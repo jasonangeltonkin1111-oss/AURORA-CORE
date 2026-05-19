@@ -18,15 +18,30 @@ Governance index for schemas, registries, and examples structure.
 - Guidebook tracker status: 16 / 16 complete in `docs/` and still active.
 - External worker status: design-stage only; no production authority granted.
 
+## Next schema creation order
+1. schema registry
+2. manifest
+3. runtime telemetry
+4. owner status
+5. layer status
+6. score registry
+7. formula registry
+8. selection ledger
+9. evidence integrity
+10. alert ledger
+11. outcome ledger
+12. external worker status
+13. contradiction ledger
+
 ## Source-of-truth relationship
 - Active doctrinal source remains `docs/00` through `docs/15` guidebooks.
-- MT5 remains owner of broker truth, publication, permission blocks, and validation of worker outputs.
-- External worker may calculate only; it may not become broker truth, publication owner, permission owner, or execution brain.
+- Repo stores schemas/examples only.
+- Runtime outputs do not belong in Git unless explicitly added as evidence samples.
 
 ## Next acceptable work
-- Add concise folder-local indexes, schemas, templates, or checklists that reference `docs/` authority.
-- Prepare migration plans and acceptance criteria without moving guidebook content in this run.
-- Add non-runtime examples that improve auditability without creating live runtime outputs.
+- Create schema stubs in `governance/schemas/` following the ordered list.
+- Add registry templates and examples that map cleanly to schema versions.
+- Keep runtime-generated outputs out of Git except explicit, bounded evidence samples.
 
 ## No-go rules
 - Do not move existing active guidebooks out of `docs/` without an explicit migration run.

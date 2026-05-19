@@ -18,15 +18,23 @@ Blueprint index for system-level blueprint placeholders and control references.
 - Guidebook tracker status: 16 / 16 complete in `docs/` and still active.
 - External worker status: design-stage only; no production authority granted.
 
+## Next blueprint detailing order
+1. Runtime Owner Blueprint
+2. Logical Layer Blueprint
+3. Build Phase Blueprint
+4. Publication Surface Blueprint
+5. Permission and Validation Blueprint
+
 ## Source-of-truth relationship
 - Active doctrinal source remains `docs/00` through `docs/15` guidebooks.
-- MT5 remains owner of broker truth, publication, permission blocks, and validation of worker outputs.
-- External worker may calculate only; it may not become broker truth, publication owner, permission owner, or execution brain.
+- Blueprint files must stay structural.
+- Detailed doctrine remains in `docs/`.
+- No source implementation is allowed from blueprint alone.
 
 ## Next acceptable work
-- Add concise folder-local indexes, schemas, templates, or checklists that reference `docs/` authority.
-- Prepare migration plans and acceptance criteria without moving guidebook content in this run.
-- Add non-runtime examples that improve auditability without creating live runtime outputs.
+- Add concise structural detail to `blueprint/01` through `blueprint/06` in the order listed above.
+- Keep blueprint content enforceable, short, and non-duplicative.
+- Keep implementation gating tied to control/governance evidence, not blueprint prose.
 
 ## No-go rules
 - Do not move existing active guidebooks out of `docs/` without an explicit migration run.

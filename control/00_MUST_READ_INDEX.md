@@ -4,7 +4,7 @@
 Control index for mandatory worker reading order and startup law.
 
 ## What belongs here
-- Index-level structure, boundaries, and ownership statements for this folder scope.
+- Mandatory pre-read list for serious worker runs.
 - References to active guidebooks in `docs/` as the current source for detailed doctrine.
 - Short, enforceable scaffold notes only (no full guidebook migration content).
 
@@ -18,15 +18,24 @@ Control index for mandatory worker reading order and startup law.
 - Guidebook tracker status: 16 / 16 complete in `docs/` and still active.
 - External worker status: design-stage only; no production authority granted.
 
+## Mandatory reading order for serious workers
+- `README.md`
+- `docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md`
+- `docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md`
+- `control/05_DECISION_STATE_REGISTER.md`
+- `docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md`
+- The relevant guidebook for the task under `docs/`.
+- Relevant `blueprint/`, `control/`, and `governance/` files if the task touches those areas.
+
 ## Source-of-truth relationship
 - Active doctrinal source remains `docs/00` through `docs/15` guidebooks.
 - MT5 remains owner of broker truth, publication, permission blocks, and validation of worker outputs.
 - External worker may calculate only; it may not become broker truth, publication owner, permission owner, or execution brain.
 
 ## Next acceptable work
-- Add concise folder-local indexes, schemas, templates, or checklists that reference `docs/` authority.
-- Prepare migration plans and acceptance criteria without moving guidebook content in this run.
-- Add non-runtime examples that improve auditability without creating live runtime outputs.
+- Add concise folder-local checklists that reinforce this must-read order.
+- Keep task-specific read requirements explicit when new scaffold indexes are added.
+- Prepare migration criteria without moving guidebook content in this run.
 
 ## No-go rules
 - Do not move existing active guidebooks out of `docs/` without an explicit migration run.
