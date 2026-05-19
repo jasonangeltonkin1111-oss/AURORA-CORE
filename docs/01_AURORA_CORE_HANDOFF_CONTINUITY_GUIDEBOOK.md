@@ -124,6 +124,13 @@ docs/06_DOSSIER_GUIDEBOOK.md
 docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
 docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
 docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
+docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
+docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+```
 ```
 
 Important note:
@@ -368,17 +375,14 @@ The guidebook set under discussion:
 
 ```text
 Guidebook tracker
-Created: 10
+Created: 16
 Total: 16
-Remaining: 6
+Remaining: 0
 
-Planned remaining:
-10 — Selection & Basket Construction Guidebook
-11 — Alerts, Permission & Safety Guidebook
-12 — Validation & Outcome Guidebook
-13 — External Worker & Calculation Bridge Guidebook
-14 — MT5 Function Guidebook
-15 — Anti-Drift & Source-of-Truth Guidebook
+Overview guidebook set status:
+COMPLETE — 16 / 16 created.
+
+No remaining guidebooks in the current overview set.
 ```
 
 Created so far:
@@ -394,13 +398,18 @@ Created so far:
 07 — Governance & Ledger Guidebook
 08 — Score, Formula & Evidence Integrity Guidebook
 09 — Bucket Universe & Taxonomy Guidebook
+10 — Selection & Basket Construction Guidebook
+11 — Alerts, Permission & Safety Guidebook
+12 — Validation & Outcome Guidebook
+13 — External Worker & Calculation Bridge Guidebook
+14 — MT5 Function Guidebook
+15 — Anti-Drift & Source-of-Truth Guidebook
 ```
 
 Recommended next discussion:
 
 ```text
-Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
-Then continue with 11, 12, 13, 14, 15.
+Run a final guidebook consistency audit after 16/16 completion.
 ```
 
 ---
@@ -654,8 +663,8 @@ Current locked structure:
 - Auto-trading is BLOCKED.
 - Completed-run full refresh cadence is every 30 minutes.
 - Heartbeat / publication / critical risk checks continue between refreshes.
-- External Worker & Calculation Bridge Guidebook is planned as 13 (not created yet).
-- Guidebook tracker: Created 10 / Total 16 / Remaining 6.
+- External Worker & Calculation Bridge Guidebook exists as docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md.
+- Guidebook tracker: Created 16 / Total 16 / Remaining 0.
 - External worker is design-stage only.
 - Python + file snapshot bridge is BEST FIRST CANDIDATE.
 - MT5 owns broker truth and publication.
@@ -665,12 +674,25 @@ Current files created:
 - README.md
 - docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 - docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+- docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+- docs/03_RUNTIME_OWNER_GUIDEBOOK.md
+- docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+- docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
+- docs/06_DOSSIER_GUIDEBOOK.md
+- docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+- docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
+- docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+- docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+- docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
+- docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
+- docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
+- docs/14_MT5_FUNCTION_GUIDEBOOK.md
+- docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 
 Current folder structure is not finalized. A future structure with blueprint/, guidebooks/, control/, mt5/, governance/, research/, prompts/, and archive/ is proposed but not yet applied.
 
 Next likely work:
-- Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
-- Then continue with 11, 12, 13, 14, 15.
+- sync/audit pass, folder-structure decision, blueprint/control/governance schema planning, or source implementation planning — only after reading the current guidebooks.
 - Only create or update files when explicitly instructed.
 
 Truth first. No fake proof. No edge claim without outcome evidence.
@@ -683,10 +705,11 @@ Truth first. No fake proof. No edge claim without outcome evidence.
 Recommended next sequence:
 
 ```text
-1. Finalize repo folder structure conceptually (no migration yet).
-2. Keep migration from docs/ to guidebooks/ on HOLD until explicitly approved.
-3. Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
-4. Continue with 11, 12, 13, 14, 15 in order.
+1. Run a final guidebook consistency audit after 16/16 completion.
+2. Decide whether to keep docs/ temporarily or migrate to guidebooks/ later.
+3. Decide next structure: blueprint/, guidebooks/, control/, mt5/, governance/, research/, prompts/, archive/.
+4. Create/update a clean index only after folder plan is approved.
+5. Begin blueprint/control/schema planning or source implementation planning only after the docs state is synchronized.
 ```
 
 ---
@@ -712,6 +735,10 @@ slow lane starvation
 external API fantasy
 auto-trade creep
 edge claims without outcome evidence
+stale tracker after file creation
+stale restart prompt
+planned-file status left after file exists
+wrong guidebook path in index
 ```
 
 ---
