@@ -12,21 +12,20 @@ Large architecture work fails when continuity is carried only inside a chat wind
 
 AURORA CORE must not depend on one long conversation staying alive.
 
-This guidebook exists so that every future chat, worker, or audit can restart from the current truth without guessing.
-
-It records:
+This guidebook records:
 
 ```text
 what has already been decided
 what is locked
 what is still open
 what guidebooks exist
-whether any future guidebooks are proposed
+what control/router files exist
 what folder structure is under discussion
 what the next strongest work should be
 what must not be claimed
 what research discipline is mandatory
 what file-creation discipline is mandatory
+what must happen before real MT5 coding starts
 ```
 
 This is a handoff book, not a full blueprint.
@@ -35,42 +34,7 @@ It should stay lean enough to read quickly, but complete enough to prevent drift
 
 ---
 
-## 1. Research Basis for This Handoff Pattern
-
-This guidebook follows a just-enough-documentation model.
-
-The target is not maximum documentation volume.
-
-The target is enough current-state truth to let future work estimate effort, continue safely, and avoid repeating old mistakes.
-
-Useful handoff documentation should preserve:
-
-```text
-current state
-decisions made
-open questions
-ownership boundaries
-dependencies
-acceptance criteria
-next actions
-risk warnings
-```
-
-AURORA adds stricter requirements because this is trading-system architecture:
-
-```text
-evidence rank
-source-of-truth status
-permission state
-no-edge-claim state
-anti-drift warnings
-publication law
-runtime owner boundaries
-```
-
----
-
-## 2. Current System Identity
+## 1. Current System Identity
 
 System name:
 
@@ -102,7 +66,7 @@ a proof of expectancy
 
 ---
 
-## 3. Current GitHub Repository
+## 2. Current GitHub Repository
 
 Repository:
 
@@ -110,10 +74,20 @@ Repository:
 https://github.com/jasonangeltonkin1111-oss/AURORA-CORE
 ```
 
-Current created source-of-truth files known at this handoff point:
+Current active front-door / control files:
 
 ```text
 README.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
+control/00_MUST_READ_INDEX.md
+control/05_DECISION_STATE_REGISTER.md
+docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+```
+
+Current guidebook set:
+
+```text
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
 docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
@@ -135,33 +109,37 @@ docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 Important note:
 
 ```text
-The current docs/ folder is temporary-good, not final-perfect.
-A cleaner structure with blueprint/ and guidebooks/ is under discussion.
-Do not reorganize files until the folder plan is explicitly approved.
+The current docs/ folder remains the active guidebook location.
+The scaffold folders exist, but guidebooks have not been migrated.
+Do not reorganize files until a migration run is explicitly approved.
 ```
 
 ---
 
-## 4. Current Decision Snapshot
+## 3. Current Decision Snapshot
 
 ```text
 AURORA CORE identity: PROCEED
 Runtime Owner top-level structure: PROCEED
 23 logical layers under Runtime Owners: PROCEED
+Guidebook overview set: COMPLETE — 16 / 16
+Current docs/ location: ACTIVE
+Super Index / Run Router: DRAFT AUTHORITY
+Decision State Register: OPERATIONAL
+Post-guidebook scaffold: CREATED
+
 MT5 native-first direction: PROCEED
 Publication-first law: PROCEED
-Timing / heartbeat guidebook: PROCEED
-Completed-run steady-state refresh (30-minute full refresh): PROCEED
-External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
+Completed-run steady-state refresh: PROCEED — 30-minute full refresh after completed run
+External calculation worker: PROCEED TO DESIGN / UNPROVEN IMPLEMENTATION
 Python worker + file snapshot bridge: BEST FIRST CANDIDATE
-C/C++ worker: HOLD as later optimization
-WebRequest bridge for main runtime bridge: HOLD
-Sockets bridge for main runtime bridge: CONSIDER later after file bridge proves insufficient
-MT5-only heavy calculations: HOLD as fallback, not preferred long-term
-Bucket-first selection: PROCEED
-Selected evidence only: PROCEED
-Outcome validation required before edge claims: PROCEED
+C/C++ worker: HOLD AS LATER OPTIMIZATION
+WebRequest main runtime bridge: HOLD
+Sockets bridge: CONSIDER LATER
+MT5-only heavy calculations: HOLD AS FALLBACK
 
+MT5 source implementation: HOLD UNTIL SHORT CONTRACT GATE IS COMPLETE
+External worker implementation: HOLD
 External DOM/API: HOLD
 Directional alerts: HOLD
 Setup strategy layer: QUARANTINE
@@ -173,7 +151,7 @@ No future chat may upgrade HOLD / QUARANTINE / BLOCKED / UNPROVEN states without
 
 ---
 
-## 5. Permanent Architecture Spine
+## 4. Permanent Architecture Spine
 
 AURORA CORE follows this spine:
 
@@ -190,17 +168,6 @@ Account + Broker Truth
 → Outcome Validation Later
 ```
 
-This means:
-
-```text
-wide cheap truth first
-one hard eligibility gate only
-descriptive ranking before prediction
-bucket structure before global basket
-selected-symbol evidence only
-permission blocked until validation
-```
-
 Forbidden reinterpretation:
 
 ```text
@@ -214,13 +181,11 @@ architecture = edge proof
 
 ---
 
-## 6. Runtime Owner Structure Is Permanent
+## 5. Permanent Runtime Owner Structure
 
 Runtime Owners are the permanent top-level blueprint headers.
 
 Logical layers live under Runtime Owners.
-
-Layer details can be revised later, but Runtime Owner headers remain the system overview spine.
 
 ```text
 Runtime Owner 1 — Foundation Truth Owner
@@ -237,7 +202,7 @@ The system must not become 23 separate runtime engines.
 
 ---
 
-## 7. Logical Layer Set
+## 6. Logical Layer Set
 
 ```text
 1.  Account / Portfolio / Prop Rule Truth
@@ -270,107 +235,37 @@ The system must not become 23 separate runtime engines.
 23. Setup / Strategy / Permission / Alert State
 ```
 
-These layers are logical truth layers.
-
-They are not permission to build 23 independent engines.
+These layers are logical truth layers, not permission to build 23 independent engines.
 
 ---
 
-## 8. Folder Structure Status
+## 7. Current Folder Structure Status
 
-The current repo has started with:
-
-```text
-README.md
-docs/
-```
-
-A better final structure has been proposed but not yet approved or applied.
-
-Proposed future structure:
+The scaffold folders exist:
 
 ```text
-AURORA-CORE/
-  README.md
-
-  blueprint/
-    00_BLUEPRINT_INDEX.md
-    01_SYSTEM_IDENTITY_AND_MISSION.md
-    02_RUNTIME_OWNER_BLUEPRINT.md
-    03_LOGICAL_LAYER_BLUEPRINT.md
-    04_BUILD_PHASE_BLUEPRINT.md
-    05_PUBLICATION_SURFACE_BLUEPRINT.md
-    06_PERMISSION_AND_VALIDATION_BLUEPRINT.md
-
-  guidebooks/
-    00_MAIN_PAGE_GUIDEBOOK.md
-    01_HANDOFF_CONTINUITY_GUIDEBOOK.md
-    02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-    03_RUNTIME_OWNER_GUIDEBOOK.md
-    04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-    05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-    06_DOSSIER_GUIDEBOOK.md
-    07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-    08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-    09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
-    10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
-    11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
-    12_VALIDATION_OUTCOME_GUIDEBOOK.md
-    13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
-    14_MT5_FUNCTION_GUIDEBOOK.md
-    15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-
-  control/
-    00_MUST_READ_INDEX.md
-    01_ANTI_DRIFT_LAW.md
-    02_WORKER_STARTUP_CHECKLIST.md
-    03_WORKFLOW_AND_PROMPT_LAW.md
-    04_BOOK_STYLE_AND_QUALITY_GATES.md
-    05_DECISION_STATE_REGISTER.md
-
-  mt5/
-    AuroraCore.mq5
-    runtime_owners/
-    io/
-    shared/
-    config/
-
-  governance/
-    schemas/
-    registries/
-    examples/
-
-  research/
-    mt5_official_docs/
-    broker_behavior/
-    prop_firm_rules/
-    validation_methods/
-    order_flow_limits/
-
-  prompts/
-    universal/
-    workers/
-    codex/
-    audits/
-
-  archive/
-    old_blueprints/
-    old_guidebook_drafts/
-    superseded_prompts/
+blueprint/
+control/
+governance/
+research/
+prompts/
+archive/
+mt5/
 ```
 
 Decision state:
 
 ```text
-Folder structure proposal: DISCUSS / REFINE FIRST
-Migration from docs/ to guidebooks/: HOLD UNTIL APPROVED
+Folder scaffold: CREATED
+Guidebook migration from docs/ to guidebooks/: HOLD UNTIL APPROVED
+MT5 source implementation: HOLD UNTIL SHORT CONTRACT GATE IS COMPLETE
 ```
+
+The scaffold is not proof of implementation.
 
 ---
 
-## 9. Current Guidebook Library Plan
-
-The guidebook set under discussion:
+## 8. Guidebook Status
 
 ```text
 Guidebook tracker
@@ -384,66 +279,49 @@ COMPLETE — 16 / 16 created.
 No remaining guidebooks in the current overview set.
 ```
 
-Created so far:
+The guidebook phase is complete. Do not create more overview guidebooks unless a new need is explicitly proven.
+
+---
+
+## 9. Codex Use Boundary
+
+Codex is not the architect.
+
+Codex may be used sparingly for:
 
 ```text
-00 — Main Page Guidebook
-01 — Handoff & Continuity Guidebook
-02 — Timing, Heartbeat & Breathing Spine Guidebook
-03 — Runtime Owner Guidebook
-04 — Publication & Truth Printing Guidebook
-05 — Board & Operator Cockpit Guidebook
-06 — Dossier Guidebook
-07 — Governance & Ledger Guidebook
-08 — Score, Formula & Evidence Integrity Guidebook
-09 — Bucket Universe & Taxonomy Guidebook
-10 — Selection & Basket Construction Guidebook
-11 — Alerts, Permission & Safety Guidebook
-12 — Validation & Outcome Guidebook
-13 — External Worker & Calculation Bridge Guidebook
-14 — MT5 Function Guidebook
-15 — Anti-Drift & Source-of-Truth Guidebook
+mechanical cleanup
+formatting
+narrow text sync
+small file edits after GPT-led design
 ```
 
-Recommended next discussion:
+Codex may not be used for:
 
 ```text
-Run a final guidebook consistency audit after 16/16 completion.
+internet research
+architecture decisions
+edge validation
+choosing MT5 functions
+trading logic design
+permission decisions
+broad rewrites
+replacing layer-by-layer testing
+```
+
+Core law:
+
+```text
+Codex is a wrench, not the architect.
 ```
 
 ---
 
-## 10. Mandatory Book Discussion Protocol
+## 10. Mandatory Research Rule
 
-Before creating or updating any guidebook, the chat must do the following:
+For every serious run, GPT-led research and audit remain mandatory where facts matter.
 
-```text
-1. Identify the book's purpose.
-2. Identify what the book owns.
-3. Identify what the book must not own.
-4. Research official / credible sources where relevant.
-5. Convert research into Aurora-specific laws, constraints, fields, tests, or acceptance criteria.
-6. Identify failure modes the book must prevent.
-7. Identify contradictions with existing guidebooks or blueprint files.
-8. Refine the outline with the user.
-9. Only create/update the file after the user explicitly approves creation or update.
-```
-
-Exception:
-
-```text
-This handoff guidebook was created immediately because the user explicitly asked for a continuity handoff guidebook now.
-```
-
----
-
-## 11. Mandatory Research Rule
-
-For every serious guidebook discussion, perform deep analysis and research.
-
-Research must not be decorative.
-
-It must be converted into at least one of:
+Research must be converted into at least one of:
 
 ```text
 system law
@@ -458,50 +336,24 @@ rollback rule
 ledger requirement
 ```
 
-For MT5 / MQL5 behavior, prefer:
-
-```text
-official MQL5 / MetaQuotes documentation
-platform behavior references
-current source inspection when code exists
-runtime evidence when available
-```
-
-For engineering process / documentation / validation behavior, prefer:
-
-```text
-credible software engineering sources
-official docs where available
-reputable engineering handbooks
-peer-reviewed or systematic-review sources when useful
-```
-
-If research is inconclusive, mark it:
-
-```text
-research_status = incomplete
-claim_status = unproven
-next_action = define falsifier or inspect source
-```
+For MT5 / MQL5 behavior, prefer official MQL5 / MetaQuotes documentation and current source inspection when source exists.
 
 ---
 
-## 12. File Creation Discipline
-
-Do not jump directly to Git file creation.
+## 11. File Creation Discipline
 
 Default workflow:
 
 ```text
 discuss
 research
-analyze
+audit
 refine outline
 agree final structure
-then create/update file only after explicit user instruction
+then create/update file only after explicit instruction
 ```
 
-Allowed direct creation:
+Allowed direct creation or update:
 
 ```text
 user explicitly says create it now
@@ -522,174 +374,112 @@ summarize changed path and commit SHA
 
 ---
 
-## 13. Next-Chat Restart Protocol
+## 12. Coding-Start Gate
 
-If a new chat must continue this work, start by reading:
+We cannot stay in planning forever.
+
+Real MT5 coding starts after the shortest safe contract gate is complete:
 
 ```text
-Read first:
-- README.md
-- docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
-- docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
-
-Then read the relevant guidebook(s) for the requested task from docs/02 through docs/15.
-
-The full 16-book overview set exists.
+1. Runtime Owner Blueprint detailed enough for Layer 1.
+2. Logical Layer Blueprint detailed enough for Layer 1.
+3. Build Phase Blueprint defines the first source slice.
+4. FileIO / route ownership contract exists.
+5. Minimum governance schemas exist:
+   - manifest
+   - runtime telemetry
+   - owner status
+   - layer status
+6. Layer 1 source plan and tests exist.
 ```
 
-Then confirm:
+Once those are done, MT5 source begins with **Layer 1 only**.
+
+Forbidden before the gate:
 
 ```text
-AURORA CORE identity
-Runtime Owner top-level structure
-current decision snapshot
-folder structure status
-guidebook library plan
-mandatory book discussion protocol
-mandatory research rule
-file creation discipline
-```
-
-Then ask or infer which task is next.
-
-If the user says "continue the books", first run a consistency audit.
-
-```text
-The current 16-book overview set is complete.
-Next work should move to folder-structure decision, blueprint/control/schema planning, or source implementation planning — only after reading the current guidebooks and confirming scope.
+create AuroraCore.mq5
+create broad .mqh scaffold
+build all Runtime Owners in code
+build Python worker implementation
+claim compile proof
+claim runtime proof
+claim edge
+approve alerts/trading/live use
 ```
 
 ---
 
+## 13. Next-Chat Restart Protocol
 
-## 13A. External Worker Boundary Law (Design-Stage Only)
-
-```text
-External calculation worker: PROCEED TO GUIDEBOOK DESIGN
-External worker implementation status: UNPROVEN
-External worker is not production-approved, not coded, and grants no trading permission.
-```
-
-MT5 owns:
+If a new chat must continue this work, read first:
 
 ```text
-broker truth
-account truth
-symbol universe truth
-quote/session truth
-selected raw source snapshots
-publication surfaces
-permission blocks
-file route ownership
-worker health monitoring
-schema/freshness validation
-operator display
+README.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
+control/00_MUST_READ_INDEX.md
+control/05_DECISION_STATE_REGISTER.md
+docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 ```
 
-External Worker may own:
+Then read the relevant guidebook(s) for the requested task from `docs/02` through `docs/14`.
+
+If the user says "next", the next likely work is:
 
 ```text
-heavy calculations
-ranking transforms if assigned
-correlation matrices
-bucket heat calculations
-large taxonomy processing
-selected evidence transforms
-statistical summaries
-validation/outcome calculations later
+Detail Runtime Owner Blueprint.
+Then detail Logical Layer Blueprint.
+Then define FileIO / route ownership contract and minimum governance schemas.
+Then start MT5 Layer 1 only.
 ```
 
-External Worker must not own:
-
-```text
-broker truth
-live account truth
-order sending
-trade permission
-publication routes
-final Board/Dossier writing
-final source-of-truth labels without MT5 validation
-```
-
-```text
-External worker may calculate.
-External worker may not become broker truth, publication owner, or permission owner.
-```
-
-Bridge design notes:
-
-```text
-Best first candidate: Python Worker + file snapshot bridge.
-WebRequest bridge for main runtime bridge: HOLD (synchronous/blocking, allowed URLs required, not available in Strategy Tester).
-C/C++ worker: HOLD as later optimization unless Python/file bridge proves insufficient.
-```
-
-References:
-- https://www.mql5.com/en/docs/event_handlers/ontimer
-- https://www.mql5.com/en/docs/network/webrequest
-- https://www.mql5.com/en/docs/python_metatrader5
+---
 
 ## 14. Copy/Paste Restart Prompt for Future Chat
 
-Use this if the conversation becomes bloated:
-
 ```text
-AURORA CORE — CONTINUE GUIDEBOOK SYSTEM WORK
+AURORA CORE — CONTINUE SYSTEM WORK
 
-You are continuing the AURORA CORE blueprint and guidebook system.
+You are continuing AURORA CORE.
 
-First read the current repo files:
+First read:
 - README.md
+- control/00_SUPER_INDEX_RUN_ROUTER.md
+- control/00_MUST_READ_INDEX.md
+- control/05_DECISION_STATE_REGISTER.md
 - docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 - docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+- docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 
-Do not assume memory is complete.
-Do not jump straight to creating files.
-For every serious guidebook discussion, do deep analysis and research first.
-Convert research into Aurora-specific laws, owner boundaries, failure states, fields, acceptance criteria, tests, or no-go rules.
+Then read the relevant guidebook(s) for the requested task.
 
-Current locked structure:
-- System name: AURORA CORE
+Current locked state:
+- Guidebooks: COMPLETE — 16 / 16
+- Super Index / Run Router: DRAFT AUTHORITY
+- Decision State Register: OPERATIONAL
 - Runtime Owners are permanent top-level blueprint headers.
 - 23 logical layers live under Runtime Owners.
-- Publication-first law is active.
-- Selected evidence only is active.
-- Edge claims are UNPROVEN.
-- Setup strategy is QUARANTINE.
-- Auto-trading is BLOCKED.
 - Completed-run full refresh cadence is every 30 minutes.
-- Heartbeat / publication / critical risk checks continue between refreshes.
-- External Worker & Calculation Bridge Guidebook exists as docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md.
-- Guidebook tracker: Created 16 / Total 16 / Remaining 0.
+- MT5 source implementation is HOLD until the short contract gate is complete.
 - External worker is design-stage only.
 - Python + file snapshot bridge is BEST FIRST CANDIDATE.
 - MT5 owns broker truth and publication.
-- External worker may calculate but may not become broker truth, publication owner, or permission owner.
+- External worker may calculate but may not become broker truth, publication owner, permission owner, or execution brain.
+- Edge claims are UNPROVEN.
+- Setup strategy is QUARANTINE.
+- Directional alerts are HOLD.
+- Auto-trading is BLOCKED.
 
-Current files created:
-- README.md
-- docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
-- docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
-- docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-- docs/03_RUNTIME_OWNER_GUIDEBOOK.md
-- docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-- docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-- docs/06_DOSSIER_GUIDEBOOK.md
-- docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-- docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-- docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
-- docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
-- docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
-- docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-- docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
-- docs/14_MT5_FUNCTION_GUIDEBOOK.md
-- docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-
-Current folder structure is not finalized. A future structure with blueprint/, guidebooks/, control/, mt5/, governance/, research/, prompts/, and archive/ is proposed but not yet applied.
+Codex is a temporary refinement tool only. GPT-led research and audit remain the main workflow.
 
 Next likely work:
-- sync/audit pass, folder-structure decision, blueprint/control/governance schema planning, or source implementation planning — only after reading the current guidebooks.
-- Only create or update files when explicitly instructed.
+1. Detail Runtime Owner Blueprint.
+2. Detail Logical Layer Blueprint.
+3. Define FileIO / route ownership contract.
+4. Create minimum governance schemas.
+5. Start MT5 Layer 1 only.
 
 Truth first. No fake proof. No edge claim without outcome evidence.
 ```
@@ -701,18 +491,22 @@ Truth first. No fake proof. No edge claim without outcome evidence.
 Recommended next sequence:
 
 ```text
-1. Run a final guidebook consistency audit after 16/16 completion.
-2. Decide whether to keep docs/ temporarily or migrate to guidebooks/ later.
-3. Decide next structure: blueprint/, guidebooks/, control/, mt5/, governance/, research/, prompts/, archive/.
-4. Create/update a clean index only after folder plan is approved.
-5. Begin blueprint/control/schema planning or source implementation planning only after the docs state is synchronized.
+1. Detail Runtime Owner Blueprint.
+2. Detail Logical Layer Blueprint.
+3. Detail Build Phase Blueprint for first source slice.
+4. Define FileIO / route ownership contract.
+5. Create minimum governance schema contracts.
+6. Define Layer 1 source plan and tests.
+7. Start MT5 Layer 1 only.
 ```
+
+This is the shortest safe path to coding.
 
 ---
 
 ## 16. Critical Failure Modes to Keep Visible
 
-AURORA CORE must avoid these:
+AURORA CORE must avoid:
 
 ```text
 chat-memory drift
@@ -735,6 +529,8 @@ stale tracker after file creation
 stale restart prompt
 planned-file status left after file exists
 wrong guidebook path in index
+planning forever without coding gate
+broad MT5 scaffold before Layer 1 contracts
 ```
 
 ---
@@ -743,10 +539,12 @@ wrong guidebook path in index
 
 ```text
 If context is lost, restart from the repo, not from memory.
-Read the Main Page Guidebook and this Handoff Guidebook first.
+Read the Super Index, Decision State Register, Main Page Guidebook, and this Handoff Guidebook first.
 Respect Runtime Owners.
 Research before writing.
-Discuss before creating files.
+Discuss before creating files unless the user explicitly asks for a repo update.
+Move toward coding through the shortest safe contract gate.
+Build Layer 1 first.
 Print truth.
 Validate before permission.
 ```
