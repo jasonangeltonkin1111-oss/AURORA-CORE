@@ -221,7 +221,8 @@ Standard Board sections:
 9. Heatmap Status
 10. Publication Status
 11. Permission / Alert State
-12. Warnings / Action Needed
+12. External Worker Status, if enabled
+13. Warnings / Action Needed
 ```
 
 Keep this compact.

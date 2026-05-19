@@ -116,6 +116,14 @@ Current created source-of-truth files known at this handoff point:
 README.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+docs/03_RUNTIME_OWNER_GUIDEBOOK.md
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
+docs/06_DOSSIER_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
 ```
 
 Important note:
@@ -140,10 +148,10 @@ Timing / heartbeat guidebook: PROCEED
 Completed-run steady-state refresh (30-minute full refresh): PROCEED
 External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
 Python worker + file snapshot bridge: BEST FIRST CANDIDATE
-C/C++ worker: HOLD
+C/C++ worker: HOLD as later optimization
 WebRequest bridge for main runtime bridge: HOLD
-Sockets bridge for main runtime bridge: CONSIDER
-MT5-only heavy calculations: HOLD
+Sockets bridge for main runtime bridge: CONSIDER later after file bridge proves insufficient
+MT5-only heavy calculations: HOLD as fallback, not preferred long-term
 Bucket-first selection: PROCEED
 Selected evidence only: PROCEED
 Outcome validation required before edge claims: PROCEED
@@ -291,8 +299,8 @@ AURORA-CORE/
   guidebooks/
     00_MAIN_PAGE_GUIDEBOOK.md
     01_HANDOFF_CONTINUITY_GUIDEBOOK.md
-    02_RUNTIME_OWNER_GUIDEBOOK.md
-    03_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+    02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+    03_RUNTIME_OWNER_GUIDEBOOK.md
     04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
     05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
     06_DOSSIER_GUIDEBOOK.md
@@ -302,8 +310,9 @@ AURORA-CORE/
     10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
     11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
     12_VALIDATION_OUTCOME_GUIDEBOOK.md
-    13_MT5_FUNCTION_GUIDEBOOK.md
-    14_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+    13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
+    14_MT5_FUNCTION_GUIDEBOOK.md
+    15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 
   control/
     00_MUST_READ_INDEX.md
@@ -359,14 +368,11 @@ The guidebook set under discussion:
 
 ```text
 Guidebook tracker
-Created: 7
+Created: 10
 Total: 16
-Remaining: 9
+Remaining: 6
 
 Planned remaining:
-07 — Governance & Ledger Guidebook
-08 — Score, Formula & Evidence Integrity Guidebook
-09 — Bucket Universe & Taxonomy Guidebook
 10 — Selection & Basket Construction Guidebook
 11 — Alerts, Permission & Safety Guidebook
 12 — Validation & Outcome Guidebook
@@ -375,43 +381,26 @@ Planned remaining:
 15 — Anti-Drift & Source-of-Truth Guidebook
 ```
 
+Created so far:
 
 ```text
 00 — Main Page Guidebook
 01 — Handoff & Continuity Guidebook
-02 — Runtime Owner Guidebook
-03 — Timing, Heartbeat & Breathing Spine Guidebook
+02 — Timing, Heartbeat & Breathing Spine Guidebook
+03 — Runtime Owner Guidebook
 04 — Publication & Truth Printing Guidebook
 05 — Board & Operator Cockpit Guidebook
 06 — Dossier Guidebook
 07 — Governance & Ledger Guidebook
 08 — Score, Formula & Evidence Integrity Guidebook
 09 — Bucket Universe & Taxonomy Guidebook
-10 — Selection & Basket Construction Guidebook
-11 — Alerts, Permission & Safety Guidebook
-12 — Validation & Outcome Guidebook
-13 — External Worker & Calculation Bridge Guidebook
-14 — MT5 Function Guidebook
-15 — Anti-Drift & Source-of-Truth Guidebook
-```
-
-Potential issue:
-
-```text
-Runtime Owner Guidebook may belong before Timing, or the Runtime Owner content may remain in blueprint/ while guidebooks start with Timing.
-This is not yet locked.
 ```
 
 Recommended next discussion:
 
 ```text
-Should the next book be Runtime Owner Guidebook or Timing / Heartbeat Guidebook?
-```
-
-Current leaning:
-
-```text
-Timing / Heartbeat is the next most valuable book because it defines how Aurora breathes and prevents fake-alive runtime failure.
+Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
+Then continue with 11, 12, 13, 14, 15.
 ```
 
 ---
@@ -533,6 +522,14 @@ If a new chat must continue this work, start by reading:
 README.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+docs/03_RUNTIME_OWNER_GUIDEBOOK.md
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
+docs/06_DOSSIER_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
 ```
 
 Then confirm:
@@ -619,7 +616,7 @@ Bridge design notes:
 ```text
 Best first candidate: Python Worker + file snapshot bridge.
 WebRequest bridge for main runtime bridge: HOLD (synchronous/blocking, allowed URLs required, not available in Strategy Tester).
-C/C++ worker: HOLD unless Python/file bridge proves insufficient.
+C/C++ worker: HOLD as later optimization unless Python/file bridge proves insufficient.
 ```
 
 References:
@@ -657,8 +654,8 @@ Current locked structure:
 - Auto-trading is BLOCKED.
 - Completed-run full refresh cadence is every 30 minutes.
 - Heartbeat / publication / critical risk checks continue between refreshes.
-- External Worker & Calculation Bridge Guidebook is planned (not created yet).
-- Guidebook tracker: Created 7 / Total 16 / Remaining 9.
+- External Worker & Calculation Bridge Guidebook is planned as 13 (not created yet).
+- Guidebook tracker: Created 10 / Total 16 / Remaining 6.
 - External worker is design-stage only.
 - Python + file snapshot bridge is BEST FIRST CANDIDATE.
 - MT5 owns broker truth and publication.
@@ -672,8 +669,8 @@ Current files created:
 Current folder structure is not finalized. A future structure with blueprint/, guidebooks/, control/, mt5/, governance/, research/, prompts/, and archive/ is proposed but not yet applied.
 
 Next likely work:
-- Discuss/refine the folder structure.
-- Then discuss/refine the Timing, Heartbeat & Breathing Spine Guidebook.
+- Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
+- Then continue with 11, 12, 13, 14, 15.
 - Only create or update files when explicitly instructed.
 
 Truth first. No fake proof. No edge claim without outcome evidence.
@@ -686,13 +683,10 @@ Truth first. No fake proof. No edge claim without outcome evidence.
 Recommended next sequence:
 
 ```text
-1. Finalize repo folder structure conceptually.
-2. Decide whether to migrate docs/ to guidebooks/ now or later.
-3. Discuss the Timing, Heartbeat & Breathing Spine Guidebook.
-4. Research MT5 OnTimer / event queue / scheduler implications again before writing the timing book.
-5. Define lane model: Fast Lane, Standard Lane, Slow Lane, Deep Lane, Recovery Lane, Publication Lane, Validation Lane.
-6. Define cadence families and fake-alive failure modes.
-7. Only then create the timing guidebook.
+1. Finalize repo folder structure conceptually (no migration yet).
+2. Keep migration from docs/ to guidebooks/ on HOLD until explicitly approved.
+3. Discuss/research/refine 10 — Selection & Basket Construction Guidebook.
+4. Continue with 11, 12, 13, 14, 15 in order.
 ```
 
 ---

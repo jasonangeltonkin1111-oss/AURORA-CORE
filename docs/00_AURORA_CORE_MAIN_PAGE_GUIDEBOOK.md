@@ -83,10 +83,10 @@ Timing / heartbeat guidebook: PROCEED
 Completed-run steady-state refresh (30-minute full refresh): PROCEED
 External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
 Python worker + file snapshot bridge: BEST FIRST CANDIDATE
-C/C++ worker: HOLD
+C/C++ worker: HOLD as later optimization
 WebRequest bridge for main runtime bridge: HOLD
-Sockets bridge for main runtime bridge: CONSIDER
-MT5-only heavy calculations: HOLD
+Sockets bridge for main runtime bridge: CONSIDER later after file bridge proves insufficient
+MT5-only heavy calculations: HOLD as fallback, not preferred long-term
 Bucket-first selection: PROCEED
 Selected evidence only: PROCEED
 
@@ -393,541 +393,45 @@ Outcome evidence begins edge validation.
 
 ## 5. Guidebook Library
 
-The AURORA CORE documentation library is organized as follows.
-
-Each guidebook owns one domain. No guidebook may silently take authority from another.
-
----
-
-### 00 — AURORA CORE MAIN PAGE GUIDEBOOK
-
-File:
+Current tracker state:
 
 ```text
-docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+Created: 10 / 16
+Remaining: 6 / 16
 ```
 
-Owns:
+Created guidebooks:
 
 ```text
-master overview
-guidebook map
-read order
-Runtime Owner header law
-current decision state
-anti-drift navigation
+00 — Main Page Guidebook
+01 — Handoff & Continuity Guidebook
+02 — Timing, Heartbeat & Breathing Spine Guidebook
+03 — Runtime Owner Guidebook
+04 — Publication & Truth Printing Guidebook
+05 — Board & Operator Cockpit Guidebook
+06 — Dossier Guidebook
+07 — Governance & Ledger Guidebook
+08 — Score, Formula & Evidence Integrity Guidebook
+09 — Bucket Universe & Taxonomy Guidebook
 ```
 
-Does not own:
+Remaining guidebooks:
 
 ```text
-detailed layer contracts
-final formulas
-source code implementation
-deep MT5 function rules
-edge validation results
+10 — Selection & Basket Construction Guidebook
+11 — Alerts, Permission & Safety Guidebook
+12 — Validation & Outcome Guidebook
+13 — External Worker & Calculation Bridge Guidebook
+14 — MT5 Function Guidebook
+15 — Anti-Drift & Source-of-Truth Guidebook
 ```
 
----
-
-### 01 — Runtime Owner Overview
-
-Planned file:
+Location law:
 
 ```text
-docs/01_RUNTIME_OWNER_OVERVIEW.md
-```
-
-Owns:
-
-```text
-8 Runtime Owners
-owned logical layers
-owner inputs
-owner outputs
-owner boundaries
-owner failure states
-owner publication contract
-```
-
-Purpose:
-
-```text
-Explain the system as organs, not scattered modules.
-```
-
-Must prevent:
-
-```text
-23 separate runtime engines
-duplicate ownership
-shadow modules
-layer drift
-```
-
----
-
-### 02 — Timing, Heartbeat & Breathing Spine Guidebook
-
-Planned file:
-
-```text
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE.md
-```
-
-Owns:
-
-```text
-heartbeat
-breathing spine
-nervous system
-OnTimer rhythm
-fast lane / slow lane / deep lane
-startup hydration
-retry cadence
-scheduler pressure
-starvation detection
-over-budget detection
-runtime telemetry timing
-```
-
-Purpose:
-
-```text
-Make the system breathe instead of trying to run everything every heartbeat.
-```
-
-Core rhythm:
-
-```text
-inhale  = collect / refresh / sense
-hold    = rank / select / compare
-exhale  = publish / log / expose state
-recover = retry / fill missing / degrade honestly
-```
-
-Must prevent:
-
-```text
-unbounded OnTimer work
-silent cadence death
-slow-lane starvation
-publication delay caused by deep work
-```
-
----
-
-### 03 — Publication & Truth Printing Guidebook
-
-Planned file:
-
-```text
-docs/03_PUBLICATION_TRUTH_PRINTING.md
-```
-
-Owns:
-
-```text
-publication law
-atomic writing
-Board publication
-Dossier publication
-Selection Desk publication
-Governance publication
-Manifest proof
-degraded file printing
-no-disappearing-output rule
-```
-
-Purpose:
-
-```text
-Keep Aurora printing truthful state even when data is partial, stale, unknown, or degraded.
-```
-
-Must prevent:
-
-```text
-silent missing files
-gating publication because review truth is not clean
-scattered FileOpen/FileWrite ownership
-```
-
----
-
-### 04 — Board & Operator Cockpit Guidebook
-
-Planned file:
-
-```text
-docs/04_BOARD_OPERATOR_COCKPIT.md
-```
-
-Owns:
-
-```text
-Board layout
-Atomic Update Overview
-operator summary
-account/risk summary
-bucket summary
-Global Top 10 display
-heatmap status
-runtime warnings
-Class 1 alert state
-```
-
-Purpose:
-
-```text
-Show the operator what matters first without dumping machine guts.
-```
-
-Must prevent:
-
-```text
-Board clutter
-raw OHLC dumps
-raw tick dumps
-full ledger spam
-confusing all-symbol noise
-```
-
----
-
-### 05 — Dossier Guidebook
-
-Planned file:
-
-```text
-docs/05_DOSSIER_GUIDEBOOK.md
-```
-
-Owns:
-
-```text
-per-symbol truth layout
-symbol identity
-bucket identity
-account context
-market state
-spec truth
-quote truth
-rank status
-selection status
-selected evidence status
-permission status
-degraded reasons
-```
-
-Purpose:
-
-```text
-Give each symbol its honest story.
-```
-
-Must prevent:
-
-```text
-blank dossiers for non-selected symbols
-fake deep evidence
-silent missing evidence
-symbol-level truth drift
-```
-
----
-
-### 06 — Governance & Ledger Guidebook
-
-Planned file:
-
-```text
-docs/06_GOVERNANCE_LEDGER_GUIDEBOOK.md
-```
-
-Owns:
-
-```text
-manifest.csv
-runtime_telemetry.csv
-layer_status.csv
-score_registry.csv
-formula_registry.csv
-selection_ledger.csv
-evidence_integrity.csv
-alert_ledger.csv
-prop_rule_profile.csv
-outcome_ledger.csv
-heatmap_registry.csv
-order_flow_availability.csv
-contradiction_ledger.csv
-```
-
-Purpose:
-
-```text
-Give every serious claim a ledger home.
-```
-
-Must prevent:
-
-```text
-trust-me proof
-unlogged selection changes
-unversioned formulas
-lost degradation history
-fake readiness claims
-```
-
----
-
-### 07 — Score, Formula & Evidence Integrity Guidebook
-
-Planned file:
-
-```text
-docs/07_SCORE_FORMULA_EVIDENCE_INTEGRITY.md
-```
-
-Owns:
-
-```text
-score labels
-formula ownership
-formula versioning
-input/output fields
-normalization basis
-sample windows
-calculation verification
-confidence labels
-evidence completeness
-```
-
-Purpose:
-
-```text
-Separate correct calculations from useful trading edge.
-```
-
-Core law:
-
-```text
-Correct formula does not prove profitable edge.
-```
-
-Must prevent:
-
-```text
-beautiful fake scores
-hidden formula drift
-unversioned normalization changes
-predictive claims from descriptive scores
-```
-
----
-
-### 08 — Bucket Universe & Taxonomy Guidebook
-
-Planned file:
-
-```text
-docs/08_BUCKET_UNIVERSE_TAXONOMY.md
-```
-
-Owns:
-
-```text
-broker group
-broker subgroup
-aggregation group
-forex majors
-forex crosses
-forex exotics
-metals
-indices
-crypto
-commodities
-stocks
-sectors
-themes
-unknown handling
-classification cache
-taxonomy version
-universe hash
-```
-
-Purpose:
-
-```text
-Make the broker universe structured, cached, reviewable, and resistant to random Other buckets.
-```
-
-Must prevent:
-
-```text
-classification rebuild every heartbeat
-loose bucket naming
-unreviewed unknown dumps
-bucket drift
-```
-
----
-
-### 09 — Selection & Basket Construction Guidebook
-
-Planned file:
-
-```text
-docs/09_SELECTION_BASKET_CONSTRUCTION.md
-```
-
-Owns:
-
-```text
-bucket Top 5
-sub-bucket Top 5
-candidate pool
-dynamic bucket selection
-correlation filtering
-backup fill
-Global Top 10
-correlation rejects
-manual pins later
-```
-
-Purpose:
-
-```text
-Build diversified attention baskets without pretending they are trade lists.
-```
-
-Must prevent:
-
-```text
-Top 10 = trade list language
-correlation rejection hiding bucket alternatives
-random all-symbol global ranking
-basket concentration risk
-```
-
----
-
-### 10 — Alerts, Permission & Safety Guidebook
-
-Planned file:
-
-```text
-docs/10_ALERTS_PERMISSION_SAFETY.md
-```
-
-Owns:
-
-```text
-Class 1 alerts
-Class 2 future setup alerts
-cooldowns
-suppression reasons
-permission state
-prop-firm rule state
-news risk state
-manual confirmation
-auto-trade block
-```
-
-Purpose:
-
-```text
-Prevent Aurora from becoming noisy, dangerous, or permission-lax.
-```
-
-Must prevent:
-
-```text
-alert spam
-focus alerts
-data-complete alerts
-unvalidated directional alerts
-auto-trading before proof
-```
-
----
-
-### 11 — Validation & Outcome Guidebook
-
-Planned file:
-
-```text
-docs/11_VALIDATION_OUTCOME_GUIDEBOOK.md
-```
-
-Owns:
-
-```text
-outcome ledger
-experiment registry
-null model comparison
-ranking validation
-setup validation
-cost-adjusted expectancy
-slippage-adjusted expectancy
-walk-forward later
-Strategy Tester harness later
-forward demo proof later
-kill conditions
-```
-
-Purpose:
-
-```text
-Prove or kill edge claims cheaply before promotion.
-```
-
-Must prevent:
-
-```text
-architecture-as-proof
-backtest-overconfidence
-uncosted expectancy
-no-null-model validation
-prop-firm fantasy
-```
-
----
-
-### 12 — MT5 Function Guidebook
-
-Planned file:
-
-```text
-docs/12_MT5_FUNCTION_GUIDEBOOK.md
-```
-
-Owns:
-
-```text
-native MT5 function map
-safe function usage
-function family owners
-cadence rules
-cache rules
-failure labels
-official documentation references
-accept / consider / reject registry
-```
-
-Purpose:
-
-```text
-Use MT5 native power safely before inventing external systems.
-```
-
-Must prevent:
-
-```text
-calling heavy functions everywhere
-external API dependence too early
-function ownership leaks
-feature existence becoming adoption permission
+Current active documentation location is docs/.
+Future blueprint/guidebooks/control/ structure remains DISCUSS / HOLD until explicitly approved.
+Do not migrate files in this phase.
 ```
 
 ---
@@ -955,10 +459,10 @@ Decision state:
 ```text
 External calculation worker: PROCEED TO GUIDEBOOK DESIGN
 Python worker + file snapshot bridge: BEST FIRST CANDIDATE
-C/C++ worker: HOLD
+C/C++ worker: HOLD as later optimization
 WebRequest bridge: HOLD for main runtime bridge
-Sockets bridge: CONSIDER
-MT5-only heavy calculations: HOLD
+Sockets bridge: CONSIDER later after file bridge proves insufficient
+MT5-only heavy calculations: HOLD as fallback, not preferred long-term
 ```
 
 ---
