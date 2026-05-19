@@ -40,6 +40,16 @@ Guidebooks explain the owners, surfaces, timing, proofs, and laws.
 
 ---
 
+
+
+Steady-state law cross-reference:
+
+```text
+run_complete ≠ system asleep
+Completed-run full refresh = every 30 minutes.
+Heartbeat / publication / critical risk checks continue between refreshes.
+```
+
 ## 1. Master Identity
 
 System name:
@@ -70,6 +80,13 @@ Runtime Owner structure: PROCEED
 MT5 native-first direction: PROCEED
 Publication-first law: PROCEED
 Timing / heartbeat guidebook: PROCEED
+Completed-run steady-state refresh (30-minute full refresh): PROCEED
+External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+C/C++ worker: HOLD
+WebRequest bridge for main runtime bridge: HOLD
+Sockets bridge for main runtime bridge: CONSIDER
+MT5-only heavy calculations: HOLD
 Bucket-first selection: PROCEED
 Selected evidence only: PROCEED
 
@@ -915,431 +932,51 @@ feature existence becoming adoption permission
 
 ---
 
-### 13 — Build Phase & Roadmap Guidebook
+### 13 — External Worker & Calculation Bridge Guidebook
 
 Planned file:
 
 ```text
-docs/13_BUILD_PHASE_ROADMAP.md
+docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
 ```
 
 Owns:
 
 ```text
-Phase 1 Foundation Printing
-Phase 2 Surface Ranking
-Phase 3 Bucket Engine
-Phase 4 Basket Selection
-Phase 5 Selected Evidence
-Phase 6 Alerts / Permission
-Phase 7 Outcome Validation
+external worker boundary law
+bridge contract fields
+worker request/response snapshot contracts
+MT5 validation gates before worker output use
+worker heartbeat/degraded status language
 ```
 
-Purpose:
+Decision state:
 
 ```text
-Build the system in the right order.
-```
-
-Must prevent:
-
-```text
-Layer 22 fantasy before Layer 1–5 truth
-strategy work before publication proof
-deep evidence before selection proof
-execution work before validation
+External calculation worker: PROCEED TO GUIDEBOOK DESIGN
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+C/C++ worker: HOLD
+WebRequest bridge: HOLD for main runtime bridge
+Sockets bridge: CONSIDER
+MT5-only heavy calculations: HOLD
 ```
 
 ---
 
-### 14 — Anti-Drift & Source-of-Truth Guidebook
+### 14 — MT5 Function Guidebook
 
 Planned file:
 
 ```text
-docs/14_ANTI_DRIFT_SOURCE_OF_TRUTH.md
-```
-
-Owns:
-
-```text
-no duplicate owners
-no shadow paths
-no route invention
-current source outranks roadmap
-Runtime Owner boundaries
-layer ownership
-publication ownership
-formula ownership
-FileIO ownership
-contradiction handling
-```
-
-Purpose:
-
-```text
-Stop Aurora from splitting into many almost-right systems.
-```
-
-Must prevent:
-
-```text
-shadow FileIO
-new final paths
-duplicate formula engines
-unowned modules
-old roadmap overriding current source
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
 ```
 
 ---
 
-## 6. Mandatory Read Order
+### 15 — Anti-Drift & Source-of-Truth Guidebook
 
-For broad architecture work, read in this order:
-
-```text
-00 Main Page Guidebook
-01 Runtime Owner Overview
-14 Anti-Drift & Source-of-Truth Guidebook
-02 Timing, Heartbeat & Breathing Spine Guidebook
-03 Publication & Truth Printing Guidebook
-13 Build Phase & Roadmap Guidebook
-```
-
-For coding work, also read:
+Planned file:
 
 ```text
-12 MT5 Function Guidebook
-06 Governance & Ledger Guidebook
-07 Score, Formula & Evidence Integrity Guidebook
-```
-
-For bucket work, also read:
-
-```text
-08 Bucket Universe & Taxonomy Guidebook
-09 Selection & Basket Construction Guidebook
-```
-
-For Board/Dossier work, also read:
-
-```text
-04 Board & Operator Cockpit Guidebook
-05 Dossier Guidebook
-03 Publication & Truth Printing Guidebook
-```
-
-For alerts/permission work, also read:
-
-```text
-10 Alerts, Permission & Safety Guidebook
-11 Validation & Outcome Guidebook
-```
-
-For strategy, setup, or edge work, read first:
-
-```text
-11 Validation & Outcome Guidebook
-07 Score, Formula & Evidence Integrity Guidebook
-10 Alerts, Permission & Safety Guidebook
-```
-
-If the evidence is missing, strategy remains quarantined.
-
----
-
-## 7. Guidebook Authority Rules
-
-### Rule 1 — Runtime Owner headers outrank layer convenience
-
-If a layer detail becomes unclear, resolve it through the Runtime Owner that owns it.
-
-Do not create a new owner just because it feels cleaner.
-
----
-
-### Rule 2 — Current source outranks roadmap prose
-
-When source code exists, current active source files outrank:
-
-```text
-old prompts
-old reports
-memory
-screenshots
-archived code
-roadmap language
-```
-
-Roadmap prose guides future work. It does not prove current behavior.
-
----
-
-### Rule 3 — Publication law outranks cleanliness gates
-
-Incomplete truth may block review/trading.
-
-Incomplete truth must not block physical publication unless actual file route / FileIO / permission failure prevents writing.
-
----
-
-### Rule 4 — Validation outranks confidence
-
-No name, score, setup, indicator, liquidity concept, or bucket rank becomes edge without outcome validation.
-
----
-
-### Rule 5 — Existing owner first
-
-Before adding anything new:
-
-```text
-find the current owner
-inspect what it already owns
-patch the owner if possible
-avoid duplicate authority
-```
-
----
-
-### Rule 6 — MT5 native first, but not blindly
-
-MT5 functions are preferred before external dependencies, but function existence does not equal safe adoption.
-
-Every function family needs:
-
-```text
-owner
-cadence
-cache policy
-failure state
-degraded label
-runtime budget
-verification method
-```
-
----
-
-## 8. System-Wide No-Go List
-
-Do not build yet:
-
-```text
-external DOM API
-paid order-flow feeds
-third-party liquidity API
-auto-trading
-strategy alerts
-full-universe OHLC
-full-universe tick capture
-full-universe indicators
-all-symbol DOM
-chart UI
-per-symbol progress alerts
-data-complete alerts
-focus alerts
-FVG/sweep/reclaim as signal
-```
-
-Do not claim:
-
-```text
-profitable edge
-live safety
-prop-firm readiness
-auto-trade readiness
-true institutional order flow
-setup confirmation
-high-probability buy/sell
-```
-
----
-
-## 9. Build Phase Map
-
-### Phase 1 — Foundation Printing
-
-```text
-Publication Owner
-Board
-Dossier Shell
-Governance Manifest
-Runtime Telemetry
-Atomic Update Overview
-Layers 1–5
-```
-
-Success means:
-
-```text
-files print
-degraded truth prints
-missing data does not hide files
-one broad gate works
-runtime pressure visible
-```
-
----
-
-### Phase 2 — Surface Ranking
-
-```text
-Layers 6–9
-score_registry
-formula_registry
-surface ranking summaries
-```
-
-Success means:
-
-```text
-scores are labelled descriptive
-no fake directional language
-cheap broad ranking works
-```
-
----
-
-### Phase 3 — Bucket Engine
-
-```text
-Layers 10–14
-taxonomy cache
-bucket Top 5
-bucket heat
-dynamic bucket selection
-candidate pool
-```
-
-Success means:
-
-```text
-broker universe becomes structured
-Global Top 10 is not built from random all-symbol soup
-```
-
----
-
-### Phase 4 — Basket Selection
-
-```text
-Layer 15 correlation
-Layer 16 Global Top 10
-correlation rejects
-backup fill logic
-```
-
-Success means:
-
-```text
-basket diversity is visible
-high-correlation rejects remain visible elsewhere
-```
-
----
-
-### Phase 5 — Selected Evidence
-
-```text
-Layers 17–22
-OHLC pack
-wick pack
-tick pack
-indicator pack
-VWAP context
-liquidity distance map
-MT5 DOM proxy if available
-```
-
-Success means:
-
-```text
-deep evidence only runs for selected symbols
-evidence completeness is visible
-no order-flow overclaiming
-```
-
----
-
-### Phase 6 — Alerts and Permission
-
-```text
-Class 1 alerts only
-alert ledger
-cooldowns
-suppression reasons
-permission state
-```
-
-Success means:
-
-```text
-rare useful alerts
-no spam
-no directional setup claims
-```
-
----
-
-### Phase 7 — Outcome Validation
-
-```text
-outcome ledger
-experiment registry
-null model comparison
-Strategy Tester harness later
-walk-forward later
-```
-
-Success means:
-
-```text
-edge claims can finally be falsified
-```
-
----
-
-## 10. What This Main Page Does Not Decide
-
-This guidebook does not lock:
-
-```text
-final formula details
-final field schemas
-final Board layout
-final Dossier layout
-final cadence numbers
-final bucket taxonomy list
-final indicator parameters
-final validation thresholds
-final implementation files
-```
-
-Those belong in the detailed guidebooks and layer-by-layer builds.
-
-This guidebook does lock:
-
-```text
-AURORA CORE identity
-Runtime Owner top-level structure
-guidebook map
-read order
-publication-first principle
-selected-evidence principle
-anti-fake-edge principle
-anti-drift boundaries
-```
-
----
-
-## 11. Final Operating Command
-
-```text
-Truth first.
-Runtime Owners hold the architecture.
-Layers explain the truth.
-Guidebooks define the boundaries.
-Publication prints the state.
-Validation earns permission.
-No edge claim without evidence.
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH.md
 ```

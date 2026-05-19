@@ -1791,6 +1791,49 @@ These should align with Atomic Update Overview status language.
 
 ---
 
+
+## 14A. External Worker Boundary (Design-Stage)
+
+```text
+External Worker is not a Runtime Owner yet.
+It is a future bridge/calculation component governed by the future External Worker & Calculation Bridge Guidebook.
+```
+
+It may provide calculation outputs to existing Runtime Owners through validated snapshot contracts.
+
+MT5 remains owner of broker truth, publication, permission authority, and final source-of-truth validation.
+
+Publication Owner remains final output writer.
+Permission / Alert Owner remains permission authority.
+Foundation Truth Owner remains broker/account/source truth authority.
+
+```text
+External worker may calculate.
+External worker may not become broker truth, publication owner, or permission owner.
+```
+
+Snapshot bridge minimum validation by MT5 before consuming worker output:
+
+```text
+request_id
+cycle_id
+schema_version
+input_hash_seen
+freshness
+worker heartbeat
+```
+
+Decision state:
+
+```text
+External calculation worker: PROCEED TO GUIDEBOOK DESIGN
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+WebRequest bridge: HOLD for main runtime bridge
+C/C++ worker: HOLD as later optimization
+Sockets bridge: CONSIDER later
+MT5-only heavy calculations: HOLD as fallback
+```
+
 ## 15. No-Go Patterns
 
 Do not allow:

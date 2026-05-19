@@ -136,7 +136,14 @@ Runtime Owner top-level structure: PROCEED
 23 logical layers under Runtime Owners: PROCEED
 MT5 native-first direction: PROCEED
 Publication-first law: PROCEED
-Timing / heartbeat guidebook: PROCEED TO DISCUSS NEXT
+Timing / heartbeat guidebook: PROCEED
+Completed-run steady-state refresh (30-minute full refresh): PROCEED
+External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+C/C++ worker: HOLD
+WebRequest bridge for main runtime bridge: HOLD
+Sockets bridge for main runtime bridge: CONSIDER
+MT5-only heavy calculations: HOLD
 Bucket-first selection: PROCEED
 Selected evidence only: PROCEED
 Outcome validation required before edge claims: PROCEED
@@ -351,6 +358,25 @@ Migration from docs/ to guidebooks/: HOLD UNTIL APPROVED
 The guidebook set under discussion:
 
 ```text
+Guidebook tracker
+Created: 7
+Total: 16
+Remaining: 9
+
+Planned remaining:
+07 — Governance & Ledger Guidebook
+08 — Score, Formula & Evidence Integrity Guidebook
+09 — Bucket Universe & Taxonomy Guidebook
+10 — Selection & Basket Construction Guidebook
+11 — Alerts, Permission & Safety Guidebook
+12 — Validation & Outcome Guidebook
+13 — External Worker & Calculation Bridge Guidebook
+14 — MT5 Function Guidebook
+15 — Anti-Drift & Source-of-Truth Guidebook
+```
+
+
+```text
 00 — Main Page Guidebook
 01 — Handoff & Continuity Guidebook
 02 — Runtime Owner Guidebook
@@ -364,8 +390,9 @@ The guidebook set under discussion:
 10 — Selection & Basket Construction Guidebook
 11 — Alerts, Permission & Safety Guidebook
 12 — Validation & Outcome Guidebook
-13 — MT5 Function Guidebook
-14 — Anti-Drift & Source-of-Truth Guidebook
+13 — External Worker & Calculation Bridge Guidebook
+14 — MT5 Function Guidebook
+15 — Anti-Drift & Source-of-Truth Guidebook
 ```
 
 Potential issue:
@@ -532,6 +559,74 @@ Likely candidate: Timing, Heartbeat & Breathing Spine Guidebook.
 
 ---
 
+
+## 13A. External Worker Boundary Law (Design-Stage Only)
+
+```text
+External calculation worker: PROCEED TO GUIDEBOOK DESIGN
+External worker implementation status: UNPROVEN
+External worker is not production-approved, not coded, and grants no trading permission.
+```
+
+MT5 owns:
+
+```text
+broker truth
+account truth
+symbol universe truth
+quote/session truth
+selected raw source snapshots
+publication surfaces
+permission blocks
+file route ownership
+worker health monitoring
+schema/freshness validation
+operator display
+```
+
+External Worker may own:
+
+```text
+heavy calculations
+ranking transforms if assigned
+correlation matrices
+bucket heat calculations
+large taxonomy processing
+selected evidence transforms
+statistical summaries
+validation/outcome calculations later
+```
+
+External Worker must not own:
+
+```text
+broker truth
+live account truth
+order sending
+trade permission
+publication routes
+final Board/Dossier writing
+final source-of-truth labels without MT5 validation
+```
+
+```text
+External worker may calculate.
+External worker may not become broker truth, publication owner, or permission owner.
+```
+
+Bridge design notes:
+
+```text
+Best first candidate: Python Worker + file snapshot bridge.
+WebRequest bridge for main runtime bridge: HOLD (synchronous/blocking, allowed URLs required, not available in Strategy Tester).
+C/C++ worker: HOLD unless Python/file bridge proves insufficient.
+```
+
+References:
+- https://www.mql5.com/en/docs/event_handlers/ontimer
+- https://www.mql5.com/en/docs/network/webrequest
+- https://www.mql5.com/en/docs/python_metatrader5
+
 ## 14. Copy/Paste Restart Prompt for Future Chat
 
 Use this if the conversation becomes bloated:
@@ -560,6 +655,14 @@ Current locked structure:
 - Edge claims are UNPROVEN.
 - Setup strategy is QUARANTINE.
 - Auto-trading is BLOCKED.
+- Completed-run full refresh cadence is every 30 minutes.
+- Heartbeat / publication / critical risk checks continue between refreshes.
+- External Worker & Calculation Bridge Guidebook is planned (not created yet).
+- Guidebook tracker: Created 7 / Total 16 / Remaining 9.
+- External worker is design-stage only.
+- Python + file snapshot bridge is BEST FIRST CANDIDATE.
+- MT5 owns broker truth and publication.
+- External worker may calculate but may not become broker truth, publication owner, or permission owner.
 
 Current files created:
 - README.md

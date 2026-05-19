@@ -213,6 +213,58 @@ exit cleanly
 
 ---
 
+
+## 5A. Completed-Run Steady-State Refresh
+
+```text
+After a full successful run reaches runtime_normal / run_complete, AURORA CORE enters steady-state refresh mode.
+run_complete ≠ system asleep.
+```
+
+## 5B. 30-Minute Full Refresh Cadence
+
+```text
+Completed-run full refresh = every 30 minutes.
+Do not lock every lane sub-cadence here yet.
+Lock only the high-level full-system refresh cadence and liveness law.
+```
+
+## 5C. Between-Refresh Liveness
+
+Between full refreshes, the runtime must keep truth visible:
+
+```text
+heartbeat remains alive
+Board still prints health
+critical account/risk/terminal/file-write states still update
+stale/degraded states remain visible
+Recovery Lane may continue bounded retry work
+Heartbeat / publication / critical risk checks continue between refreshes
+```
+
+## 5D. External Worker Health Monitoring (If Enabled)
+
+```text
+If external_worker_enabled = true, monitor worker heartbeat and output freshness between 30-minute full refresh cycles.
+Worker health monitoring remains MT5-owned.
+Worker calculation outputs remain optional unless a downstream owner marks them required.
+```
+
+Bridge guidance status:
+
+```text
+External calculation worker: PROCEED TO GUIDEBOOK DESIGN
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+WebRequest bridge for main runtime bridge: HOLD
+C/C++ worker: HOLD
+Sockets bridge: CONSIDER
+```
+
+References:
+- https://www.mql5.com/en/docs/event_handlers/ontimer
+- https://www.mql5.com/en/docs/network/webrequest
+- https://www.mql5.com/en/docs/python_metatrader5
+
 ## 6. Breathing Spine Model
 
 AURORA CORE uses a breathing model for runtime rhythm.

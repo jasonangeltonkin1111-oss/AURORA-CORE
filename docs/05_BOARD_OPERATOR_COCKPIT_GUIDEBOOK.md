@@ -133,6 +133,7 @@ selected evidence progress
 heatmap status
 publication status
 permission/alert state
+external worker status if enabled
 warnings/action needed
 ```
 
@@ -504,6 +505,32 @@ live_allowed = false
 ```
 
 ---
+
+## 17A. External Worker Status Section
+
+Future Board-visible fields (if worker bridge is enabled):
+
+```text
+external_worker_enabled
+external_worker_status
+last_worker_seen
+last_worker_request_id
+last_worker_completed_request_id
+worker_result_freshness
+worker_calculation_duration_ms
+worker_degraded_reason
+```
+
+Rules:
+
+```text
+Board must show when worker is stale/offline/failed if worker outputs are needed.
+Board must not hide worker failure.
+Board must not imply calculations are fresh when worker output is stale.
+run_complete ≠ system asleep
+Completed-run full refresh = every 30 minutes.
+Heartbeat / publication / critical risk checks continue between refreshes.
+```
 
 ## 18. Warnings / Action Needed Section
 
