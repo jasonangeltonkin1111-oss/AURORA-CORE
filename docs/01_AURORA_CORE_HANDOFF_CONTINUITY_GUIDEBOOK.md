@@ -21,7 +21,7 @@ what has already been decided
 what is locked
 what is still open
 what guidebooks exist
-what guidebooks are planned
+whether any future guidebooks are proposed
 what folder structure is under discussion
 what the next strongest work should be
 what must not be claimed
@@ -130,7 +130,6 @@ docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
 docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
 docs/14_MT5_FUNCTION_GUIDEBOOK.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
 ```
 
 Important note:
@@ -528,17 +527,14 @@ summarize changed path and commit SHA
 If a new chat must continue this work, start by reading:
 
 ```text
-README.md
-docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
-docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/03_RUNTIME_OWNER_GUIDEBOOK.md
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-docs/06_DOSSIER_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+Read first:
+- README.md
+- docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+- docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+
+Then read the relevant guidebook(s) for the requested task from docs/02 through docs/15.
+
+The full 16-book overview set exists.
 ```
 
 Then confirm:
@@ -556,11 +552,11 @@ file creation discipline
 
 Then ask or infer which task is next.
 
-If the user says "continue the books", the next chat should continue from:
+If the user says "continue the books", first run a consistency audit.
 
 ```text
-Discuss and refine the next overview guidebook before creating it.
-Likely candidate: Timing, Heartbeat & Breathing Spine Guidebook.
+The current 16-book overview set is complete.
+Next work should move to folder-structure decision, blueprint/control/schema planning, or source implementation planning — only after reading the current guidebooks and confirming scope.
 ```
 
 ---
