@@ -396,8 +396,9 @@ Outcome evidence begins edge validation.
 Current tracker state:
 
 ```text
-Created: 10 / 16
-Remaining: 6 / 16
+Created: 16 / 16
+Remaining: 0 / 16
+Status: Overview guidebook set complete.
 ```
 
 Created guidebooks:
@@ -413,11 +414,6 @@ Created guidebooks:
 07 — Governance & Ledger Guidebook
 08 — Score, Formula & Evidence Integrity Guidebook
 09 — Bucket Universe & Taxonomy Guidebook
-```
-
-Remaining guidebooks:
-
-```text
 10 — Selection & Basket Construction Guidebook
 11 — Alerts, Permission & Safety Guidebook
 12 — Validation & Outcome Guidebook
@@ -438,20 +434,19 @@ Do not migrate files in this phase.
 
 ### 13 — External Worker & Calculation Bridge Guidebook
 
-Planned file:
+Status: CREATED
 
 ```text
 docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
 ```
 
-Owns:
+Role:
 
 ```text
-external worker boundary law
-bridge contract fields
-worker request/response snapshot contracts
-MT5 validation gates before worker output use
-worker heartbeat/degraded status language
+external calculation boundary
+bridge protocol
+worker validation
+anti-shadow-brain law
 ```
 
 Decision state:
@@ -469,18 +464,36 @@ MT5-only heavy calculations: HOLD as fallback, not preferred long-term
 
 ### 14 — MT5 Function Guidebook
 
-Planned file:
+Status: CREATED
 
 ```text
 docs/14_MT5_FUNCTION_GUIDEBOOK.md
+```
+
+Role:
+
+```text
+native MT5/MQL5 function map
+owner/lane/cadence rules
+function adoption boundary
 ```
 
 ---
 
 ### 15 — Anti-Drift & Source-of-Truth Guidebook
 
-Planned file:
+Status: CREATED
 
 ```text
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+```
+
+Role:
+
+```text
+final source-of-truth hierarchy
+anti-shadow-owner law
+contradiction handling
+Codex drift controls
+no-fake-proof doctrine
 ```
