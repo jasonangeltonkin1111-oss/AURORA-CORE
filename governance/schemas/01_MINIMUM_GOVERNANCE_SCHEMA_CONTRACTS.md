@@ -1,0 +1,453 @@
+# AURORA CORE — MINIMUM GOVERNANCE SCHEMA CONTRACTS
+
+**System:** AURORA CORE  
+**Role:** Minimum runtime proof schemas required before first MT5 source implementation, including manifest, runtime telemetry, owner status, and layer status.  
+**Status:** FOUNDATION CONTRACT — required before MT5 Layer 1 source implementation starts.
+
+---
+
+## 0. Purpose
+
+This contract defines the minimum governance schemas needed before Aurora starts real MT5 source implementation.
+
+The goal is simple:
+
+```text
+If Aurora prints, pulses, owns, or progresses, it must be able to prove it.
+```
+
+Minimum schemas for Layer 1 source readiness:
+
+```text
+manifest
+runtime telemetry
+owner status
+layer status
+```
+
+Core law:
+
+```text
+No ledger, no proof.
+No schema, no trustworthy ledger.
+```
+
+---
+
+## 1. Research Foundation
+
+Operational monitoring distinguishes metrics, logs, traces, and dashboards. Aurora does not need a full external observability stack yet, but it does need stable row schemas for runtime proof.
+
+Reference:
+
+```text
+https://opentelemetry.io/docs/concepts/signals/
+```
+
+Prometheus instrumentation guidance favors stable metric names with labels rather than generated metric names for each object. Aurora applies the same idea to CSV/JSON-like governance rows: use stable columns and symbol/owner/layer labels instead of changing field names dynamically.
+
+Reference:
+
+```text
+https://prometheus.io/docs/practices/instrumentation/
+```
+
+MQL5 `OnTimer()` runtime behavior makes telemetry mandatory. Timer events are not queued if one is already queued or processing, so Aurora needs runtime telemetry to prove heartbeat duration, pressure, and starvation risk.
+
+Reference:
+
+```text
+https://www.mql5.com/en/docs/event_handlers/ontimer
+```
+
+Aurora translation:
+
+```text
+Schemas must prove file publication, heartbeat health, owner state, and layer state before source claims become credible.
+```
+
+---
+
+## 2. What This Contract Owns
+
+This contract owns:
+
+```text
+minimum governance schema set
+common schema fields
+manifest schema contract
+runtime telemetry schema contract
+owner status schema contract
+layer status schema contract
+status values
+freshness values
+Layer 1 proof requirements
+schema no-go rules
+```
+
+---
+
+## 3. What This Contract Must Not Own
+
+This contract must not own:
+
+```text
+runtime-generated CSV spam
+actual live outputs
+MT5 implementation code
+trading permission
+edge validation proof
+all future schemas
+```
+
+Repo stores schema contracts and examples.
+
+Runtime-generated outputs belong in MT5 Files output locations later, not committed to Git unless explicitly added as evidence samples.
+
+---
+
+## 4. Common Required Fields
+
+Every governance row should include where applicable:
+
+```text
+schema_name
+schema_version
+cycle_id
+heartbeat_id
+generated_at
+source_owner
+source_layer
+status
+freshness_state
+degraded_reason
+blocked_reason
+```
+
+Schema version starts at:
+
+```text
+v0.1
+```
+
+Version changes are required when field meaning changes.
+
+---
+
+## 5. Common Status Values
+
+Allowed common statuses:
+
+```text
+not_started
+attempted
+shell_printed
+filling
+partial
+complete
+complete_with_degraded
+stale
+blocked
+failed
+unavailable
+```
+
+Do not invent new status words casually.
+
+If new status is required, update schema version.
+
+---
+
+## 6. Common Freshness Values
+
+Freshness states:
+
+```text
+fresh
+aging
+stale
+expired
+unknown
+not_applicable
+```
+
+Freshness must not be implied by file existence.
+
+---
+
+## 7. Manifest Schema Contract
+
+Purpose:
+
+```text
+Prove what physical file publication attempted and what happened.
+```
+
+Minimum fields:
+
+```text
+schema_name
+schema_version
+file_id
+surface
+route_key
+final_path
+temp_path
+write_started_at
+write_finished_at
+bytes_written
+final_exists
+final_size
+write_status
+degraded_state
+source_owner
+source_layer
+source_cycle_id
+source_heartbeat_id
+publication_owner_status
+blocked_reason
+degraded_reason
+```
+
+Allowed write_status values:
+
+```text
+not_attempted
+temp_open_failed
+temp_write_failed
+flush_failed
+close_failed
+move_failed
+verify_failed
+manifest_failed
+file_written_clean
+file_written_partial
+file_written_degraded
+```
+
+Manifest proves physical publication state.
+
+Manifest does not prove data correctness, trading edge, or runtime safety by itself.
+
+---
+
+## 8. Runtime Telemetry Schema Contract
+
+Purpose:
+
+```text
+Prove heartbeat/runtime pressure, timer duration, task progress, and fake-alive risk.
+```
+
+Minimum fields:
+
+```text
+schema_name
+schema_version
+cycle_id
+heartbeat_id
+timer_started_at
+timer_finished_at
+timer_duration_ms
+timer_budget_ms
+over_budget_flag
+runtime_state
+breath_phase
+owner_executed
+lane_executed
+tasks_due_count
+tasks_executed_count
+tasks_deferred_count
+oldest_starved_task_age_seconds
+publication_completed_flag
+board_write_age_seconds
+recovery_pending_count
+fake_alive_risk_flag
+```
+
+Layer 1 may start with simple telemetry fields, but must preserve schema-compatible naming.
+
+Runtime telemetry proves observed runtime state only when generated by actual runtime.
+
+---
+
+## 9. Owner Status Schema Contract
+
+Purpose:
+
+```text
+Prove Runtime Owner state and progress.
+```
+
+Minimum fields:
+
+```text
+schema_name
+schema_version
+cycle_id
+heartbeat_id
+owner_id
+owner_name
+owner_status
+last_attempt_at
+last_success_at
+freshness_state
+pending_count
+partial_count
+degraded_count
+blocked_count
+failed_count
+primary_output_available
+last_publication_state
+degraded_reason
+blocked_reason
+```
+
+For Layer 1 first source, at minimum:
+
+```text
+owner_id = foundation_truth_owner
+owner_name = Foundation Truth Owner
+owner_status = shell_printed / partial / complete / failed
+```
+
+---
+
+## 10. Layer Status Schema Contract
+
+Purpose:
+
+```text
+Prove logical layer state and progress under its Runtime Owner.
+```
+
+Minimum fields:
+
+```text
+schema_name
+schema_version
+cycle_id
+heartbeat_id
+layer_id
+layer_name
+source_owner
+layer_status
+freshness_state
+complete_count
+partial_count
+degraded_count
+blocked_count
+failed_count
+primary_output_available
+degraded_reason
+blocked_reason
+```
+
+For Layer 1 first source:
+
+```text
+layer_id = 1
+layer_name = Account / Portfolio / Prop Rule Truth
+source_owner = Foundation Truth Owner
+```
+
+---
+
+## 11. Layer 1 Minimum Proof Set
+
+Before Layer 1 source can claim runtime progress, it must generate or plan to generate:
+
+```text
+one manifest row for its publication surface
+one runtime telemetry row per heartbeat/publication cycle
+one owner status row for Foundation Truth Owner
+one layer status row for Layer 1
+```
+
+If runtime generation is not yet implemented:
+
+```text
+schema_status = drafted_only
+runtime_proof = false
+```
+
+---
+
+## 12. Stable Schema Rules
+
+Use stable columns and labels.
+
+Bad:
+
+```text
+EURUSD_status
+GBPUSD_status
+XAUUSD_status
+```
+
+Good:
+
+```text
+symbol,status,owner,layer
+EURUSD,complete,Foundation Truth Owner,Market Watch Truth
+```
+
+Do not generate schema columns dynamically per symbol, owner, or score.
+
+---
+
+## 13. File Format Position
+
+The first schema contract is format-neutral but should be easy to publish as:
+
+```text
+CSV
+JSON-like text
+plain text table
+```
+
+Layer 1 should prefer the simplest format that is easy for MT5 to write and easy for a human to audit.
+
+Do not choose complex formats before FileIO works.
+
+---
+
+## 14. No-Go Patterns
+
+Do not allow:
+
+```text
+runtime proof claim without generated rows
+manifest success when file failed
+owner complete when layer failed
+layer complete when primary output missing
+file existence treated as data correctness
+schema fields changing without version change
+runtime generated outputs committed to Git as normal source
+```
+
+---
+
+## 15. Acceptance Criteria
+
+This contract is acceptable if:
+
+```text
+minimum schemas are defined
+common fields are defined
+status/freshness values are defined
+manifest proves publication attempt/result
+runtime telemetry proves heartbeat pressure
+owner status proves owner progress
+layer status proves layer progress
+Layer 1 minimum proof set is defined
+schema existence does not claim runtime proof
+```
+
+---
+
+## 16. Final Minimum Schema Law
+
+```text
+Before Aurora says it happened, Aurora must know how it would prove it happened.
+```
