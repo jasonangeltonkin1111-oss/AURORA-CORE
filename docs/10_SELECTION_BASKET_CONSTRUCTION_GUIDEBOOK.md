@@ -1,8 +1,8 @@
-# AURORA CORE - SELECTION AND RANKING GROUP GUIDEBOOK
+# AURORA CORE - SELECTION DESK AND RANKING GROUP GUIDEBOOK
 
 **System:** AURORA CORE  
-**Role:** Selection taxonomy contract, Ranking Group authority, candidate-pool construction, diversification/correlation control, Global Top 10 inspection basket, backup fill, and selection-ledger authority.  
-**Status:** RUN016 direction lock. This replaces old major/minor/bucket wording.
+**Role:** Selection Desk folder contract, taxonomy naming contract, Ranking Group authority, candidate-pool construction, diversification/correlation control, Global Top 10 inspection basket, backup fill, and selection-ledger authority.  
+**Status:** Professional contract lock. This replaces old major/minor/bucket wording for new active work.
 
 ---
 
@@ -66,15 +66,17 @@ review_lane
 block_reason
 ```
 
-Old names are dead in new work:
+Old names are retired for active source fields, route names, and publication labels:
 
 ```text
 major_bucket
 minor_bucket
 aggregation_group
+bucket_top5
+sub_bucket_top5
 ```
 
-Do not reintroduce them as active source fields, route names, or publication labels.
+Do not reintroduce them as active source fields, route names, or operator-facing publication labels.
 
 ---
 
@@ -159,14 +161,50 @@ Use ranking_group for selection/cap/diversification rules unless a later owner e
 
 ---
 
-## 4. What This Guidebook Owns
+## 4. Selection Desk Folder Contract
+
+Runtime 7 Publication Owner owns the folder routes.
+
+Allowed current placeholder folders:
+
+```text
+Selection Desk/Ranking Group Top 5/
+Selection Desk/Global Top 10/
+```
+
+Required placeholder file metadata:
+
+```text
+placeholder_status=structure_only
+truth_status=no_runtime_truth_yet
+ranking_group_runtime=false
+selection_logic_runtime=false
+trade_permission=false
+scope_guard=no_symbols_no_ranking_no_selection_claim_no_strategy_no_execution
+```
+
+No placeholder may imply ranked symbols, live selection, trade permission, edge, or prop-firm readiness.
+
+The Dossiers folder contract stays separate and must not be renamed by Selection Desk work:
+
+```text
+Dossiers/
+Dossiers/Open/
+Dossiers/Closed/
+Dossiers/Unknown/
+```
+
+---
+
+## 5. What This Guidebook Owns
 
 This guidebook owns:
 
 ```text
 taxonomy naming contract
+Selection Desk folder naming contract
 ranking_group selection authority
-ranking_group Top 5 later
+Ranking Group Top 5 later
 candidate pool later
 dynamic ranking_group selection later
 correlation / overlap filtering later
@@ -183,12 +221,12 @@ selection ledger requirements later
 
 ---
 
-## 5. What This Guidebook Must Not Own
+## 6. What This Guidebook Must Not Own
 
 This guidebook must not own:
 
 ```text
-FileIO routes
+FileIO implementation
 Runtime 0 heartbeat/governance proof
 Runtime 1 account truth
 surface score formulas
@@ -203,31 +241,6 @@ trade execution
 Selection chooses attention.
 
 Selection does not approve trading.
-
----
-
-## 6. Selection Desk Placeholder Contract
-
-The current EA may print structure placeholders before real ranking exists.
-
-Allowed placeholder folders:
-
-```text
-Selection Desk/Ranking Group Top 5/
-Selection Desk/Global Top 10/
-```
-
-Placeholder files must say:
-
-```text
-placeholder_status=structure_only
-truth_status=no_runtime_truth_yet
-ranking_group_runtime=false
-selection_logic_runtime=false
-trade_permission=false
-```
-
-No placeholder may imply a ranked symbol exists.
 
 ---
 
@@ -458,17 +471,19 @@ Asset Class -> Market Group -> Market Segment -> Symbol
 Ranking Group = EA selection/cap/diversification bucket
 ```
 
-Old active names are killed:
+Retired active names:
 
 ```text
 major_bucket
 minor_bucket
 aggregation_group
+bucket_top5
+sub_bucket_top5
 ```
 
 Current status:
 
 ```text
-RUN016 locks the naming contract and route placeholder direction.
-No real ranking, selection, candidate pool, or trade permission exists yet.
+This contract locks the professional naming and route placeholder direction.
+No real ranking, selection, candidate pool, strategy, execution, edge proof, or trade permission exists yet.
 ```
