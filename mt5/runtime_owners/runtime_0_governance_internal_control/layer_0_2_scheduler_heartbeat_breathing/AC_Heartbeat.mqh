@@ -1,8 +1,7 @@
 #ifndef AC_HEARTBEAT_MQH
 #define AC_HEARTBEAT_MQH
 
-#include "../../../core/AC_Config.mqh"
-#include "../../../core/AC_CommonTypes.mqh"
+// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
 
 long AC_HEARTBEAT_ID = 0;
 
