@@ -31,6 +31,11 @@ int AC_FileFlags()
    return flags;
 }
 
+int AC_CommonFlag()
+{
+   return AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+}
+
 string AC_ServerNameForRoute()
 {
    string server = AccountInfoString(ACCOUNT_SERVER);
@@ -88,7 +93,6 @@ bool AC_EnsureFolderPath(const string folder_path, string &detail)
    }
 
    string current = "";
-   bool ok = true;
    detail = "folder_create_attempted";
 
    for(int i = 0; i < count; i++)
@@ -101,22 +105,19 @@ bool AC_EnsureFolderPath(const string folder_path, string &detail)
          current = current + "\\" + parts[i];
 
       ResetLastError();
-      if(!FolderCreate(current, AC_USE_COMMON_FILES ? FILE_COMMON : 0))
+      bool created = FolderCreate(current, AC_CommonFlag());
+      int err = GetLastError();
+      if(!created && err != 0)
       {
-         int err = GetLastError();
-         // FolderCreate can fail when folder already exists on some builds/environments.
-         // Treat existing/usable folder as acceptable by probing with a tiny temp file later.
-         if(err != 0)
-         {
-            detail = "folder_create_failed_at=" + current + ";error=" + IntegerToString(err);
-            ok = false;
-         }
+         // FolderCreate may report failure when the folder already exists.
+         // Runtime usability is proven by the later temp-to-final file write.
+         detail += ";folder_create_warning_at=" + current + ";error=" + IntegerToString(err);
       }
    }
 
-   if(ok)
-      detail = "folder_create_ok";
-   return ok;
+   if(detail == "folder_create_attempted")
+      detail = "folder_create_attempted_no_errors";
+   return true;
 }
 
 bool AC_EnsureRuntimeFolders(string &detail)
