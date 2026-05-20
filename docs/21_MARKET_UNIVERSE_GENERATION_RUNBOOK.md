@@ -108,6 +108,17 @@ strict_rank_allowed_rows=1294
 public_research_rank_allowed_rows=224
 review_only_rows=184
 blocked_rows=1
+review_or_blocked_rows=185
+duplicate_primary_key_count=0
+```
+
+Definitions:
+
+```text
+review_only_rows = rows where review_lane starts with REVIEW_ONLY
+blocked_rows = rows where review_lane equals BLOCKED_NOT_RANKABLE
+review_or_blocked_rows = review_only_rows + blocked_rows
+primary_key = server|broker_file|broker_symbol
 ```
 
 If any count differs, do not patch around it.
@@ -122,6 +133,7 @@ blank/duplicate broker_symbol rows
 strict_rank_allowed/public_research_rank_allowed fields
 review_lane values
 blocked row identity
+primary key construction
 ```
 
 ---
@@ -137,11 +149,19 @@ mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRo
 It must contain:
 
 ```text
+AC_UNIVERSE_GENERATED_SCHEMA_VERSION
+AC_UNIVERSE_ROW_SCHEMA
+AC_UNIVERSE_SOURCE_FILE_SHA256
+AC_UNIVERSE_HEADER_SHA256
+AC_UNIVERSE_ROW_SCHEMA_SHA256
+AC_UNIVERSE_LOOKUP_KEY_SCHEMA
 AC_UNIVERSE_GENERATED_ROW_COUNT = 1703
 AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = 1294
 AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = 224
 AC_UNIVERSE_GENERATED_REVIEW_ONLY = 184
 AC_UNIVERSE_GENERATED_BLOCKED = 1
+AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = 185
+AC_UNIVERSE_GENERATED_DUPLICATE_PRIMARY_KEYS = 0
 AC_UniverseGeneratedRow(index)
 ```
 
@@ -157,7 +177,31 @@ not prop-firm readiness
 
 ---
 
-## 5. Required Runtime 2 Follow-Up Patch After Rows Land
+## 5. Required Audit JSON Properties
+
+`docs/market_universe_generation_audit.json` must contain:
+
+```text
+source_file_sha256
+header_sha256
+row_schema_sha256
+lookup_key_schema=server|broker_file|broker_symbol
+first_broker_symbol
+last_broker_symbol
+counts.total_rows=1703
+counts.duplicate_primary_key_count=0
+runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
+ranking_runtime=false
+selection_runtime=false
+trade_permission=false
+prop_firm_readiness=false
+```
+
+This audit JSON is not compile proof or runtime proof. It only proves the generator completed against the local workbook source and wrote expected files.
+
+---
+
+## 6. Required Runtime 2 Follow-Up Patch After Rows Land
 
 After `AC_MarketUniverseRows.mqh` is committed, patch `AC_MarketUniverse.mqh` to include it and switch diagnostics from skeleton-only to generated-copy mode.
 
@@ -178,6 +222,17 @@ AC_UniverseBlockedCount() -> AC_UNIVERSE_GENERATED_BLOCKED
 AC_UniverseRowsGenerated() -> true
 ```
 
+Also expose generated metadata in Runtime 2 diagnostics:
+
+```text
+source_file_sha256
+header_sha256
+row_schema_sha256
+lookup_key_schema
+review_or_blocked_count
+duplicate_primary_key_count
+```
+
 Do not change Selection Desk routes.
 
 Do not add FileIO ownership to Runtime 2.
@@ -186,7 +241,7 @@ Do not add ranking, scoring, selection, signal, alert, strategy, or execution lo
 
 ---
 
-## 6. Compile Risk Sniff Before MetaEditor
+## 7. Compile Risk Sniff Before MetaEditor
 
 Before compiling, inspect for:
 
@@ -208,7 +263,7 @@ Fallback design must preserve one Runtime 2 owner and may use smaller chunked in
 
 ---
 
-## 7. MetaEditor Compile Acceptance
+## 8. MetaEditor Compile Acceptance
 
 Compile target:
 
@@ -237,7 +292,7 @@ Compile success proves only build compatibility.
 
 ---
 
-## 8. Runtime Smoke Acceptance
+## 9. Runtime Smoke Acceptance
 
 After compile, attach/run in MT5 and verify output files publish.
 
@@ -262,6 +317,8 @@ strict_rank_allowed_count=1294
 public_research_rank_allowed_count=224
 review_only_count=184
 blocked_count=1
+review_or_blocked_count=185
+duplicate_primary_key_count=0
 old_field_names_active=false
 runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
 ranking_group_runtime=false
@@ -271,7 +328,7 @@ trade_permission=false
 
 ---
 
-## 9. Rollback Plan
+## 10. Rollback Plan
 
 If generation is bad:
 
@@ -294,7 +351,7 @@ no runtime/trading claims
 
 ---
 
-## 10. Forbidden Outcomes
+## 11. Forbidden Outcomes
 
 Do not allow:
 
@@ -306,6 +363,7 @@ Runtime 2 owning FileIO or routes
 Selection Desk folder renamed away from Groups / Global / Selection Index.txt
 rank numbers, Top-N labels, or cycle IDs becoming parent folder names
 row count mismatch hidden or patched around
+source/header/schema hashes missing from audit
 compile success sold as runtime proof
 runtime placeholder sold as ranking/selection proof
 trade permission or prop-firm readiness claimed
@@ -313,7 +371,7 @@ trade permission or prop-firm readiness claimed
 
 ---
 
-## 11. Decision Gate
+## 12. Decision Gate
 
 Current state before running this runbook:
 
