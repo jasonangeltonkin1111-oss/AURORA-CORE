@@ -83,6 +83,11 @@ string AC_DiagnosticsPath()
    return AC_WorkbenchFolder() + "\\Diagnostics.txt";
 }
 
+string AC_UpgradeLogPath()
+{
+   return AC_WorkbenchFolder() + "\\Upgrade Log.txt";
+}
+
 bool AC_EnsureFolderPath(const string folder_path, string &detail)
 {
    string parts[];
