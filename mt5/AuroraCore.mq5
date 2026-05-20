@@ -166,7 +166,7 @@ void AC_PublishRuntime0()
    phase_start = GetTickCount();
    string folder_detail = "";
    bool folders_ok = AC_EnsureRuntimeFolders(folder_detail);
-   AC_SNAPSHOT.folder_create_status = folders_ok ? "folder_create_ok" : "folder_create_failed";
+   AC_SNAPSHOT.folder_create_status = AC_FolderStatusFromDetail(folders_ok, folder_detail);
    if(!folders_ok)
    {
       AC_SNAPSHOT.file_publication_blocked = true;
