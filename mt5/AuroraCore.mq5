@@ -1,14 +1,14 @@
 #property strict
-#property version   "0.001"
+#property version   "0.010"
 #property description "AURORA CORE — Runtime 0 first source slice"
 
-#include "core/AC_Config.mqh"
-#include "core/AC_CommonTypes.mqh"
-#include "runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh"
-#include "runtime_owners/runtime_7_publication_owner/publication_fileio/AC_FileIO.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_1_startup_runtime_identity/AC_RuntimeIdentity.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
+#include <AURORA-CORE/mt5/core/AC_Config.mqh>
+#include <AURORA-CORE/mt5/core/AC_CommonTypes.mqh>
+#include <AURORA-CORE/mt5/runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh>
+#include <AURORA-CORE/mt5/runtime_owners/runtime_7_publication_owner/publication_fileio/AC_FileIO.mqh>
+#include <AURORA-CORE/mt5/runtime_owners/runtime_0_governance_internal_control/layer_0_1_startup_runtime_identity/AC_RuntimeIdentity.mqh>
+#include <AURORA-CORE/mt5/runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh>
+#include <AURORA-CORE/mt5/runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh>
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
 
