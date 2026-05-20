@@ -1,0 +1,20 @@
+# AURORA CORE local-only workbook/input safety
+# Keep source workbooks and temporary local generation inputs out of Git.
+
+local_inputs/*
+!local_inputs/.gitkeep
+
+*.xlsx
+*.xlsm
+*.xls
+~$*
+
+# Python/tooling local noise
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# MT5/editor local outputs
+*.ex5
+*.log
+*.tmp
