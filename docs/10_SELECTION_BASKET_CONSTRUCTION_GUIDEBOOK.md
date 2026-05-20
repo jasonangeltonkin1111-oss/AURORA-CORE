@@ -1,8 +1,8 @@
-# AURORA CORE - SELECTION DESK AND RANKING GROUP GUIDEBOOK
+# AURORA CORE - SELECTION DESK AND GROUP SELECTION GUIDEBOOK
 
 **System:** AURORA CORE  
-**Role:** Selection Desk folder contract, taxonomy naming contract, Ranking Group authority, candidate-pool construction, diversification/correlation control, Global Top 10 inspection basket, backup fill, and selection-ledger authority.  
-**Status:** Professional contract lock. This replaces old major/minor/bucket wording for new active work.
+**Role:** Selection Desk stable parent-folder contract, taxonomy naming contract, group authority, candidate-pool construction, diversification/correlation control, global inspection basket, backup fill, and selection-ledger authority.  
+**Status:** Professional stable-parent contract lock. This replaces old major/minor/bucket wording and removes Top-N numbering from parent folder names.
 
 ---
 
@@ -14,7 +14,7 @@ The permanent taxonomy contract is:
 
 ```text
 asset_class -> market_group -> market_segment -> symbol
-ranking_group = EA-safe aggregation group used for caps, selection, diversification, and Top 5 / Top 10 logic
+ranking_group = EA-safe group field used for caps, selection, diversification, and Top-N logic
 ```
 
 Core law:
@@ -22,6 +22,8 @@ Core law:
 ```text
 Selection is attention.
 Selection is not permission.
+Folder parents are stable ownership surfaces.
+Ranking/order/Top-N numbers are child-file content, not parent-folder names.
 Ranking Group is the selection/cap/diversification grouping field.
 Market Segment is classification detail, not automatically the ranking bucket.
 ```
@@ -30,6 +32,7 @@ The enemy:
 
 ```text
 Global Top 10 becomes "best trades".
+Changing rank/order becomes a folder route.
 ```
 
 Kill that language immediately.
@@ -134,7 +137,7 @@ Non-equity symbols must not be forced into equity-style sector naming.
 Ranking Group answers:
 
 ```text
-Which EA-safe aggregation group should this symbol use for ranking, caps, diversification, and selection controls?
+Which EA-safe group should this symbol use for ranking, caps, diversification, and selection controls?
 ```
 
 Market Segment answers:
@@ -165,11 +168,57 @@ Use ranking_group for selection/cap/diversification rules unless a later owner e
 
 Runtime 7 Publication Owner owns the folder routes.
 
-Allowed current placeholder folders:
+Allowed current stable parent folders:
+
+```text
+Selection Desk/Groups/
+Selection Desk/Global/
+```
+
+Forbidden parent folder names:
 
 ```text
 Selection Desk/Ranking Group Top 5/
 Selection Desk/Global Top 10/
+Selection Desk/Top 5/
+Selection Desk/Top 10/
+Selection Desk/Rank 1/
+Selection Desk/Cycle <number>/
+```
+
+Reason:
+
+```text
+Top-N and rank order change over time.
+Changing order must not change route ownership.
+Only child files/rows may carry rank numbers, cycle IDs, and Top-N metadata.
+```
+
+Allowed future pattern:
+
+```text
+Selection Desk/Groups/_INDEX.txt
+Selection Desk/Groups/<stable-group-name>.txt
+Selection Desk/Global/_INDEX.txt
+Selection Desk/Global/Global Selection.txt
+```
+
+The sibling `_INDEX.txt` file may explain:
+
+```text
+cycle_id
+generated_at
+selection_status
+ranking_order_definition
+rank_number_meaning
+top_n_cutoff
+input_source
+expected_child_files
+row_count
+strict/public/review/degraded counts
+reject/backup counts
+runtime_permission=false
+trade_permission=false
 ```
 
 Required placeholder file metadata:
@@ -177,9 +226,11 @@ Required placeholder file metadata:
 ```text
 placeholder_status=structure_only
 truth_status=no_runtime_truth_yet
+selection_parent_runtime=true
 ranking_group_runtime=false
 selection_logic_runtime=false
 trade_permission=false
+route_contract=stable_parent_folder_numbers_live_inside_child_files_not_folder_names
 scope_guard=no_symbols_no_ranking_no_selection_claim_no_strategy_no_execution
 ```
 
@@ -202,15 +253,18 @@ This guidebook owns:
 
 ```text
 taxonomy naming contract
-Selection Desk folder naming contract
+Selection Desk stable parent folder naming contract
 ranking_group selection authority
-Ranking Group Top 5 later
+Groups index later
+Global index later
+group child files later
+global child files later
 candidate pool later
 dynamic ranking_group selection later
 correlation / overlap filtering later
 diversity scoring later
 backup fill later
-Global Top 10 later
+global inspection basket later
 correlation rejects later
 selection hysteresis later
 selection churn control later
@@ -244,29 +298,29 @@ Selection does not approve trading.
 
 ---
 
-## 7. Ranking Group Top 5 vs Global Top 10
+## 7. Groups vs Global
 
-Ranking Group Top 5 answers later:
+Groups answers later:
 
 ```text
-Which symbols are strongest alternatives inside this ranking_group?
+Which symbols are strongest alternatives inside each stable ranking_group?
 ```
 
-Global Top 10 answers later:
+Global answers later:
 
 ```text
 Which selected candidates form the best diversified inspection basket right now?
 ```
 
-Ranking Group Top 5 must remain visible even if a symbol is not in Global Top 10.
+Group files must remain visible even if a symbol is not in the global basket.
 
-Correlation rejection from Global Top 10 must not erase the symbol from its ranking group list.
+Correlation rejection from Global must not erase the symbol from its group list.
 
 ---
 
 ## 8. Candidate Pool Contract
 
-Candidate pool should be built from ranking group leaders.
+Candidate pool should be built from group leaders.
 
 Wrong:
 
@@ -279,9 +333,9 @@ Correct later:
 ```text
 rank inside ranking_group
 select active/valid ranking_groups
-build candidate pool from ranking_group leaders
+build candidate pool from group leaders
 apply diversity/correlation controls
-build Global Top 10
+build global inspection basket
 publish rejects/backups
 ```
 
@@ -294,9 +348,9 @@ asset_class
 market_group
 market_segment
 ranking_group
-ranking_group_rank
+rank_in_group
 surface_score_summary
-ranking_group_heat_score
+group_heat_score
 candidate_reason
 candidate_status
 data_quality_status
@@ -304,22 +358,22 @@ data_quality_status
 
 ---
 
-## 9. Dynamic Ranking Group Selection Contract
+## 9. Dynamic Group Selection Contract
 
-Dynamic ranking group selection may consider later:
+Dynamic group selection may consider later:
 
 ```text
-ranking_group_heat
-ranking_group_strength
-ranking_group_quality
-ranking_group_activity
-ranking_group_cost
-ranking_group_movement
-ranking_group_degraded_count
-ranking_group_backup_depth
+group_heat
+group_strength
+group_quality
+group_activity
+group_cost
+group_movement
+group_degraded_count
+group_backup_depth
 ```
 
-Dynamic ranking groups are selected for inspection coverage.
+Dynamic groups are selected for inspection coverage.
 
 They are not trading sectors.
 
@@ -411,14 +465,14 @@ Publish weak evidence as weak.
 
 ## 13. Backup Fill Rules
 
-Backup fill is used later when Global Top 10 cannot be filled cleanly from primary candidates.
+Backup fill is used later when Global cannot be filled cleanly from primary candidates.
 
 Backup fill must record:
 
 ```text
 backup_fill_used
 backup_symbol
-backup_source_ranking_group
+backup_source_group
 backup_reason
 backup_rank
 backup_data_quality_status
@@ -468,7 +522,9 @@ Use:
 
 ```text
 Asset Class -> Market Group -> Market Segment -> Symbol
-Ranking Group = EA selection/cap/diversification bucket
+Ranking Group = EA selection/cap/diversification group field
+Selection Desk/Groups = stable parent for per-group child files and index metadata
+Selection Desk/Global = stable parent for global child files and index metadata
 ```
 
 Retired active names:
@@ -484,6 +540,6 @@ sub_bucket_top5
 Current status:
 
 ```text
-This contract locks the professional naming and route placeholder direction.
+This contract locks professional naming and stable parent routes.
 No real ranking, selection, candidate pool, strategy, execution, edge proof, or trade permission exists yet.
 ```
