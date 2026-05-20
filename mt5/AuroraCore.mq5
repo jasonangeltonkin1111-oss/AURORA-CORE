@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.017"
-#property description "AURORA CORE - Selection Desk Ranking Group placeholder contract"
+#property version   "0.018"
+#property description "AURORA CORE - Runtime 2 universe lookup owner skeleton"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -10,6 +10,7 @@
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh"
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh"
+#include "runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
 bool AC_TIMER_READY = false;
@@ -65,7 +66,7 @@ void AC_RecordWriteProblem(const string surface, const AC_WriteResult &result)
 
 string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write)
 {
-   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n" + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n" + AC_LayerStatusRows(AC_SNAPSHOT) + AC_AccountTruthStatusRow(account_write) + "\r\n";
+   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n" + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n" + AC_LayerStatusRows(AC_SNAPSHOT) + AC_AccountTruthStatusRow(account_write) + "\r\n" + AC_UniverseStatusRow() + "\r\n";
 }
 
 string AC_BuildRuntimeStatusText()
@@ -200,6 +201,8 @@ void AC_PublishRuntime0()
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
    diagnostics += "selection_desk_structure=Ranking Group Top 5 + Global Top 10 placeholders only\r\n";
    diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
+   diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
+   diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
    diagnostics += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
    diagnostics += "scope_check=runtime1_layer1_account_truth_placeholders_only_no_symbols_no_ranking_no_strategy_no_execution\r\n";
