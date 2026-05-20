@@ -88,14 +88,14 @@ string AC_SelectionDeskFolder()
    return AC_RootFolder() + "\\" + AC_SELECTION_FOLDER;
 }
 
-string AC_RankingGroupTop5Folder()
+string AC_SelectionGroupsFolder()
 {
-   return AC_SelectionDeskFolder() + "\\" + AC_RANKING_GROUP_TOP5_FOLDER;
+   return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_GROUPS_FOLDER;
 }
 
-string AC_GlobalTop10Folder()
+string AC_SelectionGlobalFolder()
 {
-   return AC_SelectionDeskFolder() + "\\" + AC_GLOBAL_TOP10_FOLDER;
+   return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_GLOBAL_FOLDER;
 }
 
 string AC_RuntimeStatusPath()
@@ -186,8 +186,8 @@ bool AC_EnsureRuntimeFolders(string &detail)
    string closed_detail = "";
    string unknown_detail = "";
    string selection_desk_detail = "";
-   string ranking_group_top5_detail = "";
-   string global_top10_detail = "";
+   string selection_groups_detail = "";
+   string selection_global_detail = "";
 
    bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
    bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
@@ -196,8 +196,8 @@ bool AC_EnsureRuntimeFolders(string &detail)
    bool closed_ok = AC_EnsureFolderPath(AC_DossiersClosedFolder(), closed_detail);
    bool unknown_ok = AC_EnsureFolderPath(AC_DossiersUnknownFolder(), unknown_detail);
    bool selection_desk_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), selection_desk_detail);
-   bool ranking_group_top5_ok = AC_EnsureFolderPath(AC_RankingGroupTop5Folder(), ranking_group_top5_detail);
-   bool global_top10_ok = AC_EnsureFolderPath(AC_GlobalTop10Folder(), global_top10_detail);
+   bool selection_groups_ok = AC_EnsureFolderPath(AC_SelectionGroupsFolder(), selection_groups_detail);
+   bool selection_global_ok = AC_EnsureFolderPath(AC_SelectionGlobalFolder(), selection_global_detail);
 
    detail = "root=" + root_detail
       + ";workbench=" + wb_detail
@@ -206,10 +206,10 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";dossiers_closed=" + closed_detail
       + ";dossiers_unknown=" + unknown_detail
       + ";selection_desk=" + selection_desk_detail
-      + ";ranking_group_top5=" + ranking_group_top5_detail
-      + ";global_top10=" + global_top10_detail;
+      + ";selection_groups=" + selection_groups_detail
+      + ";selection_global=" + selection_global_detail;
 
-   return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && ranking_group_top5_ok && global_top10_ok;
+   return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
 }
 
 #endif
