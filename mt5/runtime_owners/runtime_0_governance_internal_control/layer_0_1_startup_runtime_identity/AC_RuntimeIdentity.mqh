@@ -1,8 +1,8 @@
 #ifndef AC_RUNTIME_IDENTITY_MQH
 #define AC_RUNTIME_IDENTITY_MQH
 
-#include "../../../core/AC_Config.mqh"
-#include "../../runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh"
+// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
+// This module intentionally avoids nested cross-owner includes to prevent MQL5 include-path drift.
 
 string AC_NowText()
 {
