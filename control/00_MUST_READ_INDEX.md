@@ -54,6 +54,9 @@ control/01_CURRENT_SOURCE_TRUTH_MAP.md
 control/00_MUST_READ_INDEX.md
 control/00_SUPER_INDEX_RUN_ROUTER.md
 control/05_DECISION_STATE_REGISTER.md
+control/03_CONTRADICTION_LEDGER.md
+control/04_CLARITY_REPAIR_LEDGER.md
+control/02_MASTER_REPO_FILE_INDEX.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 ```
 
@@ -73,7 +76,9 @@ Default hierarchy:
 3. README.md for current repo-level direction
 4. control/01_CURRENT_SOURCE_TRUTH_MAP.md for current navigation and contradiction prevention
 5. control/00_SUPER_INDEX_RUN_ROUTER.md for work routing
-6. control/05_DECISION_STATE_REGISTER.md for decision/evidence gates
+6. control/05_DECISION_STATE_REGISTER.md
+control/03_CONTRADICTION_LEDGER.md
+control/04_CLARITY_REPAIR_LEDGER.md for decision/evidence gates
 7. Active docs/ guidebooks for doctrine
 8. Active blueprint/ contracts for structure
 9. governance/ schemas and ledgers

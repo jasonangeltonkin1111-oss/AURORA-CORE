@@ -150,17 +150,19 @@ Every serious worker run must:
 
 ```text
 1. Read README.md.
-2. Read control/00_SUPER_INDEX_RUN_ROUTER.md.
+2. Read control/01_CURRENT_SOURCE_TRUTH_MAP.md.
 3. Read control/00_MUST_READ_INDEX.md.
-4. Read control/05_DECISION_STATE_REGISTER.md.
-5. Read docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md.
-6. Read the task-specific guidebooks/files from the Super Index.
-7. Inspect current relevant repo files.
-8. Do internet/platform research where facts matter.
-9. Translate the research into constraints/tests/no-go rules.
-10. Declare run mode and scope.
-11. Produce or patch only what the scope justifies.
-12. Debug/audit the created or updated files before final report.
+4. Read control/00_SUPER_INDEX_RUN_ROUTER.md.
+5. Read control/05_DECISION_STATE_REGISTER.md.
+6. Read control/02_MASTER_REPO_FILE_INDEX.md.
+7. Read docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md.
+8. Read the task-specific guidebooks/files from the Super Index.
+9. Inspect current relevant repo files.
+10. Do internet/platform research where facts matter.
+11. Translate the research into constraints/tests/no-go rules.
+12. Declare run mode and scope.
+13. Produce or patch only what the scope justifies.
+14. Debug/audit the created or updated files before final report.
 ```
 
 ---
@@ -170,7 +172,7 @@ Every serious worker run must:
 For the next MT5 source build, use this rhythm:
 
 ```text
-Run mode: SOURCE IMPLEMENTATION LATER
+Run mode: SOURCE IMPLEMENTATION
 Runtime Owner: Runtime 0 — Governance / Internal Control Owner
 Internal Layers:
 - Layer 0.1 — Startup / Runtime Identity
@@ -197,7 +199,7 @@ Support Owner:
 For later layer builds, use this rhythm:
 
 ```text
-Run mode: SOURCE PLANNING or SOURCE IMPLEMENTATION LATER
+Run mode: SOURCE PLANNING or SOURCE IMPLEMENTATION
 Runtime Owner: <runtime number + proper owner name>
 Layer: <number + full proper layer name>
 

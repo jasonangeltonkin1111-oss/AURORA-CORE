@@ -16,9 +16,11 @@ Start in AUDIT / DEBUG / PATCH mode unless the user explicitly changes scope.
 MANDATORY FIRST READ
 Read these first from Git:
 - README.md
-- control/00_SUPER_INDEX_RUN_ROUTER.md
+- control/01_CURRENT_SOURCE_TRUTH_MAP.md
 - control/00_MUST_READ_INDEX.md
+- control/00_SUPER_INDEX_RUN_ROUTER.md
 - control/05_DECISION_STATE_REGISTER.md
+- control/02_MASTER_REPO_FILE_INDEX.md
 - docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 - docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
 - docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
@@ -50,8 +52,7 @@ CURRENT LOCKED TRUTH
 - Guidebooks: COMPLETE — 16 / 16
 - Runtime 0 — Governance / Internal Control Owner is the first source target.
 - Runtime 7 — Publication Owner is allowed only as FileIO/routes support for Runtime 0.
-- Runtime 1 — Foundation Truth Owner is HOLD until Runtime 0 compiles and runtime-smokes.
-- Layer 1 — Account / Portfolio / Prop Rule Truth is HOLD until Runtime 0 passes.
+- Runtime 1 Layer 1 account truth source exists (read-only snapshot); no trading permission.
 - External worker implementation is HOLD.
 - Directional alerts are HOLD.
 - Setup strategy layer is QUARANTINE.
@@ -59,7 +60,7 @@ CURRENT LOCKED TRUTH
 - Trading edge claim is UNPROVEN.
 
 CURRENT SOURCE STATE
-Runtime 0 source has been created, but it is not accepted yet.
+Source exists in active MT5 owners with limited scope; acceptance still requires compile/runtime evidence for new source edits.
 
 Evidence state:
 - Source exists in Git: YES
@@ -82,8 +83,8 @@ Latest patch changed mt5/AuroraCore.mq5 back to main-file relative quoted includ
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh"
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
 
-Latest version string:
-#property version "000.010"
+Latest version string (check source, do not trust prompt memory):
+#property version "0.019"
 
 NEXT REQUIRED ACTION
 Ask the user for the next compile output after the latest patch, or if they already provided it, debug only those compiler-reported errors.

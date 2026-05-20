@@ -19,6 +19,12 @@ Coding should begin as soon as the required planned-system contracts are ready, 
 - Trading approval, live-use approval, directional-alert approval, auto-trading approval, or prop-firm-readiness claims.
 - Guidebook duplication or replacement of `docs/00` through `docs/15` doctrinal ownership.
 
+## Current source truth note
+
+This register is subordinate to active source truth in `mt5/` and the navigation bridge in `control/01_CURRENT_SOURCE_TRUTH_MAP.md`.
+
+Where this file still contains old planning-era states, treat those rows as historical and patch them to match current source status before using them as routing authority.
+
 ## Decision-state baseline table
 | Decision area | Baseline state |
 |---|---|
@@ -29,14 +35,14 @@ Coding should begin as soon as the required planned-system contracts are ready, 
 | Current docs/ location | ACTIVE |
 | Guidebook migration to guidebooks/ | HOLD UNTIL APPROVED |
 | Post-guidebook Phase 1 scaffold | CREATED |
-| Super Index / Run Router | CREATED / DRAFT AUTHORITY |
+| Super Index / Run Router | ACTIVE / CURRENT ROUTER AUTHORITY |
 | Blueprint scaffold | CREATED / NEEDS DETAILING |
 | Control spine scaffold | CREATED / NEEDS DETAILING |
 | Governance schema scaffold | CREATED / NEEDS SCHEMAS |
 | Research scaffold | CREATED / NEEDS SOURCES |
 | Prompt scaffold | CREATED / NEEDS PROMPTS |
 | Archive scaffold | CREATED / EVIDENCE ONLY |
-| MT5 source planning scaffold | CREATED / NO IMPLEMENTATION |
+| MT5 source planning scaffold | ACTIVE / IMPLEMENTATION EXISTS (LIMITED SCOPE) |
 | Planned-system completion ladder | PROCEED |
 | Runtime Owner Blueprint | NEXT / REQUIRED BEFORE MT5 SOURCE |
 | Logical Layer Blueprint | REQUIRED BEFORE MT5 SOURCE |
@@ -44,7 +50,7 @@ Coding should begin as soon as the required planned-system contracts are ready, 
 | FileIO / route ownership contract | REQUIRED BEFORE MT5 SOURCE |
 | Minimum governance schemas | REQUIRED BEFORE MT5 SOURCE |
 | Layer 1 source plan and tests | REQUIRED BEFORE MT5 SOURCE |
-| MT5 source implementation | HOLD UNTIL PLANNED-SYSTEM CONTRACT GATE IS COMPLETE |
+| MT5 source implementation | ACTIVE (LIMITED: Runtime 0, Runtime 1 Layer 1, Runtime 2 skeleton, Runtime 7) |
 | External calculation worker | PROCEED TO DESIGN / UNPROVEN IMPLEMENTATION |
 | Python + file snapshot bridge | BEST FIRST CANDIDATE |
 | WebRequest main bridge | HOLD |
@@ -55,7 +61,7 @@ Coding should begin as soon as the required planned-system contracts are ready, 
 | Auto-trading | BLOCKED |
 | Trading edge claim | UNPROVEN |
 
-## Planned-System Completion Ladder
+## Planned-System Completion Ladder (historical planning ladder)
 The next phase is not endless planning and not immediate coding.
 
 The intended path is:
@@ -70,6 +76,8 @@ The intended path is:
 7. Create prompt/workflow templates only where they help future layer work.
 8. Define Layer 1 source plan and tests.
 9. Start MT5 Layer 1 only.
+
+Note: this ladder is retained as historical scaffold context; active source has already started in limited scope.
 ```
 
 Coding starts after the required contracts exist, not after every possible document is perfect.

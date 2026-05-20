@@ -421,8 +421,6 @@ aggregation_group
 bucket_top5
 sub_bucket_top5
 Top 5 Per Bucket
-MT5 source implementation: HOLD
-planning-only
 ```
 
 Decision default:
