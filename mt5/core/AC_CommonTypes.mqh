@@ -1,6 +1,11 @@
 #ifndef AC_COMMON_TYPES_MQH
 #define AC_COMMON_TYPES_MQH
 
+string AC_UlongToText(const ulong value)
+{
+   return StringFormat("%I64u", value);
+}
+
 struct AC_WriteResult
 {
    bool   attempted;
@@ -9,7 +14,7 @@ struct AC_WriteResult
    bool   temp_write_ok;
    bool   move_ok;
    bool   final_exists;
-   long   final_size;
+   ulong  final_size;
    int    error_code;
    string status;
    string detail;
