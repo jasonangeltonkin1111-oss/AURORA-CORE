@@ -1,8 +1,8 @@
 # AURORA CORE — RUNTIME OWNER BLUEPRINT
 
 **System:** AURORA CORE  
-**Role:** Permanent Runtime Owner map, authority boundary, source-of-truth ownership, layer grouping, build sequence anchor, and anti-23-engine fragmentation contract.  
-**Status:** DETAILED BLUEPRINT — required before MT5 source implementation starts.
+**Role:** Permanent Runtime Owner map, authority boundary, source-of-truth ownership, layer grouping, build sequence anchor, and anti-fragmentation contract.  
+**Status:** DETAILED BLUEPRINT — Runtime 0 first.
 
 ---
 
@@ -14,13 +14,12 @@ Runtime Owners are the top-level architecture headers.
 
 Logical layers live under Runtime Owners.
 
-The 23 logical layers are not 23 engines, not 23 schedulers, and not 23 independent source-of-truth systems.
-
 Core law:
 
 ```text
-Runtime Owners own truth domains.
+Runtime Owners own truth domains and internal runtime domains.
 Logical layers are ordered responsibilities inside those owners.
+Runtime 0 — Governance / Internal Control Owner comes before market/account truth layers.
 No shadow owner may calculate or publish truth that belongs to another owner.
 ```
 
@@ -28,25 +27,11 @@ No shadow owner may calculate or publish truth that belongs to another owner.
 
 ## 1. Research Foundation
 
-This blueprint converts the overview guidebooks into implementation-facing architecture.
-
-Software architecture is the high-level structure of a system: elements, relationships, and properties needed to reason about behavior before building. Architecture decisions become costly to change after implementation, so Aurora must lock owner boundaries before source work.
-
-Reference:
-
-```text
-https://en.wikipedia.org/wiki/Software_architecture
-```
+Software architecture is the high-level structure of a system: elements, relationships, and properties needed to reason about behavior before building.
 
 Single-source-of-truth practice means each data element should be mastered in only one place, with other views referencing or consuming it rather than becoming independent editors.
 
-Reference:
-
-```text
-https://en.wikipedia.org/wiki/Single_source_of_truth
-```
-
-MQL5 `OnTimer()` documentation confirms a practical runtime constraint: each program has one timer, and if a Timer event is already queued or processing, a new Timer event is not added. That means Runtime Owners must be lane/budget aware; long owner work can silently destroy cadence.
+MQL5 `OnTimer()` documentation confirms a practical runtime constraint: each program has one timer, and if a Timer event is already queued or processing, a new Timer event is not added. Runtime 0 must therefore prove heartbeat/breathing behavior before heavier owners are added.
 
 Reference:
 
@@ -54,12 +39,21 @@ Reference:
 https://www.mql5.com/en/docs/event_handlers/ontimer
 ```
 
+MQL5 file operations are sandboxed, folder creation and file writing can fail, and publication must therefore be proven before downstream truth layers rely on it.
+
+References:
+
+```text
+https://www.mql5.com/en/docs/files/fileopen
+https://www.mql5.com/en/docs/files/foldercreate
+https://www.mql5.com/en/docs/files/filemove
+https://www.mql5.com/en/docs/files/fileflush
+```
+
 Aurora translation:
 
 ```text
-Owners must be bounded.
-Owners must publish degraded state instead of blocking outputs.
-Owners must not hide long work inside OnTimer.
+Before Aurora knows the account or market, Aurora must prove it can create its home, breathe, write files, and report failure.
 ```
 
 ---
@@ -70,6 +64,7 @@ This blueprint owns:
 
 ```text
 permanent Runtime Owner list
+Runtime 0 internal-control ownership
 owner responsibilities
 owner forbidden responsibilities
 owner input/output contract shape
@@ -78,7 +73,8 @@ owner governance relationship
 owner build order
 owner failure/degraded state contract
 owner interaction rules
-foundation-first coding boundary
+Runtime 0 first-source boundary
+Runtime 1 Layer 1 later-source boundary
 ```
 
 ---
@@ -100,7 +96,7 @@ external worker implementation
 
 Detailed doctrine remains in `docs/`.
 
-Source implementation comes later, layer by layer.
+Source implementation comes later, Runtime Owner by Runtime Owner.
 
 ---
 
@@ -109,6 +105,7 @@ Source implementation comes later, layer by layer.
 The permanent Runtime Owners are:
 
 ```text
+0. Governance / Internal Control Owner
 1. Foundation Truth Owner
 2. Surface Scoring Owner
 3. Bucket Intelligence Owner
@@ -125,7 +122,67 @@ They may be refined internally, but they must not be casually replaced or duplic
 
 ---
 
-## 5. Owner 1 — Foundation Truth Owner
+## 5. Runtime 0 — Governance / Internal Control Owner
+
+### Owns
+
+```text
+Layer 0.1 — Startup / Runtime Identity
+Layer 0.2 — Scheduler / Heartbeat / Breathing Spine
+Layer 0.3 — Decision State and Runtime Modes
+Layer 0.4 — Governance / Manifest / Telemetry
+Layer 0.5 — Diagnostics / Errors / Recovery
+```
+
+### Mission
+
+Runtime 0 answers:
+
+```text
+Can the EA start, identify itself, create its account-safe home, heartbeat, publish internal proof, write diagnostics, and report failure honestly?
+```
+
+### May own
+
+```text
+startup identity
+runtime mode
+scheduler / heartbeat / breathing spine
+decision-state mirror
+governance row helpers
+manifest row helpers
+runtime telemetry helpers
+diagnostics / error capture
+schema/version constants
+internal recovery state
+source-start proof controls
+```
+
+### Must not own
+
+```text
+account truth
+symbol truth
+quote truth
+score truth
+bucket truth
+selection truth
+deep evidence truth
+permission truth
+trade execution
+strategy logic
+operator-facing market meaning
+```
+
+### Runtime 0 coding rule
+
+Runtime 0 is the first real coding target.
+
+Runtime 0 must prove folder creation, FileIO, heartbeat, manifest, telemetry, Runtime 0 owner status, Runtime 0 layer status, and diagnostics before Runtime 1 source begins.
+
+---
+
+## 6. Runtime 1 — Foundation Truth Owner
 
 ### Owns
 
@@ -160,26 +217,6 @@ SymbolInfoMarginRate
 OrderCalcMargin / OrderCalcProfit later for margin/profit facts
 ```
 
-### Research anchors
-
-`SymbolInfoTick()` returns current prices in `MqlTick`, including time of the last price update. This supports quote freshness, but it does not prove full tick history.
-
-```text
-https://www.mql5.com/en/docs/marketinformation/symbolinfotick
-```
-
-`SymbolInfoSessionTrade()` returns beginning/end times for symbol sessions, with the returned date ignored because the values are seconds from midnight. This means Aurora must label session time basis honestly.
-
-```text
-https://www.mql5.com/en/docs/marketinformation/symbolinfosessiontrade
-```
-
-`SymbolInfoInteger()` returns symbol properties and exposes errors such as unknown symbol, not selected in Market Watch, and invalid property id. This creates explicit failure states.
-
-```text
-https://www.mql5.com/en/docs/marketinformation/symbolinfointeger
-```
-
 ### Must not own
 
 ```text
@@ -189,19 +226,24 @@ deep evidence
 publication routes
 trade permission
 strategy signals
+Runtime 0 heartbeat/FileIO/governance proof
 ```
 
 ### Foundation coding rule
 
-Foundation is the first real coding target after the planned-system contract gate.
+Runtime 1 starts only after Runtime 0 passes compile and runtime smoke.
 
-But Foundation must start with Layer 1 only.
+First Runtime 1 target later:
 
-Layer 1 does not mean all Foundation layers at once.
+```text
+Layer 1 — Account / Portfolio / Prop Rule Truth
+```
+
+Layer 1 does not mean all Runtime 1 layers at once.
 
 ---
 
-## 6. Owner 2 — Surface Scoring Owner
+## 7. Runtime 2 — Surface Scoring Owner
 
 ### Owns
 
@@ -234,7 +276,7 @@ All scores are descriptive until Validation / Outcome evidence proves otherwise.
 
 ---
 
-## 7. Owner 3 — Bucket Intelligence Owner
+## 8. Runtime 3 — Bucket Intelligence Owner
 
 ### Owns
 
@@ -257,20 +299,11 @@ Which symbols lead inside their own categories?
 Which buckets deserve attention now?
 ```
 
-### Must not own
-
-```text
-Global Top 10 final basket
-trade permission
-deep evidence
-strategy setup
-```
-
 Taxonomy unknowns must remain honest unknowns, not fake `Other`.
 
 ---
 
-## 8. Owner 4 — Basket Selection Owner
+## 9. Runtime 4 — Basket Selection Owner
 
 ### Owns
 
@@ -289,20 +322,11 @@ Which candidates were rejected due to overlap/correlation?
 Which backup fills were used?
 ```
 
-### Must not claim
-
-```text
-best trades
-buy/sell list
-edge
-permission
-```
-
 Global Top 10 is an inspection basket only.
 
 ---
 
-## 9. Owner 5 — Selected Evidence Owner
+## 10. Runtime 5 — Selected Evidence Owner
 
 ### Owns
 
@@ -315,46 +339,16 @@ Layer 21 — Selected Indicator / Reference Pack
 Layer 22 — Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack
 ```
 
-### Mission
-
-Selected Evidence Owner answers:
-
-```text
-What deeper evidence exists for selected symbols only?
-What is complete, partial, stale, unavailable, failed, or waiting on dependency?
-```
-
-### Must not own
-
-```text
-all-symbol deep evidence
-strategy confirmation
-trade permission
-true order-flow claims
-```
-
 Selected evidence is expensive and must stay selected-only.
 
 ---
 
-## 10. Owner 6 — Permission / Alert Owner
+## 11. Runtime 6 — Permission / Alert Owner
 
 ### Owns
 
 ```text
 Layer 23 — Setup / Strategy / Permission / Alert State
-```
-
-### Mission
-
-Permission / Alert Owner answers:
-
-```text
-What is allowed?
-What is blocked?
-What alert class may fire?
-What must stay suppressed?
-What prop/risk/news states block permission?
 ```
 
 ### Default state
@@ -373,18 +367,17 @@ Permission does not create proof.
 
 ---
 
-## 11. Owner 7 — Publication Owner
+## 12. Runtime 7 — Publication Owner
 
 ### Owns
 
 ```text
-Board publication
-Dossier publication
-Selection Desk publication later
-Governance publication
-Manifest proof
-Atomic Update Overview
-FileIO route ownership later
+physical publication
+FileIO
+routes
+surfaces
+manifest proof
+atomic update overview later
 ```
 
 ### Mission
@@ -404,29 +397,13 @@ Broken truth may block review/trading.
 Broken truth must not block printing.
 ```
 
-### MT5 file research anchors
+Runtime 7 support is allowed in the first source slice because Runtime 0 cannot prove folder creation or file writing without Publication Owner support.
 
-`FileOpen()` is sandboxed; MQL5 file operations cannot write outside the file sandbox, and `FILE_COMMON` places files in the shared terminal common folder.
-
-```text
-https://www.mql5.com/en/docs/files/fileopen
-```
-
-`FileMove()` needs `FILE_REWRITE` if the destination already exists; otherwise the move fails.
-
-```text
-https://www.mql5.com/en/docs/files/filemove
-```
-
-`FileFlush()` forces buffered data to disk, but frequent calls can affect program speed.
-
-```text
-https://www.mql5.com/en/docs/files/fileflush
-```
+Runtime 7 must not compute source truth.
 
 ---
 
-## 12. Owner 8 — Validation / Outcome Owner
+## 13. Runtime 8 — Validation / Outcome Owner
 
 ### Owns
 
@@ -448,21 +425,13 @@ Validation / Outcome Owner answers:
 Did any score, selection rule, setup, or evidence pack survive falsification after costs and null comparison?
 ```
 
-Core law:
-
-```text
-Architecture is not edge.
-No null model, no validation.
-No cost model, no validation.
-```
-
 Validation may recommend.
 
 Permission decides.
 
 ---
 
-## 13. Runtime Owner Interaction Rules
+## 14. Runtime Owner Interaction Rules
 
 Owners may consume upstream truth.
 
@@ -471,17 +440,18 @@ Owners may not secretly recreate upstream truth.
 Allowed pattern:
 
 ```text
-Foundation Truth Owner publishes quote freshness.
-Surface Scoring Owner consumes quote freshness.
-Basket Selection Owner consumes bucket leaders.
-Selected Evidence Owner consumes Global Top 10 feed.
-Publication Owner prints owner outputs.
+Runtime 0 publishes runtime heartbeat and governance proof.
+Runtime 7 physically writes and proves outputs.
+Runtime 1 consumes working Runtime 0 / Runtime 7 publication support before account truth begins.
+Surface Scoring consumes Foundation truth later.
+Publication prints owner outputs.
 Governance records proof.
 ```
 
 Forbidden pattern:
 
 ```text
+Runtime 1 recreates FileIO ownership.
 Board computes Global Top 10.
 Dossier recalculates scores.
 External worker decides permission.
@@ -491,7 +461,7 @@ Validation Owner grants trade permission directly.
 
 ---
 
-## 14. Owner Output Contract Shape
+## 15. Owner Output Contract Shape
 
 Every owner output should eventually expose:
 
@@ -519,7 +489,7 @@ blocked_reasons
 
 ---
 
-## 15. Owner Failure States
+## 16. Owner Failure States
 
 Common owner states:
 
@@ -540,50 +510,44 @@ A failed owner must not make expected files disappear unless physical FileIO/rou
 
 ---
 
-## 16. Foundation-First Build Rule
+## 17. Build Order
 
-The first source implementation must begin under Foundation Truth Owner.
-
-Foundation build sequence:
+Correct build order:
 
 ```text
-Layer 1 first: Account / Portfolio / Prop Rule Truth shell
-then Layer 2: Market Open / Closed Truth
-then Layer 3: Symbol + Broker Specs Truth
-then Layer 4: Market Watch Truth
-then Layer 5: Basic System Gate
+1. Runtime 0 — Governance / Internal Control Owner
+2. Runtime 7 — Publication Owner support needed by Runtime 0
+3. Runtime 1 — Foundation Truth Owner / Layer 1 — Account / Portfolio / Prop Rule Truth
+4. Runtime 1 — Foundation Truth Owner / Layers 2–5 one by one
+5. Runtime 2 onward only after Foundation truth works
 ```
 
-Do not build all five Foundation layers at once.
+Do not build all owners at once.
 
-Do not build scoring, buckets, selection, alerts, external worker, or strategy before Foundation truth exists.
+Do not build all Runtime 0 layers if not needed for the first proof.
 
 ---
 
-## 17. Acceptance Criteria
+## 18. Acceptance Criteria
 
 This blueprint is acceptable if:
 
 ```text
-All 8 Runtime Owners are defined.
-Each owner has owned layers.
+Runtime 0 is defined.
+All Runtime Owners 0–8 are defined.
+Runtime 0 is clearly first source target.
+Runtime 7 publication support is allowed only for FileIO/route proof.
+Runtime 1 Layer 1 is held until Runtime 0 passes.
 Each owner has forbidden responsibilities.
-Foundation is clearly first coding target.
-Layer 1 is clearly first source slice.
-Publication is separated from permission.
-Validation is separated from permission.
-External worker cannot become an owner of broker truth.
 No owner can become a shadow owner.
 ```
 
 ---
 
-## 18. Final Runtime Owner Law
+## 19. Final Runtime Owner Law
 
 ```text
-One truth spine.
-Eight owners.
-Twenty-three logical layers.
-Build Foundation first.
+Before Aurora knows the account or market, Aurora must prove it can breathe, create its home, write, and report failure.
+Runtime 0 first. Runtime 1 second.
 No shadow owners.
 ```
