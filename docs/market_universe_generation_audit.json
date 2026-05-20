@@ -1,6 +1,6 @@
 {
   "schema_name": "market_universe_generation_audit",
-  "schema_version": "universe_generation_audit_v0.1",
+  "schema_version": "universe_generation_audit_v0.2",
   "source_workbook": "Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx",
   "source_sheet": "EA Export Safe",
   "generator_script": "tools/generate_market_universe_rows.py",
@@ -10,7 +10,17 @@
     "strict_rank_allowed_rows": 1294,
     "public_research_rank_allowed_rows": 224,
     "review_only_rows": 184,
-    "blocked_rows": 1
+    "blocked_rows": 1,
+    "review_or_blocked_rows": 185,
+    "duplicate_primary_key_count": 0
+  },
+  "required_generation_metadata": {
+    "source_file_sha256": "required_after_real_generation",
+    "header_sha256": "required_after_real_generation",
+    "row_schema_sha256": "required_after_real_generation",
+    "lookup_key_schema": "server|broker_file|broker_symbol",
+    "first_broker_symbol": "required_after_real_generation",
+    "last_broker_symbol": "required_after_real_generation"
   },
   "git_truth": {
     "generator_script_committed": true,
@@ -33,6 +43,6 @@
   "compile_proof": "not_available_phone_only_no_metaeditor_access",
   "runtime_smoke": "not_available_phone_only_no_mt5_access",
   "current_state": "generator_and_skeleton_landed_rows_not_committed",
-  "next_safe_step": "Use direct Git filesystem access or a repo-side generation path to run the generator against the workbook and commit AC_MarketUniverseRows.mqh only after count checks pass.",
+  "next_safe_step": "Use direct Git filesystem access or a repo-side generation path to run the generator against the workbook and commit AC_MarketUniverseRows.mqh only after count checks and metadata hashes pass.",
   "decision": "TEST_FIRST"
 }
