@@ -1,0 +1,38 @@
+{
+  "schema_name": "market_universe_generation_audit",
+  "schema_version": "universe_generation_audit_v0.1",
+  "source_workbook": "Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx",
+  "source_sheet": "EA Export Safe",
+  "generator_script": "tools/generate_market_universe_rows.py",
+  "generated_include_target": "mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh",
+  "expected_counts": {
+    "total_rows": 1703,
+    "strict_rank_allowed_rows": 1294,
+    "public_research_rank_allowed_rows": 224,
+    "review_only_rows": 184,
+    "blocked_rows": 1
+  },
+  "git_truth": {
+    "generator_script_committed": true,
+    "runtime2_skeleton_committed": true,
+    "generated_include_committed": false,
+    "generated_rows_committed": false,
+    "row_count_loaded_in_ea": 0
+  },
+  "local_generation_reported_in_chat": {
+    "attempted": true,
+    "reported_counts_matched_expected": true,
+    "evidence_rank": "chat_runtime_report_only_not_repo_artifact",
+    "not_authoritative_until_generated_file_committed": true
+  },
+  "runtime_permission": "LOOKUP_ONLY_NOT_TRADE_PERMISSION",
+  "ranking_runtime": false,
+  "selection_runtime": false,
+  "trade_permission": false,
+  "prop_firm_readiness": false,
+  "compile_proof": "not_available_phone_only_no_metaeditor_access",
+  "runtime_smoke": "not_available_phone_only_no_mt5_access",
+  "current_state": "generator_and_skeleton_landed_rows_not_committed",
+  "next_safe_step": "Use direct Git filesystem access or a repo-side generation path to run the generator against the workbook and commit AC_MarketUniverseRows.mqh only after count checks pass.",
+  "decision": "TEST_FIRST"
+}
