@@ -172,6 +172,16 @@ strict_rank_allowed_rows=1294
 public_research_rank_allowed_rows=224
 review_only_rows=184
 blocked_rows=1
+review_or_blocked_rows=185
+duplicate_primary_key_count=0
+```
+
+Definitions:
+
+```text
+review_only_rows = rows where review_lane starts with REVIEW_ONLY
+blocked_rows = rows where review_lane equals BLOCKED_NOT_RANKABLE
+review_or_blocked_rows = review_only_rows + blocked_rows
 ```
 
 These counts must be treated as acceptance targets for the generated EA copy.
@@ -180,7 +190,24 @@ If the generated EA copy does not match these counts, the import is degraded or 
 
 ---
 
-## 7. Future Runtime Owner Boundary
+## 7. Required Generation Metadata
+
+The generated audit must include:
+
+```text
+source_file_sha256
+header_sha256
+row_schema_sha256
+lookup_key_schema=server|broker_file|broker_symbol
+first_broker_symbol
+last_broker_symbol
+```
+
+This prevents a different workbook with the same filename from silently becoming source truth.
+
+---
+
+## 8. Future Runtime Owner Boundary
 
 Runtime 2 Market Universe / Taxonomy Lookup Owner may own:
 
@@ -224,7 +251,7 @@ Rank numbers, Top-N order, cycle IDs, and selection metadata must live inside ch
 
 ---
 
-## 8. Lightweight Runtime Rule
+## 9. Lightweight Runtime Rule
 
 The EA must not rebuild, research, or reclassify the symbol universe on every timer event.
 
@@ -247,7 +274,7 @@ turn public research rows into broker truth
 
 ---
 
-## 9. Publication Law
+## 10. Publication Law
 
 Broken or incomplete taxonomy truth may block ranking, review, selection, trading, and permission.
 
@@ -265,7 +292,7 @@ keep selection_logic_runtime=false until later owners exist
 
 ---
 
-## 10. Import Acceptance Criteria
+## 11. Import Acceptance Criteria
 
 The import is acceptable only when all are true:
 
@@ -274,6 +301,8 @@ EA copy contains 1703 rows.
 EA copy exposes source_workbook and source_sheet identity.
 EA diagnostics report row_count=1703.
 Strict/public/review/blocked counts match source expectations.
+Duplicate primary key count is 0.
+Generation metadata hashes are present.
 Old major/minor/bucket naming is not used as active EA-facing taxonomy.
 Selection Desk parent folders remain Groups and Global.
 Selection Desk sidecar file remains Selection Index.txt.
@@ -285,7 +314,7 @@ MT5 runtime smoke proves diagnostics/file publication after import.
 
 ---
 
-## 11. Required Diagnostics After Import
+## 12. Required Diagnostics After Import
 
 The future Runtime 2 diagnostics should expose at minimum:
 
@@ -293,12 +322,17 @@ The future Runtime 2 diagnostics should expose at minimum:
 universe_schema_version
 source_workbook
 source_sheet
+source_file_sha256
+header_sha256
+row_schema_sha256
 source_row_count
 loaded_row_count
 strict_rank_allowed_count
 public_research_rank_allowed_count
 review_only_count
 blocked_count
+review_or_blocked_count
+duplicate_primary_key_count
 lookup_key_schema
 translation_contract_status
 old_field_names_active=false
@@ -307,12 +341,13 @@ runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
 
 ---
 
-## 12. Falsifiers
+## 13. Falsifiers
 
 Kill or hold the import if any of these happen:
 
 ```text
 row_count does not match 1703 and no reason is logged
+source/header/schema hashes are missing from the generated audit
 broker_symbol alone becomes the lookup key
 old major_bucket/minor_bucket/aggregation_group becomes active EA-facing authority
 public_research_rank_allowed rows are treated as broker-confirmed strict rows
@@ -325,7 +360,7 @@ OnTimer does heavy universe parsing or classification
 
 ---
 
-## 13. Current Decision State
+## 14. Current Decision State
 
 Until the actual EA copy is generated, compiled, and runtime-smoked, the universe import status is:
 
