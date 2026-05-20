@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.012"
-#property description "AURORA CORE - Runtime 0 first source slice"
+#property version   "0.013"
+#property description "AURORA CORE - Runtime 1 Layer 1 account truth slice"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -9,6 +9,7 @@
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_1_startup_runtime_identity/AC_RuntimeIdentity.mqh"
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh"
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
+#include "runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
 bool AC_TIMER_READY = false;
@@ -51,9 +52,9 @@ void AC_RecordWriteProblem(const string surface, const AC_WriteResult &result)
    AC_AppendReason(surface + "=" + result.status);
 }
 
-string AC_BuildWorkbenchStatusText()
+string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write)
 {
-   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n" + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n" + AC_LayerStatusRows(AC_SNAPSHOT);
+   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n" + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n" + AC_LayerStatusRows(AC_SNAPSHOT) + AC_AccountTruthStatusRow(account_write) + "\r\n";
 }
 
 string AC_BuildRuntimeStatusText()
@@ -64,7 +65,8 @@ string AC_BuildRuntimeStatusText()
 void AC_FinalizeState(const AC_WriteResult &runtime_write,
                       const AC_WriteResult &status_write,
                       const AC_WriteResult &manifest_write,
-                      const AC_WriteResult &diagnostics_write)
+                      const AC_WriteResult &diagnostics_write,
+                      const AC_WriteResult &account_write)
 {
    AC_SNAPSHOT.fileio_status = runtime_write.ok ? "runtime_status_written" : runtime_write.status;
    AC_SNAPSHOT.telemetry_status = status_write.ok ? "workbench_status_written" : status_write.status;
@@ -74,6 +76,7 @@ void AC_FinalizeState(const AC_WriteResult &runtime_write,
    AC_RecordWriteProblem("Workbench Status", status_write);
    AC_RecordWriteProblem("Manifest", manifest_write);
    AC_RecordWriteProblem("Diagnostics", diagnostics_write);
+   AC_RecordWriteProblem("Account Status", account_write);
    AC_SNAPSHOT.layer_0_4_status = (status_write.ok && manifest_write.ok && diagnostics_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
 }
@@ -103,11 +106,13 @@ void AC_PublishRuntime0()
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
 
+   AC_WriteResult account_write = AC_WriteTextFile(AC_AccountStatusPath(), AC_AccountTruthText());
    AC_WriteResult runtime_write = AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   AC_WriteResult status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText());
+   AC_WriteResult status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
    string manifest = "";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT) + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
    string diagnostics = "";
@@ -120,18 +125,20 @@ void AC_PublishRuntime0()
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
+   diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
    diagnostics += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
-   diagnostics += "scope_check=runtime0_only\r\n";
+   diagnostics += "scope_check=runtime1_layer1_account_truth_only_no_symbols_no_ranking_no_strategy_no_execution\r\n";
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
-   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write);
+   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write, account_write);
 
    runtime_write = AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText());
+   status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
    manifest = "";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Diagnostics", diagnostics_write, AC_SNAPSHOT) + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? "manifest_written" : manifest_write.status;
@@ -146,7 +153,7 @@ void AC_PublishRuntime0()
    AC_SNAPSHOT.manifest_status = manifest_final_write.ok ? "manifest_written" : manifest_final_write.status;
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
    AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText());
+   AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
 }
 
 int OnInit()
