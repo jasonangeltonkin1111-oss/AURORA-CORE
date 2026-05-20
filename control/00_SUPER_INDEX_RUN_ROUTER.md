@@ -1,8 +1,8 @@
-# AURORA CORE — SUPER INDEX / RUN ROUTER
+# AURORA CORE - SUPER INDEX / RUN ROUTER
 
 **System:** AURORA CORE  
-**Role:** Temporary master run router, reading law, work-mode router, source-of-truth gateway, and anti-drift control surface.  
-**Status:** DRAFT AUTHORITY — created by GPT after the 16-guidebook overview set. This is not final. It must be revised later after source/runtime evidence matures.
+**Role:** current run router, reading law, work-mode router, source-of-truth gateway, and anti-drift control surface.  
+**Status:** CURRENT ROUTER - must be read with `README.md` and `control/01_CURRENT_SOURCE_TRUTH_MAP.md` before any serious work.
 
 ---
 
@@ -13,8 +13,9 @@ This Super Index tells every future Aurora run what to read, what mode it is in,
 Core law:
 
 ```text
-Every serious run must follow the right books before touching architecture, schemas, source, prompts, or claims.
-Runtime 0 — Governance / Internal Control Owner comes before Layer 1 — Account / Portfolio / Prop Rule Truth.
+Every serious run must follow the current source truth map before touching architecture, schemas, source, prompts, or claims.
+Runtime/source files outrank old guidebook-era wording for implementation truth.
+No serious run may proceed from memory alone.
 ```
 
 ---
@@ -22,28 +23,30 @@ Runtime 0 — Governance / Internal Control Owner comes before Layer 1 — Accou
 ## 1. Current System State
 
 ```text
-Guidebook overview set: COMPLETE — 16 / 16
-Current active guidebook location: docs/
-Post-guidebook scaffold: CREATED
-Super Index: DRAFT AUTHORITY
-Runtime 0 source plan: CREATED
-MT5 source implementation: HOLD UNTIL RUNTIME 0 SOURCE START IS EXPLICITLY REQUESTED
-External worker implementation: HOLD
+README.md: current repo-level direction
+control/01_CURRENT_SOURCE_TRUTH_MAP.md: current navigation and contradiction-prevention bridge
+Guidebooks: active doctrine, but older wording must be patched when it conflicts with current source truth
+MT5 source implementation: active source exists, limited scope only
+Runtime 0: governance/status/manifest/diagnostics/micro-log support exists
+Runtime 1 Layer 1: account truth snapshot exists
+Runtime 2: taxonomy/universe lookup skeleton or contract only unless generated rows are committed
+Runtime 7: FileIO/routes owner exists
+Selection Desk: structure placeholders only
+Dossiers: Open/Closed/Unknown structure preserved
+External worker: design-stage only; no production authority granted
 Trading edge claim: UNPROVEN
 Setup strategy layer: QUARANTINE
 Directional alerts: HOLD
-Auto-trading: BLOCKED
+Auto-trading / trade permission: BLOCKED
 ```
 
 Important:
 
 ```text
-16 / 16 guidebooks created means the overview documentation set exists.
-It does not mean Aurora is implemented.
-It does not mean compile proof exists.
-It does not mean runtime proof exists.
-It does not mean edge exists.
-It does not mean trading is allowed.
+Existing guidebooks and source slices mean documentation and limited implementation exist.
+They do not mean compile proof exists for the latest patch.
+They do not mean runtime proof exists for the latest patch.
+They do not mean ranking, selection, edge, strategy, alerts, or trading permission exists.
 ```
 
 ---
@@ -53,36 +56,21 @@ It does not mean trading is allowed.
 Default hierarchy:
 
 ```text
-1. Current active source files, once source exists
-2. Current active guidebooks in docs/
-3. Current control / blueprint / governance / research / mt5 planning files
-4. Current governance/ledger outputs, once runtime exists
-5. README / index files
-6. Accepted current prompts
-7. Recent audit reports with direct file/source evidence
-8. Git history / previous commits
-9. Archived guidebooks, reports, and prompts
-10. Screenshots, pasted outputs, user reports
-11. Chat memory / AI reasoning
+1. Current active MT5 source files for implementation truth
+2. Runtime/generated file evidence supplied by the user for observed behavior
+3. README.md for current repo-level direction
+4. control/01_CURRENT_SOURCE_TRUTH_MAP.md for current navigation and contradiction prevention
+5. This router for work routing
+6. control/05_DECISION_STATE_REGISTER.md for decision/evidence gates
+7. Active docs/ guidebooks for doctrine
+8. Active blueprint/ contracts for structure
+9. governance/ schemas and ledgers
+10. research/ primary-source constraints
+11. Git history / previous commits
+12. Old guidebooks, reports, prompts, screenshots, chats, and memory as background only
 ```
 
-Until MT5 source exists:
-
-```text
-Current guidebooks + this Super Index + current scaffold/planning files are the active planning authority.
-```
-
-After MT5 source exists:
-
-```text
-Current active source files outrank roadmap prose and old reports for implementation truth.
-```
-
-For runtime behavior later:
-
-```text
-Runtime logs, generated files, and manifest proof outrank source intention.
-```
+If any source conflicts, log the contradiction before editing. Do not resolve it by guessing.
 
 ---
 
@@ -92,16 +80,14 @@ Every serious Aurora run must first read:
 
 ```text
 README.md
-docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
-docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/00_MUST_READ_INDEX.md
 control/00_SUPER_INDEX_RUN_ROUTER.md
 control/05_DECISION_STATE_REGISTER.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 ```
 
-Then read the relevant books for the task using the router below.
-
-No serious run may proceed from memory alone.
+Then read the relevant guidebook, blueprint, governance contract, research note, and active source owner files for the task.
 
 ---
 
@@ -118,7 +104,7 @@ SCHEMA
 PROMPT BUILD
 PATCH
 SOURCE PLANNING
-SOURCE IMPLEMENTATION LATER
+SOURCE IMPLEMENTATION
 EDGE VALIDATION
 LIVE EVIDENCE REVIEW
 ```
@@ -134,14 +120,311 @@ SCHEMA may define schemas/examples. It must not create runtime-generated output 
 PROMPT BUILD may create execution prompts. It must not claim proof.
 PATCH may edit declared files only.
 SOURCE PLANNING may define source contracts. It must not create EA implementation unless explicitly approved.
-SOURCE IMPLEMENTATION LATER is allowed only after owner contracts, routes, schemas, and tests are ready.
+SOURCE IMPLEMENTATION may patch current active owners only after source inspection and scope lock.
 EDGE VALIDATION may test claims. It must not grant live permission.
 LIVE EVIDENCE REVIEW may evaluate supplied live/demo evidence only within evidence bounds.
 ```
 
 ---
 
-## 5. Codex Use Law
+## 5. Current Naming and Route Locks
+
+Taxonomy field names:
+
+```text
+asset_class
+market_group
+market_segment
+ranking_group
+symbol
+```
+
+Dossier folders stay:
+
+```text
+Dossiers/
+Dossiers/Open/
+Dossiers/Closed/
+Dossiers/Unknown/
+```
+
+Selection Desk parent folders are stable:
+
+```text
+Selection Desk/
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
+```
+
+Do not create parent folders named after changing ranks or Top-N values.
+
+Top-N belongs inside future child files or indexes, not route ownership.
+
+Dead active names:
+
+```text
+major_bucket
+minor_bucket
+aggregation_group
+bucket_top5
+sub_bucket_top5
+Top 5 Per Bucket
+```
+
+These may appear only in historical notes or contradiction ledgers, not active routes, source fields, or operator-facing output labels.
+
+---
+
+## 6. MT5 Source Implementation Law
+
+Current MT5 source exists. Do not treat the repo as planning-only.
+
+Runtime 0 / Runtime 1 / Runtime 2 / Runtime 7 source truth must be inspected before changes.
+
+Active first-source scope already includes:
+
+```text
+Runtime 0 governance/status/manifest/diagnostics/micro-log support
+Runtime 1 Layer 1 account truth snapshot
+Runtime 2 taxonomy/universe lookup skeleton or contract only unless generated rows are present
+Runtime 7 route and FileIO support
+```
+
+Forbidden behavior:
+
+```text
+broad rewrites
+building all runtime owners at once
+unverified external worker dependency
+unbounded OnTimer work
+hidden publication blockers
+hidden permission grants
+duplicate FileIO/path/logging/timer/publication owners
+selection/ranking/trading logic from placeholder routes
+```
+
+---
+
+## 7. Router by Work Type
+
+### 7.1 Runtime 0 / Governance / Logging / First-Source Proof
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/05_DECISION_STATE_REGISTER.md
+docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+blueprint/04_BUILD_PHASE_BLUEPRINT.md
+blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md
+blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
+governance/schemas/01_MINIMUM_GOVERNANCE_SCHEMA_CONTRACTS.md
+research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md
+research/validation_methods/00_VALIDATION_METHODS_INDEX.md
+mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md
+mt5/AuroraCore.mq5
+mt5/core/AC_Config.mqh
+mt5/core/AC_CommonTypes.mqh
+mt5/runtime_owners/runtime_0_governance_internal_control/
+mt5/runtime_owners/runtime_7_publication_owner/
+```
+
+Must preserve:
+
+```text
+OnTimer stays bounded.
+Logging is bounded snapshot/addendum style, not spam.
+Runtime 7 owns routes/FileIO.
+Publication must print honest degraded truth rather than hide files.
+```
+
+---
+
+### 7.2 Publication / Route / Dossier / Selection Desk Structure
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
+docs/06_DOSSIER_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md
+blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
+mt5/AuroraCore.mq5
+mt5/runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh
+mt5/runtime_owners/runtime_7_publication_owner/publication_fileio/AC_FileIO.mqh
+```
+
+Must preserve:
+
+```text
+Dossiers stay Open/Closed/Unknown.
+Selection Desk parent folders stay Groups and Global, plus Selection Index.txt.
+No Top-N parent folders.
+Broken truth may block review/trading but must not block physical publication.
+```
+
+---
+
+### 7.3 Runtime 1 Account / Portfolio / Prop Rule Truth
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+docs/03_RUNTIME_OWNER_GUIDEBOOK.md
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+mt5/AuroraCore.mq5
+mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh
+```
+
+Must preserve:
+
+```text
+Account truth is read-only.
+trade_permission remains blocked.
+Prop rule profile is not configured until explicitly implemented and verified.
+```
+
+---
+
+### 7.4 Runtime 2 Taxonomy / Universe / Ranking Group Contract
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+mt5/AuroraCore.mq5
+mt5/core/AC_Config.mqh
+mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh
+```
+
+Must preserve:
+
+```text
+Use asset_class, market_group, market_segment, ranking_group, symbol.
+Do not revive major_bucket, minor_bucket, aggregation_group, or bucket_top5 as active terms.
+Do not rebuild taxonomy inside OnTimer.
+Do not imply generated universe rows exist unless source files prove they are committed.
+```
+
+---
+
+### 7.5 Selection / Basket / Candidate Pool
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+mt5/AuroraCore.mq5
+mt5/core/AC_Config.mqh
+mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh
+```
+
+Must preserve:
+
+```text
+Selection is attention, not permission.
+Current Selection Desk files are placeholders only.
+Ranking numbers belong inside child files/indexes, not folder names.
+No selection logic exists until deliberately implemented and tested.
+```
+
+---
+
+### 7.6 External Worker Work
+
+Read:
+
+```text
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+```
+
+Must preserve:
+
+```text
+External worker may calculate only.
+MT5 owns broker truth, account truth, symbol universe truth, publication surfaces, permission blocks, and final validation.
+No external worker production authority exists yet.
+```
+
+---
+
+### 7.7 Alerts / Permission / Safety Work
+
+Read:
+
+```text
+docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
+docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
+docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
+docs/14_MT5_FUNCTION_GUIDEBOOK.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+```
+
+Must preserve:
+
+```text
+No permission without evidence.
+No live/funded/prop-firm readiness claim from architecture, compile, placeholders, or backtest alone.
+```
+
+---
+
+## 8. Completed-Run Refresh Law
+
+After a future full successful run reaches `runtime_normal` / `run_complete`:
+
+```text
+Default steady-state full-system refresh cadence = every 30 minutes.
+```
+
+Between full refreshes:
+
+```text
+heartbeat remains alive
+status surfaces still print health
+critical account/risk/terminal/file-write states still update
+stale/degraded states remain visible
+Recovery Lane may continue bounded retry work
+external worker health is monitored if enabled
+```
+
+---
+
+## 9. Codex Use Law
 
 Codex is temporary and sparing.
 
@@ -176,506 +459,18 @@ Codex is a wrench, not the architect.
 
 ---
 
-## 6. MT5 Source Implementation Law
-
-MT5 source starts with Runtime 0.
-
-Do not create `.mq5` or `.mqh` implementation files until the user explicitly requests source implementation.
-
-When implementation begins, the first target is:
+## 10. Proof Discipline
 
 ```text
-Runtime Owner: Runtime 0 — Governance / Internal Control Owner
-Internal Layers:
-Layer 0.1 — Startup / Runtime Identity
-Layer 0.2 — Scheduler / Heartbeat / Breathing Spine
-Layer 0.4 — Governance / Manifest / Telemetry
-Support: Runtime 7 — Publication Owner for FileIO/routes only
+Compile success proves syntax/build compatibility only.
+Runtime file output proves only observed publication behavior under observed terminal/account/server conditions.
+Placeholder files prove only structure publication.
+Selection is attention, not permission.
+No live trading, prop-firm readiness, strategy edge, or execution approval exists until evidence specifically proves it.
 ```
 
-Runtime 0 must prove:
+Decision default after source edits:
 
 ```text
-EA starts
-account-safe home folder creation is attempted and reported
-heartbeat/timer runs
-Runtime Status.txt prints or failure is honestly reported
-Workbench/Manifest.txt prints or failure is honestly reported
-Workbench/Status.txt prints or failure is honestly reported
-Workbench/Diagnostics.txt prints or failure is honestly reported
-runtime telemetry exists
-Runtime 0 owner status exists
-Runtime 0 layer status rows exist
-```
-
-Only after Runtime 0 passes may the system move to:
-
-```text
-Runtime 1 — Foundation Truth Owner
-Layer 1 — Account / Portfolio / Prop Rule Truth
-```
-
-Forbidden first-source behavior:
-
-```text
-building Runtime 1 before Runtime 0 passes
-building all runtime owners at once
-adding all layers at once
-unverified external worker dependency
-unbounded OnTimer work
-hidden publication blockers
-hidden permission grants
-```
-
----
-
-## 7. Completed-Run Refresh Law
-
-After a full successful run reaches `runtime_normal` / `run_complete` later:
-
-```text
-Default steady-state full-system refresh cadence = every 30 minutes.
-```
-
-Between full refreshes:
-
-```text
-heartbeat remains alive
-Board still prints health
-critical account/risk/terminal/file-write states still update
-stale/degraded states remain visible
-Recovery Lane may continue bounded retry work
-external worker health is monitored if enabled
-```
-
-Core wording:
-
-```text
-run_complete ≠ system asleep
-Completed-run full refresh = every 30 minutes
-Heartbeat / publication / critical risk checks continue between refreshes
-```
-
----
-
-## 8. External Worker Law
-
-External worker is design-stage only.
-
-Current decision state:
-
-```text
-External calculation worker: PROCEED TO DESIGN / UNPROVEN IMPLEMENTATION
-Python + file snapshot bridge: BEST FIRST CANDIDATE
-WebRequest main bridge: HOLD
-Sockets bridge: CONSIDER LATER
-C/C++ worker: HOLD AS LATER OPTIMIZATION
-```
-
-MT5 owns:
-
-```text
-broker truth
-account truth
-symbol universe truth
-quote/session truth
-selected raw source snapshots
-publication surfaces
-permission blocks
-file route ownership
-worker health monitoring
-schema/freshness validation
-operator display
-```
-
-External Worker must not own:
-
-```text
-broker truth
-live account truth
-order sending
-trade permission
-publication routes
-final Board/Dossier writing
-final source-of-truth labels without MT5 validation
-```
-
----
-
-## 9. Guidebook Router by Work Type
-
-### 9.1 Runtime 0 / First MT5 Source Work
-
-Read:
-
-```text
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/05_DECISION_STATE_REGISTER.md
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-blueprint/04_BUILD_PHASE_BLUEPRINT.md
-blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md
-blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
-governance/schemas/01_MINIMUM_GOVERNANCE_SCHEMA_CONTRACTS.md
-research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md
-research/validation_methods/00_VALIDATION_METHODS_INDEX.md
-mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md
-mt5/02_SEED_SENTINEL_INHERITANCE_AUDIT.md
-```
-
-Must preserve:
-
-```text
-Runtime 0 — Governance / Internal Control Owner first.
-Runtime 7 publication support only for FileIO/routes.
-No Runtime 1 source until Runtime 0 proves folder creation and file writing.
-No account/market/symbol/ranking/strategy/external-worker logic in Runtime 0 first source.
-```
-
----
-
-### 9.2 Timing / Heartbeat / Scheduler Work
-
-Read:
-
-```text
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/03_RUNTIME_OWNER_GUIDEBOOK.md
-docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md if worker status is involved
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
-Must preserve:
-
-```text
-OnTimer is bounded.
-Events sense and route.
-No lane may starve silently.
-Publication continues with degraded truth.
-```
-
----
-
-### 9.3 Runtime Owner / Architecture Work
-
-Read:
-
-```text
-docs/03_RUNTIME_OWNER_GUIDEBOOK.md
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-blueprint/00_BLUEPRINT_INDEX.md
-blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
-blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
-```
-
-Must preserve:
-
-```text
-Runtime Owners are top-level architecture headers.
-Runtime 0 is the internal-control owner.
-Layers live under Runtime Owners.
-No shadow owners.
-No duplicate owners.
-```
-
----
-
-### 9.4 Publication / Board / Dossier Work
-
-Read:
-
-```text
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-docs/06_DOSSIER_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
-Must preserve:
-
-```text
-Broken truth may block review/trading.
-Broken truth must not block printing.
-Board summarizes.
-Dossier explains per symbol.
-Governance proves.
-```
-
----
-
-### 9.5 Governance / Ledger / Schema Work
-
-Read:
-
-```text
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md if worker schemas are involved
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-governance/00_GOVERNANCE_INDEX.md
-governance/schemas/00_SCHEMA_INDEX.md
-```
-
-Must preserve:
-
-```text
-No ledger, no proof.
-Repo stores schemas/examples only.
-Runtime output spam does not belong in Git.
-Stable schemas beat clever filenames.
-```
-
----
-
-### 9.6 Score / Formula / Evidence Work
-
-Read:
-
-```text
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
-Must preserve:
-
-```text
-Correct formula does not prove profitable edge.
-Every score has type, owner, formula version, intended use, and out-of-scope use.
-Missing/stale data must not become fake zero.
-```
-
----
-
-### 9.7 Bucket / Taxonomy Work
-
-Read:
-
-```text
-docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
----
-
-### 9.8 Selection / Basket Work
-
-Read:
-
-```text
-docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
-docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
----
-
-### 9.9 Alerts / Permission / Safety Work
-
-Read:
-
-```text
-docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
----
-
-### 9.10 Validation / Outcome / Edge Work
-
-Read:
-
-```text
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
-docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
----
-
-### 9.11 External Worker Work
-
-Read:
-
-```text
-docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md
-docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md
-docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-research/external_worker/00_EXTERNAL_WORKER_RESEARCH_INDEX.md
-```
-
----
-
-### 9.12 MT5 Function / Platform Work
-
-Read:
-
-```text
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md
-docs/03_RUNTIME_OWNER_GUIDEBOOK.md
-docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md
-docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md if bridge-related
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md
-```
-
----
-
-### 9.13 Runtime 1 / Layer 1 Later Work
-
-Read:
-
-```text
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/05_DECISION_STATE_REGISTER.md
-blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
-blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
-blueprint/04_BUILD_PHASE_BLUEPRINT.md
-blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
-mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md
-mt5/01_LAYER1_ACCOUNT_PORTFOLIO_PROP_RULE_TRUTH_SOURCE_PLAN_AND_TESTS.md
-```
-
-Prerequisite:
-
-```text
-Runtime 0 — Governance / Internal Control Owner must be compiled, runtime-smoked, printed, and audited first.
-```
-
----
-
-## 10. Layer-by-Layer Build Law
-
-Every source build must follow:
-
-```text
-1. Declare Runtime Owner and full layer name.
-2. Read mandatory books from this Super Index.
-3. Do internet/platform research where facts matter.
-4. Define input contract.
-5. Define output contract.
-6. Define degraded/missing/stale states.
-7. Define publication behavior.
-8. Define governance ledger fields.
-9. Define tests/falsifiers.
-10. Build smallest useful slice only.
-11. Compile-test if source changed.
-12. Runtime-test if FileIO/timer/publication behavior changed.
-13. Audit outputs.
-14. Update index/control/schema only if needed.
-15. Move to next layer only after acceptance.
-```
-
----
-
-## 11. Evidence Upgrade Rules
-
-No claim may outrank its evidence.
-
-```text
-Source truth upgrade requires current file inspection.
-Compile readiness requires compile output.
-Runtime readiness requires runtime logs/generated outputs.
-Publication readiness requires generated files and manifest proof.
-External worker readiness requires request/result/schema/hash/freshness validation proof.
-Edge readiness requires validation/outcome evidence after costs and null model.
-Prop-firm readiness requires current prop-rule profile evidence.
-```
-
----
-
-## 12. Contradiction Rule
-
-If a contradiction is found, record:
-
-```text
-Claim A:
-Claim B:
-Source for A:
-Source for B:
-Evidence rank for A:
-Evidence rank for B:
-Which source outranks and why:
-Resolution test:
-Pause required:
-```
-
-Default decision:
-
-```text
-If contradiction affects source truth, publication, permission, selection, evidence integrity, FileIO routes, external worker output, or risk: HOLD / TEST FIRST.
-```
-
----
-
-## 13. Next Acceptable Work
-
-After this file exists, acceptable next work is:
-
-```text
-1. Implement Runtime 0 — Governance / Internal Control Owner first source slice when explicitly requested.
-2. Compile Runtime 0 source.
-3. Runtime-smoke folder creation and file writing.
-4. Audit Runtime 0 outputs.
-5. Only then move to Runtime 1 — Foundation Truth Owner / Layer 1 — Account / Portfolio / Prop Rule Truth.
-```
-
-Immediate forbidden next work:
-
-```text
-build Runtime 1 before Runtime 0 passes
-build all Runtime Owners in code
-build Python worker implementation
-claim edge
-approve alerts/trading/live use
-```
-
----
-
-## 14. Final Run Router Law
-
-```text
-Runtime 0 first.
-Then Runtime 1 Layer 1.
-Read the right books.
-Touch the right owner.
-Build the smallest layer.
-Test before moving.
-Codex refines sparingly.
-Truth outranks speed.
+TEST FIRST
 ```
