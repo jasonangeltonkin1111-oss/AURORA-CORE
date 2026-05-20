@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.015"
-#property description "AURORA CORE - Selection Desk placeholder route correction"
+#property version   "0.017"
+#property description "AURORA CORE - Selection Desk Ranking Group placeholder contract"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -82,6 +82,9 @@ string AC_PlaceholderText(const string surface)
    text += "placeholder_surface=" + surface + "\r\n";
    text += "placeholder_status=structure_only\r\n";
    text += "truth_status=no_runtime_truth_yet\r\n";
+   text += "ranking_group_runtime=false\r\n";
+   text += "selection_logic_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
    text += "scope_guard=no_symbols_no_ranking_no_selection_claim_no_strategy_no_execution\r\n";
    text += "generated_at=" + AC_NowText() + "\r\n";
    return text;
@@ -91,10 +94,10 @@ bool AC_AllPlaceholdersOk(const AC_WriteResult &dossiers_root,
                           const AC_WriteResult &dossiers_open,
                           const AC_WriteResult &dossiers_closed,
                           const AC_WriteResult &dossiers_unknown,
-                          const AC_WriteResult &bucket_top5,
+                          const AC_WriteResult &ranking_group_top5,
                           const AC_WriteResult &global_top10)
 {
-   return dossiers_root.ok && dossiers_open.ok && dossiers_closed.ok && dossiers_unknown.ok && bucket_top5.ok && global_top10.ok;
+   return dossiers_root.ok && dossiers_open.ok && dossiers_closed.ok && dossiers_unknown.ok && ranking_group_top5.ok && global_top10.ok;
 }
 
 void AC_FinalizeState(const AC_WriteResult &runtime_write,
@@ -149,15 +152,15 @@ void AC_PublishRuntime0()
    AC_WriteResult ph_dossiers_open = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersOpenFolder()), AC_PlaceholderText("Dossiers/Open"));
    AC_WriteResult ph_dossiers_closed = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersClosedFolder()), AC_PlaceholderText("Dossiers/Closed"));
    AC_WriteResult ph_dossiers_unknown = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersUnknownFolder()), AC_PlaceholderText("Dossiers/Unknown"));
-   AC_WriteResult ph_bucket_top5 = AC_WriteTextFile(AC_PlaceholderPath(AC_BucketTop5Folder()), AC_PlaceholderText("Selection Desk/Bucket Top 5"));
+   AC_WriteResult ph_ranking_group_top5 = AC_WriteTextFile(AC_PlaceholderPath(AC_RankingGroupTop5Folder()), AC_PlaceholderText("Selection Desk/Ranking Group Top 5"));
    AC_WriteResult ph_global_top10 = AC_WriteTextFile(AC_PlaceholderPath(AC_GlobalTop10Folder()), AC_PlaceholderText("Selection Desk/Global Top 10"));
-   bool placeholders_ok = AC_AllPlaceholdersOk(ph_dossiers_root, ph_dossiers_open, ph_dossiers_closed, ph_dossiers_unknown, ph_bucket_top5, ph_global_top10);
+   bool placeholders_ok = AC_AllPlaceholdersOk(ph_dossiers_root, ph_dossiers_open, ph_dossiers_closed, ph_dossiers_unknown, ph_ranking_group_top5, ph_global_top10);
    AC_SNAPSHOT.placeholder_status = placeholders_ok ? "placeholders_written" : "placeholder_write_degraded";
    AC_RecordWriteProblem("Placeholder Dossiers", ph_dossiers_root);
    AC_RecordWriteProblem("Placeholder Dossiers Open", ph_dossiers_open);
    AC_RecordWriteProblem("Placeholder Dossiers Closed", ph_dossiers_closed);
    AC_RecordWriteProblem("Placeholder Dossiers Unknown", ph_dossiers_unknown);
-   AC_RecordWriteProblem("Placeholder Bucket Top 5", ph_bucket_top5);
+   AC_RecordWriteProblem("Placeholder Ranking Group Top 5", ph_ranking_group_top5);
    AC_RecordWriteProblem("Placeholder Global Top 10", ph_global_top10);
    AC_AddMicroLog("write_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
 
@@ -178,7 +181,7 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Bucket Top 5 Placeholder", ph_bucket_top5, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Ranking Group Top 5 Placeholder", ph_ranking_group_top5, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Global Top 10 Placeholder", ph_global_top10, AC_SNAPSHOT) + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
@@ -195,7 +198,8 @@ void AC_PublishRuntime0()
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
-   diagnostics += "selection_desk_structure=Bucket Top 5 + Global Top 10 placeholders only\r\n";
+   diagnostics += "selection_desk_structure=Ranking Group Top 5 + Global Top 10 placeholders only\r\n";
+   diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
    diagnostics += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
    diagnostics += "scope_check=runtime1_layer1_account_truth_placeholders_only_no_symbols_no_ranking_no_strategy_no_execution\r\n";
@@ -219,7 +223,7 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Bucket Top 5 Placeholder", ph_bucket_top5, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Ranking Group Top 5 Placeholder", ph_ranking_group_top5, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Global Top 10 Placeholder", ph_global_top10, AC_SNAPSHOT) + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? "manifest_written" : manifest_write.status;
