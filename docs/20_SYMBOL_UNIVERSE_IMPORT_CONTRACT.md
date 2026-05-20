@@ -4,7 +4,7 @@
 **Owner direction:** Runtime 2 - Market Universe / Taxonomy Lookup Owner  
 **Source workbook:** `Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx`  
 **Source sheet:** `EA Export Safe`  
-**Status:** Import contract only. No symbol-universe runtime owner, generated EA copy, ranking logic, strategy, trade permission, or prop-firm readiness exists yet.
+**Status:** Import contract only. No generated EA copy, ranking logic, strategy, trade permission, or prop-firm readiness exists yet.
 
 ---
 
@@ -30,10 +30,11 @@ Source truth order for the universe import:
 
 ```text
 1. Current workbook sheet: EA Export Safe
-2. Generated EA universe include / data file
-3. MetaEditor compile output
-4. MT5 runtime load diagnostics
-5. MT5 file-output smoke proof
+2. Operator omit controls from MT5 evidence
+3. Generated EA universe include / data file
+4. MetaEditor compile output
+5. MT5 runtime load diagnostics
+6. MT5 file-output smoke proof
 ```
 
 The workbook may classify symbols for lookup, but live tradability still requires runtime checks such as symbol availability, quote freshness, spread, margin, session state, risk rules, and prop-firm profile.
@@ -162,18 +163,18 @@ runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
 
 ---
 
-## 6. Expected Import Counts
+## 6. Source Counts Before Operator Omit
 
-Current expected counts from the source workbook sheet:
+Current source counts from the workbook sheet:
 
 ```text
-total_rows=1703
-strict_rank_allowed_rows=1294
-public_research_rank_allowed_rows=224
-review_only_rows=184
-blocked_rows=1
-review_or_blocked_rows=185
-duplicate_primary_key_count=0
+source_row_count=1703
+source_strict_rank_allowed_rows=1294
+source_public_research_rank_allowed_rows=224
+source_review_only_rows=184
+source_blocked_rows=1
+source_review_or_blocked_rows=185
+source_duplicate_primary_key_count=0
 ```
 
 Definitions:
@@ -184,13 +185,30 @@ blocked_rows = rows where review_lane equals BLOCKED_NOT_RANKABLE
 review_or_blocked_rows = review_only_rows + blocked_rows
 ```
 
-These counts must be treated as acceptance targets for the generated EA copy.
+---
 
-If the generated EA copy does not match these counts, the import is degraded or failed until explained.
+## 7. Generated Counts After Operator Omit
+
+The EA-generated normal lookup include must apply the operator omit set before normal eligibility.
+
+Expected generated counts:
+
+```text
+generated_row_count=1688
+operator_omit_count=15
+generated_strict_rank_allowed_rows=1279
+generated_public_research_rank_allowed_rows=224
+generated_review_only_rows=184
+generated_blocked_rows=1
+generated_review_or_blocked_rows=185
+generated_duplicate_primary_key_count=0
+```
+
+The omitted symbols may be recorded in audit/control docs, but they must not become normal eligible generated rows.
 
 ---
 
-## 7. Required Generation Metadata
+## 8. Required Generation Metadata
 
 The generated audit must include:
 
@@ -198,22 +216,24 @@ The generated audit must include:
 source_file_sha256
 header_sha256
 row_schema_sha256
+operator_omit_set_sha256
 lookup_key_schema=server|broker_file|broker_symbol
-first_broker_symbol
-last_broker_symbol
+first_generated_broker_symbol
+last_generated_broker_symbol
 ```
 
-This prevents a different workbook with the same filename from silently becoming source truth.
+This prevents a different workbook or different operator omit set from silently becoming source truth.
 
 ---
 
-## 8. Future Runtime Owner Boundary
+## 9. Future Runtime Owner Boundary
 
 Runtime 2 Market Universe / Taxonomy Lookup Owner may own:
 
 ```text
 cached symbol universe rows
-row-count diagnostics
+source/generated row-count diagnostics
+operator omit count diagnostics
 schema version
 source workbook/sheet identity
 lookup key schema
@@ -251,7 +271,7 @@ Rank numbers, Top-N order, cycle IDs, and selection metadata must live inside ch
 
 ---
 
-## 9. Lightweight Runtime Rule
+## 10. Lightweight Runtime Rule
 
 The EA must not rebuild, research, or reclassify the symbol universe on every timer event.
 
@@ -274,7 +294,7 @@ turn public research rows into broker truth
 
 ---
 
-## 10. Publication Law
+## 11. Publication Law
 
 Broken or incomplete taxonomy truth may block ranking, review, selection, trading, and permission.
 
@@ -292,15 +312,17 @@ keep selection_logic_runtime=false until later owners exist
 
 ---
 
-## 11. Import Acceptance Criteria
+## 12. Import Acceptance Criteria
 
 The import is acceptable only when all are true:
 
 ```text
-EA copy contains 1703 rows.
+Source workbook count is 1703 rows.
+Operator omit count is 15 rows.
+EA generated normal lookup include contains 1688 rows.
 EA copy exposes source_workbook and source_sheet identity.
-EA diagnostics report row_count=1703.
-Strict/public/review/blocked counts match source expectations.
+EA diagnostics report source_row_count=1703 and loaded_row_count=1688.
+Strict/public/review/blocked counts match generated expectations.
 Duplicate primary key count is 0.
 Generation metadata hashes are present.
 Old major/minor/bucket naming is not used as active EA-facing taxonomy.
@@ -314,7 +336,7 @@ MT5 runtime smoke proves diagnostics/file publication after import.
 
 ---
 
-## 12. Required Diagnostics After Import
+## 13. Required Diagnostics After Import
 
 The future Runtime 2 diagnostics should expose at minimum:
 
@@ -325,8 +347,11 @@ source_sheet
 source_file_sha256
 header_sha256
 row_schema_sha256
+operator_omit_set_sha256
 source_row_count
 loaded_row_count
+operator_omit_count
+eligible_lookup_row_count
 strict_rank_allowed_count
 public_research_rank_allowed_count
 review_only_count
@@ -341,13 +366,15 @@ runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
 
 ---
 
-## 13. Falsifiers
+## 14. Falsifiers
 
 Kill or hold the import if any of these happen:
 
 ```text
-row_count does not match 1703 and no reason is logged
-source/header/schema hashes are missing from the generated audit
+source_row_count does not match 1703 and no reason is logged
+generated_row_count does not match 1688 and no reason is logged
+operator omit count does not match 15 and no reason is logged
+source/header/schema/omit hashes are missing from the generated audit
 broker_symbol alone becomes the lookup key
 old major_bucket/minor_bucket/aggregation_group becomes active EA-facing authority
 public_research_rank_allowed rows are treated as broker-confirmed strict rows
@@ -360,7 +387,7 @@ OnTimer does heavy universe parsing or classification
 
 ---
 
-## 14. Current Decision State
+## 15. Current Decision State
 
 Until the actual EA copy is generated, compiled, and runtime-smoked, the universe import status is:
 
@@ -368,6 +395,7 @@ Until the actual EA copy is generated, compiled, and runtime-smoked, the univers
 contract_created
 source_workbook_identified
 source_sheet_identified
+operator_omit_control_landed
 not_generated_into_ea
 not_compiler_passed
 not_runtime_observed
