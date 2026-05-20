@@ -1,0 +1,3 @@
+# Local-only workbook/input staging folder.
+# Keep this file so the folder exists in Git.
+# Do not commit workbook files here.
