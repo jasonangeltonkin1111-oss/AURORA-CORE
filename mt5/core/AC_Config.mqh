@@ -2,12 +2,12 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "selection_desk_ranking_group_contract_lock";
-static const string AC_BUILD_VERSION      = "0.017";
-static const string AC_UPGRADE_ID         = "SELECTION_DESK_RANKING_GROUP_CONTRACT_LOCK";
-static const string AC_UPGRADE_SUMMARY    = "Locks the professional Selection Desk folder contract: Ranking Group Top 5 and Global Top 10 under the existing Publication Owner route system.";
-static const string AC_UPGRADE_SCOPE      = "Route labels, placeholder publication contract, guidebook alignment, and documentation only; no taxonomy runtime load, symbol scan, ranking, selection logic, alerts, strategy, worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Selection Desk/Ranking Group Top 5 and Selection Desk/Global Top 10 placeholders; verify old major/minor/bucket labels are not active route or publication labels.";
+static const string AC_BUILD_PHASE        = "runtime2_universe_owner_skeleton";
+static const string AC_BUILD_VERSION      = "0.018";
+static const string AC_UPGRADE_ID         = "RUNTIME2_UNIVERSE_OWNER_SKELETON";
+static const string AC_UPGRADE_SUMMARY    = "Adds the Runtime 2 Market Universe / Taxonomy Lookup Owner skeleton and publishes lookup-only diagnostics without importing the 1703-row universe yet.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 2 skeleton owner, schema/count diagnostics, and documentation alignment only; no generated universe rows, no taxonomy runtime load, no ranking, no selection logic, no alerts, no strategy, no worker, and no trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Workbench diagnostics/status output; verify universe loaded_row_count=0, expected_row_count=1703, old_field_names_active=false, and runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION.";
 static const string AC_LOGGING_POLICY     = "bounded_snapshot_plus_upgrade_addendum_not_append_spam";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
