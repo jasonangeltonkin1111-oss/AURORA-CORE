@@ -36,7 +36,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    result.temp_path = final_path + ".tmp";
 
    ResetLastError();
-   int handle = FileOpen(result.temp_path, AC_FileFlags() | FILE_WRITE | FILE_REWRITE);
+   int handle = FileOpen(result.temp_path, AC_FileFlags() | FILE_WRITE);
    if(handle == INVALID_HANDLE)
    {
       result.error_code = GetLastError();
@@ -71,8 +71,10 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       return result;
    }
 
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+
    ResetLastError();
-   if(!FileMove(result.temp_path, 0, result.final_path, FILE_REWRITE | (AC_USE_COMMON_FILES ? FILE_COMMON : 0)))
+   if(!FileMove(result.temp_path, common_flag, result.final_path, FILE_REWRITE | common_flag))
    {
       result.error_code = GetLastError();
       result.status = "move_failed";
@@ -82,7 +84,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    result.move_ok = true;
 
    ResetLastError();
-   result.final_exists = FileIsExist(result.final_path, AC_USE_COMMON_FILES ? FILE_COMMON : 0);
+   result.final_exists = FileIsExist(result.final_path, common_flag);
    if(!result.final_exists)
    {
       result.error_code = GetLastError();
