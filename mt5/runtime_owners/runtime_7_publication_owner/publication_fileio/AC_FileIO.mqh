@@ -8,6 +8,8 @@ string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
    if(result.ok)
       return "file_written_clean";
+   if(result.status == "flush_failed")
+      return "flush_failed";
    if(!result.temp_open_ok)
       return "temp_open_failed";
    if(!result.temp_write_ok)
@@ -16,6 +18,8 @@ string AC_WriteStatusFromResult(const AC_WriteResult &result)
       return "move_failed";
    if(!result.final_exists)
       return "verify_failed";
+   if(result.status != "")
+      return result.status;
    return "failed";
 }
 
