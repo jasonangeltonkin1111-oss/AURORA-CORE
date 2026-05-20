@@ -50,17 +50,21 @@ The current stable parent-folder contract is:
 ```text
 Aurora Core/<server>/<account>/Selection Desk/Groups/
 Aurora Core/<server>/<account>/Selection Desk/Global/
+Aurora Core/<server>/<account>/Selection Desk/Selection Index.txt
 ```
 
 Ranking numbers, Top-N order, cycle IDs, and selection metadata belong inside child files and sibling index/metadata files, not in parent folder names.
 
-Allowed future pattern:
+Top-N was not removed.
+
+The planned output views are preserved as child files/content:
 
 ```text
 Selection Desk/Groups/_INDEX.txt
-Selection Desk/Groups/<stable-group-name>.txt
+Selection Desk/Groups/<ranking_group>.txt        # later contains group_top_n=5 and rank_1..rank_5
 Selection Desk/Global/_INDEX.txt
-Selection Desk/Global/Global Selection.txt
+Selection Desk/Global/Global Top 10.txt          # later contains global_top_n=10 and rank_1..rank_10
+Selection Desk/Selection Index.txt               # sidecar overview of group/symbol order and metadata
 ```
 
 The Dossiers contract remains separate and must not be renamed by Selection Desk work:
@@ -73,6 +77,24 @@ Aurora Core/<server>/<account>/Dossiers/Unknown/
 ```
 
 Current Selection Desk files are structure placeholders only until a later selection owner exists. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
+
+---
+
+## Current Runtime 2 Universe Status
+
+The bucket/symbol universe exists in the source workbook contract, not yet as loaded EA runtime truth.
+
+Current source state:
+
+```text
+source_workbook=Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx
+source_sheet=EA Export Safe
+expected_rows=1703
+Runtime 2 loaded_row_count=0
+AC_MarketUniverseRows.mqh=not committed
+```
+
+So the workbook contains literal symbol rows, but the EA still has only the Runtime 2 lookup skeleton until the generated row include is committed and compiled.
 
 ---
 
@@ -104,6 +126,7 @@ These old names may appear only as historical references. They must not be used 
 - Runtime 7 Publication Owner owns folder routes and FileIO boundaries.
 - Selection Desk parent folders must be stable: `Groups` and `Global`.
 - Do not create route folders named after changing ranks such as Top 5, Top 10, Rank 1, or active cycle numbers.
+- Top 5 per group and Global Top 10 are planned child output views, not parent folder owners.
 - Do not create duplicate route owners or shadow writers.
 - Do not block physical publication just because truth is partial, stale, degraded, or review-unsafe.
 - Broken truth may block review, ranking, selection, trading, and permission; it must not hide expected files.
