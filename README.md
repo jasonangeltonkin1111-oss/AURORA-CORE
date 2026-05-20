@@ -14,17 +14,20 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 
 ---
 
-## Mandatory Quality and Control Laws
+## Mandatory Reading Spine
 
-All future Aurora Core work must obey:
+All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
 
 ```text
+docs/01_LOGICAL_LAYER_BLUEPRINT.md
 docs/22_AURORA_QUALITY_7S_LAW.md
 docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
 docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
 ```
 
-These laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
+`docs/01_LOGICAL_LAYER_BLUEPRINT.md` is the canonical map for Runtime Owner numbers versus Logical Layer numbers. Runtime 7 publication support may exist early; Logical Layer 7 Session Relevance Ranking is not built until Layers 2–6 are ready.
+
+The control laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
 
 ---
 
@@ -39,13 +42,15 @@ Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
 Layer 0.4 - Governance / Manifest / Telemetry
 Runtime 1 - Foundation Truth Owner
 Layer 1 - Account / Portfolio / Prop Rule Truth
-Runtime 2 - Market Universe / Taxonomy Lookup
+Runtime 2 - Market Universe / Taxonomy Lookup skeleton in current source
 Runtime 7 - Publication Owner
 ```
 
-Do not assign new material to a layer by guess.
+Do not confuse active source owners with complete logical layers.
 
-Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must each receive an audited owner/lane before implementation.
+Runtime 7 publication exists early only as infrastructure. It does not mean Logical Layer 7 is complete.
+
+Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow the logical placement in `docs/01_LOGICAL_LAYER_BLUEPRINT.md` and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
 
 ---
 
@@ -103,33 +108,18 @@ Current Selection Desk files are structure placeholders only until a later selec
 
 ---
 
-## Dossier / Fundamental Link / DOM Direction
+## Layer Placement For New Evidence Sources
 
-Dossiers are future per-symbol truth pages. They must become useful soon, but they must not become random dumps or hidden truth owners.
-
-Future Dossier flow after owner assignment:
+From the canonical logical layer blueprint:
 
 ```text
-symbol identity
-status and operator omit state
-Runtime 2 taxonomy
-Runtime 1 account/broker context reference
-broker-spec owner output when available
-Market Watch / quote-truth owner output when available
-calculation-mode/spec-validation output when available
-broker metadata labelled advisory-only
-fundamental research links where applicable
-DOM snapshot summary only when deliberately sampled by its owner
-contradiction ledger
-ranking/selection eligibility later
-trade_permission=false
+Layer 2 = Market Open / Closed Truth, with fundamental links as support sidecar for symbol/market identity and bucket verification where applicable
+Layer 3 = Symbol + Broker Specs Truth, including calculation mode/spec-validation direction
+Layer 4 = Market Watch Truth
+Layer 22 = Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack, where DOM belongs later
 ```
 
-This is display order only. It does not assign source ownership by itself.
-
-Fundamental links are for trader review and taxonomy verification support where applicable. Not every symbol needs links.
-
-DOM is broker order-book evidence, not fundamentals. DOM likely belongs later after universe, Dossier, broker-spec, quote-truth, and calculation-mode foundations exist. DOM sampling must be bounded and never full-universe event spam.
+DOM is not fundamentals. DOM is not current Runtime 2 taxonomy. DOM must be bounded, availability-gated, labelled proxy evidence later.
 
 ---
 
