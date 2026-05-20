@@ -37,6 +37,20 @@ int AC_CommonFlag()
    return AC_USE_COMMON_FILES ? FILE_COMMON : 0;
 }
 
+bool AC_FolderDetailHasWarning(const string detail)
+{
+   return StringFind(detail, "folder_create_warning_at=") >= 0;
+}
+
+string AC_FolderStatusFromDetail(const bool folders_ok, const string detail)
+{
+   if(!folders_ok)
+      return "folder_create_failed";
+   if(AC_FolderDetailHasWarning(detail))
+      return "folder_create_warning";
+   return "folder_create_ok";
+}
+
 string AC_ServerNameForRoute()
 {
    string server = AccountInfoString(ACCOUNT_SERVER);
