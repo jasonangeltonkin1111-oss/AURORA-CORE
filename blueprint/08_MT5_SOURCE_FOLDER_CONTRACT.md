@@ -204,13 +204,15 @@ runtime_1_foundation_truth_owner/
   layer_5_basic_system_gate/
 ```
 
-First source target:
+Runtime 1 source starts only after Runtime 0 — Governance / Internal Control Owner proves folder creation, FileIO, heartbeat, manifest, telemetry, owner status, layer status, and diagnostics.
+
+First Runtime 1 target later:
 
 ```text
 Layer 1 — Account / Portfolio / Prop Rule Truth
 ```
 
-Do not create source for Layers 2–5 until Layer 1 — Account / Portfolio / Prop Rule Truth is compiled, runtime-smoked, published, and audited.
+Do not create source for Runtime 1 Layers 1–5 until Runtime 0 — Governance / Internal Control Owner is compiled, runtime-smoked, published, and audited.
 
 ---
 
@@ -224,7 +226,7 @@ runtime_2_surface_scoring_owner/
   layer_9_surface_structure_location_geometry/
 ```
 
-These folders must not be created in the first source slice unless real source files are being added with explicit approval.
+These folders must not be created until real source files are being added with explicit approval.
 
 ---
 
@@ -239,7 +241,7 @@ runtime_3_bucket_intelligence_owner/
   layer_14_bucket_leader_candidate_pool/
 ```
 
-No bucket source exists in Layer 1 — Account / Portfolio / Prop Rule Truth implementation.
+No bucket source exists during Runtime 0 — Governance / Internal Control Owner implementation.
 
 ---
 
@@ -253,7 +255,7 @@ runtime_4_basket_selection_owner/
 
 Global Top 10 remains an inspection basket, not a trade list.
 
-No selection source exists in Layer 1 — Account / Portfolio / Prop Rule Truth implementation.
+No selection source exists during Runtime 0 — Governance / Internal Control Owner implementation.
 
 ---
 
@@ -271,7 +273,7 @@ runtime_5_selected_evidence_owner/
 
 Selected Evidence is expensive and selected-only.
 
-No selected evidence source exists in Layer 1 — Account / Portfolio / Prop Rule Truth implementation.
+No selected evidence source exists during Runtime 0 — Governance / Internal Control Owner implementation.
 
 ---
 
@@ -291,7 +293,7 @@ auto-trading = BLOCKED
 trade permission = false
 ```
 
-No alerts or setup logic exist in Layer 1 — Account / Portfolio / Prop Rule Truth implementation.
+No alerts or setup logic exist during Runtime 0 — Governance / Internal Control Owner implementation.
 
 ---
 
@@ -320,6 +322,8 @@ Runtime 7 must not compute source truth.
 
 It prints and proves outputs.
 
+Runtime 7 support is allowed in the first source slice because Runtime 0 cannot prove folder creation or file writing without Publication Owner support.
+
 ---
 
 ## 14. Runtime 8 — Validation / Outcome Owner Folder Set
@@ -336,7 +340,7 @@ Validation may recommend future state changes.
 
 Permission decides.
 
-No validation source exists in Layer 1 — Account / Portfolio / Prop Rule Truth implementation.
+No validation source exists during Runtime 0 — Governance / Internal Control Owner implementation.
 
 ---
 
@@ -392,6 +396,8 @@ This prevents folder confetti while preserving the architecture.
 
 ## 17. First Source Slice Folder Set
 
+The first source slice is Runtime 0 — Governance / Internal Control Owner plus only the Runtime 7 — Publication Owner support needed to prove folders and file writing.
+
 The first source slice may create only these source areas:
 
 ```text
@@ -404,13 +410,12 @@ mt5/runtime_owners/runtime_0_governance_internal_control/
   layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh
   layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh
 
-mt5/runtime_owners/runtime_1_foundation_truth_owner/
-  layer_1_account_portfolio_prop_rule_truth/AC_Layer1_AccountPortfolioPropRuleTruth.mqh
-
 mt5/runtime_owners/runtime_7_publication_owner/
   publication_fileio/AC_FileIO.mqh
   publication_routes/AC_ServerPaths.mqh
 ```
+
+Do not create Runtime 1 — Foundation Truth Owner source in the first source slice.
 
 Do not create source folders for all future owners yet.
 
@@ -428,8 +433,13 @@ Adopt from Seed now:
 account-safe routing concept
 central path owner pattern
 verified FileIO / last-good preserved concept
-account probe concept
 print-truth / degraded-publication law
+```
+
+Adopt from Seed later:
+
+```text
+account probe concept for Layer 1 — Account / Portfolio / Prop Rule Truth
 ```
 
 Adopt from Sentinel now:
@@ -446,6 +456,7 @@ Do not copy now:
 ```text
 Seed broad include graph
 Seed symbol universe
+Seed account probe into Runtime 0
 Seed Candidate Board
 Seed Dossier bootstrap
 Seed Selection Desk
@@ -479,7 +490,11 @@ full owner name
 Module names should be explicit:
 
 ```text
-AC_Layer1_AccountPortfolioPropRuleTruth.mqh
+AC_Layer0_1_StartupRuntimeIdentity.mqh
+AC_Layer0_2_HeartbeatBreathing.mqh
+AC_Layer0_4_GovernanceRows.mqh
+AC_ServerPaths.mqh
+AC_FileIO.mqh
 ```
 
 Avoid vague names:
@@ -504,9 +519,10 @@ Runtime 0 — Governance / Internal Control Owner is defined.
 Every runtime owner has proper semantic folder names.
 Every layer folder uses number + full name.
 No empty-folder spam is allowed.
-First source slice folder set is clear.
+First source slice is Runtime 0 first.
+Runtime 7 publication support is allowed only to prove folder/FileIO writing.
+Runtime 1 — Foundation Truth Owner source is held until Runtime 0 passes.
 Seed/Sentinel inheritance is bounded.
-Layer 1 — Account / Portfolio / Prop Rule Truth remains first source target.
 ```
 
 ---
@@ -514,6 +530,7 @@ Layer 1 — Account / Portfolio / Prop Rule Truth remains first source target.
 ## 21. Final Source Folder Law
 
 ```text
+Before Aurora knows the account or market, Aurora must prove it can create its home, breathe, write, and report failure.
 Readable folders are part of correctness.
 Every owner has a home.
 Every layer has a name.
