@@ -20,13 +20,12 @@ import json
 import re
 import zipfile
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
 SOURCE_SHEET = "EA Export Safe"
-SCHEMA_VERSION = "universe_rows_v0.3"
+SCHEMA_VERSION = "universe_rows_v0.4"
 
-# Source workbook counts before operator omit controls are applied.
 EXPECTED_SOURCE = {
     "source_row_count": 1703,
     "source_strict_rank_allowed_rows": 1294,
@@ -37,18 +36,18 @@ EXPECTED_SOURCE = {
     "source_duplicate_primary_key_count": 0,
 }
 
-# Generated Runtime 2 include counts after operator omit controls are applied.
 EXPECTED_GENERATED = {
-    "generated_row_count": 1688,
-    "operator_omit_count": 15,
-    "generated_strict_rank_allowed_rows": 1279,
-    "generated_public_research_rank_allowed_rows": 224,
-    "generated_review_only_rows": 184,
+    "generated_row_count": 1649,
+    "operator_omit_count": 54,
+    "generated_strict_rank_allowed_rows": 1261,
+    "generated_public_research_rank_allowed_rows": 211,
+    "generated_review_only_rows": 176,
     "generated_blocked_rows": 1,
-    "generated_review_or_blocked_rows": 185,
+    "generated_review_or_blocked_rows": 177,
     "generated_duplicate_primary_key_count": 0,
 }
 
+# Operator-marked unusable/dead symbols from MT5 screenshot evidence.
 OPERATOR_OMIT_SYMBOLS = {
     "11.xhkg",
     "1186.xhkg",
@@ -58,9 +57,48 @@ OPERATOR_OMIT_SYMBOLS = {
     "762.xhkg",
     "883.xhkg",
     "941.xhkg",
+    "AMP",
+    "ANSS",
+    "ATC",
+    "ATUS",
+    "BRFS",
+    "BYON",
+    "CSTR",
+    "CTLT",
+    "CVAC",
+    "DOV",
+    "FL",
+    "FLT",
+    "FSR",
+    "GCI",
+    "HBI",
+    "HES",
     "INCUSD.c",
+    "INFA",
+    "IPG",
+    "K",
+    "LH",
+    "MDC",
+    "MDRX",
+    "MMC",
+    "NSTG",
+    "OMI",
+    "PARA",
+    "PXD",
     "SGCSGD.c",
+    "SIX",
+    "SKX",
+    "SPLK",
+    "SPR",
+    "SPWR",
+    "SWN",
+    "SYMC",
+    "TTE",
+    "TUP",
     "TWCUSD.c",
+    "VTLE",
+    "WBA",
+    "WISH",
     "813.xhkg",
     "2007.xhkg",
     "410.xhkg",
@@ -145,10 +183,7 @@ def read_shared_strings(zf: zipfile.ZipFile) -> List[str]:
     root = ET.fromstring(raw)
     values: List[str] = []
     for si in root.findall(f"{NS_MAIN}si"):
-        parts: List[str] = []
-        for t in si.iter(f"{NS_MAIN}t"):
-            parts.append(t.text or "")
-        values.append("".join(parts))
+        values.append("".join(t.text or "" for t in si.iter(f"{NS_MAIN}t")))
     return values
 
 
@@ -161,7 +196,6 @@ def workbook_sheet_path(zf: zipfile.ZipFile, sheet_name: str) -> str:
         target = rel.attrib.get("Target")
         if rid and target:
             rid_to_target[rid] = target
-
     for sheet in workbook.findall(f".//{NS_MAIN}sheet"):
         if sheet.attrib.get("name") != sheet_name:
             continue
@@ -204,7 +238,7 @@ def read_sheet_rows(xlsx_path: Path, sheet_name: str) -> List[List[str]]:
         return rows
 
 
-def load_records_and_headers(xlsx_path: Path) -> tuple[List[Dict[str, str]], List[str]]:
+def load_records_and_headers(xlsx_path: Path) -> Tuple[List[Dict[str, str]], List[str]]:
     rows = read_sheet_rows(xlsx_path, SOURCE_SHEET)
     if not rows:
         raise RuntimeError("No rows found in source sheet")
@@ -327,7 +361,7 @@ def count_rows(rows: List[Dict[str, str]], prefix: str) -> Dict[str, int]:
     }
 
 
-def validate_counts(source_rows: List[Dict[str, str]], generated_rows: List[Dict[str, str]]) -> tuple[Dict[str, int], Dict[str, int]]:
+def validate_counts(source_rows: List[Dict[str, str]], generated_rows: List[Dict[str, str]]) -> Tuple[Dict[str, int], Dict[str, int]]:
     source_counts = count_rows(source_rows, "source")
     generated_counts = count_rows(generated_rows, "generated")
     generated_counts["operator_omit_count"] = len(source_rows) - len(generated_rows)
@@ -342,7 +376,7 @@ def mql_escape(value: str) -> str:
     return clean(value).replace("|", "/").replace("\\", "\\\\").replace('"', '\\"')
 
 
-def generation_metadata(xlsx_path: Path, headers: List[str], source_rows: List[Dict[str, str]], generated_rows: List[Dict[str, str]]) -> Dict[str, str]:
+def generation_metadata(xlsx_path: Path, headers: List[str], generated_rows: List[Dict[str, str]]) -> Dict[str, str]:
     first_symbol = f(generated_rows[0], "broker_symbol") if generated_rows else ""
     last_symbol = f(generated_rows[-1], "broker_symbol") if generated_rows else ""
     return {
@@ -427,7 +461,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     source_rows, headers = load_records_and_headers(args.workbook)
     generated_rows = eligible_rows(source_rows)
     source_counts, generated_counts = validate_counts(source_rows, generated_rows)
-    metadata = generation_metadata(args.workbook, headers, source_rows, generated_rows)
+    metadata = generation_metadata(args.workbook, headers, generated_rows)
     mql = generate_mql(generated_rows, metadata, source_counts, generated_counts)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.audit_out.parent.mkdir(parents=True, exist_ok=True)
