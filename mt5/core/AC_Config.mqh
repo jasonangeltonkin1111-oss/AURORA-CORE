@@ -2,12 +2,12 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "taxonomy_ranking_group_contract_lock";
-static const string AC_BUILD_VERSION      = "0.016";
-static const string AC_UPGRADE_ID         = "RUN016_TAXONOMY_RANKING_GROUP_CONTRACT";
-static const string AC_UPGRADE_SUMMARY    = "Locks the new taxonomy contract: asset_class, market_group, market_segment, ranking_group, and updates Selection Desk placeholders.";
-static const string AC_UPGRADE_SCOPE      = "Guidebook and placeholder route direction only; no taxonomy runtime load, symbol scan, ranking, selection logic, alerts, strategy, worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Selection Desk/Ranking Group Top 5 and Selection Desk/Global Top 10 placeholders; verify old bucket naming is not active.";
+static const string AC_BUILD_PHASE        = "selection_desk_ranking_group_contract_lock";
+static const string AC_BUILD_VERSION      = "0.017";
+static const string AC_UPGRADE_ID         = "SELECTION_DESK_RANKING_GROUP_CONTRACT_LOCK";
+static const string AC_UPGRADE_SUMMARY    = "Locks the professional Selection Desk folder contract: Ranking Group Top 5 and Global Top 10 under the existing Publication Owner route system.";
+static const string AC_UPGRADE_SCOPE      = "Route labels, placeholder publication contract, guidebook alignment, and documentation only; no taxonomy runtime load, symbol scan, ranking, selection logic, alerts, strategy, worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Selection Desk/Ranking Group Top 5 and Selection Desk/Global Top 10 placeholders; verify old major/minor/bucket labels are not active route or publication labels.";
 static const string AC_LOGGING_POLICY     = "bounded_snapshot_plus_upgrade_addendum_not_append_spam";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
