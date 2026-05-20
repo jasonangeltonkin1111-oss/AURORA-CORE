@@ -1,8 +1,8 @@
-# AURORA CORE — BUCKET UNIVERSE & TAXONOMY GUIDEBOOK
+# AURORA CORE - UNIVERSE TAXONOMY GUIDEBOOK
 
 **System:** AURORA CORE  
-**Role:** Symbol universe model, broker bucket hierarchy, taxonomy cache, classification source discipline, unknown handling, and anti-random-bucket law.  
-**Status:** Overview guidebook foundation. Exact taxonomy maps may be refined later.
+**Role:** symbol universe model, taxonomy hierarchy, ranking_group contract, classification source discipline, unknown handling, and anti-random-classification law.  
+**Status:** RUN020 current naming contract. Old broker-group/subgroup/aggregation wording is retired for active work.
 
 ---
 
@@ -14,9 +14,10 @@ It answers:
 
 ```text
 What is this symbol?
-What broker group does it belong to?
-What subgroup?
-What aggregation group?
+What asset_class does it belong to?
+What market_group does it belong to?
+What market_segment does it belong to?
+What ranking_group should the EA use for selection/caps/diversification later?
 Is classification known, inferred, broker-provided, manual, cached, or unknown?
 Is taxonomy stale?
 What version classified it?
@@ -31,15 +32,52 @@ Every symbol needs honest classification or honest unknown state.
 
 ---
 
-## 1. What This Guidebook Owns
+## 1. Active Naming Contract
+
+Use these exact active field names:
+
+```text
+asset_class
+market_group
+market_segment
+ranking_group
+symbol
+```
+
+Meaning:
+
+```text
+Asset Class -> Market Group -> Market Segment -> Symbol
+Ranking Group = EA-safe selection/cap/diversification grouping field
+```
+
+Dead active names:
+
+```text
+major_bucket
+minor_bucket
+broker_group
+broker_subgroup
+aggregation_group
+bucket_top5
+sub_bucket_top5
+Top 5 Per Bucket
+```
+
+These may appear only in historical notes or contradiction ledgers. They must not be used as active source fields, route names, operator-facing labels, or new workbook headers.
+
+---
+
+## 2. What This Guidebook Owns
 
 This guidebook owns:
 
 ```text
 symbol universe model
-broker group
-broker subgroup
-aggregation group
+asset_class
+market_group
+market_segment
+ranking_group
 classification source
 classification confidence
 classification cache
@@ -51,18 +89,17 @@ manual review state
 classification freshness
 symbol naming normalization
 suffix/prefix handling
-asset class hierarchy
 forex major/cross/exotic rules
 metals rules
 indices rules
 commodities rules
 crypto rules
-stock/sector/theme rules
+stock/sector/theme support where relevant
 ```
 
 ---
 
-## 2. What This Guidebook Must Not Own
+## 3. What This Guidebook Must Not Own
 
 This guidebook must not own:
 
@@ -78,11 +115,13 @@ strategy logic
 
 Taxonomy tells what the symbol is.
 
-It does not say whether to trade it.
+Ranking Group tells how it should be grouped for later selection/cap/diversification logic.
+
+Neither says whether to trade it.
 
 ---
 
-## 3. Research Foundation
+## 4. Research Foundation
 
 MQL5 exposes broker-side symbol metadata through `SymbolInfoInteger`, `SymbolInfoDouble`, and `SymbolInfoString`.
 
@@ -110,29 +149,22 @@ Broker metadata is still broker-provided and may be incomplete or inconsistent.
 Parser-derived taxonomy must be labelled as derived truth.
 ```
 
-GICS and ICB show that serious financial classification is hierarchical and versioned, but they are equity/company classification frameworks and must not be blindly applied to forex, metals, indices, crypto, or broker CFDs.
+Professional equity frameworks such as GICS show that serious classification is hierarchical and versioned, but they are equity/company classification frameworks and must not be blindly applied to forex, metals, indices, crypto, or broker CFDs.
 
-Reference:
-
-```text
-https://www.investopedia.com/articles/stocks/08/global-industry-classification-industrial-classification-benchmark.asp
-```
-
-ISO 10962 CFI is an instrument classification standard, showing the importance of instrument-type classification, but Aurora cannot assume MT5 brokers expose CFI.
-
-Reference:
+Aurora translation:
 
 ```text
-https://en.wikipedia.org/wiki/ISO_10962
+Use hierarchy.
+Do not force equity sector logic onto every asset class.
 ```
 
 ---
 
-## 4. Core Taxonomy Law
+## 5. Core Taxonomy Law
 
 ```text
 Raw symbol is broker truth.
-Normalized symbol is derived truth.
+Canonical symbol is derived truth.
 Unknown is honest.
 Fake Other is corruption.
 ```
@@ -143,13 +175,18 @@ Unknown classification should print and be tracked.
 
 ---
 
-## 5. Symbol Universe Model
+## 6. Symbol Universe Model
 
 Symbol universe state should include:
 
 ```text
 server
 account
+broker_file
+broker_symbol
+canonical_symbol
+ea_lookup_key
+taxonomy_lookup_key
 symbols_total
 symbols_seen
 symbols_open
@@ -167,60 +204,84 @@ A classification cache from one broker/account must not silently apply to anothe
 
 ---
 
-## 6. Broker Group / Subgroup / Aggregation Group
+## 7. Taxonomy Hierarchy
 
 Base hierarchy:
 
 ```text
-broker_group
-broker_subgroup
-aggregation_group
+asset_class
+  market_group
+    market_segment
+      symbol
 ```
 
 Examples:
 
 ```text
-Currency
-  forex.major
-  forex.cross
-  forex.exotic
-
-Metals
-  precious.metals
-  industrial.metals
-
-Indices
-  us.indices
-  eu.indices
-  asia.indices
-
-Energy
-  oil
-  gas
-
-Crypto
-  crypto.major
-  crypto.alt
-
-Stocks
-  stock.us
-  stock.eu
-  stock.other
+asset_class=FX
+market_group=Majors
+market_segment=USD Cross
+symbol=EURUSD
+ranking_group=FX Majors / USD Crosses
 ```
-
-Optional fields for stocks:
 
 ```text
-sector
-industry
-theme
+asset_class=Commodities
+market_group=Metals
+market_segment=Gold
+symbol=XAUUSD
+ranking_group=Metals / Gold
 ```
 
-Do not force every symbol to have sector/theme.
+```text
+asset_class=Crypto
+market_group=Major Crypto
+market_segment=Bitcoin
+symbol=BTCUSD
+ranking_group=Major Crypto / Bitcoin
+```
+
+```text
+asset_class=Equities
+market_group=Information Technology
+market_segment=Semiconductors
+symbol=NVDA
+ranking_group=Information Technology / Semiconductors
+```
+
+Do not force every symbol to have equity sector/theme fields.
+
+Non-equity symbols should use market-native groups and segments.
 
 ---
 
-## 7. Classification Source Ladder
+## 8. Ranking Group Contract
+
+`ranking_group` is separate from `market_segment`.
+
+It answers:
+
+```text
+Which EA-safe aggregation group should this symbol use for later ranking, caps, diversification, and selection controls?
+```
+
+Why separate it:
+
+```text
+Some market segments only contain 1-2 symbols.
+Ranking every tiny segment separately creates fake diversification and unstable selection.
+```
+
+Rule:
+
+```text
+Store asset_class, market_group, and market_segment for classification truth.
+Use ranking_group for selection/cap/diversification rules unless a later owner proves a narrower grouping is safe.
+```
+
+---
+
+## 9. Classification Source Ladder
 
 Classification sources:
 
@@ -230,7 +291,7 @@ symbol_path
 symbol_description
 symbol_name_parser
 known_symbol_map
-external_reference_later
+public_research_later
 manual_review
 unknown
 ```
@@ -241,7 +302,7 @@ General source priority:
 broker metadata may outrank parser
 manual review may outrank parser if recorded
 known symbol map may outrank fuzzy description
-external reference only if provenance recorded
+public research only if provenance recorded
 unknown is allowed when evidence is insufficient
 ```
 
@@ -252,11 +313,16 @@ classification_source
 classification_confidence
 classification_version
 review_status
+evidence_status
+strict_rank_allowed
+public_research_rank_allowed
+review_lane
+block_reason
 ```
 
 ---
 
-## 8. Evidence and Confidence Labels
+## 10. Evidence and Confidence Labels
 
 Classification confidence labels:
 
@@ -281,7 +347,7 @@ A parser-derived classification should not claim broker-verified status.
 
 ---
 
-## 9. Raw Symbol vs Normalized Symbol
+## 11. Raw Symbol vs Canonical Symbol
 
 Symbol names are often polluted by broker suffixes/prefixes.
 
@@ -301,436 +367,110 @@ BTCUSD.r
 Required fields:
 
 ```text
-raw_symbol
-normalized_symbol
-detected_prefix
-detected_suffix
-base_asset
-quote_asset
-contract_hint
-broker_path
-description
+broker_symbol
+canonical_symbol
+ea_lookup_key
+taxonomy_lookup_key
+normalization_method
+normalization_confidence
 ```
 
-Rule:
+Normalization is derived truth.
+
+Never hide the broker symbol.
+
+---
+
+## 12. Unknown Handling
+
+Unknown is allowed.
+
+Unknown must be visible.
+
+Required unknown fields:
 
 ```text
-raw_symbol is always preserved.
-normalized_symbol is derived.
-derived classification must cite source and confidence.
+classification_status=unknown
+classification_confidence=unknown
+unknown_reason
+review_required=true
+strict_rank_allowed=false
+public_research_rank_allowed=false unless explicitly proven
+```
+
+No symbol may disappear merely because classification is incomplete.
+
+---
+
+## 13. Runtime Constraint
+
+Taxonomy lookup must stay lightweight.
+
+Do not rebuild taxonomy inside `OnTimer`.
+
+Expected later design:
+
+```text
+prebuilt generated lookup rows
+cache/version/hash checks
+bounded runtime lookup
+honest degraded state when lookup is missing or stale
+```
+
+Current status:
+
+```text
+Runtime 2 is skeleton / contract only unless generated rows are committed and compiled.
 ```
 
 ---
 
-## 10. Prefix / Suffix Handling
+## 14. Selection Desk Relationship
 
-Prefix/suffix handling must be conservative.
+Taxonomy does not own Selection Desk routes.
 
-Wrong:
-
-```text
-strip all non-letters and assume result is correct
-```
-
-Correct:
+Selection Desk parent routes are:
 
 ```text
-preserve raw_symbol
-derive normalized_symbol
-record detected suffix/prefix
-record parser confidence
-fall back to unknown if uncertain
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
 ```
 
-No parser may destroy broker truth.
+Ranking Group Top-N content belongs later inside child files/indexes, not parent folder names.
 
 ---
 
-## 11. Forex Classification Rules
+## 15. Dossier Relationship
 
-Forex classification must be pair-structure based.
-
-Fields:
+Dossiers keep stable status folders:
 
 ```text
-base_currency
-quote_currency
-currency_pair_type
-major_currency_involved
-is_usd_pair
-is_cross
-is_exotic
-region_tags
+Dossiers/
+Dossiers/Open/
+Dossiers/Closed/
+Dossiers/Unknown/
 ```
 
-Common major currencies:
+Do not replace Dossier folders with taxonomy folders.
 
-```text
-USD
-EUR
-GBP
-JPY
-CHF
-CAD
-AUD
-NZD
-```
-
-Taxonomy versions must define exact major/cross/exotic rules.
-
-Rule:
-
-```text
-Forex classification must be pair-structure based, not GICS-based.
-```
+Taxonomy fields belong inside Dossier content, lookup rows, indexes, and metadata.
 
 ---
 
-## 12. Metals Classification Rules
+## 16. Decision
 
-Common metal hints:
+Use:
 
 ```text
-XAU
-gold
-XAG
-silver
-XPT
-platinum
-XPD
-palladium
+asset_class -> market_group -> market_segment -> symbol
+ranking_group = EA selection/cap/diversification grouping field
 ```
 
-Group examples:
+Do not revive old active names.
+
+Decision default after taxonomy/source edits:
 
 ```text
-Metals / precious.metals
-Metals / industrial.metals
-```
-
-Do not classify metals as Currency merely because they are quoted against USD.
-
----
-
-## 13. Indices Classification Rules
-
-Common index hints:
-
-```text
-US30
-DJ30
-NAS100
-US100
-SPX500
-US500
-GER40
-DE40
-DAX
-UK100
-JP225
-HK50
-```
-
-Group examples:
-
-```text
-Indices / us.indices
-Indices / eu.indices
-Indices / asia.indices
-```
-
-Broker path/description should be used when available.
-
----
-
-## 14. Commodities Classification Rules
-
-Commodity groups may include:
-
-```text
-Energy
-Agriculture
-Softs
-Industrial Metals
-Precious Metals
-```
-
-Energy hints:
-
-```text
-WTI
-BRENT
-UKOIL
-USOIL
-NGAS
-```
-
-Do not classify commodities by loose substring alone if broker metadata/path contradicts it.
-
----
-
-## 15. Crypto Classification Rules
-
-Crypto classification fields:
-
-```text
-crypto_base
-quote_asset
-crypto_pair_type
-crypto_major_flag
-crypto_alt_flag
-```
-
-Common crypto hints:
-
-```text
-BTC
-ETH
-SOL
-XRP
-BNB
-ADA
-DOGE
-```
-
-Rule:
-
-```text
-Crypto pair quoted in USD is not Forex.
-```
-
----
-
-## 16. Stocks / Sector / Industry / Theme Rules
-
-Stocks may use:
-
-```text
-broker metadata sector
-broker metadata industry
-symbol path
-description
-external reference later
-manual review
-```
-
-Optional classification:
-
-```text
-sector
-industry
-theme
-```
-
-Do not force sector/theme on non-stock instruments.
-
-GICS/ICB may inform structure for equities, but they must not override broker truth without source/provenance.
-
----
-
-## 17. Unknown / Other / Unsupported Distinction
-
-States:
-
-```text
-classified
-classified_degraded
-unknown_pending
-manual_review_required
-unsupported_instrument
-excluded_by_policy
-```
-
-Definitions:
-
-```text
-Unknown = classification not yet known.
-Other = taxonomy intentionally defines a catch-all bucket.
-Unsupported = instrument recognized but not handled.
-```
-
-Forbidden:
-
-```text
-silently assign Other
-silently exclude unknown
-pretend unknown is classified
-```
-
-Unknown is not failure if honest.
-
-Fake classification is failure.
-
----
-
-## 18. Classification Cache Contract
-
-Taxonomy must not rebuild every heartbeat.
-
-Cache key:
-
-```text
-server
-account
-taxonomy_engine_version
-symbol_universe_hash
-symbol_count
-first_symbol
-last_symbol
-symbol_list_checksum
-```
-
-Cache row:
-
-```text
-raw_symbol
-normalized_symbol
-broker_group
-broker_subgroup
-aggregation_group
-classification_source
-classification_confidence
-review_status
-taxonomy_engine_version
-classified_at
-last_seen_at
-```
-
----
-
-## 19. Universe Hash Contract
-
-Universe hash should represent the broker/account symbol universe.
-
-Possible ingredients:
-
-```text
-server
-account
-symbol_count
-first_symbol
-last_symbol
-sorted_symbol_list_checksum
-taxonomy_schema_version
-```
-
-Universe hash is used to detect when classification cache may be stale.
-
----
-
-## 20. Cache Invalidation Rules
-
-Invalidate cache when:
-
-```text
-server changes
-account changes
-symbol universe hash changes
-taxonomy engine version changes
-manual cache clear
-schema version changes
-major symbol count/list change
-```
-
-Do not invalidate cache for:
-
-```text
-tick changes
-quote changes
-rank changes
-spread changes
-selection changes
-heartbeat changes
-```
-
-Cache churn is runtime poison.
-
----
-
-## 21. Manual Review State
-
-Manual review fields:
-
-```text
-review_status
-review_reason
-reviewed_by
-reviewed_at
-manual_classification
-manual_confidence
-manual_notes
-```
-
-Manual review must be recorded.
-
-Manual review must not become invisible memory.
-
----
-
-## 22. Taxonomy Governance Contract
-
-Governance should record:
-
-```text
-taxonomy_engine_version
-taxonomy_schema_version
-symbol_universe_hash
-classified_count
-unknown_count
-manual_review_count
-classification_cache_status
-classification_degraded_count
-```
-
-Classification changes should be traceable.
-
----
-
-## 23. No-Go Patterns
-
-Do not allow:
-
-```text
-every unknown becomes Other
-classification recalculates every heartbeat
-broker suffix breaks forex detection
-stocks get Forex bucket
-metals get Currency bucket
-crypto pair treated as forex
-broker path ignored
-manual review not recorded
-taxonomy version changes without cache invalidation
-raw symbol overwritten by normalized symbol
-classification grants trade permission
-```
-
----
-
-## 24. Acceptance Criteria
-
-This guidebook is acceptable if symbol universe truth becomes structured and auditable.
-
-Acceptance criteria:
-
-```text
-Every symbol has classification or honest unknown state.
-Raw broker symbol is preserved.
-Normalized symbol is derived and labelled.
-Classification source and confidence are recorded.
-Taxonomy version is recorded.
-Universe hash is recorded.
-Cache does not rebuild every heartbeat.
-Unknown is not silently converted to Other.
-Broker metadata/path/description are used when available.
-GICS/ICB/ISO patterns inform taxonomy but do not override broker truth.
-No taxonomy state grants trade permission.
-```
-
----
-
-## 25. Final Taxonomy Law
-
-```text
-AURORA CORE must know what a symbol is before it ranks the symbol.
-If it does not know, it must say unknown, not invent certainty.
+TEST FIRST
 ```
