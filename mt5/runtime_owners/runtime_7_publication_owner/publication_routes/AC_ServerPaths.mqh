@@ -1,7 +1,8 @@
 #ifndef AC_SERVER_PATHS_MQH
 #define AC_SERVER_PATHS_MQH
 
-#include "../../../core/AC_Config.mqh"
+// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
+// Runtime 7 owns route building; config is supplied by the main include chain.
 
 string AC_SanitizePathPart(string value)
 {
