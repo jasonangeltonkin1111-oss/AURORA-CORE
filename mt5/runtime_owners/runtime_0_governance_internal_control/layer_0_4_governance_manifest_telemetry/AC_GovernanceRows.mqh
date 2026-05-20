@@ -21,9 +21,14 @@ string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
    text += "generated_at=" + snapshot.generated_at + "\r\n";
    text += "route_root=" + snapshot.route_root + "\r\n";
    text += "folder_create_status=" + snapshot.folder_create_status + "\r\n";
+   text += "placeholder_status=" + snapshot.placeholder_status + "\r\n";
    text += "fileio_status=" + snapshot.fileio_status + "\r\n";
    text += "manifest_status=" + snapshot.manifest_status + "\r\n";
    text += "telemetry_status=" + snapshot.telemetry_status + "\r\n";
+   text += "diagnostics_status=" + snapshot.diagnostics_status + "\r\n";
+   text += "upgrade_log_status=" + snapshot.upgrade_log_status + "\r\n";
+   text += "upgrade_addendum_status=" + snapshot.upgrade_addendum_status + "\r\n";
+   text += "micro_log_status=" + snapshot.micro_log_status + "\r\n";
    text += "owner_status=" + snapshot.owner_status + "\r\n";
    text += "layer_0_1_startup_runtime_identity_status=" + snapshot.layer_0_1_status + "\r\n";
    text += "layer_0_2_scheduler_heartbeat_breathing_status=" + snapshot.layer_0_2_status + "\r\n";
@@ -31,7 +36,7 @@ string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
    text += "file_publication_blocked=" + AC_BoolText(snapshot.file_publication_blocked) + "\r\n";
    text += "degraded_reason=" + snapshot.degraded_reason + "\r\n";
    text += "blocked_reason=" + snapshot.blocked_reason + "\r\n";
-   text += "next_allowed_step=Runtime 1 - Foundation Truth Owner / Layer 1 - Account / Portfolio / Prop Rule Truth only after Runtime 0 compile and runtime smoke proof\r\n";
+   text += "next_allowed_step=Runtime 1 - Foundation Truth Owner / Layer 1 - Account / Portfolio / Prop Rule Truth compile and runtime smoke proof, then hold for Layer 2 planning\r\n";
    return text;
 }
 
@@ -84,6 +89,36 @@ string AC_ManifestRow(const string surface, const AC_WriteResult &result, const 
       + "|error_code=" + IntegerToString(result.error_code);
 }
 
+string AC_MicroLogRow(const string function_name, const uint start_ms, const uint end_ms, const string status)
+{
+   return "schema_name=micro_log|schema_version=v0.1|upgrade_id=" + AC_UPGRADE_ID
+      + "|function=" + function_name
+      + "|start_ms=" + IntegerToString((int)start_ms)
+      + "|end_ms=" + IntegerToString((int)end_ms)
+      + "|duration_ms=" + IntegerToString((int)(end_ms - start_ms))
+      + "|status=" + status;
+}
+
+string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
+{
+   string text = "";
+   text += "schema_name=upgrade_addendum\r\n";
+   text += "schema_version=v0.1\r\n";
+   text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
+   text += "build_version=" + AC_BUILD_VERSION + "\r\n";
+   text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
+   text += "generated_at=" + snapshot.generated_at + "\r\n";
+   text += "addendum_reason=user_requested_logging_addendum_micro_logging_and_placeholder_routes\r\n";
+   text += "logging_contract=mandatory_for_every_upgrade_bounded_snapshot_plus_addendum\r\n";
+   text += "micro_logging_contract=major_phase_timing_only_no_per_tick_append_no_symbol_loop_spam\r\n";
+   text += "placeholder_contract=dossiers_open_closed_unknown_and_selection_top_folders_are_structure_only_no_ranking_claim\r\n";
+   text += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
+   text += "scope_guard=no_symbols_no_ranking_no_strategy_no_execution_no_external_worker\r\n";
+   text += "compile_proof=pending_external_metaeditor_output\r\n";
+   text += "runtime_smoke=pending_user_generated_files_review\r\n";
+   return text;
+}
+
 string AC_UpgradeLogText(const AC_Runtime0Snapshot &snapshot,
                          const AC_WriteResult &runtime_write,
                          const AC_WriteResult &status_write,
@@ -111,7 +146,7 @@ string AC_UpgradeLogText(const AC_Runtime0Snapshot &snapshot,
    text += "diagnostics_write=" + AC_WriteResultLine("Diagnostics", diagnostics_write) + "\r\n";
    text += "acceptance_compile_proof=pending_external_metaeditor_output\r\n";
    text += "acceptance_runtime_smoke=pending_user_generated_files_review\r\n";
-   text += "acceptance_note=Upgrade Log is a bounded snapshot overwritten each heartbeat, not an append journal. It proves latest upgrade state without file-growth spam.\r\n";
+   text += "acceptance_note=Upgrade Log and Upgrade Addendum are bounded snapshots. Micro Log records major phase timings only.\r\n";
    return text;
 }
 
