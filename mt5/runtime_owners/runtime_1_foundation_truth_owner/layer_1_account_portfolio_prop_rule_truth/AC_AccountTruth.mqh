@@ -24,13 +24,13 @@ string AC_AccountTruthText()
    text += "runtime_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    text += "layer_name=" + AC_LAYER_1_NAME + "\r\n";
    text += "generated_at=" + AC_NowText() + "\r\n";
-   text += "account_login=" + IntegerToString((int)AccountInfoInteger(ACCOUNT_LOGIN)) + "\r\n";
+   text += "account_login=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\r\n";
    text += "account_server=" + AccountInfoString(ACCOUNT_SERVER) + "\r\n";
    text += "account_company=" + AccountInfoString(ACCOUNT_COMPANY) + "\r\n";
    text += "account_name=" + AccountInfoString(ACCOUNT_NAME) + "\r\n";
    text += "account_currency=" + AccountInfoString(ACCOUNT_CURRENCY) + "\r\n";
    text += "account_trade_mode=" + AC_TradeModeText(AccountInfoInteger(ACCOUNT_TRADE_MODE)) + "\r\n";
-   text += "account_leverage=" + IntegerToString((int)AccountInfoInteger(ACCOUNT_LEVERAGE)) + "\r\n";
+   text += "account_leverage=" + IntegerToString(AccountInfoInteger(ACCOUNT_LEVERAGE)) + "\r\n";
    text += "balance=" + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "\r\n";
    text += "equity=" + DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY), 2) + "\r\n";
    text += "profit=" + DoubleToString(AccountInfoDouble(ACCOUNT_PROFIT), 2) + "\r\n";
