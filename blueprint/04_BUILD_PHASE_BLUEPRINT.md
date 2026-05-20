@@ -1,7 +1,7 @@
 # AURORA CORE — BUILD PHASE BLUEPRINT
 
 **System:** AURORA CORE  
-**Role:** Planned-system completion ladder, phase gates, source-start boundary, Layer 1 entry contract, and anti-endless-planning / anti-big-bang-coding control.  
+**Role:** Planned-system completion ladder, phase gates, Runtime 0 first-source boundary, and anti-endless-planning / anti-big-bang-coding control.  
 **Status:** DETAILED BLUEPRINT — required before MT5 source implementation starts.
 
 ---
@@ -14,30 +14,24 @@ It exists to prevent two opposite failures:
 
 ```text
 1. endless planning that never reaches code
-2. rushed coding that skips required contracts and recreates drift
+2. rushed coding that skips Runtime 0, FileIO, folder creation, heartbeat, telemetry, and governance proof
 ```
 
 Core law:
 
 ```text
-Move toward code through the planned-system completion ladder.
-Do not skip blueprint, control, schemas, route contracts, research anchors, or tests.
-Do not wait for perfect documents before starting Layer 1.
+Runtime 0 — Governance / Internal Control Owner is the first source build.
+Layer 1 — Account / Portfolio / Prop Rule Truth starts only after Runtime 0 proves folder creation, FileIO, heartbeat, manifest, telemetry, status rows, and diagnostics.
+Do not wait for perfect documents forever, but do not skip the internal runtime foundation.
 ```
 
 ---
 
 ## 1. Research Foundation
 
-Incremental delivery reduces risk by building small, testable slices instead of large unverified systems. Aurora must apply that principle to MT5 source because MQL5 runtime timing and FileIO behavior can fail silently if broad work is loaded into the wrong lane.
+Incremental delivery reduces risk by building small, testable slices instead of large unverified systems.
 
-Reference:
-
-```text
-https://en.wikipedia.org/wiki/Incremental_build_model
-```
-
-MQL5 `OnTimer()` has one timer per program and does not queue a new Timer event when one is already queued or processing. This means a broad all-at-once EA implementation can destroy cadence before correctness is even visible.
+MQL5 `OnTimer()` has one timer per program and does not queue a new Timer event when one is already queued or processing. A broad all-at-once EA implementation can destroy cadence before correctness is visible.
 
 Reference:
 
@@ -45,10 +39,22 @@ Reference:
 https://www.mql5.com/en/docs/event_handlers/ontimer
 ```
 
+MQL5 file operations are sandboxed, `FileOpen()` returns `INVALID_HANDLE` on failure, `FolderCreate()` creates folders relative to the Files/Common sandbox, `FileMove()` needs `FILE_REWRITE` when replacing an existing file, and frequent `FileFlush()` can affect program speed.
+
+References:
+
+```text
+https://www.mql5.com/en/docs/files/fileopen
+https://www.mql5.com/en/docs/files/foldercreate
+https://www.mql5.com/en/docs/files/filemove
+https://www.mql5.com/en/docs/files/fileflush
+```
+
 Aurora translation:
 
 ```text
-Build small.
+Build Runtime 0 first.
+Prove folder creation and file writing before account/market truth.
 Measure heartbeat pressure.
 Publish degraded truth.
 Do not hide heavy work inside OnTimer.
@@ -64,270 +70,99 @@ This blueprint owns:
 planned-system completion ladder
 phase order
 phase gates
-coding-start gate
-Layer 1 first-source boundary
-what is required before MT5 source
+Runtime 0 first-source boundary
+Layer 1 later-source boundary
+what is required before source begins
 what must remain blocked
 acceptance criteria for moving phases
 ```
 
 ---
 
-## 3. What This Blueprint Must Not Own
-
-This blueprint must not own:
-
-```text
-full guidebook doctrine
-final MQL5 code
-Python worker implementation
-formula math
-trading strategy
-runtime proof claims
-compile proof claims
-```
-
----
-
-## 4. Current Phase State
+## 3. Current Phase State
 
 ```text
 Guidebook overview set: COMPLETE — 16 / 16
 Post-guidebook scaffold: CREATED
 Super Index / Run Router: CREATED / DRAFT AUTHORITY
-Decision State Register: OPERATIONAL
-Runtime Owner Blueprint: DETAILED
-Logical Layer Blueprint: DETAILED
-Build Phase Blueprint: THIS FILE
-MT5 source implementation: HOLD UNTIL CONTRACT GATE IS COMPLETE
+Decision State Register: OPERATIONAL BUT MAY NEED STATUS SYNC
+Runtime Owner Blueprint: NEEDS RUNTIME 0 SYNC IF NOT PATCHED
+Logical Layer Blueprint: NEEDS RUNTIME 0 SYNC IF NOT PATCHED
+Build Phase Blueprint: THIS FILE / RUNTIME 0 FIRST
+MT5 source implementation: HOLD UNTIL RUNTIME 0 SOURCE PLAN IS ACCEPTED
 ```
 
 ---
 
-## 5. Planned-System Completion Ladder
+## 4. Planned-System Completion Ladder
 
-The required path is:
+Completed foundation artifacts:
 
 ```text
-1. Detail Runtime Owner Blueprint.
-2. Detail Logical Layer Blueprint.
-3. Detail Build Phase Blueprint.
-4. Define FileIO / route ownership contract.
-5. Create minimum governance schema contracts.
-6. Create/update research indexes with required official-source anchors.
-7. Create prompt/workflow templates only where they help future layer work.
-8. Define Layer 1 source plan and tests.
-9. Start MT5 Layer 1 only.
+1. Guidebook overview set — COMPLETE
+2. Runtime Owner Blueprint — CREATED / NEEDS RUNTIME 0 AS FIRST SOURCE OWNER
+3. Logical Layer Blueprint — CREATED / NEEDS RUNTIME 0 INTERNAL LAYERS
+4. Build Phase Blueprint — THIS FILE / RUNTIME 0 FIRST
+5. FileIO / route ownership contract — CREATED
+6. Minimum governance schema contracts — CREATED
+7. MT5 source folder contract — CREATED / RUNTIME 0 FIRST
+8. Runtime 0 — Governance / Internal Control Owner source plan and tests — CREATED
 ```
 
-This ladder is not optional.
-
-It is also not an excuse to delay coding forever.
-
----
-
-## 6. Phase 1 — Overview Doctrine Complete
-
-Status:
+Correct implementation ladder:
 
 ```text
-COMPLETE — 16 / 16 guidebooks
-```
-
-Evidence:
-
-```text
-docs/00 through docs/15 exist
-Main Page and Handoff list 16 / 16 complete
-```
-
-No more overview guidebooks should be added unless a new need is proven.
-
----
-
-## 7. Phase 2 — Scaffold and Control Spine
-
-Status:
-
-```text
-CREATED / NEEDS TARGETED DETAILING
-```
-
-Includes:
-
-```text
-blueprint/
-control/
-governance/
-research/
-prompts/
-archive/
-mt5/
-```
-
-Important:
-
-```text
-Scaffold existence is not implementation proof.
-Scaffold existence is not compile proof.
-Scaffold existence is not runtime proof.
+1. Runtime 0 — Governance / Internal Control Owner source implementation.
+2. Compile Runtime 0 source.
+3. Runtime-smoke Runtime 0 in MT5.
+4. Verify account-safe folder creation.
+5. Verify Runtime Status.txt, Workbench/Manifest.txt, Workbench/Status.txt, and Workbench/Diagnostics.txt.
+6. Verify manifest, runtime telemetry, Runtime 0 owner status, and Runtime 0 layer status rows.
+7. Audit Runtime 0 outputs and failure states.
+8. Only then start Layer 1 — Account / Portfolio / Prop Rule Truth.
 ```
 
 ---
 
-## 8. Phase 3 — Blueprint Detailing
-
-Required blueprint artifacts:
-
-```text
-blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
-blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
-blueprint/04_BUILD_PHASE_BLUEPRINT.md
-```
-
-These must be detailed enough to answer:
-
-```text
-Which owner owns Layer 1?
-What does Layer 1 produce?
-What is forbidden in Layer 1?
-What comes after Layer 1?
-What contracts must exist before source begins?
-```
-
----
-
-## 9. Phase 4 — FileIO / Route Ownership Contract
-
-Required before source:
-
-```text
-blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md
-```
-
-Must answer:
-
-```text
-Who owns FileOpen/FileWrite/FileMove/FileFlush/FileIsExist?
-What can physically block publication?
-What cannot block publication?
-What is the temp-to-final pattern?
-What route paths are conceptual vs approved?
-How are generated files verified?
-```
-
----
-
-## 10. Phase 5 — Minimum Governance Schema Contracts
-
-Required before source:
-
-```text
-governance/schemas/01_MINIMUM_GOVERNANCE_SCHEMA_CONTRACTS.md
-```
-
-Minimum schemas:
-
-```text
-manifest
-runtime telemetry
-owner status
-layer status
-```
-
-These schemas are needed before runtime claims can be honest.
-
----
-
-## 11. Phase 6 — Research Anchors
-
-Research indexes must contain official-source anchors for implementation work.
-
-Minimum anchors before Layer 1:
-
-```text
-MQL5 AccountInfoInteger / AccountInfoDouble / AccountInfoString
-MQL5 TerminalInfo*
-MQL5 FileOpen / FileMove / FileFlush / FileIsExist
-MQL5 OnTimer
-```
-
-Research must convert sources into:
-
-```text
-constraints
-failure states
-acceptance checks
-no-go rules
-```
-
----
-
-## 12. Phase 7 — Prompt / Workflow Templates
-
-Prompts should be created only where they reduce drift.
-
-Useful templates later:
-
-```text
-Layer build prompt template
-Layer audit prompt template
-Compile-failure triage prompt template
-Runtime-output audit prompt template
-```
-
-Prompts are execution tools, not source truth.
-
----
-
-## 13. Phase 8 — Layer 1 Source Plan and Tests
-
-Before source begins, define:
-
-```text
-Layer 1 owner
-Layer 1 source files planned
-Layer 1 input functions
-Layer 1 output fields
-Layer 1 degraded states
-Layer 1 publication surface
-Layer 1 governance rows
-Layer 1 compile checks
-Layer 1 runtime checks
-Layer 1 kill/rollback condition
-```
-
-Layer 1 must be small.
-
-Layer 1 must not include Layer 2–5.
-
----
-
-## 14. Phase 9 — Start MT5 Layer 1 Only
+## 5. Runtime 0 First Source Phase
 
 First coding target:
 
 ```text
-Runtime Owner: Foundation Truth Owner
-Layer: 1 — Account / Portfolio / Prop Rule Truth
+Runtime Owner: Runtime 0 — Governance / Internal Control Owner
+Internal layers:
+Layer 0.1 — Startup / Runtime Identity
+Layer 0.2 — Scheduler / Heartbeat / Breathing Spine
+Layer 0.4 — Governance / Manifest / Telemetry
+Support owner: Runtime 7 — Publication Owner for FileIO/routes only
 ```
 
 Allowed in first source slice:
 
 ```text
-account identity shell
-basic AccountInfo* capture
-account status publication shell
-minimum manifest/runtime/owner/layer status rows
-FileIO temp-to-final through approved owner
+EA OnInit / OnTimer / OnDeinit shell
+EventSetTimer / EventKillTimer
+runtime identity
+heartbeat counter and duration
+account-safe folder root attempt
+Runtime Status.txt
+Workbench/Manifest.txt
+Workbench/Status.txt
+Workbench/Diagnostics.txt
+manifest row
+runtime telemetry row
+Runtime 0 owner status row
+Runtime 0 layer status rows
+FileIO through Runtime 7 publication support
 ```
 
 Forbidden in first source slice:
 
 ```text
-symbol universe scanning
-market session logic
-market watch quote loop
+Layer 1 — Account / Portfolio / Prop Rule Truth account capture beyond route labels
+symbols
+market sessions
+quotes
 ranking
 buckets
 selection
@@ -335,23 +170,69 @@ deep evidence
 alerts
 strategy
 external worker
+trading
 ```
 
 ---
 
-## 15. Advancement Rules
+## 6. Layer 1 Later Source Phase
 
-A phase may advance only when:
+Layer 1 — Account / Portfolio / Prop Rule Truth remains the first market/account truth layer, but it is not the first EA source build.
+
+It starts only after Runtime 0 passes.
+
+Layer 1 later target:
 
 ```text
-required files exist
-required owner boundaries are clear
-required acceptance criteria are written
-required no-go rules are written
-contradictions are resolved or explicitly held
+Runtime Owner: Runtime 1 — Foundation Truth Owner
+Layer: Layer 1 — Account / Portfolio / Prop Rule Truth
 ```
 
-MT5 source phase may advance only with:
+Layer 1 later may include:
+
+```text
+AccountInfoInteger / AccountInfoDouble / AccountInfoString capture
+account status publication
+prop-rule profile placeholder
+Layer 1 owner/layer status rows
+```
+
+Layer 1 later may not include:
+
+```text
+symbol universe scanning
+sessions
+quotes
+ranking
+buckets
+selection
+alerts
+strategy
+external worker
+```
+
+---
+
+## 7. Advancement Rules
+
+Runtime 0 may advance to Layer 1 only when:
+
+```text
+Runtime 0 source compiles.
+Runtime 0 EA initializes.
+Timer heartbeat runs.
+Account-safe root folder is created or failure is honestly printed.
+Runtime Status.txt prints or failure is honestly printed.
+Workbench/Manifest.txt prints or failure is honestly printed.
+Workbench/Status.txt prints or failure is honestly printed.
+Workbench/Diagnostics.txt prints or failure is honestly printed.
+Runtime telemetry exists.
+Runtime 0 owner status exists.
+Runtime 0 layer status rows exist.
+No Runtime 1+ market/account truth logic appears except route labels.
+```
+
+MT5 source phase may claim readiness only with:
 
 ```text
 compile output when source changes
@@ -361,14 +242,15 @@ manifest proof when publication is claimed
 
 ---
 
-## 16. No-Go Patterns
+## 8. No-Go Patterns
 
 Do not allow:
 
 ```text
+coding Layer 1 before Runtime 0 proves folder/FileIO writing
 coding all Runtime Owners at once
-coding all Foundation layers at once
-using coding ASAP to skip planned contracts
+coding all Runtime 0 layers at once if not needed
+using coding ASAP to skip Runtime 0
 waiting for perfect documentation forever
 claiming scaffold equals implementation
 claiming source exists before .mq5/.mqh exists
@@ -378,26 +260,24 @@ claiming runtime proof without runtime outputs
 
 ---
 
-## 17. Acceptance Criteria
+## 9. Acceptance Criteria
 
 This blueprint is acceptable if:
 
 ```text
-planned-system completion ladder is explicit
-MT5 source remains held until contracts are ready
-coding is not delayed beyond the necessary contract gate
-Layer 1 is clearly first source target
-big-bang EA scaffolding is forbidden
-minimum governance schemas and FileIO contract are required before source
+Runtime 0 is the first source target.
+Layer 1 — Account / Portfolio / Prop Rule Truth is held until Runtime 0 passes.
+Folder creation and FileIO publication are treated as first proof.
+Big-bang EA scaffolding is forbidden.
+Runtime 7 publication support is allowed only for FileIO/route proof.
 ```
 
 ---
 
-## 18. Final Build Phase Law
+## 10. Final Build Phase Law
 
 ```text
-Finish the planned foundations.
-Then code Layer 1.
-No shortcut river.
-No endless swamp.
+Before Aurora knows the account or market, Aurora must prove it can create its home, breathe, write, and report failure.
+Runtime 0 first. Then Layer 1.
+No shortcut river. No endless swamp.
 ```
