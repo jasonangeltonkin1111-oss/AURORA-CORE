@@ -24,15 +24,47 @@ from typing import Dict, Iterable, List, Optional
 from xml.etree import ElementTree as ET
 
 SOURCE_SHEET = "EA Export Safe"
-SCHEMA_VERSION = "universe_rows_v0.2"
-EXPECTED = {
-    "total_rows": 1703,
-    "strict_rank_allowed_rows": 1294,
-    "public_research_rank_allowed_rows": 224,
-    "review_only_rows": 184,
-    "blocked_rows": 1,
-    "review_or_blocked_rows": 185,
-    "duplicate_primary_key_count": 0,
+SCHEMA_VERSION = "universe_rows_v0.3"
+
+# Source workbook counts before operator omit controls are applied.
+EXPECTED_SOURCE = {
+    "source_row_count": 1703,
+    "source_strict_rank_allowed_rows": 1294,
+    "source_public_research_rank_allowed_rows": 224,
+    "source_review_only_rows": 184,
+    "source_blocked_rows": 1,
+    "source_review_or_blocked_rows": 185,
+    "source_duplicate_primary_key_count": 0,
+}
+
+# Generated Runtime 2 include counts after operator omit controls are applied.
+EXPECTED_GENERATED = {
+    "generated_row_count": 1688,
+    "operator_omit_count": 15,
+    "generated_strict_rank_allowed_rows": 1279,
+    "generated_public_research_rank_allowed_rows": 224,
+    "generated_review_only_rows": 184,
+    "generated_blocked_rows": 1,
+    "generated_review_or_blocked_rows": 185,
+    "generated_duplicate_primary_key_count": 0,
+}
+
+OPERATOR_OMIT_SYMBOLS = {
+    "11.xhkg",
+    "1186.xhkg",
+    "1800.xhkg",
+    "3188.xhkg",
+    "728.xhkg",
+    "762.xhkg",
+    "883.xhkg",
+    "941.xhkg",
+    "INCUSD.c",
+    "SGCSGD.c",
+    "TWCUSD.c",
+    "813.xhkg",
+    "2007.xhkg",
+    "410.xhkg",
+    "272.xhkg",
 }
 
 ROW_SCHEMA = [
@@ -197,6 +229,14 @@ def primary_key(row: Dict[str, str]) -> str:
     return "|".join([f(row, "server"), f(row, "broker_file"), f(row, "broker_symbol")])
 
 
+def is_operator_omit(row: Dict[str, str]) -> bool:
+    return f(row, "broker_symbol") in OPERATOR_OMIT_SYMBOLS
+
+
+def eligible_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    return [row for row in rows if not is_operator_omit(row)]
+
+
 def derive_asset_class(row: Dict[str, str]) -> str:
     instrument_class = f(row, "instrument_class").lower()
     if "forex" in instrument_class:
@@ -273,42 +313,50 @@ def duplicate_primary_key_count(rows: List[Dict[str, str]]) -> int:
     return duplicates
 
 
-def validate_counts(rows: List[Dict[str, str]]) -> Dict[str, int]:
+def count_rows(rows: List[Dict[str, str]], prefix: str) -> Dict[str, int]:
     review_only = sum(1 for row in rows if f(row, "review_lane").startswith("REVIEW_ONLY"))
     blocked = sum(1 for row in rows if f(row, "review_lane") == "BLOCKED_NOT_RANKABLE")
-    counts = {
-        "total_rows": len(rows),
-        "strict_rank_allowed_rows": sum(1 for row in rows if f(row, "strict_rank_allowed") == "YES"),
-        "public_research_rank_allowed_rows": sum(1 for row in rows if f(row, "public_research_rank_allowed") == "YES"),
-        "review_only_rows": review_only,
-        "blocked_rows": blocked,
-        "review_or_blocked_rows": review_only + blocked,
-        "duplicate_primary_key_count": duplicate_primary_key_count(rows),
+    return {
+        f"{prefix}_row_count": len(rows),
+        f"{prefix}_strict_rank_allowed_rows": sum(1 for row in rows if f(row, "strict_rank_allowed") == "YES"),
+        f"{prefix}_public_research_rank_allowed_rows": sum(1 for row in rows if f(row, "public_research_rank_allowed") == "YES"),
+        f"{prefix}_review_only_rows": review_only,
+        f"{prefix}_blocked_rows": blocked,
+        f"{prefix}_review_or_blocked_rows": review_only + blocked,
+        f"{prefix}_duplicate_primary_key_count": duplicate_primary_key_count(rows),
     }
-    if counts != EXPECTED:
-        raise RuntimeError(f"Count mismatch: actual={counts} expected={EXPECTED}")
-    return counts
+
+
+def validate_counts(source_rows: List[Dict[str, str]], generated_rows: List[Dict[str, str]]) -> tuple[Dict[str, int], Dict[str, int]]:
+    source_counts = count_rows(source_rows, "source")
+    generated_counts = count_rows(generated_rows, "generated")
+    generated_counts["operator_omit_count"] = len(source_rows) - len(generated_rows)
+    if source_counts != EXPECTED_SOURCE:
+        raise RuntimeError(f"Source count mismatch: actual={source_counts} expected={EXPECTED_SOURCE}")
+    if generated_counts != EXPECTED_GENERATED:
+        raise RuntimeError(f"Generated count mismatch: actual={generated_counts} expected={EXPECTED_GENERATED}")
+    return source_counts, generated_counts
 
 
 def mql_escape(value: str) -> str:
     return clean(value).replace("|", "/").replace("\\", "\\\\").replace('"', '\\"')
 
 
-def generation_metadata(xlsx_path: Path, headers: List[str], rows: List[Dict[str, str]]) -> Dict[str, str]:
-    first_symbol = f(rows[0], "broker_symbol") if rows else ""
-    last_symbol = f(rows[-1], "broker_symbol") if rows else ""
+def generation_metadata(xlsx_path: Path, headers: List[str], source_rows: List[Dict[str, str]], generated_rows: List[Dict[str, str]]) -> Dict[str, str]:
+    first_symbol = f(generated_rows[0], "broker_symbol") if generated_rows else ""
+    last_symbol = f(generated_rows[-1], "broker_symbol") if generated_rows else ""
     return {
         "source_file_sha256": sha256_file(xlsx_path),
         "header_sha256": sha256_text("|".join(headers)),
         "row_schema_sha256": sha256_text("|".join(ROW_SCHEMA)),
+        "operator_omit_set_sha256": sha256_text("|".join(sorted(OPERATOR_OMIT_SYMBOLS))),
         "lookup_key_schema": "server|broker_file|broker_symbol",
-        "first_broker_symbol": first_symbol,
-        "last_broker_symbol": last_symbol,
+        "first_generated_broker_symbol": first_symbol,
+        "last_generated_broker_symbol": last_symbol,
     }
 
 
-def generate_mql(rows: List[Dict[str, str]], metadata: Dict[str, str]) -> str:
-    counts = validate_counts(rows)
+def generate_mql(rows: List[Dict[str, str]], metadata: Dict[str, str], source_counts: Dict[str, int], generated_counts: Dict[str, int]) -> str:
     out: List[str] = []
     out.append("#ifndef AC_MARKET_UNIVERSE_ROWS_MQH")
     out.append("#define AC_MARKET_UNIVERSE_ROWS_MQH")
@@ -322,14 +370,17 @@ def generate_mql(rows: List[Dict[str, str]], metadata: Dict[str, str]) -> str:
     out.append(f'static const string AC_UNIVERSE_SOURCE_FILE_SHA256 = "{metadata["source_file_sha256"]}";')
     out.append(f'static const string AC_UNIVERSE_HEADER_SHA256 = "{metadata["header_sha256"]}";')
     out.append(f'static const string AC_UNIVERSE_ROW_SCHEMA_SHA256 = "{metadata["row_schema_sha256"]}";')
+    out.append(f'static const string AC_UNIVERSE_OPERATOR_OMIT_SET_SHA256 = "{metadata["operator_omit_set_sha256"]}";')
     out.append(f'static const string AC_UNIVERSE_LOOKUP_KEY_SCHEMA = "{metadata["lookup_key_schema"]}";')
-    out.append(f"static const int AC_UNIVERSE_GENERATED_ROW_COUNT = {counts['total_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = {counts['strict_rank_allowed_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = {counts['public_research_rank_allowed_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_ONLY = {counts['review_only_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_BLOCKED = {counts['blocked_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = {counts['review_or_blocked_rows']};")
-    out.append(f"static const int AC_UNIVERSE_GENERATED_DUPLICATE_PRIMARY_KEYS = {counts['duplicate_primary_key_count']};")
+    out.append(f"static const int AC_UNIVERSE_SOURCE_ROW_COUNT = {source_counts['source_row_count']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_ROW_COUNT = {generated_counts['generated_row_count']};")
+    out.append(f"static const int AC_UNIVERSE_OPERATOR_OMIT_COUNT = {generated_counts['operator_omit_count']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = {generated_counts['generated_strict_rank_allowed_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = {generated_counts['generated_public_research_rank_allowed_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_ONLY = {generated_counts['generated_review_only_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_BLOCKED = {generated_counts['generated_blocked_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = {generated_counts['generated_review_or_blocked_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_DUPLICATE_PRIMARY_KEYS = {generated_counts['generated_duplicate_primary_key_count']};")
     out.append("")
     out.append("string AC_UniverseGeneratedRow(const int index)")
     out.append("{")
@@ -348,13 +399,14 @@ def generate_mql(rows: List[Dict[str, str]], metadata: Dict[str, str]) -> str:
     return "\n".join(out)
 
 
-def write_audit(path: Path, counts: Dict[str, int], metadata: Dict[str, str], out_path: Path) -> None:
+def write_audit(path: Path, source_counts: Dict[str, int], generated_counts: Dict[str, int], metadata: Dict[str, str], out_path: Path) -> None:
     audit = {
         "schema_name": "market_universe_generation_audit",
         "schema_version": SCHEMA_VERSION,
         "source_sheet": SOURCE_SHEET,
         "generated_file": str(out_path).replace("\\", "/"),
-        "counts": counts,
+        "source_counts": source_counts,
+        "generated_counts": generated_counts,
         "metadata": metadata,
         "runtime_permission": "LOOKUP_ONLY_NOT_TRADE_PERMISSION",
         "ranking_runtime": False,
@@ -372,15 +424,16 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--audit-out", type=Path, default=Path("docs/market_universe_generation_audit.json"))
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    rows, headers = load_records_and_headers(args.workbook)
-    counts = validate_counts(rows)
-    metadata = generation_metadata(args.workbook, headers, rows)
-    mql = generate_mql(rows, metadata)
+    source_rows, headers = load_records_and_headers(args.workbook)
+    generated_rows = eligible_rows(source_rows)
+    source_counts, generated_counts = validate_counts(source_rows, generated_rows)
+    metadata = generation_metadata(args.workbook, headers, source_rows, generated_rows)
+    mql = generate_mql(generated_rows, metadata, source_counts, generated_counts)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.audit_out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(mql, encoding="utf-8")
-    write_audit(args.audit_out, counts, metadata, args.out)
-    print(json.dumps({"generated": str(args.out), "audit": str(args.audit_out), "counts": counts, "metadata": metadata}, indent=2))
+    write_audit(args.audit_out, source_counts, generated_counts, metadata, args.out)
+    print(json.dumps({"generated": str(args.out), "audit": str(args.audit_out), "source_counts": source_counts, "generated_counts": generated_counts, "metadata": metadata}, indent=2))
     return 0
 
 
