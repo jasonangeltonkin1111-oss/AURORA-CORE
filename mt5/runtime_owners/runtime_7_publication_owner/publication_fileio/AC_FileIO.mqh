@@ -1,8 +1,8 @@
 #ifndef AC_FILEIO_MQH
 #define AC_FILEIO_MQH
 
-#include "../../../core/AC_CommonTypes.mqh"
-#include "../publication_routes/AC_ServerPaths.mqh"
+// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
+// Runtime 7 owns FileIO; it does not own routes/types/config.
 
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
@@ -28,7 +28,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    result.temp_write_ok = false;
    result.move_ok = false;
    result.final_exists = false;
-   result.final_size = -1;
+   result.final_size = 0;
    result.error_code = 0;
    result.status = "attempted";
    result.detail = "";
@@ -48,7 +48,8 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
 
    ResetLastError();
    uint written = FileWriteString(handle, content);
-   if(written < StringLen(content))
+   uint expected = (uint)StringLen(content);
+   if(written < expected)
    {
       result.error_code = GetLastError();
       result.status = "temp_write_failed";
@@ -103,7 +104,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    else
    {
       result.error_code = GetLastError();
-      result.final_size = -1;
+      result.final_size = 0;
    }
 
    result.ok = true;
@@ -118,7 +119,7 @@ string AC_WriteResultLine(const string surface, const AC_WriteResult &result)
       + "|status=" + AC_WriteStatusFromResult(result)
       + "|ok=" + (result.ok ? "true" : "false")
       + "|final_exists=" + (result.final_exists ? "true" : "false")
-      + "|final_size=" + IntegerToString((int)result.final_size)
+      + "|final_size=" + AC_UlongToText(result.final_size)
       + "|error=" + IntegerToString(result.error_code)
       + "|final_path=" + result.final_path;
 }
