@@ -2,46 +2,53 @@
 
 **System:** AURORA CORE  
 **Status:** Mandatory design/control document.  
-**Scope:** Future Dossiers, existing Runtime Owner boundaries, fundamental research links, broker metadata contradiction checks, and later Depth of Market evidence.
+**Scope:** Future Dossiers, logical-layer placement, fundamental research links, broker metadata contradiction checks, and later Depth of Market evidence.
 
 ---
 
 ## 0. Purpose
 
-This document corrects a previous architecture drift: broker specs, Market Watch, calculation mode, fundamentals, and DOM must not be forced into a guessed layer model.
+This document corrects a previous architecture drift: Runtime Owner numbers and Logical Layer numbers must not be confused.
 
-Current source truth proves the active compile chain only includes:
+Canonical source:
 
 ```text
-Runtime 0 - Governance / Internal Control
-Layer 0.1 - Startup / Runtime Identity
-Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
-Layer 0.4 - Governance / Manifest / Telemetry
-Runtime 1 - Foundation Truth Owner
-Layer 1 - Account / Portfolio / Prop Rule Truth
-Runtime 2 - Market Universe / Taxonomy Lookup
-Runtime 7 - Publication Owner
+docs/01_LOGICAL_LAYER_BLUEPRINT.md
 ```
 
-Therefore any new material must be placed as a candidate future owner/lane until the roadmap/source defines the exact layer.
+Core distinction:
 
-No document may claim that broker specs, Market Watch, calculation mode, or DOM are Layer 2 just because they sound related.
+```text
+Runtime 7 = Publication Owner, allowed early as infrastructure.
+Layer 7 = Session Relevance Ranking, not allowed before Layers 2–6.
+```
+
+Publication support being active does not mean Logical Layer 7 is complete.
 
 ---
 
-## 1. Current Proven Layer Truth
+## 1. Correct Placement From Logical Blueprint
 
-Current active include/source truth:
+The logical blueprint places the relevant ideas as follows:
 
 ```text
-Runtime 1 currently owns account / portfolio / prop-rule truth.
-Runtime 2 currently owns market universe / taxonomy lookup.
-Runtime 7 currently owns routes and FileIO publication.
+Layer 2 — Market Open / Closed Truth
+Layer 3 — Symbol + Broker Specs Truth
+Layer 4 — Market Watch Truth
+Layer 22 — Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack
 ```
 
-Runtime 2 does not currently own broker specs, Market Watch, calculation mode, DOM, or fundamental links.
+Placement decisions:
 
-Any future placement must be done after an owner-map audit.
+```text
+fundamental links = Layer 2 support sidecar for symbol/market identity and bucket verification, printed in Dossiers where applicable
+broker specs = Layer 3
+calculation mode = Layer 3 spec truth / spec-validation gate; heavy calculations delegated to later calculation workers/owners
+Market Watch / quote truth = Layer 4
+DOM = Layer 22 later; bounded MT5 order-flow proxy evidence, not fundamentals
+```
+
+Runtime 2 remains the current compile-chain universe/taxonomy lookup skeleton. The broader blueprint says Surface Scoring owns Layers 6–9, but current source has not yet implemented those logical layers.
 
 ---
 
@@ -49,18 +56,17 @@ Any future placement must be done after an owner-map audit.
 
 Dossiers are future per-symbol truth pages.
 
-They may display facts from multiple owners, but must not become a hidden owner of those facts.
+They may display facts from multiple layer owners, but must not become a hidden owner of those facts.
 
-Allowed future Dossier inputs after owner assignment:
+Allowed future Dossier inputs after layer owners exist:
 
 ```text
-Runtime 1 account/broker context reference
-Runtime 2 universe/taxonomy lookup
-future broker-spec owner output
-future Market Watch / quote-truth owner output
-future calculation-mode/spec-validation owner output
-future fundamental-link owner output
-future bounded DOM owner output
+Layer 1 account / portfolio / prop-rule truth
+Layer 2 market open/closed truth and fundamental-link sidecar where applicable
+Layer 3 symbol + broker specs truth, including calculation mode/spec-validation fields
+Layer 4 Market Watch quote truth
+Runtime 2 current universe/taxonomy lookup until broader layer ownership is implemented
+Layer 22 DOM / order-flow proxy snapshot later, bounded and optional
 Runtime 7 route/FileIO publication
 ```
 
@@ -81,23 +87,7 @@ Heavy calculations should be delegated to the correct future worker/owner and co
 
 ---
 
-## 3. Placement Rules For New Material
-
-Until exact future layer ownership is confirmed:
-
-```text
-fundamental links = candidate fundamental-link sidecar for Dossiers; user says this belongs with the future Layer 2 direction, but final owner must be confirmed by source/roadmap before implementation
-broker specs = candidate broker-spec truth owner, not automatically Runtime 2
-Market Watch / quote truth = candidate quote-truth owner, separate from broker specs unless source later merges them deliberately
-calculation mode = candidate spec-validation / value-math gate, not automatically broker specs or Market Watch
-DOM = later microstructure / depth-evidence owner, not fundamentals and not current Runtime 2
-```
-
-A future patch must name the owner file/module before implementing any of these.
-
----
-
-## 4. Fundamental Research Links
+## 3. Fundamental Research Links — Layer 2 Support
 
 Fundamental links are allowed in Dossiers where the instrument has a meaningful research identity.
 
@@ -115,46 +105,20 @@ Purpose:
 support trader review
 support taxonomy verification
 support contradiction detection
+support market/symbol identity checks
 ```
 
 Fundamental links must not overwrite broker specs, quote truth, calculation mode, Runtime 2 taxonomy, or trade permission.
 
 ---
 
-## 5. Broker Metadata Control
+## 4. Broker Specs and Calculation Mode — Layer 3
 
-MT5 broker specs may expose sector, industry, country, exchange, and ISIN-style metadata.
+Layer 3 owns Symbol + Broker Specs Truth.
 
-These fields may be printed, but they are advisory metadata only.
+Calculation mode belongs under Layer 3 spec truth / spec-validation gate before trusted value, margin, pip/tick, spread-cost, or profit/loss math.
 
-Known screenshot falsifier:
-
-```text
-AEM / Agnico Eagle Mines Ltd shown as Technology / Consumer Electronics
-EGO / Eldorado Gold Corp shown as Technology / Consumer Electronics
-ATI / Allegheny Technologies Inc shown as Technology / Consumer Electronics
-Eagle Materials Inc shown as Technology / Consumer Electronics
-```
-
-Required future handling:
-
-```text
-broker_metadata_status=advisory_only
-broker_metadata_can_contradict_taxonomy=true
-broker_metadata_must_not_overwrite_runtime2_taxonomy=true
-```
-
----
-
-## 6. Calculation Mode Placement
-
-Calculation mode is mandatory before trusted value, margin, pip/tick, spread-cost, or profit/loss math.
-
-But calculation mode placement must be audited before implementation.
-
-It may belong under a future broker-spec owner, a future value-math gate, or a dedicated spec-validation owner. It must not be guessed.
-
-Required future fields, wherever the owner lands:
+Required future fields:
 
 ```text
 SYMBOL_TRADE_CALC_MODE
@@ -196,15 +160,72 @@ Heavy value/risk calculations should be performed by the proper future calculati
 
 ---
 
-## 7. DOM Placement
+## 5. Market Watch Truth — Layer 4
+
+Layer 4 owns current Market Watch truth.
+
+Expected future fields:
+
+```text
+bid
+ask
+last
+spread
+tick_time
+quote_freshness
+bid_high
+bid_low
+ask_high
+ask_low
+open_price
+close_price
+daily_change
+```
+
+Zero spread is not automatically invalid.
+
+Layer 4 must not overwrite Layer 3 broker specs or Runtime 2 taxonomy.
+
+---
+
+## 6. Broker Metadata Control
+
+MT5 broker specs may expose sector, industry, country, exchange, and ISIN-style metadata.
+
+These fields may be printed, but they are advisory metadata only.
+
+Known screenshot falsifier:
+
+```text
+AEM / Agnico Eagle Mines Ltd shown as Technology / Consumer Electronics
+EGO / Eldorado Gold Corp shown as Technology / Consumer Electronics
+ATI / Allegheny Technologies Inc shown as Technology / Consumer Electronics
+Eagle Materials Inc shown as Technology / Consumer Electronics
+```
+
+Required future handling:
+
+```text
+broker_metadata_status=advisory_only
+broker_metadata_can_contradict_taxonomy=true
+broker_metadata_must_not_overwrite_runtime2_taxonomy=true
+```
+
+---
+
+## 7. DOM Placement — Layer 22 Later
 
 Depth of Market is broker order-book / microstructure evidence.
 
-It is not fundamentals.
+It belongs later under:
 
-It is not current Runtime 2 taxonomy.
+```text
+Layer 22 — Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack
+```
 
-It is likely a later-layer evidence source after basic universe, Dossier, broker-spec, quote-truth, and calculation-mode foundations exist.
+DOM is not fundamentals.
+
+DOM is not current Runtime 2 taxonomy.
 
 Potential use later:
 
@@ -239,28 +260,27 @@ DOM used as trade permission
 
 ---
 
-## 8. Dossier Output Order After Owner Assignment
+## 8. Dossier Output Order After Layer Owners Exist
 
-Future Dossier files should be assembled from owner outputs in this order:
+Future Dossier files should be assembled from layer/owner outputs in this order:
 
 ```text
 1. Header / symbol identity / generated time
 2. Current status: placeholder, partial, complete, degraded, omitted
-3. Runtime 2 taxonomy and lookup lane
+3. Runtime 2 taxonomy / lookup lane while current skeleton exists
 4. Operator omit status
-5. Runtime 1 account/broker context reference
-6. Broker-spec owner output when available
-7. Market Watch / quote-truth owner output when available
-8. Calculation-mode/spec-validation output when available
+5. Layer 1 account/broker context reference
+6. Layer 2 market open/closed truth and fundamental links where applicable
+7. Layer 3 broker specs and calculation mode/spec-validation output
+8. Layer 4 Market Watch / quote-truth output
 9. Broker metadata, advisory only
-10. Fundamental links where applicable
-11. DOM snapshot summary only when deliberately sampled by its owner
-12. Contradiction ledger
-13. Ranking/selection eligibility later
-14. trade_permission=false
+10. Layer 22 DOM snapshot summary later, only when deliberately sampled
+11. Contradiction ledger
+12. Ranking/selection eligibility later
+13. trade_permission=false
 ```
 
-This order is a display contract only. It does not assign source ownership by itself.
+This order is a display contract only. It does not move later logical layers earlier.
 
 ---
 
@@ -270,13 +290,15 @@ Hold or kill a patch if:
 
 ```text
 Dossiers become random raw dumps
-new material is forced into a guessed layer without owner-map audit
+Runtime Owner numbers are confused with Logical Layer numbers
+Layer 7 is treated as complete because Runtime 7 publication exists
 fundamental links appear as trade permission
 forex symbols are forced to have stock links
 broker Sector/Industry overwrites Runtime 2 taxonomy
-calculation mode owner is guessed instead of assigned
+calculation mode is placed outside Layer 3 without explicit blueprint revision
 heavy calculations are buried inside Dossier publication
 DOM is called fundamentals
+DOM is implemented before Layer 22 prerequisites
 DOM subscriptions are full-universe or unbounded
 OnBookEvent becomes a heavy processing path
 DOM missing state blocks normal Dossier publication
@@ -287,9 +309,12 @@ DOM missing state blocks normal Dossier publication
 ## 10. Current Decision State
 
 ```text
-control_doc_corrected_after_layer_audit
-active_layer_truth_checked_from_compile_chain
-future_owner_assignment_required_before_implementation
+control_doc_corrected_against_original_logical_blueprint
+Runtime7_vs_Layer7_distinction_landed
+Layer2_fundamental_link_support_direction_recorded
+Layer3_broker_specs_and_calculation_mode_direction_recorded
+Layer4_market_watch_direction_recorded
+Layer22_DOM_direction_recorded
 Dossier_content_not_yet_rich
 fundamental_links_not_yet_printed
 DOM_not_yet_sampled
