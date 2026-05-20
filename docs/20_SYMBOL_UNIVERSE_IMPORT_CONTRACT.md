@@ -10,7 +10,7 @@
 
 ## 0. Purpose
 
-This document defines how the broker symbol universe must be transferred from the workbook into the EA without reintroducing old bucket language, duplicate route owners, heavy timer work, or fake trade permission.
+This document defines how the broker symbol universe must be transferred from the workbook into the EA without reintroducing old bucket language, duplicate route owners, heavy timer work, unstable Selection Desk folder names, or fake trade permission.
 
 The future EA universe copy is a cached lookup surface.
 
@@ -58,7 +58,7 @@ Required meaning:
 asset_class    = broad universe lane, e.g. FX, Equities, Commodities, Indices, Crypto, Rates
 market_group   = main market family or sector-style group
 market_segment = precise classification detail
-ranking_group  = EA-safe grouping used for ranking, caps, diversification, Top 5, and Global Top 10 logic
+ranking_group  = EA-safe grouping used for ranking, caps, diversification, group files, and later global inspection basket logic
 symbol         = canonical display symbol or canonical symbol identity
 ```
 
@@ -202,8 +202,9 @@ FileIO implementation
 Selection Desk routes
 Dossier routes
 score formulas
-Ranking Group Top 5 construction
-Global Top 10 construction
+Selection Desk group file construction
+Selection Desk global file construction
+Selection Index publication
 trade permission
 execution
 prop-firm approval
@@ -211,12 +212,15 @@ prop-firm approval
 
 Runtime 7 remains the route/FileIO owner.
 
-Selection Desk remains:
+Selection Desk route contract remains stable:
 
 ```text
-Selection Desk/Ranking Group Top 5/
-Selection Desk/Global Top 10/
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
 ```
+
+Rank numbers, Top-N order, cycle IDs, and selection metadata must live inside child files or the Selection Index, not in parent folder names.
 
 ---
 
@@ -271,7 +275,9 @@ EA copy exposes source_workbook and source_sheet identity.
 EA diagnostics report row_count=1703.
 Strict/public/review/blocked counts match source expectations.
 Old major/minor/bucket naming is not used as active EA-facing taxonomy.
-Selection Desk folder names remain Ranking Group Top 5 and Global Top 10.
+Selection Desk parent folders remain Groups and Global.
+Selection Desk sidecar file remains Selection Index.txt.
+No rank number, Top-N label, cycle ID, or changing score label becomes a parent folder name.
 No trade permission, edge, or prop-firm readiness is claimed.
 MetaEditor compile proof is captured after import.
 MT5 runtime smoke proves diagnostics/file publication after import.
@@ -310,7 +316,8 @@ row_count does not match 1703 and no reason is logged
 broker_symbol alone becomes the lookup key
 old major_bucket/minor_bucket/aggregation_group becomes active EA-facing authority
 public_research_rank_allowed rows are treated as broker-confirmed strict rows
-Selection Desk routes are renamed away from Ranking Group Top 5 / Global Top 10
+Selection Desk routes are renamed away from Groups / Global / Selection Index.txt
+rank numbers, Top-N labels, or cycle IDs become parent folder names
 import adds FileIO or route ownership outside Runtime 7
 import claims trading edge, execution permission, or prop-firm readiness
 OnTimer does heavy universe parsing or classification
