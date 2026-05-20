@@ -14,15 +14,17 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 
 ---
 
-## Mandatory Quality Law
+## Mandatory Quality and Control Laws
 
 All future Aurora Core work must obey:
 
 ```text
 docs/22_AURORA_QUALITY_7S_LAW.md
+docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
+docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
 ```
 
-This law requires the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
+These laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
 
 ---
 
@@ -80,6 +82,33 @@ Current Selection Desk files are structure placeholders only until a later selec
 
 ---
 
+## Dossier / Specs / Fundamental Link / DOM Direction
+
+Dossiers are the future per-symbol truth pages. They must become useful soon, but they must not become random dumps.
+
+Correct future Dossier flow:
+
+```text
+symbol identity
+status and operator omit state
+Runtime 2 taxonomy
+Layer 1 account/broker context reference
+Layer 2 calculation mode and broker specs
+Market Watch quote freshness
+Depth of Market snapshot summary when deliberately sampled
+broker metadata labelled advisory-only
+fundamental research links where applicable
+contradiction ledger
+ranking/selection eligibility later
+trade_permission=false
+```
+
+Depth of Market is broker order-book evidence, not fundamentals. DOM sampling must be bounded, watchlist-only, and never a full-universe heavy event path.
+
+Fundamental links are for trader review and taxonomy verification support where applicable. Not every symbol needs links.
+
+---
+
 ## Current Runtime 2 Universe Status
 
 The bucket/symbol universe exists in the source workbook contract, not yet as loaded EA runtime truth.
@@ -89,7 +118,9 @@ Current source state:
 ```text
 source_workbook=Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx
 source_sheet=EA Export Safe
-expected_rows=1703
+source_rows=1703
+operator_omit_count=54
+generated_eligible_rows_after_omit=1649
 Runtime 2 loaded_row_count=0
 AC_MarketUniverseRows.mqh=not committed
 ```
