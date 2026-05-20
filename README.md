@@ -22,7 +22,7 @@ AURORA CORE exists to answer:
 What does the broker/account/market actually say?
 Which symbols are usable right now?
 Which symbols deserve attention?
-Which ranking groups are strongest?
+Which groups are strongest?
 Which candidates form a diversified inspection basket?
 Which selected symbols deserve deep evidence?
 What is complete, degraded, stale, blocked, or still filling?
@@ -33,11 +33,22 @@ What is allowed, and what is not allowed?
 
 ## Current Selection Desk Contract
 
-The current professional folder contract is:
+The current stable parent-folder contract is:
 
 ```text
-Aurora Core/<server>/<account>/Selection Desk/Ranking Group Top 5/
-Aurora Core/<server>/<account>/Selection Desk/Global Top 10/
+Aurora Core/<server>/<account>/Selection Desk/Groups/
+Aurora Core/<server>/<account>/Selection Desk/Global/
+```
+
+Ranking numbers, Top-N order, cycle IDs, and selection metadata belong inside child files and sibling index/metadata files, not in parent folder names.
+
+Allowed future pattern:
+
+```text
+Selection Desk/Groups/_INDEX.txt
+Selection Desk/Groups/<stable-group-name>.txt
+Selection Desk/Global/_INDEX.txt
+Selection Desk/Global/Global Selection.txt
 ```
 
 The Dossiers contract remains separate and must not be renamed by Selection Desk work:
@@ -49,7 +60,7 @@ Aurora Core/<server>/<account>/Dossiers/Closed/
 Aurora Core/<server>/<account>/Dossiers/Unknown/
 ```
 
-Current Selection Desk files are structure placeholders only until a later ranking owner exists. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
+Current Selection Desk files are structure placeholders only until a later selection owner exists. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
 
 ---
 
@@ -59,7 +70,7 @@ Use the professional hierarchy:
 
 ```text
 asset_class -> market_group -> market_segment -> symbol
-ranking_group = EA selection/cap/diversification bucket
+ranking_group = EA selection/cap/diversification group field
 ```
 
 Retired active names:
@@ -79,6 +90,8 @@ These old names may appear only as historical references. They must not be used 
 ## Runtime Ownership Rules
 
 - Runtime 7 Publication Owner owns folder routes and FileIO boundaries.
+- Selection Desk parent folders must be stable: `Groups` and `Global`.
+- Do not create route folders named after changing ranks such as Top 5, Top 10, Rank 1, or active cycle numbers.
 - Do not create duplicate route owners or shadow writers.
 - Do not block physical publication just because truth is partial, stale, degraded, or review-unsafe.
 - Broken truth may block review, ranking, selection, trading, and permission; it must not hide expected files.
