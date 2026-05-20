@@ -1,49 +1,67 @@
-# AURORA CORE - DOSSIER SPECS, FUNDAMENTALS, AND DOM CONTROL
+# AURORA CORE - DOSSIER, FUNDAMENTAL LINKS, AND DOM PLACEMENT CONTROL
 
 **System:** AURORA CORE  
 **Status:** Mandatory design/control document.  
-**Scope:** Future Dossiers, Layer 1 account context, Layer 2 broker specs / Market Watch truth, fundamental research links, and Depth of Market evidence.
+**Scope:** Future Dossiers, existing Runtime Owner boundaries, fundamental research links, broker metadata contradiction checks, and later Depth of Market evidence.
 
 ---
 
 ## 0. Purpose
 
-Aurora must start making the Dossier folder useful soon, but Dossiers must not become random dumps.
+This document corrects a previous architecture drift: broker specs, Market Watch, calculation mode, fundamentals, and DOM must not be forced into a guessed layer model.
 
-A symbol Dossier is the professional per-symbol truth page.
-
-It should collect the right evidence in the right order:
+Current source truth proves the active compile chain only includes:
 
 ```text
-symbol identity
-availability state
-operator omit status
-broker specs
-calculation mode
-Market Watch quote truth
-Depth of Market snapshot where useful
-fundamental research links where applicable
-Runtime 2 taxonomy
-contradiction warnings
-ranking/selection eligibility later
-trade_permission=false until separately proven
+Runtime 0 - Governance / Internal Control
+Layer 0.1 - Startup / Runtime Identity
+Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
+Layer 0.4 - Governance / Manifest / Telemetry
+Runtime 1 - Foundation Truth Owner
+Layer 1 - Account / Portfolio / Prop Rule Truth
+Runtime 2 - Market Universe / Taxonomy Lookup
+Runtime 7 - Publication Owner
 ```
+
+Therefore any new material must be placed as a candidate future owner/lane until the roadmap/source defines the exact layer.
+
+No document may claim that broker specs, Market Watch, calculation mode, or DOM are Layer 2 just because they sound related.
 
 ---
 
-## 1. Dossier Owner Boundary
+## 1. Current Proven Layer Truth
 
-Dossiers may display facts from multiple owners, but they must not become a hidden owner of those facts.
-
-Allowed Dossier inputs:
+Current active include/source truth:
 
 ```text
-Runtime 1 account/broker context
+Runtime 1 currently owns account / portfolio / prop-rule truth.
+Runtime 2 currently owns market universe / taxonomy lookup.
+Runtime 7 currently owns routes and FileIO publication.
+```
+
+Runtime 2 does not currently own broker specs, Market Watch, calculation mode, DOM, or fundamental links.
+
+Any future placement must be done after an owner-map audit.
+
+---
+
+## 2. Dossier Role
+
+Dossiers are future per-symbol truth pages.
+
+They may display facts from multiple owners, but must not become a hidden owner of those facts.
+
+Allowed future Dossier inputs after owner assignment:
+
+```text
+Runtime 1 account/broker context reference
 Runtime 2 universe/taxonomy lookup
-Layer 2 broker specs and Market Watch truth
+future broker-spec owner output
+future Market Watch / quote-truth owner output
+future calculation-mode/spec-validation owner output
+future fundamental-link owner output
+future bounded DOM owner output
 Runtime 7 route/FileIO publication
-fundamental research link templates
-bounded DOM snapshots
 ```
 
 Dossiers must not own:
@@ -52,42 +70,91 @@ Dossiers must not own:
 FileIO implementation
 route construction
 taxonomy authority
-calculation formulas without Layer 2 proof
+heavy calculations
 ranking formulas
 selection decisions
 trade permission
 execution
 ```
 
+Heavy calculations should be delegated to the correct future worker/owner and consumed as published proof, not buried inside Dossier construction.
+
 ---
 
-## 2. Layer 1 Before Dossiers
+## 3. Placement Rules For New Material
 
-Layer 1 should establish account/broker context before rich symbol Dossiers expand.
-
-Layer 1 should publish:
+Until exact future layer ownership is confirmed:
 
 ```text
-account number
-server
-currency
-balance/equity/margin/free margin
-account trade mode
-leverage
-broker/account route root
-prop rule profile status when available
-trade_permission=false
+fundamental links = candidate fundamental-link sidecar for Dossiers; user says this belongs with the future Layer 2 direction, but final owner must be confirmed by source/roadmap before implementation
+broker specs = candidate broker-spec truth owner, not automatically Runtime 2
+Market Watch / quote truth = candidate quote-truth owner, separate from broker specs unless source later merges them deliberately
+calculation mode = candidate spec-validation / value-math gate, not automatically broker specs or Market Watch
+DOM = later microstructure / depth-evidence owner, not fundamentals and not current Runtime 2
 ```
 
-Dossiers can reference Layer 1 context, but must not duplicate it into a second hidden account owner.
+A future patch must name the owner file/module before implementing any of these.
 
 ---
 
-## 3. Layer 2 Broker Specs Must Come Early
+## 4. Fundamental Research Links
 
-Layer 2 is the first major content layer that makes Dossiers useful.
+Fundamental links are allowed in Dossiers where the instrument has a meaningful research identity.
 
-Every symbol Dossier should eventually expose:
+Required future fields:
+
+```text
+fundamental_links_status=available|not_applicable|pending_canonical_symbol|operator_omitted
+canonical_research_symbol=<value or blank>
+research_links=<source=url list>
+```
+
+Purpose:
+
+```text
+support trader review
+support taxonomy verification
+support contradiction detection
+```
+
+Fundamental links must not overwrite broker specs, quote truth, calculation mode, Runtime 2 taxonomy, or trade permission.
+
+---
+
+## 5. Broker Metadata Control
+
+MT5 broker specs may expose sector, industry, country, exchange, and ISIN-style metadata.
+
+These fields may be printed, but they are advisory metadata only.
+
+Known screenshot falsifier:
+
+```text
+AEM / Agnico Eagle Mines Ltd shown as Technology / Consumer Electronics
+EGO / Eldorado Gold Corp shown as Technology / Consumer Electronics
+ATI / Allegheny Technologies Inc shown as Technology / Consumer Electronics
+Eagle Materials Inc shown as Technology / Consumer Electronics
+```
+
+Required future handling:
+
+```text
+broker_metadata_status=advisory_only
+broker_metadata_can_contradict_taxonomy=true
+broker_metadata_must_not_overwrite_runtime2_taxonomy=true
+```
+
+---
+
+## 6. Calculation Mode Placement
+
+Calculation mode is mandatory before trusted value, margin, pip/tick, spread-cost, or profit/loss math.
+
+But calculation mode placement must be audited before implementation.
+
+It may belong under a future broker-spec owner, a future value-math gate, or a dedicated spec-validation owner. It must not be guessed.
+
+Required future fields, wherever the owner lands:
 
 ```text
 SYMBOL_TRADE_CALC_MODE
@@ -110,190 +177,90 @@ SYMBOL_TRADE_MODE
 SYMBOL_TRADE_EXEMODE
 SYMBOL_FILLING_MODE
 SYMBOL_ORDER_MODE
-session windows
-quote freshness
-bid/ask/last/time/spread
 ```
 
-Calculation mode is mandatory before true value, risk, margin, pip/tick, spread-cost, or profit/loss math is trusted.
+Required future checks:
+
+```text
+OrderCalcMargin check
+OrderCalcProfit check
+SymbolInfoMarginRate check where available
+calculation_mode_missing warning
+unsupported_calculation_mode warning
+missing_tick_value warning
+invalid_contract_size warning
+currency_conversion_needed warning
+```
+
+Heavy value/risk calculations should be performed by the proper future calculation worker/owner and published back as proof.
 
 ---
 
-## 4. Broker Sector / Industry Is Advisory Only
+## 7. DOM Placement
 
-MT5 broker specs may expose sector, industry, country, exchange, and ISIN-style metadata.
+Depth of Market is broker order-book / microstructure evidence.
 
-These fields may be printed, but they are advisory metadata only.
+It is not fundamentals.
 
-They must not overwrite Runtime 2 taxonomy by themselves.
+It is not current Runtime 2 taxonomy.
 
-Known screenshot falsifier:
+It is likely a later-layer evidence source after basic universe, Dossier, broker-spec, quote-truth, and calculation-mode foundations exist.
 
-```text
-AEM / Agnico Eagle Mines Ltd shown as Technology / Consumer Electronics
-EGO / Eldorado Gold Corp shown as Technology / Consumer Electronics
-ATI / Allegheny Technologies Inc shown as Technology / Consumer Electronics
-Eagle Materials Inc shown as Technology / Consumer Electronics
-```
-
-Future Dossiers should display broker sector/industry only with status:
+Potential use later:
 
 ```text
-broker_metadata_status=advisory_only
-broker_metadata_can_contradict_taxonomy=true
-```
-
----
-
-## 5. Fundamental Research Links
-
-Fundamental links are allowed in Dossiers where the instrument has a meaningful research identity.
-
-Examples:
-
-```text
-stocks / stock CFDs
-listed ETFs where relevant
-indices where a stable public page exists
-commodities where a stable public page exists
-crypto where a stable public page exists
-```
-
-Some symbols do not need or may not have useful fundamental links.
-
-Examples:
-
-```text
-many forex pairs
-broker synthetic symbols
-operator-omitted/dead symbols
-symbols without a verified canonical research symbol
-```
-
-Required Dossier fields:
-
-```text
-fundamental_links_status=available|not_applicable|pending_canonical_symbol|operator_omitted
-canonical_research_symbol=<value or blank>
-research_links=<source=url list>
-```
-
-These links are for trader review and taxonomy verification support.
-
-They are not broker execution truth and do not grant trade permission.
-
----
-
-## 6. Depth of Market Control
-
-The extended book shown in the operator screenshot is Depth of Market.
-
-DOM is broker/order-book evidence, not fundamentals.
-
-MQL5 support:
-
-```text
-MarketBookAdd(symbol) subscribes to Depth of Market changes.
-MarketBookGet(symbol, book[]) reads MqlBookInfo rows.
-OnBookEvent(symbol) receives DOM change events after subscription.
-MarketBookRelease(symbol) unsubscribes.
-```
-
-Official MQL5 warning translated into Aurora law:
-
-```text
-subscribe deliberately
-release subscriptions deliberately
-filter OnBookEvent by symbol
-never subscribe to the full universe
-never process heavy DOM logic inside every event
-```
-
-DOM can be useful for:
-
-```text
-confirming market depth exists
+DOM availability
 best bid/ask depth snapshot
 top-of-book volume
-spread/depth quality warning
+depth spread
+visible size near price
 illiquidity warning
-large visible order levels
 execution-friction context
 ```
 
-DOM must not be used as:
+MQL5 implementation must remain bounded:
 
 ```text
-taxonomy authority
-fundamental identity proof
-trade permission
-edge proof
-prop-firm readiness
-heavy ranking engine before controlled tests
+MarketBookAdd(symbol)
+MarketBookGet(symbol, book[])
+OnBookEvent(symbol)
+MarketBookRelease(symbol)
+```
+
+Forbidden:
+
+```text
+full-universe DOM subscription
+unbounded OnBookEvent processing
+DOM called fundamentals
+DOM used as taxonomy authority
+DOM used as trade permission
 ```
 
 ---
 
-## 7. DOM Sampling Rule
+## 8. Dossier Output Order After Owner Assignment
 
-DOM must be bounded.
-
-Allowed first implementation:
-
-```text
-manual/diagnostic only
-watchlist-only
-small symbol set only
-one-shot snapshot or short sampled window
-write summary to Dossier/Workbench
-no per-tick/event spam
-no full-universe subscription
-```
-
-Required DOM diagnostics:
-
-```text
-dom_subscription_status
-dom_snapshot_status
-dom_level_count
-best_bid_depth_volume
-best_ask_depth_volume
-depth_spread
-snapshot_time
-last_error
-```
-
-If DOM is unavailable, the Dossier should say:
-
-```text
-dom_status=not_available_or_not_subscribed
-```
-
-and continue publishing other truth.
-
----
-
-## 8. Dossier Output Order
-
-Future Dossier files should follow this order:
+Future Dossier files should be assembled from owner outputs in this order:
 
 ```text
 1. Header / symbol identity / generated time
 2. Current status: placeholder, partial, complete, degraded, omitted
 3. Runtime 2 taxonomy and lookup lane
 4. Operator omit status
-5. Layer 1 account/broker context reference
-6. Layer 2 calculation mode and broker specs
-7. Market Watch quote freshness
-8. DOM snapshot summary, if sampled
+5. Runtime 1 account/broker context reference
+6. Broker-spec owner output when available
+7. Market Watch / quote-truth owner output when available
+8. Calculation-mode/spec-validation output when available
 9. Broker metadata, advisory only
-10. Fundamental research links, if applicable
-11. Contradiction ledger
-12. Ranking/selection eligibility later
-13. trade_permission=false
+10. Fundamental links where applicable
+11. DOM snapshot summary only when deliberately sampled by its owner
+12. Contradiction ledger
+13. Ranking/selection eligibility later
+14. trade_permission=false
 ```
 
-This order keeps the Dossier readable and professional.
+This order is a display contract only. It does not assign source ownership by itself.
 
 ---
 
@@ -303,14 +270,16 @@ Hold or kill a patch if:
 
 ```text
 Dossiers become random raw dumps
+new material is forced into a guessed layer without owner-map audit
 fundamental links appear as trade permission
 forex symbols are forced to have stock links
 broker Sector/Industry overwrites Runtime 2 taxonomy
+calculation mode owner is guessed instead of assigned
+heavy calculations are buried inside Dossier publication
 DOM is called fundamentals
 DOM subscriptions are full-universe or unbounded
 OnBookEvent becomes a heavy processing path
 DOM missing state blocks normal Dossier publication
-calculation mode is missing before value/risk math
 ```
 
 ---
@@ -318,9 +287,9 @@ calculation mode is missing before value/risk math
 ## 10. Current Decision State
 
 ```text
-dossier_specs_fundamentals_dom_control_created
-Layer1_account_context_exists_as_basic_account_status
-Layer2_specs_not_yet_implemented
+control_doc_corrected_after_layer_audit
+active_layer_truth_checked_from_compile_chain
+future_owner_assignment_required_before_implementation
 Dossier_content_not_yet_rich
 fundamental_links_not_yet_printed
 DOM_not_yet_sampled
