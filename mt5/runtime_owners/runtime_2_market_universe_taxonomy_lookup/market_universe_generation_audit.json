@@ -1,0 +1,39 @@
+{
+  "schema_name": "market_universe_generation_audit",
+  "schema_version": "universe_rows_v0.4",
+  "source_sheet": "EA Export Safe",
+  "generated_file": "mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh",
+  "source_counts": {
+    "source_row_count": 1703,
+    "source_strict_rank_allowed_rows": 1294,
+    "source_public_research_rank_allowed_rows": 224,
+    "source_review_only_rows": 184,
+    "source_blocked_rows": 1,
+    "source_review_or_blocked_rows": 185,
+    "source_duplicate_primary_key_count": 0
+  },
+  "generated_counts": {
+    "generated_row_count": 1649,
+    "generated_strict_rank_allowed_rows": 1261,
+    "generated_public_research_rank_allowed_rows": 211,
+    "generated_review_only_rows": 176,
+    "generated_blocked_rows": 1,
+    "generated_review_or_blocked_rows": 177,
+    "generated_duplicate_primary_key_count": 0,
+    "operator_omit_count": 54
+  },
+  "metadata": {
+    "source_file_sha256": "a981bba3ca8a2d10633d05b1268cd1931f672640b50e8ba581522bee9826c825",
+    "header_sha256": "9041d764ec32d3996dfff4b7cd6c2fbbb1e106ecd99617e27c95ba1a473e4266",
+    "row_schema_sha256": "b142227c9f4e8e5b66c8c45a6dd89fc3857021810b643c7289f946e713e51c47",
+    "operator_omit_set_sha256": "1a4c50650725e0ab638fb13d8a6fb0c3e47f630e2eafb038e5af9f3ad43f0c4e",
+    "lookup_key_schema": "server|broker_file|broker_symbol",
+    "first_generated_broker_symbol": "ADAUSD",
+    "last_generated_broker_symbol": "ZTS"
+  },
+  "runtime_permission": "LOOKUP_ONLY_NOT_TRADE_PERMISSION",
+  "ranking_runtime": false,
+  "selection_runtime": false,
+  "trade_permission": false,
+  "prop_firm_readiness": false
+}
