@@ -1,0 +1,44 @@
+#ifndef AC_COMMON_TYPES_MQH
+#define AC_COMMON_TYPES_MQH
+
+struct AC_WriteResult
+{
+   bool   attempted;
+   bool   ok;
+   bool   temp_open_ok;
+   bool   temp_write_ok;
+   bool   move_ok;
+   bool   final_exists;
+   long   final_size;
+   int    error_code;
+   string status;
+   string detail;
+   string final_path;
+   string temp_path;
+};
+
+struct AC_Runtime0Snapshot
+{
+   long   heartbeat_id;
+   uint   timer_started_ms;
+   uint   timer_finished_ms;
+   uint   timer_duration_ms;
+   bool   over_budget;
+   string generated_at;
+   string runtime_state;
+   string terminal_connected;
+   string route_root;
+   string folder_create_status;
+   string fileio_status;
+   string manifest_status;
+   string telemetry_status;
+   string owner_status;
+   string layer_0_1_status;
+   string layer_0_2_status;
+   string layer_0_4_status;
+   bool   file_publication_blocked;
+   string degraded_reason;
+   string blocked_reason;
+};
+
+#endif
