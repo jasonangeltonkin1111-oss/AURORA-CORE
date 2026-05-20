@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.018"
-#property description "AURORA CORE - Runtime 2 universe lookup owner skeleton"
+#property version   "0.019"
+#property description "AURORA CORE - Selection Desk stable parent routes"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -83,10 +83,12 @@ string AC_PlaceholderText(const string surface)
    text += "placeholder_surface=" + surface + "\r\n";
    text += "placeholder_status=structure_only\r\n";
    text += "truth_status=no_runtime_truth_yet\r\n";
+   text += "selection_parent_runtime=true\r\n";
    text += "ranking_group_runtime=false\r\n";
    text += "selection_logic_runtime=false\r\n";
    text += "trade_permission=false\r\n";
    text += "scope_guard=no_symbols_no_ranking_no_selection_claim_no_strategy_no_execution\r\n";
+   text += "route_contract=stable_parent_folder_numbers_live_inside_child_files_not_folder_names\r\n";
    text += "generated_at=" + AC_NowText() + "\r\n";
    return text;
 }
@@ -95,10 +97,10 @@ bool AC_AllPlaceholdersOk(const AC_WriteResult &dossiers_root,
                           const AC_WriteResult &dossiers_open,
                           const AC_WriteResult &dossiers_closed,
                           const AC_WriteResult &dossiers_unknown,
-                          const AC_WriteResult &ranking_group_top5,
-                          const AC_WriteResult &global_top10)
+                          const AC_WriteResult &selection_groups,
+                          const AC_WriteResult &selection_global)
 {
-   return dossiers_root.ok && dossiers_open.ok && dossiers_closed.ok && dossiers_unknown.ok && ranking_group_top5.ok && global_top10.ok;
+   return dossiers_root.ok && dossiers_open.ok && dossiers_closed.ok && dossiers_unknown.ok && selection_groups.ok && selection_global.ok;
 }
 
 void AC_FinalizeState(const AC_WriteResult &runtime_write,
@@ -153,16 +155,16 @@ void AC_PublishRuntime0()
    AC_WriteResult ph_dossiers_open = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersOpenFolder()), AC_PlaceholderText("Dossiers/Open"));
    AC_WriteResult ph_dossiers_closed = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersClosedFolder()), AC_PlaceholderText("Dossiers/Closed"));
    AC_WriteResult ph_dossiers_unknown = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersUnknownFolder()), AC_PlaceholderText("Dossiers/Unknown"));
-   AC_WriteResult ph_ranking_group_top5 = AC_WriteTextFile(AC_PlaceholderPath(AC_RankingGroupTop5Folder()), AC_PlaceholderText("Selection Desk/Ranking Group Top 5"));
-   AC_WriteResult ph_global_top10 = AC_WriteTextFile(AC_PlaceholderPath(AC_GlobalTop10Folder()), AC_PlaceholderText("Selection Desk/Global Top 10"));
-   bool placeholders_ok = AC_AllPlaceholdersOk(ph_dossiers_root, ph_dossiers_open, ph_dossiers_closed, ph_dossiers_unknown, ph_ranking_group_top5, ph_global_top10);
+   AC_WriteResult ph_selection_groups = AC_WriteTextFile(AC_PlaceholderPath(AC_SelectionGroupsFolder()), AC_PlaceholderText("Selection Desk/Groups"));
+   AC_WriteResult ph_selection_global = AC_WriteTextFile(AC_PlaceholderPath(AC_SelectionGlobalFolder()), AC_PlaceholderText("Selection Desk/Global"));
+   bool placeholders_ok = AC_AllPlaceholdersOk(ph_dossiers_root, ph_dossiers_open, ph_dossiers_closed, ph_dossiers_unknown, ph_selection_groups, ph_selection_global);
    AC_SNAPSHOT.placeholder_status = placeholders_ok ? "placeholders_written" : "placeholder_write_degraded";
    AC_RecordWriteProblem("Placeholder Dossiers", ph_dossiers_root);
    AC_RecordWriteProblem("Placeholder Dossiers Open", ph_dossiers_open);
    AC_RecordWriteProblem("Placeholder Dossiers Closed", ph_dossiers_closed);
    AC_RecordWriteProblem("Placeholder Dossiers Unknown", ph_dossiers_unknown);
-   AC_RecordWriteProblem("Placeholder Ranking Group Top 5", ph_ranking_group_top5);
-   AC_RecordWriteProblem("Placeholder Global Top 10", ph_global_top10);
+   AC_RecordWriteProblem("Placeholder Selection Groups", ph_selection_groups);
+   AC_RecordWriteProblem("Placeholder Selection Global", ph_selection_global);
    AC_AddMicroLog("write_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
 
    AC_HeartbeatFinish(AC_SNAPSHOT);
@@ -182,8 +184,8 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Ranking Group Top 5 Placeholder", ph_ranking_group_top5, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Global Top 10 Placeholder", ph_global_top10, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Selection Groups Placeholder", ph_selection_groups, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Selection Global Placeholder", ph_selection_global, AC_SNAPSHOT) + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
    string diagnostics = "";
@@ -199,7 +201,7 @@ void AC_PublishRuntime0()
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
-   diagnostics += "selection_desk_structure=Ranking Group Top 5 + Global Top 10 placeholders only\r\n";
+   diagnostics += "selection_desk_structure=Groups + Global stable parent placeholders only; top/rank numbering belongs inside child files not folder names\r\n";
    diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
@@ -226,8 +228,8 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT) + "\r\n";
    manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Ranking Group Top 5 Placeholder", ph_ranking_group_top5, AC_SNAPSHOT) + "\r\n";
-   manifest += AC_ManifestRow("Global Top 10 Placeholder", ph_global_top10, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Selection Groups Placeholder", ph_selection_groups, AC_SNAPSHOT) + "\r\n";
+   manifest += AC_ManifestRow("Selection Global Placeholder", ph_selection_global, AC_SNAPSHOT) + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? "manifest_written" : manifest_write.status;
    AC_RecordWriteProblem("Manifest Final", manifest_write);
