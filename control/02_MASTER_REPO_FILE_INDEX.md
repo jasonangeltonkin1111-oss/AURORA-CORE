@@ -1,0 +1,175 @@
+# 02 MASTER REPO FILE INDEX
+
+## Purpose
+Complete navigation index for important repository files, ownership boundaries, and current status.
+
+## Owns / Does Not Own
+**Owns:** repository navigation, must-read pointers, folder-by-folder file map, authority labels.
+
+**Does not own:** runtime implementation truth, strategy/trading permission, compile/runtime proof claims.
+
+## Mandatory startup path for new chats
+1. `README.md`
+2. `control/01_CURRENT_SOURCE_TRUTH_MAP.md`
+3. `control/00_MUST_READ_INDEX.md`
+4. `control/00_SUPER_INDEX_RUN_ROUTER.md`
+5. `control/05_DECISION_STATE_REGISTER.md`
+
+## Source authority levels used here
+- **L1:** Active MT5 source files (implementation truth)
+- **L2:** Runtime/generated evidence samples (when explicitly present)
+- **L3:** README + `control/01_CURRENT_SOURCE_TRUTH_MAP.md`
+- **L4:** Control router/index files
+- **L5:** Docs guidebooks
+- **L6:** Blueprint contracts
+- **L7:** Governance schemas/registries/examples
+- **L8:** Research and prompts
+- **L9:** Historical/archive context
+
+---
+
+## Root
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `README.md` | Repo front door and direction | Active | yes | L3 | Must be read before guidebook memory. |
+| `.gitignore` | Repository ignore policy baseline | Active | no | L4 | Repo hygiene only; not runtime authority. |
+
+## control
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `control/01_CURRENT_SOURCE_TRUTH_MAP.md` | Current source truth bridge and contradiction prevention | Active | yes | L3 | First control file after README. |
+| `control/00_MUST_READ_INDEX.md` | Mandatory reading index and contract locks | Active | yes | L4 | Worker startup gate. |
+| `control/00_SUPER_INDEX_RUN_ROUTER.md` | Work routing and mode law | Active | yes | L4 | Read with current truth map. |
+| `control/05_DECISION_STATE_REGISTER.md` | Evidence-gated decision states | Active | yes | L4 | Must align with active source state. |
+| `control/02_MASTER_REPO_FILE_INDEX.md` | Master navigation index | Active | no | L4 | This file. |
+| `control/01_ANTI_DRIFT_LAW.md` | Anti-drift rules | Active | no | L4 | Control doctrine. |
+| `control/02_WORKER_STARTUP_CHECKLIST.md` | Worker startup checklist | Active | no | L4 | Operational checklist. |
+| `control/03_WORKFLOW_AND_PROMPT_LAW.md` | Workflow/prompt controls | Active | no | L4 | Prompt guardrails. |
+| `control/04_BOOK_STYLE_AND_QUALITY_GATES.md` | Documentation quality gates | Active | no | L4 | Writing quality contract. |
+
+## docs
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md` | Guidebook front door | Active | yes | L5 | Doctrine, not source implementation authority. |
+| `docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md` | Continuity/handoff | Active | yes | L5 | Startup continuity for new chats. |
+| `docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md` | Active taxonomy naming contract | Active | yes | L5 | Uses `asset_class/market_group/market_segment/ranking_group/symbol`. |
+| `docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md` | Selection Desk parent-route contract doctrine | Active | yes | L5 | Stable parent routes contract. |
+| `docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md` | Source-of-truth anti-drift doctrine | Active | yes | L5 | Authority/boundary doctrine. |
+| `docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md` .. `docs/14_MT5_FUNCTION_GUIDEBOOK.md` | Runtime doctrines by domain | Active | no | L5 | Task-specific doctrine set. |
+| `docs/20_SYMBOL_UNIVERSE_IMPORT_CONTRACT.md` .. `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md` | Quality/import/runbook laws | Active | no | L5 | Contract and process addenda. |
+
+## blueprint
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `blueprint/00_BLUEPRINT_INDEX.md` | Blueprint navigation front door | Active | yes | L6 | Structural contracts router. |
+| `blueprint/01_SYSTEM_IDENTITY_AND_MISSION.md` | Identity/mission blueprint | Active | no | L6 | Structure, not runtime proof. |
+| `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner boundaries | Active | no | L6 | Architecture map. |
+| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Layer map | Active | no | L6 | Layer structure contract. |
+| `blueprint/04_BUILD_PHASE_BLUEPRINT.md` | Build phase contract | Active | no | L6 | Phase/evidence gates. |
+| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Surface structure doctrine. |
+| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | No trading permission authority. |
+| `blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md` | Route and FileIO ownership | Active | no | L6 | Runtime 7 ownership contract. |
+| `blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md` | MT5 source placement contract | Active | no | L6 | Source folder structure. |
+
+## governance
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `governance/00_GOVERNANCE_INDEX.md` | Governance index | Active | no | L7 | Governance navigation spine. |
+| `governance/registries/00_REGISTRY_INDEX.md` | Registry index | Active | no | L7 | Registry navigation. |
+| `governance/examples/00_EXAMPLES_INDEX.md` | Example index | Active | no | L7 | Sample schemas/rows. |
+
+## governance/schemas
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `governance/schemas/00_SCHEMA_INDEX.md` | Schema index | Active | no | L7 | Schema navigation. |
+| `governance/schemas/01_MINIMUM_GOVERNANCE_SCHEMA_CONTRACTS.md` | Minimum schema contracts | Active | no | L7 | Contract-level constraints. |
+
+## research
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `research/00_RESEARCH_INDEX.md` | Research index | Active | no | L8 | Research routing. |
+| `research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md` | MT5 official docs anchors | Active | no | L8 | Primary-source links. |
+| `research/validation_methods/00_VALIDATION_METHODS_INDEX.md` | Validation methods index | Active | no | L8 | Validation references. |
+| `research/external_worker/00_EXTERNAL_WORKER_RESEARCH_INDEX.md` | External worker research index | Active | no | L8 | Design-stage only. |
+| `research/order_flow_limits/00_ORDER_FLOW_LIMITS_INDEX.md` | Order-flow limits research index | Active | no | L8 | Cautionary research references. |
+| `research/prop_firm_rules/00_PROP_FIRM_RULES_INDEX.md` | Prop-rule research index | Active | no | L8 | Research only, no permission grant. |
+
+## prompts
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `prompts/00_PROMPTS_INDEX.md` | Prompt system index | Active | no | L8 | Prompt navigation. |
+| `prompts/universal/00_UNIVERSAL_PROMPTS_INDEX.md` | Universal prompt index | Active | no | L8 | Generic run templates. |
+| `prompts/universal/01_AURORA_CORE_NEXT_CHAT_HANDOVER_PROMPT.md` | New-chat handover prompt | Active | no | L8 | Must point to current truth map first. |
+| `prompts/workers/00_WORKER_PROMPTS_INDEX.md` | Worker prompt index | Active | no | L8 | Worker prompt routing. |
+| `prompts/codex/00_CODEX_PROMPTS_INDEX.md` | Codex-specific prompt index | Active | no | L8 | Codex run controls. |
+| `prompts/audits/00_AUDIT_PROMPTS_INDEX.md` | Audit prompt index | Active | no | L8 | Audit-specific prompts. |
+
+## reports
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| *(folder currently has no markdown files)* | Historical report sink when present | N/A | no | L9 | Add index only if reports are added. |
+
+## mt5
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `mt5/00_MT5_SOURCE_INDEX.md` | MT5 source navigation | Active | yes | L1 | Source gateway. |
+| `mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md` | Runtime 0 source plan/tests | Active | no | L1/L4 | Planning+tests for active owner. |
+| `mt5/01_LAYER1_ACCOUNT_PORTFOLIO_PROP_RULE_TRUTH_SOURCE_PLAN_AND_TESTS.md` | Runtime 1 Layer 1 plan/tests | Active | no | L1/L4 | Layer 1 scope. |
+| `mt5/02_SEED_SENTINEL_INHERITANCE_AUDIT.md` | Seed/sentinel audit notes | Active | no | L1/L4 | Audit/contract note. |
+| `mt5/AuroraCore.mq5` | Main EA source | Active | yes | L1 | Current implementation truth. |
+
+## mt5/core
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `mt5/core/AC_Config.mqh` | Build/runtime contract constants | Active | yes | L1 | Upgrade scope/truth contract. |
+| `mt5/core/AC_CommonTypes.mqh` | Shared runtime structs/types | Active | no | L1 | Core shared data model. |
+
+## mt5/runtime_owners
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md` | Runtime owners source index | Active | yes | L1/L4 | Source owner map. |
+
+## mt5/runtime_owners/runtime_0_governance_internal_control
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `.../layer_0_1_startup_runtime_identity/AC_RuntimeIdentity.mqh` | Runtime identity owner code | Active | yes | L1 | Runtime 0 layer owner. |
+| `.../layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh` | Timer/heartbeat owner code | Active | yes | L1 | Bounded heartbeat contract. |
+| `.../layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh` | Manifest/telemetry rows owner | Active | yes | L1 | Governance publication support. |
+
+## mt5/runtime_owners/runtime_1_foundation_truth_owner
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `.../layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh` | Account truth snapshot owner | Active | yes | L1 | Read-only account truth layer. |
+
+## mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `.../AC_MarketUniverse.mqh` | Taxonomy/universe lookup contract skeleton | Active | yes | L1 | Skeleton/contract unless generated rows committed. |
+
+## mt5/runtime_owners/runtime_7_publication_owner
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `.../publication_routes/AC_ServerPaths.mqh` | Route builder owner | Active | yes | L1 | Runtime 7 route ownership truth. |
+| `.../publication_fileio/AC_FileIO.mqh` | FileIO writer owner | Active | yes | L1 | Runtime 7 FileIO ownership truth. |
+
+## Archive (historical context only)
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `archive/00_ARCHIVE_INDEX.md` and sub-indexes | Superseded drafts/prompts/blueprints | Historical | no | L9 | Never outranks current source/control truth. |
+
+
+## local_inputs
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `local_inputs/00_LOCAL_INPUTS_INDEX.md` | Local staging input index | Active | no | L9 | Staging/support only; never active source truth by itself. |
+
+## tools
+| path | role | status | must-read? | source authority level | notes |
+|---|---|---|---|---|---|
+| `tools/00_TOOLS_INDEX.md` | Utility tools index | Active | no | L9 | Support tooling only; cannot override source-truth hierarchy. |
+
+## When to update this master index
+- When root folders are added/removed/repurposed.
+- When mandatory startup routing changes.
+- When active source owners/files change.
+- When archive/local_inputs/tools authority boundaries change.

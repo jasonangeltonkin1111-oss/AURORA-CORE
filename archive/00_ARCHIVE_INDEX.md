@@ -39,3 +39,19 @@ This folder scaffold is now created.
 Existing guidebooks remain in docs/ until an explicit migration run is approved.
 Do not duplicate guidebook content here.
 ```
+
+
+## Historical authority warning
+- Archive content is historical only.
+- Archive content is not active authority.
+- Do not use archive content without comparing against current source and `control/01_CURRENT_SOURCE_TRUTH_MAP.md`.
+- Current source truth map outranks all archive content.
+
+## Key files in this folder
+- `archive/old_blueprints/00_OLD_BLUEPRINTS_INDEX.md`
+- `archive/old_guidebook_drafts/00_OLD_GUIDEBOOK_DRAFTS_INDEX.md`
+- `archive/superseded_prompts/00_SUPERSEDED_PROMPTS_INDEX.md`
+
+## When to update this index
+- When new archive sub-indexes are created.
+- When archive authority warnings need strengthening after drift incidents.
