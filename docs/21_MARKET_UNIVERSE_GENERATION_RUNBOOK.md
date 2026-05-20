@@ -8,16 +8,7 @@
 
 ## 0. Current State
 
-The repo currently has:
-
-```text
-docs/20_SYMBOL_UNIVERSE_IMPORT_CONTRACT.md
-tools/generate_market_universe_rows.py
-mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh
-docs/market_universe_generation_audit.json
-```
-
-The repo does not yet have:
+Current repo has the Runtime 2 skeleton and generator, but does **not** yet have:
 
 ```text
 mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh
@@ -34,7 +25,7 @@ selection_logic_runtime=false
 trade_permission=false
 ```
 
-Selection Desk route contract is stable:
+Selection Desk route contract remains stable:
 
 ```text
 Selection Desk/Groups/
@@ -48,23 +39,11 @@ Rank numbers, Top-N labels, cycle IDs, and selection metadata belong inside chil
 
 ## 1. Required Source Workbook
 
-Use this workbook:
+Use:
 
 ```text
 Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx
-```
-
-Required sheet:
-
-```text
 EA Export Safe
-```
-
-The workbook must be the same source referenced by:
-
-```text
-docs/20_SYMBOL_UNIVERSE_IMPORT_CONTRACT.md
-docs/market_universe_generation_audit.json
 ```
 
 Do not use an older workbook, temporary export, renamed run file, or sheet with old bucket-only labels unless it has been audited and intentionally promoted.
@@ -73,16 +52,7 @@ Do not use an older workbook, temporary export, renamed run file, or sheet with 
 
 ## 2. Generation Command
 
-From the repository root, place the workbook at a known local path outside or inside the repo.
-
-Example if the workbook is outside the repo:
-
-```bash
-python tools/generate_market_universe_rows.py \
-  "/path/to/Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx"
-```
-
-Example if the workbook is placed under a local-only input folder:
+From repository root:
 
 ```bash
 python tools/generate_market_universe_rows.py \
@@ -100,16 +70,29 @@ docs/market_universe_generation_audit.json
 
 ## 3. Hard Count Acceptance Gate
 
-The generator must fail if counts do not match:
+The generator must fail if source counts before operator omit do not match:
 
 ```text
-total_rows=1703
-strict_rank_allowed_rows=1294
-public_research_rank_allowed_rows=224
-review_only_rows=184
-blocked_rows=1
-review_or_blocked_rows=185
-duplicate_primary_key_count=0
+source_row_count=1703
+source_strict_rank_allowed_rows=1294
+source_public_research_rank_allowed_rows=224
+source_review_only_rows=184
+source_blocked_rows=1
+source_review_or_blocked_rows=185
+source_duplicate_primary_key_count=0
+```
+
+The generator must fail if generated counts after operator omit do not match:
+
+```text
+generated_row_count=1649
+operator_omit_count=54
+generated_strict_rank_allowed_rows=1261
+generated_public_research_rank_allowed_rows=211
+generated_review_only_rows=176
+generated_blocked_rows=1
+generated_review_or_blocked_rows=177
+generated_duplicate_primary_key_count=0
 ```
 
 Definitions:
@@ -119,34 +102,16 @@ review_only_rows = rows where review_lane starts with REVIEW_ONLY
 blocked_rows = rows where review_lane equals BLOCKED_NOT_RANKABLE
 review_or_blocked_rows = review_only_rows + blocked_rows
 primary_key = server|broker_file|broker_symbol
+operator_omit_set = visible dead/unusable symbols from MT5 screenshot evidence
 ```
 
-If any count differs, do not patch around it.
-
-Instead, stop and audit:
-
-```text
-source workbook identity
-source sheet name
-header row
-blank/duplicate broker_symbol rows
-strict_rank_allowed/public_research_rank_allowed fields
-review_lane values
-blocked row identity
-primary key construction
-```
+If any count differs, stop and audit the workbook identity, source sheet, header row, omit set, rank gates, review lanes, primary keys, and blocked row identity.
 
 ---
 
 ## 4. Required Generated Include Properties
 
-The generated include must be:
-
-```text
-mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh
-```
-
-It must contain:
+The generated include must contain:
 
 ```text
 AC_UNIVERSE_GENERATED_SCHEMA_VERSION
@@ -154,13 +119,16 @@ AC_UNIVERSE_ROW_SCHEMA
 AC_UNIVERSE_SOURCE_FILE_SHA256
 AC_UNIVERSE_HEADER_SHA256
 AC_UNIVERSE_ROW_SCHEMA_SHA256
+AC_UNIVERSE_OPERATOR_OMIT_SET_SHA256
 AC_UNIVERSE_LOOKUP_KEY_SCHEMA
-AC_UNIVERSE_GENERATED_ROW_COUNT = 1703
-AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = 1294
-AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = 224
-AC_UNIVERSE_GENERATED_REVIEW_ONLY = 184
+AC_UNIVERSE_SOURCE_ROW_COUNT = 1703
+AC_UNIVERSE_GENERATED_ROW_COUNT = 1649
+AC_UNIVERSE_OPERATOR_OMIT_COUNT = 54
+AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = 1261
+AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = 211
+AC_UNIVERSE_GENERATED_REVIEW_ONLY = 176
 AC_UNIVERSE_GENERATED_BLOCKED = 1
-AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = 185
+AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = 177
 AC_UNIVERSE_GENERATED_DUPLICATE_PRIMARY_KEYS = 0
 AC_UniverseGeneratedRow(index)
 ```
@@ -182,14 +150,16 @@ not prop-firm readiness
 `docs/market_universe_generation_audit.json` must contain:
 
 ```text
+source_counts.source_row_count=1703
+generated_counts.generated_row_count=1649
+generated_counts.operator_omit_count=54
 source_file_sha256
 header_sha256
 row_schema_sha256
+operator_omit_set_sha256
 lookup_key_schema=server|broker_file|broker_symbol
-first_broker_symbol
-last_broker_symbol
-counts.total_rows=1703
-counts.duplicate_primary_key_count=0
+first_generated_broker_symbol
+last_generated_broker_symbol
 runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
 ranking_runtime=false
 selection_runtime=false
@@ -211,9 +181,9 @@ Expected direction:
 #include "AC_MarketUniverseRows.mqh"
 ```
 
-Then update the Runtime 2 count functions so they return generated constants:
+Then Runtime 2 count functions must return generated constants:
 
-```mql5
+```text
 AC_UniverseLoadedRowCount() -> AC_UNIVERSE_GENERATED_ROW_COUNT
 AC_UniverseStrictRankAllowedCount() -> AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED
 AC_UniversePublicResearchRankAllowedCount() -> AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED
@@ -222,26 +192,26 @@ AC_UniverseBlockedCount() -> AC_UNIVERSE_GENERATED_BLOCKED
 AC_UniverseRowsGenerated() -> true
 ```
 
-Also expose generated metadata in Runtime 2 diagnostics:
+Runtime 2 diagnostics must expose:
 
 ```text
 source_file_sha256
 header_sha256
 row_schema_sha256
+operator_omit_set_sha256
 lookup_key_schema
-review_or_blocked_count
-duplicate_primary_key_count
+source_row_count=1703
+loaded_row_count=1649
+operator_omit_count=54
+review_or_blocked_count=177
+duplicate_primary_key_count=0
 ```
 
-Do not change Selection Desk routes.
-
-Do not add FileIO ownership to Runtime 2.
-
-Do not add ranking, scoring, selection, signal, alert, strategy, or execution logic.
+Do not change Selection Desk routes. Do not add FileIO ownership to Runtime 2. Do not add ranking, scoring, selection, signal, alert, strategy, or execution logic.
 
 ---
 
-## 7. Compile Risk Sniff Before MetaEditor
+## 7. Compile and Runtime Proof Gates
 
 Before compiling, inspect for:
 
@@ -257,67 +227,25 @@ FileIO/path ownership drift
 Selection Desk route drift
 ```
 
-The generated file is expected to be large. If MetaEditor rejects the switch/string layout, do not force it.
-
-Fallback design must preserve one Runtime 2 owner and may use smaller chunked include files only if source inspection proves the single include is not compile-safe.
-
----
-
-## 8. MetaEditor Compile Acceptance
-
 Compile target:
 
 ```text
 mt5/AuroraCore.mq5
 ```
 
-Required claim after compile:
+Compile success proves build compatibility only.
+
+Runtime smoke must verify expected files physically publish and Workbench diagnostics show:
 
 ```text
-compiler-passed or compiler-failed
-```
-
-Do not claim:
-
-```text
-runtime working
-file-output observed
-EA ready
-trade ready
-prop-firm ready
-edge proven
-```
-
-Compile success proves only build compatibility.
-
----
-
-## 9. Runtime Smoke Acceptance
-
-After compile, attach/run in MT5 and verify output files publish.
-
-Required smoke observations:
-
-```text
-Runtime Status.txt exists
-Workbench/Status.txt exists
-Workbench/Diagnostics.txt exists
-Workbench/Manifest.txt exists
-Selection Desk/Groups/_PLACEHOLDER.txt exists
-Selection Desk/Global/_PLACEHOLDER.txt exists
-Selection Desk/Selection Index.txt exists
-```
-
-Diagnostics must show:
-
-```text
-source_row_count_expected=1703
-loaded_row_count=1703
-strict_rank_allowed_count=1294
-public_research_rank_allowed_count=224
-review_only_count=184
+source_row_count=1703
+loaded_row_count=1649
+operator_omit_count=54
+strict_rank_allowed_count=1261
+public_research_rank_allowed_count=211
+review_only_count=176
 blocked_count=1
-review_or_blocked_count=185
+review_or_blocked_count=177
 duplicate_primary_key_count=0
 old_field_names_active=false
 runtime_permission=LOOKUP_ONLY_NOT_TRADE_PERMISSION
@@ -328,7 +256,7 @@ trade_permission=false
 
 ---
 
-## 10. Rollback Plan
+## 8. Rollback Plan
 
 If generation is bad:
 
@@ -351,7 +279,7 @@ no runtime/trading claims
 
 ---
 
-## 11. Forbidden Outcomes
+## 9. Forbidden Outcomes
 
 Do not allow:
 
@@ -363,7 +291,7 @@ Runtime 2 owning FileIO or routes
 Selection Desk folder renamed away from Groups / Global / Selection Index.txt
 rank numbers, Top-N labels, or cycle IDs becoming parent folder names
 row count mismatch hidden or patched around
-source/header/schema hashes missing from audit
+source/header/schema/operator-omit hashes missing from audit
 compile success sold as runtime proof
 runtime placeholder sold as ranking/selection proof
 trade permission or prop-firm readiness claimed
@@ -371,12 +299,13 @@ trade permission or prop-firm readiness claimed
 
 ---
 
-## 12. Decision Gate
+## 10. Decision Gate
 
 Current state before running this runbook:
 
 ```text
 generator_script_landed
+operator_omit_control_landed_54
 runtime2_skeleton_landed
 rows_not_committed
 not_compiler_passed
@@ -386,7 +315,7 @@ not_runtime_smoked
 After running this runbook successfully, the next valid state is only:
 
 ```text
-generated_rows_committed
+generated_rows_committed_1649
 runtime2_counts_wired
 compiler_pending
 runtime_smoke_pending
