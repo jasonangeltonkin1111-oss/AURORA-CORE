@@ -15,22 +15,24 @@ selection runtime, trade permission, edge proof, or prop-firm readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
-import sys
 import zipfile
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from xml.etree import ElementTree as ET
 
 SOURCE_SHEET = "EA Export Safe"
-SCHEMA_VERSION = "universe_rows_v0.1"
+SCHEMA_VERSION = "universe_rows_v0.2"
 EXPECTED = {
     "total_rows": 1703,
     "strict_rank_allowed_rows": 1294,
     "public_research_rank_allowed_rows": 224,
     "review_only_rows": 184,
     "blocked_rows": 1,
+    "review_or_blocked_rows": 185,
+    "duplicate_primary_key_count": 0,
 }
 
 ROW_SCHEMA = [
@@ -81,6 +83,18 @@ REL_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 
 def clean(value: object) -> str:
     return str(value or "").replace("\r", " ").replace("\n", " ").strip()
+
+
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def col_to_index(cell_ref: str) -> int:
@@ -158,7 +172,7 @@ def read_sheet_rows(xlsx_path: Path, sheet_name: str) -> List[List[str]]:
         return rows
 
 
-def load_records(xlsx_path: Path) -> List[Dict[str, str]]:
+def load_records_and_headers(xlsx_path: Path) -> tuple[List[Dict[str, str]], List[str]]:
     rows = read_sheet_rows(xlsx_path, SOURCE_SHEET)
     if not rows:
         raise RuntimeError("No rows found in source sheet")
@@ -172,11 +186,15 @@ def load_records(xlsx_path: Path) -> List[Dict[str, str]]:
         record = {headers[i]: clean(padded[i]) for i in range(len(headers))}
         if record.get("broker_symbol"):
             records.append(record)
-    return records
+    return records, headers
 
 
 def f(row: Dict[str, str], key: str) -> str:
     return clean(row.get(key, ""))
+
+
+def primary_key(row: Dict[str, str]) -> str:
+    return "|".join([f(row, "server"), f(row, "broker_file"), f(row, "broker_symbol")])
 
 
 def derive_asset_class(row: Dict[str, str]) -> str:
@@ -244,13 +262,28 @@ def to_universe_row(row: Dict[str, str]) -> Dict[str, str]:
     }
 
 
+def duplicate_primary_key_count(rows: List[Dict[str, str]]) -> int:
+    seen: set[str] = set()
+    duplicates = 0
+    for row in rows:
+        key = primary_key(row)
+        if key in seen:
+            duplicates += 1
+        seen.add(key)
+    return duplicates
+
+
 def validate_counts(rows: List[Dict[str, str]]) -> Dict[str, int]:
+    review_only = sum(1 for row in rows if f(row, "review_lane").startswith("REVIEW_ONLY"))
+    blocked = sum(1 for row in rows if f(row, "review_lane") == "BLOCKED_NOT_RANKABLE")
     counts = {
         "total_rows": len(rows),
         "strict_rank_allowed_rows": sum(1 for row in rows if f(row, "strict_rank_allowed") == "YES"),
         "public_research_rank_allowed_rows": sum(1 for row in rows if f(row, "public_research_rank_allowed") == "YES"),
-        "review_only_rows": sum(1 for row in rows if f(row, "review_lane").startswith("REVIEW_ONLY")),
-        "blocked_rows": sum(1 for row in rows if f(row, "review_lane") == "BLOCKED_NOT_RANKABLE"),
+        "review_only_rows": review_only,
+        "blocked_rows": blocked,
+        "review_or_blocked_rows": review_only + blocked,
+        "duplicate_primary_key_count": duplicate_primary_key_count(rows),
     }
     if counts != EXPECTED:
         raise RuntimeError(f"Count mismatch: actual={counts} expected={EXPECTED}")
@@ -261,7 +294,20 @@ def mql_escape(value: str) -> str:
     return clean(value).replace("|", "/").replace("\\", "\\\\").replace('"', '\\"')
 
 
-def generate_mql(rows: List[Dict[str, str]]) -> str:
+def generation_metadata(xlsx_path: Path, headers: List[str], rows: List[Dict[str, str]]) -> Dict[str, str]:
+    first_symbol = f(rows[0], "broker_symbol") if rows else ""
+    last_symbol = f(rows[-1], "broker_symbol") if rows else ""
+    return {
+        "source_file_sha256": sha256_file(xlsx_path),
+        "header_sha256": sha256_text("|".join(headers)),
+        "row_schema_sha256": sha256_text("|".join(ROW_SCHEMA)),
+        "lookup_key_schema": "server|broker_file|broker_symbol",
+        "first_broker_symbol": first_symbol,
+        "last_broker_symbol": last_symbol,
+    }
+
+
+def generate_mql(rows: List[Dict[str, str]], metadata: Dict[str, str]) -> str:
     counts = validate_counts(rows)
     out: List[str] = []
     out.append("#ifndef AC_MARKET_UNIVERSE_ROWS_MQH")
@@ -273,11 +319,17 @@ def generate_mql(rows: List[Dict[str, str]]) -> str:
     out.append("")
     out.append(f'static const string AC_UNIVERSE_GENERATED_SCHEMA_VERSION = "{SCHEMA_VERSION}";')
     out.append(f'static const string AC_UNIVERSE_ROW_SCHEMA = "{"|".join(ROW_SCHEMA)}";')
+    out.append(f'static const string AC_UNIVERSE_SOURCE_FILE_SHA256 = "{metadata["source_file_sha256"]}";')
+    out.append(f'static const string AC_UNIVERSE_HEADER_SHA256 = "{metadata["header_sha256"]}";')
+    out.append(f'static const string AC_UNIVERSE_ROW_SCHEMA_SHA256 = "{metadata["row_schema_sha256"]}";')
+    out.append(f'static const string AC_UNIVERSE_LOOKUP_KEY_SCHEMA = "{metadata["lookup_key_schema"]}";')
     out.append(f"static const int AC_UNIVERSE_GENERATED_ROW_COUNT = {counts['total_rows']};")
     out.append(f"static const int AC_UNIVERSE_GENERATED_STRICT_RANK_ALLOWED = {counts['strict_rank_allowed_rows']};")
     out.append(f"static const int AC_UNIVERSE_GENERATED_PUBLIC_RESEARCH_RANK_ALLOWED = {counts['public_research_rank_allowed_rows']};")
     out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_ONLY = {counts['review_only_rows']};")
     out.append(f"static const int AC_UNIVERSE_GENERATED_BLOCKED = {counts['blocked_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_REVIEW_OR_BLOCKED = {counts['review_or_blocked_rows']};")
+    out.append(f"static const int AC_UNIVERSE_GENERATED_DUPLICATE_PRIMARY_KEYS = {counts['duplicate_primary_key_count']};")
     out.append("")
     out.append("string AC_UniverseGeneratedRow(const int index)")
     out.append("{")
@@ -296,17 +348,19 @@ def generate_mql(rows: List[Dict[str, str]]) -> str:
     return "\n".join(out)
 
 
-def write_audit(path: Path, counts: Dict[str, int], out_path: Path) -> None:
+def write_audit(path: Path, counts: Dict[str, int], metadata: Dict[str, str], out_path: Path) -> None:
     audit = {
         "schema_name": "market_universe_generation_audit",
         "schema_version": SCHEMA_VERSION,
         "source_sheet": SOURCE_SHEET,
         "generated_file": str(out_path).replace("\\", "/"),
         "counts": counts,
+        "metadata": metadata,
         "runtime_permission": "LOOKUP_ONLY_NOT_TRADE_PERMISSION",
         "ranking_runtime": False,
         "selection_runtime": False,
         "trade_permission": False,
+        "prop_firm_readiness": False,
     }
     path.write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8")
 
@@ -318,14 +372,15 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--audit-out", type=Path, default=Path("docs/market_universe_generation_audit.json"))
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    rows = load_records(args.workbook)
+    rows, headers = load_records_and_headers(args.workbook)
     counts = validate_counts(rows)
-    mql = generate_mql(rows)
+    metadata = generation_metadata(args.workbook, headers, rows)
+    mql = generate_mql(rows, metadata)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.audit_out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(mql, encoding="utf-8")
-    write_audit(args.audit_out, counts, args.out)
-    print(json.dumps({"generated": str(args.out), "audit": str(args.audit_out), "counts": counts}, indent=2))
+    write_audit(args.audit_out, counts, metadata, args.out)
+    print(json.dumps({"generated": str(args.out), "audit": str(args.audit_out), "counts": counts, "metadata": metadata}, indent=2))
     return 0
 
 
