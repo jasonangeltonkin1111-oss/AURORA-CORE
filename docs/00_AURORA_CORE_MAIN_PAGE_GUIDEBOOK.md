@@ -1,8 +1,8 @@
-# AURORA CORE — MAIN PAGE GUIDEBOOK
+# AURORA CORE - MAIN PAGE GUIDEBOOK
 
 **Guidebook to the Guidebooks**  
 **System Identity:** AURORA CORE  
-**Role:** Master overview, documentation spine, and anti-drift map for the full Aurora Core blueprint.
+**Role:** master overview, documentation spine, current navigation map, and anti-drift front door.
 
 ---
 
@@ -10,85 +10,54 @@
 
 This document is the front door to the AURORA CORE documentation system.
 
-It does not replace the README.
-
-It does not replace the detailed guidebooks.
-
-It tells every future worker, auditor, prompt, and build run:
+It does not replace:
 
 ```text
-what the system is
-what the guidebooks are
-which guidebook owns which truth
-what order to read them in
-what must never drift
-what is locked as system structure
-what remains open for layer-by-layer refinement
+README.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/00_MUST_READ_INDEX.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
 ```
+
+A new worker must read those files before acting.
+
+This guidebook explains the system shape, active naming contracts, and what must not drift.
 
 AURORA CORE is not a finished trading edge.
 
 AURORA CORE is a native MT5 market-intelligence, runtime-ownership, truth-publication, and future-validation system.
 
-The permanent overview principle is:
+Permanent overview principle:
 
 ```text
 Runtime Owners are the top-level system headers.
 Logical layers live under Runtime Owners.
-Guidebooks explain the owners, surfaces, timing, proofs, and laws.
+Guidebooks explain owners, surfaces, timing, proofs, and laws.
+Current source files define implementation truth.
 ```
 
 ---
 
-
-
-Steady-state law cross-reference:
-
-```text
-run_complete ≠ system asleep
-Completed-run full refresh = every 30 minutes.
-Heartbeat / publication / critical risk checks continue between refreshes.
-```
-
-## 1. Master Identity
-
-System name:
-
-```text
-AURORA CORE
-```
-
-Full description:
-
-```text
-Native MT5 Market Intelligence, Runtime Ownership, and Truth Publication System
-```
-
-Short definition:
-
-```text
-AURORA CORE scans wide with cheap broker truth, ranks through buckets, builds diversified inspection baskets, applies expensive evidence only to selected symbols, publishes truth and degradation atomically, and blocks trading claims until outcome validation proves edge.
-```
-
----
-
-## 2. Current Truth Status
+## 1. Current Truth Status
 
 ```text
 Architecture planning: PROCEED
 Runtime Owner structure: PROCEED
 MT5 native-first direction: PROCEED
 Publication-first law: PROCEED
-Timing / heartbeat guidebook: PROCEED
-Completed-run steady-state refresh (30-minute full refresh): PROCEED
-External calculation worker architecture: PROCEED TO GUIDEBOOK DESIGN
-Python worker + file snapshot bridge: BEST FIRST CANDIDATE
+Runtime 0 source: EXISTS, compile/runtime proof required after each patch
+Runtime 1 Layer 1 account truth: EXISTS, read-only snapshot only
+Runtime 2 taxonomy/universe lookup: SKELETON / CONTRACT ONLY unless generated rows are committed
+Runtime 7 publication/FileIO routes: EXISTS
+Selection Desk: STRUCTURE PLACEHOLDERS ONLY
+Dossiers: STRUCTURE PLACEHOLDERS ONLY
+External calculation worker architecture: DESIGN-STAGE ONLY
+Python worker + file snapshot bridge: BEST FIRST CANDIDATE, not production authority
 C/C++ worker: HOLD as later optimization
 WebRequest bridge for main runtime bridge: HOLD
 Sockets bridge for main runtime bridge: CONSIDER later after file bridge proves insufficient
 MT5-only heavy calculations: HOLD as fallback, not preferred long-term
-Bucket-first selection: PROCEED
-Selected evidence only: PROCEED
+Selected evidence only: PROCEED AS ARCHITECTURE, not runtime proof
 
 External DOM/API: HOLD
 Directional alerts: HOLD
@@ -97,80 +66,216 @@ Auto-trading: BLOCKED
 Trading edge claim: UNPROVEN
 ```
 
-No future guidebook may override this status casually.
-
-Any change to trading permission, setup alerts, external feeds, or auto-trading requires explicit evidence upgrade through the Validation / Outcome guidebook.
+No guidebook may upgrade trading permission, setup alerts, external feeds, or auto-trading without explicit evidence upgrade through validation/outcome proof.
 
 ---
 
-## 3. Permanent System Spine
+## 2. Current Mandatory Navigation
+
+Every serious run must first read:
+
+```text
+README.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/00_MUST_READ_INDEX.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
+control/05_DECISION_STATE_REGISTER.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+```
+
+Then read the relevant guidebook, blueprint, governance contract, research file, and active MT5 source owner files.
+
+No serious run may proceed from memory alone.
+
+---
+
+## 3. Current Source-of-Truth Order
+
+```text
+1. Current active MT5 source files for implementation truth
+2. Runtime/generated file evidence supplied by the user for observed behavior
+3. README.md for current repo-level direction
+4. control/01_CURRENT_SOURCE_TRUTH_MAP.md for current navigation and contradiction prevention
+5. control/00_SUPER_INDEX_RUN_ROUTER.md for work routing
+6. control/05_DECISION_STATE_REGISTER.md for decision/evidence gates
+7. Active docs/ guidebooks for doctrine
+8. Active blueprint/ contracts for structure
+9. governance/ schemas and ledgers
+10. research/ primary-source constraints
+11. Old guidebooks/reports/prompts/chats/history as background only
+```
+
+If files conflict, log a contradiction before editing.
+
+---
+
+## 4. Permanent System Spine
 
 The system spine is:
 
 ```text
 Account + Broker Truth
-→ Market Availability
-→ One Basic Gate
-→ Cheap Broad Ranking
-→ Bucket Ranking
-→ Dynamic Bucket Selection
-→ Correlation-Aware Global Top 10
-→ Selected Deep Evidence
-→ Integrity / Permission / Alert State
-→ Outcome Validation Later
+-> Market Availability
+-> One Basic Gate
+-> Cheap Broad Ranking
+-> Taxonomy Classification
+-> Ranking Group Selection Controls
+-> Correlation-Aware Global Inspection Basket
+-> Selected Deep Evidence
+-> Integrity / Permission / Alert State
+-> Outcome Validation Later
 ```
 
 Meaning:
 
 ```text
 wide cheap truth
-→ one hard eligibility gate
-→ descriptive ranking
-→ bucket structure
-→ diversified attention
-→ selected-symbol evidence
-→ permission blocked unless validated
+-> one hard eligibility gate
+-> descriptive ranking
+-> taxonomy fields
+-> ranking_group selection/cap/diversification controls
+-> diversified attention
+-> selected-symbol evidence
+-> permission blocked unless validated
 ```
 
 Forbidden interpretation:
 
 ```text
 ranking = signal
-Top 10 = trade list
+Global Top 10 = trade list
 deep evidence = confirmation
 architecture = edge proof
+placeholder file = runtime truth
 ```
 
 ---
 
-## 4. Permanent Runtime Owner Headers
+## 5. Active Taxonomy Naming Contract
 
-Runtime Owners are the permanent top-level overview structure.
+Use these active field names:
 
-The logical layers will still be revised and expanded layer-by-layer later, but the Runtime Owner structure is the stable blueprint spine.
+```text
+asset_class
+market_group
+market_segment
+ranking_group
+symbol
+```
+
+Meaning:
+
+```text
+Asset Class -> Market Group -> Market Segment -> Symbol
+Ranking Group = EA selection/cap/diversification grouping field
+```
+
+Dead active names:
+
+```text
+major_bucket
+minor_bucket
+aggregation_group
+bucket_top5
+sub_bucket_top5
+Top 5 Per Bucket
+```
+
+These may appear only in historical notes or contradiction ledgers.
 
 ---
 
-### Runtime Owner 1 — Foundation Truth Owner
+## 6. Active Route Contracts
 
-Owns:
+Dossiers stay:
 
 ```text
-Layer 1  Account / Portfolio / Prop Rule Truth
-Layer 2  Market Open / Closed Truth
-Layer 3  Symbol + Broker Specs Truth
-Layer 4  Market Watch Truth
-Layer 5  Basic System Gate
+Dossiers/
+Dossiers/Open/
+Dossiers/Closed/
+Dossiers/Unknown/
 ```
 
-Answers:
+Do not replace Dossier folders with taxonomy folders.
+
+Taxonomy belongs inside Dossier content, lookup rows, indexes, and metadata, not in the Dossier parent-folder layout.
+
+Selection Desk stable parent routes:
 
 ```text
-What exists?
-What is open?
-What is tradable?
-What is fresh?
-What is blocked?
+Selection Desk/
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
+```
+
+Top-N and rank order belong inside future child files or indexes, not parent folder names.
+
+Future views may include:
+
+```text
+Selection Desk/Groups/_INDEX.txt
+Selection Desk/Groups/<ranking_group>.txt
+Selection Desk/Global/_INDEX.txt
+Selection Desk/Global/Global Top 10.txt
+Selection Desk/Selection Index.txt
+```
+
+Current status:
+
+```text
+structure placeholders only
+ranking_group_runtime=false
+selection_logic_runtime=false
+trade_permission=false
+```
+
+---
+
+## 7. Runtime Owner Headers
+
+Runtime Owners remain the permanent top-level overview structure.
+
+### Runtime Owner 0 - Governance / Internal Control Owner
+
+Owns current internal-control source slices:
+
+```text
+Layer 0.1 Startup / Runtime Identity
+Layer 0.2 Scheduler / Heartbeat / Breathing Spine
+Layer 0.4 Governance / Manifest / Telemetry
+```
+
+Must preserve:
+
+```text
+bounded timer work
+honest status
+manifest proof
+micro-log/addendum proof
+no hidden permission grants
+```
+
+---
+
+### Runtime Owner 1 - Foundation Truth Owner
+
+Owns planned/current foundation truth:
+
+```text
+Layer 1 Account / Portfolio / Prop Rule Truth
+Layer 2 Market Open / Closed Truth
+Layer 3 Symbol + Broker Specs Truth
+Layer 4 Market Watch Truth
+Layer 5 Basic System Gate
+```
+
+Current implemented slice:
+
+```text
+Layer 1 account truth snapshot only
+trade_permission=blocked
+prop_rule_status=not_configured
 ```
 
 Must not own:
@@ -178,117 +283,92 @@ Must not own:
 ```text
 strategy edge
 indicator signals
-deep evidence
-bucket selection
-trade permission
+selection logic
+trade permission grant
 ```
 
 ---
 
-### Runtime Owner 2 — Surface Scoring Owner
+### Runtime Owner 2 - Market Universe / Taxonomy Lookup Owner
 
-Owns:
+Owns taxonomy/universe lookup direction:
 
 ```text
-Layer 6  Surface Cost / Friction Ranking
-Layer 7  Session Relevance Ranking
-Layer 8  Surface Movement / Range Ranking
-Layer 9  Surface Structure / Location Geometry
+asset_class
+market_group
+market_segment
+ranking_group
+symbol
+lookup keys
+classification confidence
+evidence status
+rank/review gates
 ```
 
-Answers:
+Current state:
 
 ```text
-Which symbols are cheap, active, moving, and positioned enough to inspect?
+skeleton / contract only unless generated rows are committed and compiled
 ```
 
-Must not claim:
+Must not become:
 
 ```text
-direction
-expectancy
-trade permission
-setup validity
+heavy OnTimer classifier
+random Other dump
+selection engine
+trade permission owner
+```
+
+---
+
+### Runtime Owner 3 - Surface Scoring Owner
+
+Owns later descriptive surface scoring:
+
+```text
+cost / friction
+session relevance
+movement / range
+structure / location geometry
 ```
 
 All surface scores are descriptive unless later outcome evidence proves predictive value.
 
 ---
 
-### Runtime Owner 3 — Bucket Intelligence Owner
+### Runtime Owner 4 - Selection / Basket Owner
 
-Owns:
-
-```text
-Layer 10 Broker Bucket Classification
-Layer 11 Symbol Ranking Inside Buckets
-Layer 12 Bucket Heat / Bucket Quality Ranking
-Layer 13 Dynamic Top Bucket Selection
-Layer 14 Bucket Leader Candidate Pool
-```
-
-Answers:
+Owns later selection logic:
 
 ```text
-Where does every symbol belong?
-Which buckets are strongest?
-Which bucket leaders deserve candidate-pool exposure?
-```
-
-Must not become:
-
-```text
-a loose tag system
-a random Other bucket dump
-a shadow global ranking engine
-```
-
----
-
-### Runtime Owner 4 — Basket Selection Owner
-
-Owns:
-
-```text
-Layer 15 Correlation / Diversity Selection
-Layer 16 Global Top 10 Builder
-```
-
-Answers:
-
-```text
-Which candidates form the best diversified inspection basket?
+Ranking Group Top-N content inside Selection Desk/Groups child files
+Global Top 10 content inside Selection Desk/Global child files
+Selection Index metadata
+correlation / diversity selection
+candidate rejects and backups
 ```
 
 Core law:
 
 ```text
-Bucket Top 5 = alternatives.
-Global Top 10 = diversified attention basket.
-Neither means trade permission.
+Selection is attention.
+Selection is not permission.
+Ranking Group is the selection/cap/diversification grouping field.
 ```
 
 ---
 
-### Runtime Owner 5 — Selected Evidence Owner
+### Runtime Owner 5 - Selected Evidence Owner
 
-Owns:
-
-```text
-Layer 17 Deep Evidence Selection Split
-Layer 18 Selected Raw OHLC Bar Pack
-Layer 19 Selected Wick / Candle Geometry Pack
-Layer 20 Selected Rolling Tick Pack
-Layer 21 Selected Indicator / Reference Pack
-Layer 22 Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack
-```
-
-Answers:
+Owns later expensive selected-symbol evidence:
 
 ```text
-Which selected symbols deserve expensive evidence?
-What deeper evidence exists for those selected symbols?
-Is the evidence complete, partial, stale, degraded, or unavailable?
+selected raw OHLC packs
+selected wick/candle geometry packs
+selected rolling tick packs
+selected indicator/reference packs
+selected deep market evidence / liquidity / MT5 order-flow proxy packs
 ```
 
 Core law:
@@ -299,201 +379,91 @@ Deep evidence is selected-symbol only.
 
 ---
 
-### Runtime Owner 6 — Permission / Alert Owner
+### Runtime Owner 6 - Permission / Alert Owner
+
+Owns later setup/permission/alert state.
+
+Default status:
+
+```text
+class_1_system_alert_allowed=true
+class_2_setup_alert_allowed=false
+directional_alert_allowed=false
+auto_trade_allowed=false
+live_allowed=false
+setup_edge_status=unproven
+```
+
+---
+
+### Runtime Owner 7 - Publication Owner
 
 Owns:
 
 ```text
-Layer 23 Setup / Strategy / Permission / Alert State
+FileIO boundary
+route construction
+Workbench outputs
+Dossier folder structure
+Selection Desk folder structure
+manifest/status/diagnostic publication support
 ```
 
-Answers:
+Must not own:
 
 ```text
-What is allowed?
-What is blocked?
-What alert class is permitted?
-What requires proof first?
-```
-
-Default state:
-
-```text
-class_1_system_alert_allowed = true
-class_2_setup_alert_allowed = false
-directional_alert_allowed = false
-auto_trade_allowed = false
-live_allowed = false
-setup_edge_status = unproven
+broker truth
+account truth
+ranking truth
+selection truth
+trade permission
+strategy
 ```
 
 ---
 
-### Runtime Owner 7 — Publication Owner
+## 8. Guidebook Map
 
-Owns:
+Core guidebooks remain under `docs/`.
 
-```text
-Board
-Dossier
-Selection Desk
-Governance Files
-Manifest
-Atomic Write Pipeline
-```
-
-Answers:
+Use this map:
 
 ```text
-What must print?
-Where does it print?
-What is degraded?
-What is missing?
-What was written successfully?
+docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md       front door
+docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md continuity/handoff
+docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md timing/heartbeat
+docs/03_RUNTIME_OWNER_GUIDEBOOK.md runtime owners
+docs/04_PUBLICATION_TRUTH_PRINTING_GUIDEBOOK.md publication law
+docs/05_BOARD_OPERATOR_COCKPIT_GUIDEBOOK.md board/operator cockpit
+docs/06_DOSSIER_GUIDEBOOK.md dossiers
+docs/07_GOVERNANCE_LEDGER_GUIDEBOOK.md governance/logging/ledger
+docs/08_SCORE_FORMULA_EVIDENCE_INTEGRITY_GUIDEBOOK.md formulas/evidence
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md taxonomy/universe; needs ongoing naming sync
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md selection/ranking_group contract
+docs/11_ALERTS_PERMISSION_SAFETY_GUIDEBOOK.md alerts/permission
+docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md validation/outcome/edge
+docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md external worker
+docs/14_MT5_FUNCTION_GUIDEBOOK.md MT5 API constraints
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md source truth / anti-drift
 ```
 
-Core law:
-
-```text
-Broken truth may block review or trading.
-Broken truth must not block printing.
-```
+If older guidebooks still use bucket-era language, treat it as stale unless explicitly marked historical.
 
 ---
 
-### Runtime Owner 8 — Validation / Outcome Owner
-
-Owns:
+## 9. Proof Discipline
 
 ```text
-Outcome Ledger
-Experiment Registry
-Setup Validation
-Score Validation
-Null Model Comparison
-Strategy Tester Harness Later
-Walk-Forward Proof Later
-Forward Demo Proof Later
+Compile success proves build compatibility only.
+Runtime file output proves only observed publication behavior under observed terminal/account/server conditions.
+Placeholder files prove only structure publication.
+Backtests do not prove live edge.
+Selection is attention, not permission.
+No live trading, prop-firm readiness, strategy edge, or execution approval exists until evidence specifically proves it.
 ```
 
-Answers:
+Decision default after source edits:
 
 ```text
-Did any score, setup, ranking, or evidence concept actually matter after costs and risk?
-```
-
-Core law:
-
-```text
-Architecture is not edge.
-Outcome evidence begins edge validation.
-```
-
----
-
-## 5. Guidebook Library
-
-Current tracker state:
-
-```text
-Created: 16 / 16
-Remaining: 0 / 16
-Status: Overview guidebook set complete.
-```
-
-Created guidebooks:
-
-```text
-00 — Main Page Guidebook
-01 — Handoff & Continuity Guidebook
-02 — Timing, Heartbeat & Breathing Spine Guidebook
-03 — Runtime Owner Guidebook
-04 — Publication & Truth Printing Guidebook
-05 — Board & Operator Cockpit Guidebook
-06 — Dossier Guidebook
-07 — Governance & Ledger Guidebook
-08 — Score, Formula & Evidence Integrity Guidebook
-09 — Bucket Universe & Taxonomy Guidebook
-10 — Selection & Basket Construction Guidebook
-11 — Alerts, Permission & Safety Guidebook
-12 — Validation & Outcome Guidebook
-13 — External Worker & Calculation Bridge Guidebook
-14 — MT5 Function Guidebook
-15 — Anti-Drift & Source-of-Truth Guidebook
-```
-
-Location law:
-
-```text
-Current active documentation location is docs/.
-Future blueprint/guidebooks/control/ structure remains DISCUSS / HOLD until explicitly approved.
-Do not migrate files in this phase.
-```
-
----
-
-### 13 — External Worker & Calculation Bridge Guidebook
-
-Status: CREATED
-
-```text
-docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md
-```
-
-Role:
-
-```text
-external calculation boundary
-bridge protocol
-worker validation
-anti-shadow-brain law
-```
-
-Decision state:
-
-```text
-External calculation worker: PROCEED TO GUIDEBOOK DESIGN
-Python worker + file snapshot bridge: BEST FIRST CANDIDATE
-C/C++ worker: HOLD as later optimization
-WebRequest bridge: HOLD for main runtime bridge
-Sockets bridge: CONSIDER later after file bridge proves insufficient
-MT5-only heavy calculations: HOLD as fallback, not preferred long-term
-```
-
----
-
-### 14 — MT5 Function Guidebook
-
-Status: CREATED
-
-```text
-docs/14_MT5_FUNCTION_GUIDEBOOK.md
-```
-
-Role:
-
-```text
-native MT5/MQL5 function map
-owner/lane/cadence rules
-function adoption boundary
-```
-
----
-
-### 15 — Anti-Drift & Source-of-Truth Guidebook
-
-Status: CREATED
-
-```text
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-```
-
-Role:
-
-```text
-final source-of-truth hierarchy
-anti-shadow-owner law
-contradiction handling
-Codex drift controls
-no-fake-proof doctrine
+TEST FIRST
 ```
