@@ -32,11 +32,15 @@ struct AC_Runtime0Snapshot
    string generated_at;
    string runtime_state;
    string terminal_connected;
+   string timer_setup_status;
+   int    timer_setup_error;
    string route_root;
    string folder_create_status;
    string fileio_status;
    string manifest_status;
    string telemetry_status;
+   string diagnostics_status;
+   string upgrade_log_status;
    string owner_status;
    string layer_0_1_status;
    string layer_0_2_status;
