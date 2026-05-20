@@ -28,6 +28,27 @@ These laws require the final product to be professional, readable, logically str
 
 ---
 
+## Active Runtime Owner Truth
+
+Current compile-chain source truth declares these active owners:
+
+```text
+Runtime 0 - Governance / Internal Control
+Layer 0.1 - Startup / Runtime Identity
+Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
+Layer 0.4 - Governance / Manifest / Telemetry
+Runtime 1 - Foundation Truth Owner
+Layer 1 - Account / Portfolio / Prop Rule Truth
+Runtime 2 - Market Universe / Taxonomy Lookup
+Runtime 7 - Publication Owner
+```
+
+Do not assign new material to a layer by guess.
+
+Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must each receive an audited owner/lane before implementation.
+
+---
+
 ## Core Mission
 
 AURORA CORE exists to answer:
@@ -82,30 +103,33 @@ Current Selection Desk files are structure placeholders only until a later selec
 
 ---
 
-## Dossier / Specs / Fundamental Link / DOM Direction
+## Dossier / Fundamental Link / DOM Direction
 
-Dossiers are the future per-symbol truth pages. They must become useful soon, but they must not become random dumps.
+Dossiers are future per-symbol truth pages. They must become useful soon, but they must not become random dumps or hidden truth owners.
 
-Correct future Dossier flow:
+Future Dossier flow after owner assignment:
 
 ```text
 symbol identity
 status and operator omit state
 Runtime 2 taxonomy
-Layer 1 account/broker context reference
-Layer 2 calculation mode and broker specs
-Market Watch quote freshness
-Depth of Market snapshot summary when deliberately sampled
+Runtime 1 account/broker context reference
+broker-spec owner output when available
+Market Watch / quote-truth owner output when available
+calculation-mode/spec-validation output when available
 broker metadata labelled advisory-only
 fundamental research links where applicable
+DOM snapshot summary only when deliberately sampled by its owner
 contradiction ledger
 ranking/selection eligibility later
 trade_permission=false
 ```
 
-Depth of Market is broker order-book evidence, not fundamentals. DOM sampling must be bounded, watchlist-only, and never a full-universe heavy event path.
+This is display order only. It does not assign source ownership by itself.
 
 Fundamental links are for trader review and taxonomy verification support where applicable. Not every symbol needs links.
+
+DOM is broker order-book evidence, not fundamentals. DOM likely belongs later after universe, Dossier, broker-spec, quote-truth, and calculation-mode foundations exist. DOM sampling must be bounded and never full-universe event spam.
 
 ---
 
