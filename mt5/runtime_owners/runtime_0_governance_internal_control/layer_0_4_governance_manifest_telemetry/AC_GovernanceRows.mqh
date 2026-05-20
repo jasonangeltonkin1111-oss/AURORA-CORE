@@ -1,8 +1,7 @@
 #ifndef AC_GOVERNANCE_ROWS_MQH
 #define AC_GOVERNANCE_ROWS_MQH
 
-#include "../../../core/AC_Config.mqh"
-#include "../../../core/AC_CommonTypes.mqh"
+// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
 
 string AC_BoolText(const bool value)
 {
@@ -71,7 +70,7 @@ string AC_ManifestRow(const string surface, const AC_WriteResult &result, const 
       + "|heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id)
       + "|write_status=" + result.status
       + "|final_exists=" + AC_BoolText(result.final_exists)
-      + "|final_size=" + IntegerToString((int)result.final_size)
+      + "|final_size=" + AC_UlongToText(result.final_size)
       + "|file_publication_blocked=" + AC_BoolText(!result.ok)
       + "|final_path=" + result.final_path
       + "|error_code=" + IntegerToString(result.error_code);
