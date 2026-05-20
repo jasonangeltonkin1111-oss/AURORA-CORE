@@ -98,6 +98,11 @@ string AC_SelectionGlobalFolder()
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_GLOBAL_FOLDER;
 }
 
+string AC_SelectionIndexPath()
+{
+   return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_INDEX_FILE;
+}
+
 string AC_RuntimeStatusPath()
 {
    return AC_RootFolder() + "\\Runtime Status.txt";
@@ -207,7 +212,8 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";dossiers_unknown=" + unknown_detail
       + ";selection_desk=" + selection_desk_detail
       + ";selection_groups=" + selection_groups_detail
-      + ";selection_global=" + selection_global_detail;
+      + ";selection_global=" + selection_global_detail
+      + ";selection_index_path=" + AC_SelectionIndexPath();
 
    return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
 }
