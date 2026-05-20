@@ -88,9 +88,9 @@ string AC_SelectionDeskFolder()
    return AC_RootFolder() + "\\" + AC_SELECTION_FOLDER;
 }
 
-string AC_BucketTop5Folder()
+string AC_RankingGroupTop5Folder()
 {
-   return AC_SelectionDeskFolder() + "\\" + AC_BUCKET_TOP5_FOLDER;
+   return AC_SelectionDeskFolder() + "\\" + AC_RANKING_GROUP_TOP5_FOLDER;
 }
 
 string AC_GlobalTop10Folder()
@@ -169,11 +169,7 @@ bool AC_EnsureFolderPath(const string folder_path, string &detail)
       bool created = FolderCreate(current, AC_CommonFlag());
       int err = GetLastError();
       if(!created && err != 0)
-      {
-         // FolderCreate may report failure when the folder already exists.
-         // Runtime usability is proven by the later temp-to-final file write.
          detail += ";folder_create_warning_at=" + current + ";error=" + IntegerToString(err);
-      }
    }
 
    if(detail == "folder_create_attempted")
@@ -190,7 +186,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
    string closed_detail = "";
    string unknown_detail = "";
    string selection_desk_detail = "";
-   string bucket_top5_detail = "";
+   string ranking_group_top5_detail = "";
    string global_top10_detail = "";
 
    bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
@@ -200,7 +196,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
    bool closed_ok = AC_EnsureFolderPath(AC_DossiersClosedFolder(), closed_detail);
    bool unknown_ok = AC_EnsureFolderPath(AC_DossiersUnknownFolder(), unknown_detail);
    bool selection_desk_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), selection_desk_detail);
-   bool bucket_top5_ok = AC_EnsureFolderPath(AC_BucketTop5Folder(), bucket_top5_detail);
+   bool ranking_group_top5_ok = AC_EnsureFolderPath(AC_RankingGroupTop5Folder(), ranking_group_top5_detail);
    bool global_top10_ok = AC_EnsureFolderPath(AC_GlobalTop10Folder(), global_top10_detail);
 
    detail = "root=" + root_detail
@@ -210,10 +206,10 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";dossiers_closed=" + closed_detail
       + ";dossiers_unknown=" + unknown_detail
       + ";selection_desk=" + selection_desk_detail
-      + ";bucket_top5=" + bucket_top5_detail
+      + ";ranking_group_top5=" + ranking_group_top5_detail
       + ";global_top10=" + global_top10_detail;
 
-   return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && bucket_top5_ok && global_top10_ok;
+   return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && ranking_group_top5_ok && global_top10_ok;
 }
 
 #endif
