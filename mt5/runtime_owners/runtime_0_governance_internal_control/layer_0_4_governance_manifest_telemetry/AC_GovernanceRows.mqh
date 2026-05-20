@@ -36,7 +36,7 @@ string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
    text += "file_publication_blocked=" + AC_BoolText(snapshot.file_publication_blocked) + "\r\n";
    text += "degraded_reason=" + snapshot.degraded_reason + "\r\n";
    text += "blocked_reason=" + snapshot.blocked_reason + "\r\n";
-   text += "next_allowed_step=Runtime 1 - Foundation Truth Owner / Layer 1 - Account / Portfolio / Prop Rule Truth compile and runtime smoke proof, then hold for Layer 2 planning\r\n";
+   text += "next_allowed_step=Runtime 2 universe generated row copy after skeleton compile/runtime smoke, then hold for import verification\r\n";
    return text;
 }
 
@@ -108,12 +108,13 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    text += "generated_at=" + snapshot.generated_at + "\r\n";
-   text += "addendum_reason=user_requested_logging_addendum_micro_logging_and_placeholder_routes\r\n";
+   text += "addendum_reason=runtime2_universe_owner_skeleton_and_selection_desk_contract_alignment\r\n";
    text += "logging_contract=mandatory_for_every_upgrade_bounded_snapshot_plus_addendum\r\n";
    text += "micro_logging_contract=major_phase_timing_only_no_per_tick_append_no_symbol_loop_spam\r\n";
-   text += "placeholder_contract=dossiers_open_closed_unknown_and_selection_top_folders_are_structure_only_no_ranking_claim\r\n";
+   text += "placeholder_contract=dossiers_open_closed_unknown_and_selection_desk_ranking_group_top5_global_top10_are_structure_only_no_ranking_claim\r\n";
+   text += "universe_contract=skeleton_only_expected_rows_1703_loaded_rows_0_lookup_only_not_trade_permission\r\n";
    text += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
-   text += "scope_guard=no_symbols_no_ranking_no_strategy_no_execution_no_external_worker\r\n";
+   text += "scope_guard=no_generated_universe_rows_no_ranking_no_strategy_no_execution_no_external_worker\r\n";
    text += "compile_proof=pending_external_metaeditor_output\r\n";
    text += "runtime_smoke=pending_user_generated_files_review\r\n";
    return text;
