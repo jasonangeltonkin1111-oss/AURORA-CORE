@@ -12,28 +12,18 @@ Aurora must not keep publishing known unusable broker symbols in normal operator
 
 Aurora also must not do value, margin, pip, tick, or profit/loss math until the symbol calculation mode and required broker spec fields are captured.
 
+New operator screenshots show another hard rule: broker `Sector` and `Industry` fields can be wrong. They must not be treated as taxonomy authority.
+
 ---
 
 ## 1. Operator Omit Set
 
-The following symbols were marked by the operator as unusable/dead from MT5 evidence and must be omitted from normal Aurora outputs until manually cleared with new evidence:
+The operator omit set is maintained by `tools/generate_market_universe_rows.py` and `docs/market_universe_generation_audit.json`.
+
+Current expected omit count:
 
 ```text
-11.xhkg
-1186.xhkg
-1800.xhkg
-3188.xhkg
-728.xhkg
-762.xhkg
-883.xhkg
-941.xhkg
-INCUSD.c
-SGCSGD.c
-TWCUSD.c
-813.xhkg
-2007.xhkg
-410.xhkg
-272.xhkg
+operator_omit_count=54
 ```
 
 Required handling:
@@ -43,7 +33,7 @@ omit_from_normal_outputs=true
 omit_reason=operator_marked_unusable_from_mt5_marketwatch_evidence
 ```
 
-They may appear only in an audit/suppressed-symbol report that explains they were omitted.
+Omitted symbols may appear only in an audit/suppressed-symbol report that explains they were omitted.
 
 ---
 
@@ -116,7 +106,37 @@ Aurora must not assume all instruments calculate like Forex. Operator screenshot
 
 ---
 
-## 4. Output Quality Order
+## 4. Broker Sector / Industry Metadata Control
+
+MT5 symbol specifications may expose `Sector`, `Industry`, `Country`, `Exchange`, and `ISIN` style metadata for some instruments.
+
+These fields are useful for display and contradiction detection, but they are not taxonomy authority.
+
+Operator screenshots prove this failure mode:
+
+```text
+AEM / Agnico Eagle Mines Ltd shown by broker specs as Sector=Technology, Industry=Consumer Electronics
+EGO / Eldorado Gold Corp shown by broker specs as Sector=Technology, Industry=Consumer Electronics
+ATI / Allegheny Technologies Inc shown by broker specs as Sector=Technology, Industry=Consumer Electronics
+Eagle Materials Inc shown by broker specs as Sector=Technology, Industry=Consumer Electronics
+```
+
+These examples are clearly inconsistent with the real company/instrument identity and therefore falsify blind trust in broker Sector/Industry fields.
+
+Required handling:
+
+```text
+broker_sector_industry_status=advisory_only
+broker_sector_industry_can_contradict_taxonomy=true
+broker_sector_industry_must_not_overwrite_runtime2_taxonomy=true
+taxonomy_authority=validated_workbook_or_verified_external_research_not_broker_sector_field_alone
+```
+
+Future Dossiers may display broker-provided sector/industry, but must label it as broker metadata and flag contradictions against Runtime 2 taxonomy.
+
+---
+
+## 5. Output Quality Order
 
 Future symbol Dossiers and broker-spec outputs should show:
 
@@ -127,14 +147,16 @@ Future symbol Dossiers and broker-spec outputs should show:
 4. calculation mode
 5. contract/tick/currency fields
 6. quote freshness and Market Watch fields
-7. margin/profit validation checks
-8. ranking/selection eligibility
-9. trade_permission=false until separately proven
+7. broker metadata: exchange/ISIN/country/sector/industry, advisory only
+8. margin/profit validation checks
+9. Runtime 2 taxonomy and contradiction status
+10. ranking/selection eligibility
+11. trade_permission=false until separately proven
 ```
 
 ---
 
-## 5. Falsifiers
+## 6. Falsifiers
 
 Hold the patch if:
 
@@ -144,17 +166,20 @@ calculation mode is missing from broker-spec truth
 Forex-style value math is applied to CFD/crypto/index symbols without calculation-mode proof
 OrderCalcMargin or OrderCalcProfit failure is hidden
 missing tick/contract/currency data is hidden
+broker Sector/Industry overwrites Runtime 2 taxonomy by itself
+broker Sector/Industry contradiction is hidden
 ```
 
 ---
 
-## 6. Current State
+## 7. Current State
 
 ```text
 control_doc_created
 runtime2_import_not_yet_landed
 operator_omit_not_yet_compiled_into_ea
 calculation_mode_not_yet_runtime_observed
+broker_sector_industry_advisory_only_law_landed
 trade_permission=false
 ```
 
