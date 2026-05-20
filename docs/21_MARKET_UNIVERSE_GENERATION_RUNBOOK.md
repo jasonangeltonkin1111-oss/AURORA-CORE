@@ -34,6 +34,16 @@ selection_logic_runtime=false
 trade_permission=false
 ```
 
+Selection Desk route contract is stable:
+
+```text
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
+```
+
+Rank numbers, Top-N labels, cycle IDs, and selection metadata belong inside child files or `Selection Index.txt`, not in parent folder names.
+
 ---
 
 ## 1. Required Source Workbook
@@ -238,8 +248,9 @@ Runtime Status.txt exists
 Workbench/Status.txt exists
 Workbench/Diagnostics.txt exists
 Workbench/Manifest.txt exists
-Selection Desk/Ranking Group Top 5/_PLACEHOLDER.txt exists
-Selection Desk/Global Top 10/_PLACEHOLDER.txt exists
+Selection Desk/Groups/_PLACEHOLDER.txt exists
+Selection Desk/Global/_PLACEHOLDER.txt exists
+Selection Desk/Selection Index.txt exists
 ```
 
 Diagnostics must show:
@@ -292,7 +303,8 @@ broker_symbol alone as global lookup key
 public_research_rank_allowed treated as strict broker truth
 old major_bucket/minor_bucket/aggregation_group as active EA-facing authority
 Runtime 2 owning FileIO or routes
-Selection Desk folder renamed away from Ranking Group Top 5 / Global Top 10
+Selection Desk folder renamed away from Groups / Global / Selection Index.txt
+rank numbers, Top-N labels, or cycle IDs becoming parent folder names
 row count mismatch hidden or patched around
 compile success sold as runtime proof
 runtime placeholder sold as ranking/selection proof
