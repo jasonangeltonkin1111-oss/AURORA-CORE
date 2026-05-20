@@ -1,8 +1,8 @@
-# AURORA CORE — HANDOFF & CONTINUITY GUIDEBOOK
+# AURORA CORE - HANDOFF AND CONTINUITY GUIDEBOOK
 
 **System:** AURORA CORE  
-**Role:** Continuity spine, restart protocol, current decision snapshot, source-state handoff, compile/debug ledger, and next-chat guide.  
-**Status:** ACTIVE HANDOFF — must be read at the start of any new Aurora Core chat.
+**Role:** continuity spine, restart protocol, current decision snapshot, source-state handoff, compile/debug ledger, and next-chat guide.  
+**Status:** ACTIVE HANDOFF - must be read at the start of any new Aurora Core chat after README and the current source truth map.
 
 ---
 
@@ -18,7 +18,6 @@ active control files
 current source files
 what is locked
 what is stale/held
-what failed recently
 what was patched
 what must be tested next
 what must not be built yet
@@ -39,7 +38,7 @@ Active location rules:
 
 ```text
 docs/ remains the active guidebook folder.
-Guidebook migration to guidebooks/ is HOLD unless explicitly approved.
+control/01_CURRENT_SOURCE_TRUTH_MAP.md is the current navigation bridge.
 Runtime-generated MT5 output files do not belong in Git unless explicitly provided as evidence samples.
 ```
 
@@ -47,49 +46,39 @@ Runtime-generated MT5 output files do not belong in Git unless explicitly provid
 
 ## 2. Mandatory First Read for a New Chat
 
-A new chat must read these first:
+A new chat must read these first, in order:
 
 ```text
 README.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
 control/00_MUST_READ_INDEX.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
 control/05_DECISION_STATE_REGISTER.md
+docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-prompts/workers/00_WORKER_PROMPTS_INDEX.md
 ```
 
-Then, for the current source/debug lane, read:
+Then read the relevant guidebook, blueprint, governance contract, research doc, and active MT5 source owner files for the task.
 
-```text
-blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
-blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
-blueprint/04_BUILD_PHASE_BLUEPRINT.md
-blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md
-blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md
-governance/schemas/01_MINIMUM_GOVERNANCE_SCHEMA_CONTRACTS.md
-research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md
-research/validation_methods/00_VALIDATION_METHODS_INDEX.md
-mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md
-mt5/02_SEED_SENTINEL_INHERITANCE_AUDIT.md
-```
-
-Then inspect current MT5 source files listed below.
+No serious run may proceed from memory alone.
 
 ---
 
 ## 3. Current Locked Decision State
 
 ```text
-Guidebook overview set: COMPLETE — 16 / 16
-Super Index / Run Router: ACTIVE DRAFT AUTHORITY
-Decision State Register: OPERATIONAL BUT MAY NEED STATUS SYNC
-Runtime 0 — Governance / Internal Control Owner: FIRST SOURCE TARGET
-Runtime 7 — Publication Owner: allowed only as FileIO/routes support for Runtime 0
-Runtime 1 — Foundation Truth Owner: HOLD UNTIL RUNTIME 0 COMPILES AND RUNTIME-SMOKES
-Layer 1 — Account / Portfolio / Prop Rule Truth: HOLD UNTIL RUNTIME 0 PASSES
-External worker implementation: HOLD
+README.md: current repo-level direction
+control/01_CURRENT_SOURCE_TRUTH_MAP.md: current navigation and contradiction-prevention bridge
+Super Index / Run Router: CURRENT ROUTER, must be read with current truth map
+Decision State Register: operational but may still need status sync after source changes
+Runtime 0: source exists, governance/status/manifest/diagnostics/micro-log support
+Runtime 1 Layer 1: source exists, account truth snapshot only
+Runtime 2: taxonomy/universe lookup skeleton or contract only unless generated row include exists
+Runtime 7: source exists, FileIO/routes owner
+Selection Desk: structure placeholders only, no selection runtime
+Dossiers: Open/Closed/Unknown structure preserved
+External worker implementation: HOLD / design-stage only
 Directional alerts: HOLD
 Setup strategy layer: QUARANTINE
 Auto-trading: BLOCKED
@@ -100,58 +89,9 @@ No future chat may upgrade HOLD / QUARANTINE / BLOCKED / UNPROVEN states without
 
 ---
 
-## 4. Permanent Runtime Owner Structure
+## 4. Current Source Truth Snapshot
 
-Runtime Owners are permanent top-level architecture/source headers.
-
-```text
-Runtime 0 — Governance / Internal Control Owner
-Runtime 1 — Foundation Truth Owner
-Runtime 2 — Surface Scoring Owner
-Runtime 3 — Bucket Intelligence Owner
-Runtime 4 — Basket Selection Owner
-Runtime 5 — Selected Evidence Owner
-Runtime 6 — Permission / Alert Owner
-Runtime 7 — Publication Owner
-Runtime 8 — Validation / Outcome Owner
-```
-
-Important correction:
-
-```text
-Runtime 0 comes before Runtime 1.
-Layer 1 — Account / Portfolio / Prop Rule Truth is not the first EA source target.
-Runtime 0 must first prove folder creation, FileIO, heartbeat, manifest, telemetry, owner status, layer status, and diagnostics.
-```
-
----
-
-## 5. Runtime 0 Internal Layers
-
-Runtime 0 — Governance / Internal Control Owner owns:
-
-```text
-Layer 0.1 — Startup / Runtime Identity
-Layer 0.2 — Scheduler / Heartbeat / Breathing Spine
-Layer 0.3 — Decision State and Runtime Modes
-Layer 0.4 — Governance / Manifest / Telemetry
-Layer 0.5 — Diagnostics / Errors / Recovery
-```
-
-Current first implementation uses only:
-
-```text
-Layer 0.1 — Startup / Runtime Identity
-Layer 0.2 — Scheduler / Heartbeat / Breathing Spine
-Layer 0.4 — Governance / Manifest / Telemetry
-Runtime 7 — Publication Owner support for FileIO/routes
-```
-
----
-
-## 6. Current MT5 Source Files
-
-Current Runtime 0 source files exist in Git:
+Current active source files include:
 
 ```text
 mt5/AuroraCore.mq5
@@ -163,109 +103,194 @@ mt5/runtime_owners/runtime_0_governance_internal_control/
   layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh
   layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh
 
+mt5/runtime_owners/runtime_1_foundation_truth_owner/
+  layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh
+
+mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/
+  AC_MarketUniverse.mqh
+
 mt5/runtime_owners/runtime_7_publication_owner/
   publication_routes/AC_ServerPaths.mqh
   publication_fileio/AC_FileIO.mqh
 ```
 
-Current source intent:
+Current expected version/source identity should be checked in:
 
 ```text
-EA OnInit / OnTimer / OnDeinit shell
-EventSetTimer / EventKillTimer
-Runtime Status.txt
-Workbench/Manifest.txt
-Workbench/Status.txt
-Workbench/Diagnostics.txt
-account-safe route attempt
-heartbeat duration / over-budget flag
-manifest row
-runtime telemetry row
-Runtime 0 owner status row
-Runtime 0 layer status rows
-FileIO temp-to-final publication
+mt5/AuroraCore.mq5
+mt5/core/AC_Config.mqh
 ```
 
-Current forbidden source scope:
+At the last continuity sync, the source direction was:
 
 ```text
-Runtime 1 — Foundation Truth Owner
-Layer 1 — Account / Portfolio / Prop Rule Truth
-symbols
-sessions
-quotes
-ranking
-buckets
-selection
-deep evidence
-alerts
-strategy
-external worker
-trade execution
+Selection Desk stable parent routes
+Dossiers Open/Closed/Unknown preserved
+Taxonomy naming locked to asset_class / market_group / market_segment / ranking_group / symbol
+```
+
+Always inspect active source before trusting this prose.
+
+---
+
+## 5. Active Route Contracts
+
+Dossiers stay:
+
+```text
+Dossiers/
+Dossiers/Open/
+Dossiers/Closed/
+Dossiers/Unknown/
+```
+
+Do not replace Dossier folders with taxonomy folders.
+
+Taxonomy fields belong inside Dossier content, lookup rows, indexes, and metadata.
+
+Selection Desk stable parent routes:
+
+```text
+Selection Desk/
+Selection Desk/Groups/
+Selection Desk/Global/
+Selection Desk/Selection Index.txt
+```
+
+Do not create Selection Desk parent folders named after Top-N ranks.
+
+Future Top-N views belong inside child files/indexes, for example:
+
+```text
+Selection Desk/Groups/<ranking_group>.txt
+Selection Desk/Global/Global Top 10.txt
+Selection Desk/Selection Index.txt
+```
+
+Current Selection Desk state:
+
+```text
+structure placeholders only
+ranking_group_runtime=false
+selection_logic_runtime=false
+trade_permission=false
 ```
 
 ---
 
-## 7. Current Compile / Debug State
+## 6. Active Taxonomy Contract
 
-Runtime 0 source has been created but is not accepted yet.
-
-Evidence state:
+Use these exact active names:
 
 ```text
-Source exists in Git: YES
-Compile proof: PENDING
-Runtime proof: PENDING
-File output proof: PENDING
-Manifest proof: PENDING
+asset_class
+market_group
+market_segment
+ranking_group
+symbol
 ```
 
-Recent compile failures provided by Jason showed:
+Meaning:
 
 ```text
-missing include files from AuroraCore.mq5
-version format warning
-undeclared identifier cascade caused by missing includes
+Asset Class -> Market Group -> Market Segment -> Symbol
+Ranking Group = EA selection/cap/diversification grouping field
 ```
 
-Root cause found:
+Dead active names:
 
 ```text
-The root include style <AURORA-CORE/mt5/...> was wrong for the actual terminal layout.
-Jason's compiler was already inside MQL5/Include/AURORA-CORE/mt5/.
+major_bucket
+minor_bucket
+broker_group
+broker_subgroup
+aggregation_group
+bucket_top5
+sub_bucket_top5
+Top 5 Per Bucket
 ```
 
-Latest patch changed `mt5/AuroraCore.mq5` back to main-file relative quoted includes:
-
-```text
-#include "core/AC_Config.mqh"
-#include "core/AC_CommonTypes.mqh"
-#include "runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh"
-#include "runtime_owners/runtime_7_publication_owner/publication_fileio/AC_FileIO.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_1_startup_runtime_identity/AC_RuntimeIdentity.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_2_scheduler_heartbeat_breathing/AC_Heartbeat.mqh"
-#include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
-```
-
-Latest version string:
-
-```text
-#property version "000.010"
-```
-
-Next required action:
-
-```text
-Recompile mt5/AuroraCore.mq5 after the latest include/version patch.
-```
-
-If compile still fails, treat new compiler output as highest evidence.
+These may appear only as historical notes or contradiction-ledger terms.
 
 ---
 
-## 8. Official Research Anchors for Current Debug Lane
+## 7. Runtime Owner Structure
 
-Current source/debug lane must use official MQL5 references where platform behavior matters:
+Runtime Owners are permanent top-level architecture/source headers.
+
+Current overview:
+
+```text
+Runtime 0 - Governance / Internal Control Owner
+Runtime 1 - Foundation Truth Owner
+Runtime 2 - Market Universe / Taxonomy Lookup Owner
+Runtime 3 - Surface Scoring Owner
+Runtime 4 - Selection / Basket Owner
+Runtime 5 - Selected Evidence Owner
+Runtime 6 - Permission / Alert Owner
+Runtime 7 - Publication Owner
+Runtime 8 - Validation / Outcome Owner
+```
+
+Runtime 0 currently owns:
+
+```text
+Layer 0.1 - Startup / Runtime Identity
+Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
+Layer 0.4 - Governance / Manifest / Telemetry
+```
+
+Runtime 1 current source slice:
+
+```text
+Layer 1 - Account / Portfolio / Prop Rule Truth
+read-only account status snapshot
+trade_permission=blocked
+prop_rule_status=not_configured
+```
+
+Runtime 2 current state:
+
+```text
+taxonomy/universe lookup skeleton or contract only unless generated rows are committed
+```
+
+Runtime 7 owns:
+
+```text
+folder routes
+FileIO temp-to-final writes
+account-safe root path support
+publication support surfaces
+```
+
+---
+
+## 8. Current Evidence State
+
+Evidence must be rechecked every run.
+
+General rules:
+
+```text
+Source inspection proves implementation shape only.
+Compile proof requires MetaEditor output.
+Runtime proof requires generated MT5 files/logs.
+Placeholder files prove only structure publication.
+Selection is attention, not permission.
+```
+
+After any source edit, the default decision is:
+
+```text
+TEST FIRST
+```
+
+---
+
+## 9. Official Research Anchors
+
+Use official MQL5 references where platform behavior matters:
 
 ```text
 OnTimer / EventSetTimer / EventKillTimer
@@ -273,10 +298,11 @@ FileOpen / FileWriteString / FileFlush / FileClose / FileMove / FileIsExist / Fi
 GetLastError / ResetLastError
 TimeCurrent / GetTickCount
 TerminalInfoInteger / TerminalInfoString
-AccountInfoInteger / AccountInfoString only for route labels in Runtime 0
+AccountInfoInteger / AccountInfoDouble / AccountInfoString
+SymbolInfoInteger / SymbolInfoDouble / SymbolInfoString when Runtime 2+ source touches broker symbol truth
 ```
 
-Runtime 0 research conclusions:
+Runtime conclusions:
 
 ```text
 Timer work must be bounded because timer events can be skipped if already queued/processing.
@@ -288,13 +314,13 @@ FileMove must respect temp/final and overwrite behavior.
 
 ---
 
-## 9. Worker Runtime Chain / GPT Work Chain
+## 10. Worker Runtime Chain / GPT Work Chain
 
 Every serious run must follow:
 
 ```text
 1. READ
-2. RESEARCH
+2. RESEARCH if facts/platform behavior may have changed or source docs are needed
 3. TRANSLATE RESEARCH INTO CONSTRAINTS
 4. INSPECT CURRENT SOURCE / FILES
 5. PATCH / CREATE ONLY WHAT EARNS ITS PLACE
@@ -310,117 +336,97 @@ A run is complete only after post-change audit.
 
 ---
 
-## 10. Seed / Sentinel Inheritance Posture
+## 11. Seed / Sentinel Inheritance Posture
 
 Seed and Sentinel are evidence, not authority.
 
-Adopt from Seed now:
+Adopt only with current-source compatibility proof.
+
+Do not import Sentinel/Seed architecture blindly.
+
+Do not use Seed naming as authority over current AURORA CORE contracts.
+
+Current AURORA CORE contracts are held in:
 
 ```text
-account-safe routing concept
-central path owner pattern
-verified FileIO / last-good concept
-print-truth / degraded-publication law
-```
-
-Adopt from Sentinel now:
-
-```text
-heartbeat / breathing / lane law
-no hidden ownership law
-source-of-truth hierarchy once source exists
-failure honesty law
-```
-
-Do not copy now:
-
-```text
-Seed broad include graph
-Seed symbol universe
-Seed account probe into Runtime 0
-Seed Candidate Board
-Seed Dossier bootstrap
-Seed Selection Desk
-Seed external worker bridge
-Seed Layer 2/3/4 logic
-Sentinel full complexity
-```
-
-Core is the new designed system.
-
----
-
-## 11. Current Next Step
-
-Immediate next step:
-
-```text
-Compile mt5/AuroraCore.mq5 in MetaEditor after latest patch.
-```
-
-Then:
-
-```text
-If compile fails: debug only the compiler-reported errors.
-If compile passes: runtime-smoke Runtime 0 only.
-```
-
-Runtime smoke must verify these generated files physically exist under the MT5 Files/Common Files location used by the EA:
-
-```text
-Aurora Core/<SERVER>/<ACCOUNT_NUMBER>/Runtime Status.txt
-Aurora Core/<SERVER>/<ACCOUNT_NUMBER>/Workbench/Manifest.txt
-Aurora Core/<SERVER>/<ACCOUNT_NUMBER>/Workbench/Status.txt
-Aurora Core/<SERVER>/<ACCOUNT_NUMBER>/Workbench/Diagnostics.txt
-```
-
-Only after Runtime 0 compiles, runs, prints, and is audited may work move to:
-
-```text
-Runtime 1 — Foundation Truth Owner / Layer 1 — Account / Portfolio / Prop Rule Truth
+README.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/00_MUST_READ_INDEX.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
+docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+mt5/core/AC_Config.mqh
+mt5/runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh
 ```
 
 ---
 
-## 12. Critical No-Go Rules
+## 12. Current No-Go Rules
 
-Do not:
+Do not build or claim:
 
 ```text
-claim compile proof without compiler output
-claim runtime proof without generated files/logs
-move to Runtime 1 before Runtime 0 passes
-add symbols, quotes, ranking, buckets, alerts, strategy, external worker, or trade execution during Runtime 0
-create duplicate FileIO or route owners
-create broad source scaffolds for future Runtime Owners
-create empty-folder spam
-use generic memory instead of official docs/current source
-invent a helper when an existing owner exists
+real selection runtime
+real Ranking Group Top-N output
+real Global Top 10 output
+strategy
+alerts
+external worker runtime
+trade execution
+prop-firm permission
+edge
+live readiness
 ```
+
+Do not change:
+
+```text
+Dossiers/Open/Closed/Unknown layout
+Selection Desk stable parent route model
+FileIO owner boundary
+route owner boundary
+bounded logging policy
+```
+
+unless the user explicitly scopes that change and the contradiction is logged.
 
 ---
 
-## 13. Restart Prompt Pointer
+## 13. Next Run Seed
 
-For a copy/paste prompt, use:
+Next serious run should start by checking:
 
 ```text
-prompts/universal/01_AURORA_CORE_NEXT_CHAT_HANDOVER_PROMPT.md
+README.md
+control/01_CURRENT_SOURCE_TRUTH_MAP.md
+control/00_MUST_READ_INDEX.md
+control/00_SUPER_INDEX_RUN_ROUTER.md
+docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
+docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
+docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
+mt5/AuroraCore.mq5
+mt5/core/AC_Config.mqh
+mt5/runtime_owners/runtime_7_publication_owner/publication_routes/AC_ServerPaths.mqh
 ```
 
-If that prompt conflicts with this handoff guidebook, this handoff guidebook and current source files outrank the prompt.
-
----
-
-## 14. Final Handoff Law
+Then run a stale-term scan for:
 
 ```text
-Restart from Git, not memory.
-Runtime 0 first.
-Compile evidence outranks source intention.
-Runtime output evidence outranks compile success.
-No fake proof.
-No duplicate owners.
-No broad scaffold.
-Print truth before market truth.
+major_bucket
+minor_bucket
+broker_group
+broker_subgroup
+aggregation_group
+bucket_top5
+sub_bucket_top5
+Top 5 Per Bucket
+MT5 source implementation: HOLD
+planning-only
+```
+
+Decision default:
+
+```text
+TEST FIRST
 ```
