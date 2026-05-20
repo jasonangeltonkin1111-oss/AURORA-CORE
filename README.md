@@ -14,6 +14,18 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 
 ---
 
+## Mandatory Quality Law
+
+All future Aurora Core work must obey:
+
+```text
+docs/22_AURORA_QUALITY_7S_LAW.md
+```
+
+This law requires the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
+
+---
+
 ## Core Mission
 
 AURORA CORE exists to answer:
