@@ -2,12 +2,12 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime_1_layer_1_placeholder_route_name_correction";
-static const string AC_BUILD_VERSION      = "0.015";
-static const string AC_UPGRADE_ID         = "RUN015_SELECTION_DESK_ROUTE_NAME_CORRECTION";
-static const string AC_UPGRADE_SUMMARY    = "Corrects selection placeholder naming from the wrong Top 5 Per Bucket label to Selection Desk / Bucket Top 5 and Global Top 10 structure.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 route-name correction and Runtime 0 placeholder proof only; no symbol scan, ranking, selection logic, alerts, strategy, worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Selection Desk/Bucket Top 5 and Selection Desk/Global Top 10 placeholders; verify no old Top 5 Per Bucket route remains.";
+static const string AC_BUILD_PHASE        = "taxonomy_ranking_group_contract_lock";
+static const string AC_BUILD_VERSION      = "0.016";
+static const string AC_UPGRADE_ID         = "RUN016_TAXONOMY_RANKING_GROUP_CONTRACT";
+static const string AC_UPGRADE_SUMMARY    = "Locks the new taxonomy contract: asset_class, market_group, market_segment, ranking_group, and updates Selection Desk placeholders.";
+static const string AC_UPGRADE_SCOPE      = "Guidebook and placeholder route direction only; no taxonomy runtime load, symbol scan, ranking, selection logic, alerts, strategy, worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; smoke Selection Desk/Ranking Group Top 5 and Selection Desk/Global Top 10 placeholders; verify old bucket naming is not active.";
 static const string AC_LOGGING_POLICY     = "bounded_snapshot_plus_upgrade_addendum_not_append_spam";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
@@ -20,7 +20,7 @@ static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
 static const string AC_SELECTION_FOLDER   = "Selection Desk";
-static const string AC_BUCKET_TOP5_FOLDER = "Bucket Top 5";
+static const string AC_RANKING_GROUP_TOP5_FOLDER = "Ranking Group Top 5";
 static const string AC_GLOBAL_TOP10_FOLDER = "Global Top 10";
 static const int    AC_TIMER_SECONDS      = 1;
 static const int    AC_PUBLICATION_INTERVAL_HEARTBEATS = 5;
