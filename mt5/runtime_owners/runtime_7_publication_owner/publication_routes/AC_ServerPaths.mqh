@@ -68,6 +68,11 @@ string AC_RuntimeStatusPath()
    return AC_RootFolder() + "\\Runtime Status.txt";
 }
 
+string AC_AccountStatusPath()
+{
+   return AC_RootFolder() + "\\Account Status.txt";
+}
+
 string AC_ManifestPath()
 {
    return AC_WorkbenchFolder() + "\\Manifest.txt";
