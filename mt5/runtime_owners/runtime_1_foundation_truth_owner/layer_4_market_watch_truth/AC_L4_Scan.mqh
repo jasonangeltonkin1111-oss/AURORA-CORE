@@ -233,7 +233,8 @@ void AC_RefreshLayer4MarketWatchTruth()
 {
    AC_L4Reset();
    int total = SymbolsTotal(false);
-   AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
+   string refreshed_at = TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
+   AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | L4 refreshed " + refreshed_at + " | symbols " + IntegerToString(total);
 
    for(int idx=0; idx<total; idx++)
    {
