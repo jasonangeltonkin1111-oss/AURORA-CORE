@@ -7,6 +7,8 @@ struct AC_ExternalWorkerStatus
    bool auto_launch_desired;
    bool popup_alerts;
    bool exe_present;
+   bool exe_flat_present;
+   bool exe_folder_present;
    bool heartbeat_present;
    bool result_manifest_present;
    bool result_present;
@@ -31,6 +33,7 @@ struct AC_ExternalWorkerStatus
    string launch_blocker;
    string missing_reason;
    string expected_exe_path;
+   string expected_folder_exe_path;
    string required_path;
    string heartbeat_path;
    string result_path;
@@ -43,6 +46,8 @@ struct AC_ExternalWorkerStatus
    int result_age_seconds;
    int launch_attempts;
    int last_error;
+   int flat_exe_error;
+   int folder_exe_error;
 };
 
 #endif
