@@ -73,9 +73,10 @@ string AC_LayerStatusRows(const AC_Runtime0Snapshot &snapshot)
    return text;
 }
 
-string AC_ManifestRow(const string surface, const AC_WriteResult &result, const AC_Runtime0Snapshot &snapshot)
+string AC_ManifestRow(const string surface, const AC_WriteResult &result, const AC_Runtime0Snapshot &snapshot, const string phase = "primary")
 {
    return "schema_name=manifest|schema_version=v0.1|surface=" + surface
+      + "|phase=" + phase
       + "|source_owner=" + AC_RUNTIME0_OWNER
       + "|source_layer=" + AC_LAYER_0_4_NAME
       + "|build_version=" + AC_BUILD_VERSION
@@ -113,7 +114,7 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
    text += "micro_logging_contract=major_phase_timing_only_no_per_tick_append_no_symbol_loop_spam\r\n";
    text += "placeholder_contract=dossiers_open_closed_unknown_and_selection_desk_groups_global_are_structure_only_no_ranking_claim\r\n";
    text += "selection_route_contract=stable_parent_folder_numbers_live_inside_child_files_not_folder_names\r\n";
-   text += "universe_contract=skeleton_only_expected_rows_1703_loaded_rows_0_lookup_only_not_trade_permission\r\n";
+   text += "universe_contract=generated_copy_present_lookup_only_expected_rows_1703_loaded_rows_runtime2_generated_row_count_lookup_only_not_trade_permission\r\n";
    text += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
    text += "scope_guard=no_generated_universe_rows_no_ranking_no_strategy_no_execution_no_external_worker\r\n";
    text += "compile_proof=pending_external_metaeditor_output\r\n";

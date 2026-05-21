@@ -141,8 +141,8 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## mt5/runtime_owners/runtime_7_publication_owner
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `.../publication_routes/AC_ServerPaths.mqh` | Route builder owner | Active | yes | L1 | Runtime 7 route ownership truth. |
-| `.../publication_fileio/AC_FileIO.mqh` | FileIO writer owner | Active | yes | L1 | Runtime 7 FileIO ownership truth. |
+| `.../publication_routes/AC_ServerPaths.mqh` | Route builder owner | Active | yes | L1 | Inherited `runtime_7_publication_owner` folder naming; architecture treats this as Publication/FileIO/Route System Service support, not trading truth ownership. |
+| `.../publication_fileio/AC_FileIO.mqh` | FileIO writer owner | Active | yes | L1 | Inherited `runtime_7_publication_owner` folder naming; do not infer trading Runtime Owner status from folder name. |
 
 ## Archive (historical context only)
 | path | role | status | must-read? | source authority level | notes |

@@ -4,7 +4,9 @@
 MT5 source index for active source-tree ownership and implementation-scope guardrails.
 
 ## Current status
-- MT5 source exists and is active in limited scope (Runtime 0, Runtime 1 Layer 1 snapshot, Runtime 2 skeleton/contract, Runtime 7 routes/FileIO).
+- MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 2 generated-row lookup-only source, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
+- Publication/status/manifest truth repair is source-present, including late-write surfacing intent in final status publication.
+- Placeholder Dossiers and Selection Desk parent-route files are structure-only route shells; they are physical publication surfaces, not ranking/selection/trading truth.
 - Compile/runtime proof is still required after source edits.
 
 ## Key files in this folder
