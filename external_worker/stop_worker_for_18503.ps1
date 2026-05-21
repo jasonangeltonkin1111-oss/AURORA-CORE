@@ -1,10 +1,10 @@
 $ErrorActionPreference = "Stop"
 
-$TaskName = "AuroraWorker_Upcomers_Server_18503"
+$TaskName = "AuroraWorker_Global"
 $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($Task) {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    Write-Host "Scheduled task stop requested: $TaskName"
+    Write-Host "Shared scheduled task stop requested: $TaskName"
 }
 
 Get-Process AuroraWorker -ErrorAction SilentlyContinue | ForEach-Object {
