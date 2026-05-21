@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.030"
-#property description "AURORA CORE - L3 broker specs and value truth"
+#property version   "1.032"
+#property description "AURORA CORE - L3 broker specs and value truth completion"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -238,7 +238,8 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer3_value_ready_count=" + IntegerToString(AC_L3_VALUE_READY_COUNT) + "\r\n";
    diagnostics += "layer3_margin_ready_count=" + IntegerToString(AC_L3_MARGIN_READY_COUNT) + "\r\n";
    diagnostics += "layer3_cache_key=" + AC_L3_CACHE_KEY + "\r\n";
-   diagnostics += "layer2_cutoff_rule=closed_symbols_block_deeper_layer_publication_until_next_recheck_due\r\n";
+   diagnostics += "layer2_to_layer3_contract=layer3_scans_known_open_and_closed_symbols_unknown_symbols_may_stop_earlier\r\n";
+   diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_not_trader_bloat\r\n";
    diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_or_L3\r\n";
@@ -249,7 +250,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_session_truth_plus_L3_broker_specs_value_truth_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_known_market_state_truth_plus_L3_broker_specs_value_truth_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
