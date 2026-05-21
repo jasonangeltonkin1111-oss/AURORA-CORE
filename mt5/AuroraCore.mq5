@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.022"
-#property description "AURORA CORE - L0 near-instant Board with cached universe"
+#property version   "1.023"
+#property description "AURORA CORE - L1 account portfolio history truth"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -54,7 +54,7 @@ void AC_ResetSnapshot()
    AC_SNAPSHOT.file_publication_blocked = false;
    AC_SNAPSHOT.degraded_reason = "";
    AC_SNAPSHOT.blocked_reason = "";
-   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.4\r\n";
+   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.5\r\n";
    AC_Layer0InitStatus(AC_L0_STATUS);
 }
 
@@ -121,6 +121,11 @@ void AC_ApplyLateWriteStatus(const string surface, const AC_WriteResult &result)
 AC_WriteResult AC_PublishMarketBoardOnly()
 {
    AC_SNAPSHOT.terminal_connected = TerminalInfoInteger(TERMINAL_CONNECTED) ? "true" : "false";
+   if(AC_L1_READY)
+   {
+      AC_RefreshLayer1SnapshotOnly();
+      AC_BuildLayer1Texts();
+   }
    string board_text = AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS);
    return AC_WriteTextFileIfChanged(AC_MarketBoardPath(), board_text, AC_LAST_BOARD_TEXT, false);
 }
@@ -152,6 +157,10 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
       AC_AppendReason(folder_detail);
    }
    AC_AddMicroLog("ensure_runtime_folders", phase_start, AC_SNAPSHOT.folder_create_status);
+
+   phase_start = GetTickCount();
+   AC_RefreshLayer1AccountTruth();
+   AC_AddMicroLog("refresh_layer1_account_truth", phase_start, AC_L1_SCAN_STATUS);
 
    phase_start = GetTickCount();
    AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
@@ -197,16 +206,18 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
+   diagnostics += "layer1_scan_status=" + AC_L1_SCAN_STATUS + "\r\n";
+   diagnostics += "layer1_scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS) + "\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_not_trader_bloat\r\n";
-   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0\r\n";
+   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_or_L1\r\n";
    diagnostics += "symbol_packet_retry_limit=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    diagnostics += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
    diagnostics += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_near_instant_board_cached_universe_only_no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_only_no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
