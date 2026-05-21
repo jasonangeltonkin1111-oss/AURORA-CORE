@@ -1,6 +1,18 @@
 #ifndef AC_L1_SCAN_MQH
 #define AC_L1_SCAN_MQH
 
+// Forward declaration: render implementation is included after scan in the Runtime 1 dispatcher.
+void AC_BuildLayer1Texts();
+
+double AC_L1SafeDealFee(const ulong deal_ticket)
+{
+   double value = 0.0;
+   ResetLastError();
+   if(HistoryDealGetDouble(deal_ticket, (ENUM_DEAL_PROPERTY_DOUBLE)DEAL_FEE, value))
+      return value;
+   return 0.0;
+}
+
 bool AC_L1FindEntryDealForPosition(const long position_id,
                                    const int close_deal_index,
                                    datetime &entry_time,
@@ -44,7 +56,7 @@ void AC_L1PositionCostSums(const long position_id,
       if(HistoryDealGetInteger(ticket, DEAL_POSITION_ID) != position_id) continue;
       commission_sum += HistoryDealGetDouble(ticket, DEAL_COMMISSION);
       swap_sum += HistoryDealGetDouble(ticket, DEAL_SWAP);
-      fee_sum += HistoryDealGetDouble(ticket, DEAL_FEE);
+      fee_sum += AC_L1SafeDealFee(ticket);
    }
 }
 
