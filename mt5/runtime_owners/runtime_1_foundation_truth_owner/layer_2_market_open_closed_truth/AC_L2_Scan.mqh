@@ -14,10 +14,10 @@ int AC_L2NormalizeSessionSecond(const datetime value)
 bool AC_L2TimeInsideSession(const int now_seconds, const int from_seconds, const int to_seconds)
 {
    if(now_seconds < 0 || from_seconds < 0 || to_seconds < 0) return false;
-   if(from_seconds == to_seconds) return true; // broker reports full-day session as 00:00-00:00 on some symbols
+   if(from_seconds == to_seconds) return true;
    if(to_seconds > from_seconds)
       return (now_seconds >= from_seconds && now_seconds < to_seconds);
-   return (now_seconds >= from_seconds || now_seconds < to_seconds); // crosses midnight
+   return (now_seconds >= from_seconds || now_seconds < to_seconds);
 }
 
 int AC_L2MinutesUntil(const int now_seconds, const int target_seconds)
@@ -213,6 +213,7 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
       AC_L2_SYMBOLS[next].source_quality = AC_L2_SYMBOLS[next].quote_session_available ? "complete" : "partial_quote_session_missing";
       AC_L2_OPEN_COUNT++;
       int close_minutes = AC_L2_SYMBOLS[next].minutes_until_session_close;
+      if(close_minutes < 1) close_minutes = AC_L2_REFRESH_SECONDS / 60;
       if(close_minutes < 1) close_minutes = 1;
       AC_L2_SYMBOLS[next].next_recheck_due = server_time + (close_minutes * 60);
       return;
@@ -244,6 +245,7 @@ void AC_RefreshLayer2MarketSessionTruth()
    AC_L2_LAST_SERVER_DAY_OF_WEEK = day_of_week;
    AC_L2_LAST_SYMBOLS_TOTAL = total;
    AC_L2_LAST_FULL_SCAN_TIME = server_time;
+   AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|scan_time=" + IntegerToString((int)server_time);
 
    if(total <= 0)
    {
