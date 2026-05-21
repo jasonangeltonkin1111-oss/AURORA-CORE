@@ -35,6 +35,8 @@ static int    AC_L1_HISTORY_ORDERS_TOTAL = 0;
 static int    AC_L1_FILLED_ORDERS = 0;
 static int    AC_L1_CANCEL_LIKE_ORDERS = 0;
 static int    AC_L1_PARTIAL_RECONSTRUCTION_COUNT = 0;
+static int    AC_L1_ORDER_CONTEXT_PARTIAL_COUNT = 0;
+static int    AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT = 0;
 static int    AC_L1_RECENT_BOARD_ROWS = 0;
 
 static double AC_L1_NET_PROFIT = 0.0;
@@ -48,8 +50,14 @@ static int    AC_L1_BUY_COUNT = 0;
 static int    AC_L1_SELL_COUNT = 0;
 static string AC_L1_WORST_SYMBOL = "none";
 static double AC_L1_WORST_SYMBOL_NET = 0.0;
+static string AC_L1_BEST_SYMBOL = "none";
+static double AC_L1_BEST_SYMBOL_NET = 0.0;
 static string AC_L1_WORST_DAY = "none";
 static double AC_L1_WORST_DAY_NET = 0.0;
+static string AC_L1_BEST_DAY = "none";
+static double AC_L1_BEST_DAY_NET = 0.0;
+static long   AC_L1_DURATION_SUM_SECONDS = 0;
+static int    AC_L1_DURATION_COUNT = 0;
 
 static string AC_L1_BOARD_SECTION = "";
 static string AC_L1_WORKBENCH_SECTION = "";
@@ -78,6 +86,8 @@ void AC_L1Reset()
    AC_L1_FILLED_ORDERS = 0;
    AC_L1_CANCEL_LIKE_ORDERS = 0;
    AC_L1_PARTIAL_RECONSTRUCTION_COUNT = 0;
+   AC_L1_ORDER_CONTEXT_PARTIAL_COUNT = 0;
+   AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT = 0;
    AC_L1_RECENT_BOARD_ROWS = 0;
 
    AC_L1_NET_PROFIT = 0.0;
@@ -91,8 +101,14 @@ void AC_L1Reset()
    AC_L1_SELL_COUNT = 0;
    AC_L1_WORST_SYMBOL = "none";
    AC_L1_WORST_SYMBOL_NET = 0.0;
+   AC_L1_BEST_SYMBOL = "none";
+   AC_L1_BEST_SYMBOL_NET = 0.0;
    AC_L1_WORST_DAY = "none";
    AC_L1_WORST_DAY_NET = 0.0;
+   AC_L1_BEST_DAY = "none";
+   AC_L1_BEST_DAY_NET = 0.0;
+   AC_L1_DURATION_SUM_SECONDS = 0;
+   AC_L1_DURATION_COUNT = 0;
 
    AC_L1_BOARD_SECTION = "";
    AC_L1_WORKBENCH_SECTION = "";
@@ -155,6 +171,11 @@ void AC_L1FinalizeStats()
          AC_L1_WORST_SYMBOL_NET = AC_L1_SYMBOL_STATS[i].net_result;
          AC_L1_WORST_SYMBOL = AC_L1_SYMBOL_STATS[i].symbol;
       }
+      if(AC_L1_SYMBOL_STATS[i].closed_count > 0 && (AC_L1_BEST_SYMBOL == "none" || AC_L1_SYMBOL_STATS[i].net_result > AC_L1_BEST_SYMBOL_NET))
+      {
+         AC_L1_BEST_SYMBOL_NET = AC_L1_SYMBOL_STATS[i].net_result;
+         AC_L1_BEST_SYMBOL = AC_L1_SYMBOL_STATS[i].symbol;
+      }
    }
 
    for(int j = 0; j < ArraySize(AC_L1_DAY_STATS); j++)
@@ -163,6 +184,11 @@ void AC_L1FinalizeStats()
       {
          AC_L1_WORST_DAY_NET = AC_L1_DAY_STATS[j].net_result;
          AC_L1_WORST_DAY = AC_L1_DAY_STATS[j].day;
+      }
+      if(AC_L1_DAY_STATS[j].closed_count > 0 && (AC_L1_BEST_DAY == "none" || AC_L1_DAY_STATS[j].net_result > AC_L1_BEST_DAY_NET))
+      {
+         AC_L1_BEST_DAY_NET = AC_L1_DAY_STATS[j].net_result;
+         AC_L1_BEST_DAY = AC_L1_DAY_STATS[j].day;
       }
    }
 }
