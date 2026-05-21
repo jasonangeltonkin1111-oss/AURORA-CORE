@@ -8,7 +8,7 @@
 
 #include "AC_ExternalWorkerTypes.mqh"
 #include "AC_ExternalWorkerState.mqh"
-#include "AC_ExternalWorkerControl.mqh"
 #include "AC_ExternalWorkerRender.mqh"
+#include "AC_ExternalWorkerControl.mqh"
 
 #endif
