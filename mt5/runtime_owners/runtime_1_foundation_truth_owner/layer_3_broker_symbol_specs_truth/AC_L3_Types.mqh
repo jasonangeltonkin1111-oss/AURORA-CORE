@@ -108,6 +108,12 @@ struct AC_L3SymbolSpecs
    string sector;
    string industry;
    string country;
+   string isin_status;
+   string exchange_status;
+   string sector_status;
+   string industry_status;
+   string country_status;
+   string broker_metadata_status;
    string asset_class;
    string market_group;
    string market_segment;
