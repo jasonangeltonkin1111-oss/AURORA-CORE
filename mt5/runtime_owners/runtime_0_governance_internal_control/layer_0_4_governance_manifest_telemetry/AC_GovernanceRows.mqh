@@ -36,7 +36,7 @@ string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
    text += "file_publication_blocked=" + AC_BoolText(snapshot.file_publication_blocked) + "\r\n";
    text += "degraded_reason=" + snapshot.degraded_reason + "\r\n";
    text += "blocked_reason=" + snapshot.blocked_reason + "\r\n";
-   text += "next_allowed_step=Compile AuroraCore.mq5, then runtime-smoke Market Board and bounded Dossiers/Unknown shell output before Layer 1/2 expansion\r\n";
+   text += "next_allowed_step=Compile AuroraCore.mq5, then runtime-smoke Market Board and Dossiers/Unknown shell output before Layer 1/2 expansion\r\n";
    return text;
 }
 
@@ -104,20 +104,21 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
 {
    string text = "";
    text += "schema_name=upgrade_addendum\r\n";
-   text += "schema_version=v0.2\r\n";
+   text += "schema_version=v0.3\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    text += "generated_at=" + snapshot.generated_at + "\r\n";
-   text += "addendum_reason=L0_trader_board_workbench_split_and_bounded_unknown_dossier_shell_fill\r\n";
-   text += "logging_contract=bounded_snapshot_plus_major_phase_timing_only_no_per_tick_append_no_symbol_loop_spam\r\n";
-   text += "board_contract=trading_side_summary_only_symbol_shell_counts_trust_blocker_no_layer2_open_closed_counts\r\n";
-   text += "workbench_contract=developer_status_layer_packets_batch_progress_route_write_proof_without_trader_bloat\r\n";
+   text += "addendum_reason=L0_near_instant_board_cached_universe_and_write_if_changed_publication\r\n";
+   text += "logging_contract=" + AC_LOGGING_POLICY + "\r\n";
+   text += "board_contract=trading_side_summary_atomic_update_only_when_content_changes\r\n";
+   text += "workbench_contract=developer_status_layer_packets_slower_refresh_without_trader_bloat\r\n";
    text += "dossier_contract=one_dossier_per_broker_symbol_under_unknown_until_layer2_moves_classifies_later\r\n";
    text += "statistics_contract=each_layer_owner_outputs_own_status_packet_board_reads_packets_only\r\n";
    text += "python_worker_contract=not_used_for_L0_lightweight_stats_future_heavy_trading_calculations_only\r\n";
-   text += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
-   text += "dossier_shell_batch_size=" + IntegerToString(AC_DOSSIER_SHELL_BATCH_SIZE) + "\r\n";
+   text += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
+   text += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
+   text += "dossier_shell_write_retries=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    text += "scope_guard=no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_alerts_no_strategy_no_execution\r\n";
    text += "compile_proof=pending_external_metaeditor_output\r\n";
    text += "runtime_smoke=pending_user_generated_files_review\r\n";
