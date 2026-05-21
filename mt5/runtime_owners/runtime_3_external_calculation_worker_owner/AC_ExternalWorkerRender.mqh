@@ -40,10 +40,15 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_path=" + AC_ExternalWorkerSnapshotPath() + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_manifest_path=" + AC_ExternalWorkerSnapshotManifestPath() + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "exe_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_present ? "true" : "false") + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "exe_flat_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_flat_present ? "true" : "false") + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "exe_folder_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_folder_present ? "true" : "false") + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "flat_exe_error=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.flat_exe_error) + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "folder_exe_error=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.folder_exe_error) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_present=" + (AC_EXTERNAL_WORKER_STATUS.heartbeat_present ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_present=" + (AC_EXTERNAL_WORKER_STATUS.result_present ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_manifest_present=" + (AC_EXTERNAL_WORKER_STATUS.result_manifest_present ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "expected_exe_path=" + AC_EXTERNAL_WORKER_STATUS.expected_exe_path + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "expected_folder_exe_path=" + AC_EXTERNAL_WORKER_STATUS.expected_folder_exe_path + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "required_path=" + AC_EXTERNAL_WORKER_STATUS.required_path + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_path=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_path + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_path=" + AC_EXTERNAL_WORKER_STATUS.result_path + "\r\n";
@@ -53,7 +58,7 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "board_alerts=disabled_for_now\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_core_continues_if_worker_missing=true\r\n";
 
-   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.6|source_owner=" + AC_RUNTIME3_OWNER
+   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.7|source_owner=" + AC_RUNTIME3_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|required=" + (AC_EXTERNAL_WORKER_STATUS.required ? "true" : "false")
@@ -63,6 +68,9 @@ void AC_BuildExternalWorkerTexts()
       + "|launch_status=" + AC_EXTERNAL_WORKER_STATUS.launch_status
       + "|worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status
       + "|install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status
+      + "|exe_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_present ? "true" : "false")
+      + "|exe_flat_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_flat_present ? "true" : "false")
+      + "|exe_folder_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_folder_present ? "true" : "false")
       + "|heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status
       + "|heartbeat_validation_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status
       + "|heartbeat_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds)
@@ -76,7 +84,6 @@ void AC_BuildExternalWorkerTexts()
       + "|snapshot_status=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS
       + "|snapshot_rows=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS)
       + "|snapshot_payload_checksum=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM
-      + "|exe_present=" + (AC_EXTERNAL_WORKER_STATUS.exe_present ? "true" : "false")
       + "|authority=" + AC_EXTERNAL_WORKER_STATUS.authority
       + "|trade_permission=false";
 }
@@ -91,7 +98,7 @@ string AC_ExternalWorkerWorkbenchSection()
 string AC_ExternalWorkerStatusRow()
 {
    if(AC_EXTERNAL_WORKER_STATUS_ROW == "")
-      return "schema_name=external_worker_status|schema_version=v0.6|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
+      return "schema_name=external_worker_status|schema_version=v0.7|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
    return AC_EXTERNAL_WORKER_STATUS_ROW;
 }
 
