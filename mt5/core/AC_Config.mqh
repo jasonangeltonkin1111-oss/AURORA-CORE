@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer2_market_open_closed_truth";
-static const string AC_BUILD_VERSION      = "1.028";
-static const string AC_UPGRADE_ID         = "L2_MARKET_OPEN_CLOSED_TRUTH";
-static const string AC_UPGRADE_SUMMARY    = "Adds Foundation Truth Owner Layer 2 market open/closed/unknown session truth with Dossier route publication and closed-symbol downstream cutoff state.";
+static const string AC_BUILD_PHASE        = "l2_runtime_polish_before_layer3_plan";
+static const string AC_BUILD_VERSION      = "1.029";
+static const string AC_UPGRADE_ID         = "L2_RUNTIME_POLISH_BEFORE_LAYER3_PLAN";
+static const string AC_UPGRADE_SUMMARY    = "Polishes L1 closed-trade result labels for trader readability and adds safe legacy placeholder cleanup while preserving Layer 2 market open/closed/unknown session truth.";
 static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account/portfolio truth and Layer 2 market open/closed/unknown session truth. L2 may route Dossiers to Open/Closed/Unknown and expose downstream cutoff state. No Layer 3 specs, Layer 4 quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; inspect Market Board L2 summary; confirm open+closed+unknown equals broker symbols; confirm Dossiers publish to Open/Closed/Unknown with no missing files; confirm closed-symbol Dossiers show deeper-layer cutoff and next_recheck_due; inspect Workbench Status, Manifest, Diagnostics, and no trade permission.";
-static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l2_session_truth_route_publication";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; confirm closed-trade tables show Result labels such as WIN_OK_SLTP_MISSING or LOSS_OK_SLTP_MISSING instead of core_complete; confirm placeholder cleanup removes legacy _PLACEHOLDER.txt files; inspect Market Board L2 summary, Workbench Status, Manifest, Diagnostics, and no trade permission.";
+static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l2_session_truth_route_publication_placeholder_cleanup";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_PUBLICATION_SERVICE_OWNER = "Publication / FileIO / Route Service";
@@ -19,7 +19,7 @@ static const string AC_LAYER_0_4_NAME     = "Layer 0.4 - Governance / Manifest /
 static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier Shell Foundation";
 static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Prop Rule Truth";
 static const string AC_LAYER_2_NAME       = "Layer 2 - Market Open / Closed Truth";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.028_l2_market_state_routes";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.029_l2_routes_l1_result_labels";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
