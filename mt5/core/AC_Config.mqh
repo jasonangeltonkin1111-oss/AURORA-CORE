@@ -3,7 +3,7 @@
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
 static const string AC_BUILD_PHASE        = "l0_near_instant_board_cached_universe";
-static const string AC_BUILD_VERSION      = "0.022";
+static const string AC_BUILD_VERSION      = "1.022";
 static const string AC_UPGRADE_ID         = "L0_NEAR_INSTANT_BOARD_CACHED_UNIVERSE";
 static const string AC_UPGRADE_SUMMARY    = "Makes Layer 0 complete as a fast symbol-universe shell pass with cached completion and near-instant atomic Board/status refresh without re-running the full universe every timer event.";
 static const string AC_UPGRADE_SCOPE      = "Layer 0 publication and per-symbol Dossier shell foundation only; full broker universe shell fill runs immediately on first pass or symbol-count change, then Board/Workbench refresh from the L0 status packet; failed symbol data packets are recorded as addendum text; no open/closed classification, no specs, no quotes, no ranking, no selection, no alerts, no strategy, no Python worker, and no trade execution.";
