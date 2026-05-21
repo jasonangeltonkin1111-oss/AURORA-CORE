@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.032"
-#property description "AURORA CORE - L3 broker specs and value truth completion"
+#property version   "1.033"
+#property description "AURORA CORE - L3 zero cause diagnostics"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
