@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.023"
-#property description "AURORA CORE - L1 account portfolio history truth"
+#property version   "1.024"
+#property description "AURORA CORE - L1 split account portfolio history truth"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
