@@ -1,5 +1,5 @@
 #property strict
-#property version   "0.022"
+#property version   "1.022"
 #property description "AURORA CORE - L0 near-instant Board with cached universe"
 
 #include "core/AC_Config.mqh"
