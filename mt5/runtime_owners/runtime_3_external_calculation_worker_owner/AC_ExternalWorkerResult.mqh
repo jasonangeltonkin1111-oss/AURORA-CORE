@@ -29,6 +29,80 @@ string AC_EWValue(const string text, const string key)
    return value;
 }
 
+void AC_ValidateExternalWorkerInstallStatus()
+{
+   AC_EXTERNAL_WORKER_STATUS.install_status_file_present = FileIsExist(AC_ExternalWorkerInstallStatusPath(), AC_CommonFlag());
+   if(!AC_EXTERNAL_WORKER_STATUS.install_status_file_present)
+   {
+      AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "worker_install_status.txt missing";
+      AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds = -1;
+      return;
+   }
+
+   string install_text = AC_EWReadTextFile(AC_ExternalWorkerInstallStatusPath(), 8000);
+   if(install_text == "")
+   {
+      AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "worker_install_status.txt could not be read";
+      return;
+   }
+
+   string installed = AC_EWValue(install_text, "installed");
+   string authority = AC_EWValue(install_text, "authority");
+   string trade_permission = AC_EWValue(install_text, "trade_permission");
+   string generated_unix = AC_EWValue(install_text, "generated_unix");
+   AC_EXTERNAL_WORKER_STATUS.install_worker_version = AC_EWValue(install_text, "worker_version");
+   AC_EXTERNAL_WORKER_STATUS.install_flat_exe_present = AC_EWValue(install_text, "flat_exe_present");
+   AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_present = AC_EWValue(install_text, "packaged_exe_present");
+
+   if(installed != "true")
+   {
+      AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "installed flag is not true";
+      return;
+   }
+   if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
+   {
+      AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "install authority mismatch";
+      return;
+   }
+   if(trade_permission != "false")
+   {
+      AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "install trade permission is not false";
+      return;
+   }
+
+   long generated = (long)StringToInteger(generated_unix);
+   if(generated > 0)
+   {
+      long age = (long)TimeGMT() - generated;
+      if(age < 0) age = 0;
+      AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds = (int)age;
+   }
+   else
+   {
+      AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds = -1;
+   }
+
+   AC_EXTERNAL_WORKER_STATUS.worker_installed = true;
+   AC_EXTERNAL_WORKER_STATUS.install_status = "Installed";
+   AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Accepted";
+   AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "worker_install_status.txt accepted";
+}
+
 void AC_ValidateExternalWorkerHeartbeat()
 {
    if(!AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
