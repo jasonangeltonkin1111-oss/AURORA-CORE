@@ -29,9 +29,9 @@ Before implementing this layer, read:
 
 ```text
 README.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/00_MUST_READ_INDEX.md
-control/05_DECISION_STATE_REGISTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
 blueprint/03_LOGICAL_LAYER_BLUEPRINT.md

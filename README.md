@@ -16,16 +16,28 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 
 ## Mandatory Reading Spine
 
+Scaffold control startup path (active):
+
+```text
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
+control/01_CONTROL_GOVERNANCE.md
+relevant folder index
+relevant real content file
+```
+
+
+
 All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
 
 ```text
-docs/01_LOGICAL_LAYER_BLUEPRINT.md
+blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 docs/22_AURORA_QUALITY_7S_LAW.md
 docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
 docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
 ```
 
-`docs/01_LOGICAL_LAYER_BLUEPRINT.md` is the canonical map for Runtime Owner numbers versus Logical Layer numbers. Runtime 7 publication support may exist early; Logical Layer 7 Session Relevance Ranking is not built until Layers 2–6 are ready.
+`blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is the active blueprint layer map for runtime/layer architecture. Any `docs/01_LOGICAL_LAYER_BLUEPRINT.md` references are secondary guidebook context, not canonical architecture authority.
 
 The control laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
 
@@ -43,14 +55,14 @@ Layer 0.4 - Governance / Manifest / Telemetry
 Runtime 1 - Foundation Truth Owner
 Layer 1 - Account / Portfolio / Prop Rule Truth
 Runtime 2 - Market Universe / Taxonomy Lookup skeleton in current source
-Runtime 7 - Publication Owner
+Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
 
 Do not confuse active source owners with complete logical layers.
 
-Runtime 7 publication exists early only as infrastructure. It does not mean Logical Layer 7 is complete.
+Publication/FileIO/Route support may exist early only as infrastructure service support. It does not make publication a trading truth owner.
 
-Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow the logical placement in `docs/01_LOGICAL_LAYER_BLUEPRINT.md` and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
+Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow the logical placement in `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
 
 ---
 
@@ -125,21 +137,17 @@ DOM is not fundamentals. DOM is not current Runtime 2 taxonomy. DOM must be boun
 
 ## Current Runtime 2 Universe Status
 
-The bucket/symbol universe exists in the source workbook contract, not yet as loaded EA runtime truth.
-
-Current source state:
+Current runtime-2 source state is treated as source-inspection truth only:
 
 ```text
-source_workbook=Aurora_Bucket_System_Hierarchy_EA_READY_PUBLIC_RESEARCH_FIXED.xlsx
-source_sheet=EA Export Safe
-source_rows=1703
-operator_omit_count=54
-generated_eligible_rows_after_omit=1649
-Runtime 2 loaded_row_count=0
-AC_MarketUniverseRows.mqh=not committed
+source workbook/audit may define generated rows
+generated row include presence: present (mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh exists)
+EA runtime loaded truth: unproven without compile/runtime output evidence
+compile proof: unknown in this markdown-only pass
+no ranking/selection permission from generated rows alone
 ```
 
-So the workbook contains literal symbol rows, but the EA still has only the Runtime 2 lookup skeleton until the generated row include is committed and compiled.
+Generated row include presence alone does not prove runtime loading, ranking completion, or permission state.
 
 ---
 
@@ -168,7 +176,7 @@ These old names may appear only as historical references. They must not be used 
 
 ## Runtime Ownership Rules
 
-- Runtime 7 Publication Owner owns folder routes and FileIO boundaries.
+- Publication / FileIO / Route Service support owns folder routes and FileIO boundaries (current source may still use runtime_7_publication_owner naming as implementation inheritance).
 - Selection Desk parent folders must be stable: `Groups` and `Global`.
 - Do not create route folders named after changing ranks such as Top 5, Top 10, Rank 1, or active cycle numbers.
 - Top 5 per group and Global Top 10 are planned child output views, not parent folder owners.

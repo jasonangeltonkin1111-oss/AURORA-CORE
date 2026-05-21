@@ -16,10 +16,10 @@ Start in AUDIT / DEBUG / PATCH mode unless the user explicitly changes scope.
 MANDATORY FIRST READ
 Read these first from Git:
 - README.md
-- control/01_CURRENT_SOURCE_TRUTH_MAP.md
-- control/00_MUST_READ_INDEX.md
-- control/00_SUPER_INDEX_RUN_ROUTER.md
-- control/05_DECISION_STATE_REGISTER.md
+- control/01_CONTROL_GOVERNANCE.md
+- control/01_CONTROL_GOVERNANCE.md
+- control/01_CONTROL_GOVERNANCE.md
+- control/01_CONTROL_GOVERNANCE.md
 - control/02_MASTER_REPO_FILE_INDEX.md
 - docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 - docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md

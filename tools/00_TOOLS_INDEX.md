@@ -1,26 +1,13 @@
 # 00 TOOLS INDEX
 
 ## Purpose
-Index for utility/support tooling used to assist governance, auditing, and bounded preparation workflows.
+Index for utility/support tooling used for bounded repository workflows.
 
-## What belongs here
-- Utility scripts/check helpers for documentation/index audits or bounded preprocessing.
-- Tooling notes that support but do not redefine runtime/source ownership.
-
-## What must not belong here
-- MT5 runtime owner logic authority.
-- Trade/edge/permission claims.
-- Replacement of control/docs source-truth hierarchy.
-
-## Authority and usage
-- `tools/` is utility support only.
-- Tool outputs must be validated against current source truth before claims are upgraded.
-
-## No-go rules
-- Do not treat tool output alone as runtime proof.
-- Do not introduce shadow owners via tooling.
-- Do not bypass mandatory first-read and source inspection flow.
-
-## When to update this index
-- When new tooling entry points are added.
-- When tool usage boundaries or validation gates change.
+## Folder Governance
+- **Purpose:** utility scripts that support indexing/audits/prep tasks.
+- **What belongs here:** helper scripts and lightweight tool documentation.
+- **What must not belong here:** implementation authority, runtime proof claims, or control doctrine duplication.
+- **Authority boundary:** tooling output is support-only and must be validated against source/control truth.
+- **Update rules:** update this index when scripts are added, removed, or repurposed.
+- **No-go rules:** do not treat tool output as standalone runtime/trading proof.
+- **Relationship to master index:** this folder is mapped in `control/02_MASTER_REPO_FILE_INDEX.md`.

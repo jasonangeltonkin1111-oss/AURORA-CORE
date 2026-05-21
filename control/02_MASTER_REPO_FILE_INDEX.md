@@ -10,15 +10,13 @@ Complete navigation index for important repository files, ownership boundaries, 
 
 ## Mandatory startup path for new chats
 1. `README.md`
-2. `control/01_CURRENT_SOURCE_TRUTH_MAP.md`
-3. `control/00_MUST_READ_INDEX.md`
-4. `control/00_SUPER_INDEX_RUN_ROUTER.md`
-5. `control/05_DECISION_STATE_REGISTER.md`
+2. `control/01_CONTROL_GOVERNANCE.md`
+3. Relevant top-level folder index
 
 ## Source authority levels used here
 - **L1:** Active MT5 source files (implementation truth)
 - **L2:** Runtime/generated evidence samples (when explicitly present)
-- **L3:** README + `control/01_CURRENT_SOURCE_TRUTH_MAP.md`
+- **L3:** README + `control/01_CONTROL_GOVERNANCE.md`
 - **L4:** Control router/index files
 - **L5:** Docs guidebooks
 - **L6:** Blueprint contracts
@@ -37,22 +35,16 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## control
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `control/01_CURRENT_SOURCE_TRUTH_MAP.md` | Current source truth bridge and contradiction prevention | Active | yes | L3 | First control file after README. |
-| `control/00_MUST_READ_INDEX.md` | Mandatory reading index and contract locks | Active | yes | L4 | Worker startup gate. |
-| `control/00_SUPER_INDEX_RUN_ROUTER.md` | Work routing and mode law | Active | yes | L4 | Read with current truth map. |
-| `control/05_DECISION_STATE_REGISTER.md` | Evidence-gated decision states | Active | yes | L4 | Must align with active source state. |
-| `control/02_MASTER_REPO_FILE_INDEX.md` | Master navigation index | Active | no | L4 | This file. |
-| `control/01_ANTI_DRIFT_LAW.md` | Anti-drift rules | Active | no | L4 | Control doctrine. |
-| `control/02_WORKER_STARTUP_CHECKLIST.md` | Worker startup checklist | Active | no | L4 | Operational checklist. |
-| `control/03_WORKFLOW_AND_PROMPT_LAW.md` | Workflow/prompt controls | Active | no | L4 | Prompt guardrails. |
-| `control/04_BOOK_STYLE_AND_QUALITY_GATES.md` | Documentation quality gates | Active | no | L4 | Writing quality contract. |
+| `control/00_CONTROL_INDEX.md` | Control navigation index | Active | yes | L4 | Active control file router. |
+| `control/01_CONTROL_GOVERNANCE.md` | Active control governance law | Active | yes | L4 | Source-truth order, run gates, naming locks. |
+| `control/02_MASTER_REPO_FILE_INDEX.md` | Master navigation index | Active | yes | L4 | This file. |
 
 ## docs
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
 | `docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md` | Guidebook front door | Active | yes | L5 | Doctrine, not source implementation authority. |
 | `docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md` | Continuity/handoff | Active | yes | L5 | Startup continuity for new chats. |
-| `docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md` | Active taxonomy naming contract | Active | yes | L5 | Uses `asset_class/market_group/market_segment/ranking_group/symbol`. |
+| `docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md` | Taxonomy naming contract (contains historical bucket terminology) | Active | yes | L5 | Active scaffold naming lock uses `ranking_group` in control files. |
 | `docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md` | Selection Desk parent-route contract doctrine | Active | yes | L5 | Stable parent routes contract. |
 | `docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md` | Source-of-truth anti-drift doctrine | Active | yes | L5 | Authority/boundary doctrine. |
 | `docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md` .. `docs/14_MT5_FUNCTION_GUIDEBOOK.md` | Runtime doctrines by domain | Active | no | L5 | Task-specific doctrine set. |
@@ -63,11 +55,11 @@ Complete navigation index for important repository files, ownership boundaries, 
 |---|---|---|---|---|---|
 | `blueprint/00_BLUEPRINT_INDEX.md` | Blueprint navigation front door | Active | yes | L6 | Structural contracts router. |
 | `blueprint/01_SYSTEM_IDENTITY_AND_MISSION.md` | Identity/mission blueprint | Active | no | L6 | Structure, not runtime proof. |
-| `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner boundaries | Active | no | L6 | Architecture map. |
-| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Layer map | Active | no | L6 | Layer structure contract. |
+| `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner + system service boundaries | Active | no | L6 | Architecture map. |
+| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Active 23-layer trading/system layer map | Active | no | L6 | Layer structure contract. |
 | `blueprint/04_BUILD_PHASE_BLUEPRINT.md` | Build phase contract | Active | no | L6 | Phase/evidence gates. |
-| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Surface structure doctrine. |
-| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | No trading permission authority. |
+| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Enriched publication surface contract. |
+| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | Enriched permission and validation contract. |
 | `blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md` | Route and FileIO ownership | Active | no | L6 | Runtime 7 ownership contract. |
 | `blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md` | MT5 source placement contract | Active | no | L6 | Source folder structure. |
 
@@ -99,7 +91,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 |---|---|---|---|---|---|
 | `prompts/00_PROMPTS_INDEX.md` | Prompt system index | Active | no | L8 | Prompt navigation. |
 | `prompts/universal/00_UNIVERSAL_PROMPTS_INDEX.md` | Universal prompt index | Active | no | L8 | Generic run templates. |
-| `prompts/universal/01_AURORA_CORE_NEXT_CHAT_HANDOVER_PROMPT.md` | New-chat handover prompt | Active | no | L8 | Must point to current truth map first. |
+| `prompts/universal/01_AURORA_CORE_NEXT_CHAT_HANDOVER_PROMPT.md` | New-chat handover prompt | Active | no | L8 | Must point to active control files first. |
 | `prompts/workers/00_WORKER_PROMPTS_INDEX.md` | Worker prompt index | Active | no | L8 | Worker prompt routing. |
 | `prompts/codex/00_CODEX_PROMPTS_INDEX.md` | Codex-specific prompt index | Active | no | L8 | Codex run controls. |
 | `prompts/audits/00_AUDIT_PROMPTS_INDEX.md` | Audit prompt index | Active | no | L8 | Audit-specific prompts. |
@@ -144,7 +136,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `.../AC_MarketUniverse.mqh` | Taxonomy/universe lookup contract skeleton | Active | yes | L1 | Skeleton/contract unless generated rows committed. |
+| `.../AC_MarketUniverse.mqh` | Taxonomy/universe lookup owner + generated rows include when present | Active | yes | L1 | Compile/runtime loading unproven unless explicit evidence exists. |
 
 ## mt5/runtime_owners/runtime_7_publication_owner
 | path | role | status | must-read? | source authority level | notes |
@@ -173,3 +165,5 @@ Complete navigation index for important repository files, ownership boundaries, 
 - When mandatory startup routing changes.
 - When active source owners/files change.
 - When archive/local_inputs/tools authority boundaries change.
+
+- separate folder governance files were merged into folder indexes (lean scaffold rule).
