@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.024"
-#property description "AURORA CORE - L1 split account portfolio history truth"
+#property version   "1.026"
+#property description "AURORA CORE - L0/L1 compile and schema cache repair"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
