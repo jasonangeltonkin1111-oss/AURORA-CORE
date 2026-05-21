@@ -196,7 +196,7 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
       AC_L4_SYMBOLS[next].quote_quality = "Missing Tick";
    }
 
-   if(AC_L4GetDouble(symbol, SYMBOL_SESSION_PRICE_CHANGE, AC_L4_SYMBOLS[next].daily_change_pct))
+   if(AC_L4GetDouble(symbol, SYMBOL_PRICE_CHANGE, AC_L4_SYMBOLS[next].daily_change_pct))
       AC_L4_SYMBOLS[next].daily_change_status = "Available";
    AC_L4GetDouble(symbol, SYMBOL_SESSION_OPEN, AC_L4_SYMBOLS[next].daily_open);
    AC_L4GetDouble(symbol, SYMBOL_BIDHIGH, AC_L4_SYMBOLS[next].daily_high_bid);
