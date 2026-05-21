@@ -21,6 +21,10 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.install_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.result_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.launch_mode = AC_EXTERNAL_WORKER_LAUNCH_MODE;
+   AC_EXTERNAL_WORKER_STATUS.launch_implementation = AC_EXTERNAL_WORKER_LAUNCH_IMPLEMENTATION;
+   AC_EXTERNAL_WORKER_STATUS.launch_status = "Not attempted";
+   AC_EXTERNAL_WORKER_STATUS.launch_blocker = "";
    AC_EXTERNAL_WORKER_STATUS.missing_reason = "";
    AC_EXTERNAL_WORKER_STATUS.expected_exe_path = AC_ExternalWorkerExePath();
    AC_EXTERNAL_WORKER_STATUS.required_path = AC_ExternalWorkerRequiredPath();
@@ -30,8 +34,10 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.checked_at = TimeCurrent();
    AC_EXTERNAL_WORKER_STATUS.last_heartbeat_seen = 0;
    AC_EXTERNAL_WORKER_STATUS.last_result_seen = 0;
+   AC_EXTERNAL_WORKER_STATUS.last_launch_attempt_time = 0;
    AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.result_age_seconds = -1;
+   AC_EXTERNAL_WORKER_STATUS.launch_attempts = 0;
    AC_EXTERNAL_WORKER_STATUS.last_error = 0;
 }
 
