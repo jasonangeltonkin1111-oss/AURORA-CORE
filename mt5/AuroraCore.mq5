@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.020"
-#property description "AURORA CORE - L0 Board and Dossier shell foundation"
+#property version   "0.021"
+#property description "AURORA CORE - L0 fast universe dossier shell foundation"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -50,7 +50,7 @@ void AC_ResetSnapshot()
    AC_SNAPSHOT.file_publication_blocked = false;
    AC_SNAPSHOT.degraded_reason = "";
    AC_SNAPSHOT.blocked_reason = "";
-   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.2\r\n";
+   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.3\r\n";
    AC_Layer0InitStatus(AC_L0_STATUS);
 }
 
@@ -145,7 +145,7 @@ void AC_PublishRuntime0()
    phase_start = GetTickCount();
    AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
    AC_RecordWriteProblem("Dossier Shell Batch", dossier_batch_write);
-   AC_AddMicroLog("write_l0_dossier_batch", phase_start, dossier_batch_write.status);
+   AC_AddMicroLog("write_l0_dossier_universe", phase_start, dossier_batch_write.status);
 
    phase_start = GetTickCount();
    AC_SNAPSHOT.placeholder_status = "route_folders_ensured_no_placeholder_file_spam";
@@ -163,7 +163,7 @@ void AC_PublishRuntime0()
 
    string manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "trader_board") + "\r\n";
-   manifest += AC_ManifestRow("Dossier Shell Batch", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_batch") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Shell Universe", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_universe") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
@@ -181,22 +181,22 @@ void AC_PublishRuntime0()
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
    diagnostics += "placeholder_status=" + AC_SNAPSHOT.placeholder_status + "\r\n";
    diagnostics += "market_board_write=" + AC_WriteResultLine("Market Board", board_write) + "\r\n";
-   diagnostics += "dossier_batch_write=" + AC_WriteResultLine("Dossier Shell Batch", dossier_batch_write) + "\r\n";
+   diagnostics += "dossier_universe_write=" + AC_WriteResultLine("Dossier Shell Universe", dossier_batch_write) + "\r\n";
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
    diagnostics += "board_contract=trading_side_summary_only_symbol_shell_counts_trust_blocker_no_layer2_open_closed_counts\r\n";
-   diagnostics += "workbench_contract=developer_status_layer_packets_batch_progress_no_trader_bloat\r\n";
+   diagnostics += "workbench_contract=developer_status_layer_packets_full_universe_pass_no_trader_bloat\r\n";
    diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0\r\n";
-   diagnostics += "dossier_batch_size=" + IntegerToString(AC_DOSSIER_SHELL_BATCH_SIZE) + "\r\n";
+   diagnostics += "symbol_packet_retry_limit=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    diagnostics += "selection_desk_structure=Groups + Global stable parent folders only in L0; no selection files are spam-written in this pass\r\n";
    diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
    diagnostics += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
-   diagnostics += "scope_check=L0_board_dossier_shell_foundation_only_no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_fast_universe_dossier_shell_foundation_only_no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
@@ -211,7 +211,7 @@ void AC_PublishRuntime0()
 
    manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
-   manifest += AC_ManifestRow("Dossier Shell Batch", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_batch") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Shell Universe", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_universe") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
@@ -220,7 +220,7 @@ void AC_PublishRuntime0()
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? "manifest_written" : manifest_write.status;
    AC_ApplyLateWriteStatus("Manifest Final", manifest_write);
 
-   AC_WriteResult upgrade_addendum_write = AC_WriteTextFile(AC_UpgradeAddendumPath(), AC_UpgradeAddendumText(AC_SNAPSHOT));
+   AC_WriteResult upgrade_addendum_write = AC_WriteTextFile(AC_UpgradeAddendumPath(), AC_UpgradeAddendumText(AC_SNAPSHOT) + "\r\n" + AC_Layer0FailureAddendumText());
    AC_SNAPSHOT.upgrade_addendum_status = upgrade_addendum_write.ok ? "upgrade_addendum_written" : upgrade_addendum_write.status;
    AC_ApplyLateWriteStatus("Upgrade Addendum", upgrade_addendum_write);
 
