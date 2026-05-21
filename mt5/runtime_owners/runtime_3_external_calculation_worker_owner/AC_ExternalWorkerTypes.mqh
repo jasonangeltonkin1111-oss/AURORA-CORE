@@ -10,6 +10,8 @@ struct AC_ExternalWorkerStatus
    bool exe_flat_present;
    bool exe_folder_present;
    bool install_status_file_present;
+   bool shared_install_status_file_present;
+   bool shared_status_file_present;
    bool worker_installed;
    bool lifecycle_file_present;
    bool lifecycle_fresh;
@@ -32,6 +34,15 @@ struct AC_ExternalWorkerStatus
    string install_task_state;
    string install_task_error;
    string install_auto_start_configured;
+   string shared_status_validation_status;
+   string shared_status_validation_reason;
+   string shared_status_worker_version;
+   string shared_status_mode;
+   string shared_status_loop_count;
+   string shared_status_discovered_root_count;
+   string shared_status_processed_root_count;
+   string shared_status_accepted_root_count;
+   string shared_status_degraded_root_count;
    string lifecycle_status;
    string lifecycle_validation_status;
    string lifecycle_validation_reason;
@@ -63,6 +74,8 @@ struct AC_ExternalWorkerStatus
    string expected_exe_path;
    string expected_folder_exe_path;
    string install_status_path;
+   string shared_install_status_path;
+   string shared_status_path;
    string lifecycle_path;
    string required_path;
    string heartbeat_path;
@@ -76,6 +89,7 @@ struct AC_ExternalWorkerStatus
    int result_age_seconds;
    int install_status_age_seconds;
    int lifecycle_last_loop_age_seconds;
+   int shared_status_age_seconds;
    int lifecycle_loop_count;
    int lifecycle_last_run_exit_code;
    int launch_attempts;
