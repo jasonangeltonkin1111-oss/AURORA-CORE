@@ -24,6 +24,7 @@ string AC_ExternalWorkerRequiredText()
    text += "account=" + AC_AccountForRoute() + "\r\n";
    text += "expected_worker_exe=" + AC_ExternalWorkerExePath() + "\r\n";
    text += "expected_packaged_worker_exe=" + AC_ExternalWorkerPackagedExePath() + "\r\n";
+   text += "install_status_path=" + AC_ExternalWorkerInstallStatusPath() + "\r\n";
    text += "snapshot_path=" + AC_ExternalWorkerSnapshotPath() + "\r\n";
    text += "result_path=" + AC_ExternalWorkerResultPath() + "\r\n";
    text += "trade_permission=false\r\n";
@@ -45,6 +46,7 @@ void AC_RefreshExternalWorkerStatus()
    AC_EXTERNAL_WORKER_STATUS.folder_exe_error = GetLastError();
    AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
    AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
+   AC_ValidateExternalWorkerInstallStatus();
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
@@ -70,23 +72,24 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Auto launch disabled by config";
    }
 
-   if(!AC_EXTERNAL_WORKER_STATUS.exe_present)
+   if(!AC_EXTERNAL_WORKER_STATUS.worker_installed)
    {
       AC_EXTERNAL_WORKER_STATUS.install_status = "Missing";
       AC_EXTERNAL_WORKER_STATUS.worker_status = "Not Installed";
-      AC_EXTERNAL_WORKER_STATUS.missing_reason = "AuroraWorker.exe missing at both flat and packaged External Worker paths";
+      AC_EXTERNAL_WORKER_STATUS.missing_reason = AC_EXTERNAL_WORKER_STATUS.install_validation_reason;
    }
    else
    {
-      AC_EXTERNAL_WORKER_STATUS.install_status = AC_EXTERNAL_WORKER_STATUS.exe_folder_present ? "Installed - packaged folder" : "Installed - flat exe only";
+      AC_EXTERNAL_WORKER_STATUS.install_status = "Installed";
       AC_EXTERNAL_WORKER_STATUS.worker_status = "Installed - heartbeat pending";
+      AC_EXTERNAL_WORKER_STATUS.missing_reason = "";
    }
 
    if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
    {
       AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Present";
       AC_ValidateExternalWorkerHeartbeat();
-      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.exe_present ? "Heartbeat present - " + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status : "Heartbeat present but exe missing";
+      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.worker_installed ? "Heartbeat present - " + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status : "Heartbeat present but install proof missing";
    }
    else
    {
