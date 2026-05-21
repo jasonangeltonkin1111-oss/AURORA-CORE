@@ -3,6 +3,9 @@
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
 // Publication / FileIO / Route Service owns route building only. It does not own trading truth.
+// Runtime 3 external worker split:
+// - Shared worker binary/install payload lives under Aurora Core\External Worker so all terminals/accounts can use one package.
+// - Per-server/account worker IO, status, inbox, outbox, logs, and proof files remain under Aurora Core\<server>\<account>\Workbench\External Worker.
 
 string AC_SanitizePathPart(string value)
 {
@@ -67,6 +70,11 @@ string AC_AccountForRoute()
    return IntegerToString(login);
 }
 
+string AC_SharedRootFolder()
+{
+   return AC_BASE_FOLDER;
+}
+
 string AC_RootFolder()
 {
    return AC_BASE_FOLDER + "\\" + AC_ServerNameForRoute() + "\\" + AC_AccountForRoute();
@@ -75,6 +83,16 @@ string AC_RootFolder()
 string AC_WorkbenchFolder()
 {
    return AC_RootFolder() + "\\" + AC_WORKBENCH_FOLDER;
+}
+
+string AC_SharedExternalWorkerFolder()
+{
+   return AC_SharedRootFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
+}
+
+string AC_SharedExternalWorkerPackageFolder()
+{
+   return AC_SharedExternalWorkerFolder() + "\\AuroraWorker";
 }
 
 string AC_ExternalWorkerFolder()
@@ -114,12 +132,12 @@ string AC_ExternalWorkerQuarantineFolder()
 
 string AC_ExternalWorkerExePath()
 {
-   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
+   return AC_SharedExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
 }
 
 string AC_ExternalWorkerPackagedExePath()
 {
-   return AC_ExternalWorkerFolder() + "\\AuroraWorker\\" + AC_EXTERNAL_WORKER_EXE_FILE;
+   return AC_SharedExternalWorkerPackageFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
 }
 
 string AC_ExternalWorkerRequiredPath()
@@ -317,6 +335,8 @@ bool AC_EnsureRuntimeFolders(string &detail)
 {
    string root_detail = "";
    string wb_detail = "";
+   string shared_worker_detail = "";
+   string shared_worker_package_detail = "";
    string worker_detail = "";
    string worker_control_detail = "";
    string worker_inbox_detail = "";
@@ -334,6 +354,8 @@ bool AC_EnsureRuntimeFolders(string &detail)
 
    bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
    bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
+   bool shared_worker_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerFolder(), shared_worker_detail);
+   bool shared_worker_package_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerPackageFolder(), shared_worker_package_detail);
    bool worker_ok = AC_EnsureFolderPath(AC_ExternalWorkerFolder(), worker_detail);
    bool worker_control_ok = AC_EnsureFolderPath(AC_ExternalWorkerControlFolder(), worker_control_detail);
    bool worker_inbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerInboxFolder(), worker_inbox_detail);
@@ -351,7 +373,9 @@ bool AC_EnsureRuntimeFolders(string &detail)
 
    detail = "root=" + root_detail
       + ";workbench=" + wb_detail
-      + ";external_worker=" + worker_detail
+      + ";shared_external_worker=" + shared_worker_detail
+      + ";shared_external_worker_package=" + shared_worker_package_detail
+      + ";external_worker_account_io=" + worker_detail
       + ";external_worker_control=" + worker_control_detail
       + ";external_worker_inbox=" + worker_inbox_detail
       + ";external_worker_outbox=" + worker_outbox_detail
@@ -367,9 +391,10 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";selection_global=" + selection_global_detail
       + ";market_board_path=" + AC_MarketBoardPath()
       + ";external_worker_required_path=" + AC_ExternalWorkerRequiredPath()
+      + ";shared_external_worker_exe_path=" + AC_ExternalWorkerPackagedExePath()
       + ";selection_index_path=" + AC_SelectionIndexPath();
 
-   return root_ok && wb_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
+   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
 }
 
 #endif
