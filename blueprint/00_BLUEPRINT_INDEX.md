@@ -11,6 +11,8 @@ Blueprint index for system-level blueprint files, active structural contracts, a
 
 Then open the blueprint file relevant to the task.
 
+Active canonical layer map: `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md`.
+
 ## Active blueprint navigation
 - `blueprint/01_SYSTEM_IDENTITY_AND_MISSION.md`
 - `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md`

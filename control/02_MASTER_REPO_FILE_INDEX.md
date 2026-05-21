@@ -55,11 +55,11 @@ Complete navigation index for important repository files, ownership boundaries, 
 |---|---|---|---|---|---|
 | `blueprint/00_BLUEPRINT_INDEX.md` | Blueprint navigation front door | Active | yes | L6 | Structural contracts router. |
 | `blueprint/01_SYSTEM_IDENTITY_AND_MISSION.md` | Identity/mission blueprint | Active | no | L6 | Structure, not runtime proof. |
-| `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner boundaries | Active | no | L6 | Architecture map. |
-| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Layer map | Active | no | L6 | Layer structure contract. |
+| `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner + system service boundaries | Active | no | L6 | Architecture map. |
+| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Active 23-layer trading/system layer map | Active | no | L6 | Layer structure contract. |
 | `blueprint/04_BUILD_PHASE_BLUEPRINT.md` | Build phase contract | Active | no | L6 | Phase/evidence gates. |
-| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Surface structure doctrine. |
-| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | No trading permission authority. |
+| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Enriched publication surface contract. |
+| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | Enriched permission and validation contract. |
 | `blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md` | Route and FileIO ownership | Active | no | L6 | Runtime 7 ownership contract. |
 | `blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md` | MT5 source placement contract | Active | no | L6 | Source folder structure. |
 
@@ -136,7 +136,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `.../AC_MarketUniverse.mqh` | Taxonomy/universe lookup contract skeleton | Active | yes | L1 | Skeleton/contract unless generated rows committed. |
+| `.../AC_MarketUniverse.mqh` | Taxonomy/universe lookup owner + generated rows include when present | Active | yes | L1 | Compile/runtime loading unproven unless explicit evidence exists. |
 
 ## mt5/runtime_owners/runtime_7_publication_owner
 | path | role | status | must-read? | source authority level | notes |
