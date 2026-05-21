@@ -1,6 +1,17 @@
 #ifndef AC_L1_RENDER_MQH
 #define AC_L1_RENDER_MQH
 
+string AC_L1DurationText(const long seconds)
+{
+   if(seconds <= 0) return "unavailable";
+   long minutes = seconds / 60;
+   long hours = minutes / 60;
+   long days = hours / 24;
+   if(days > 0) return IntegerToString((int)days) + "d " + IntegerToString((int)(hours % 24)) + "h";
+   if(hours > 0) return IntegerToString((int)hours) + "h " + IntegerToString((int)(minutes % 60)) + "m";
+   return IntegerToString((int)minutes) + "m";
+}
+
 string AC_L1ClosedTradeLine(const AC_L1ClosedTradeRow &row)
 {
    return AC_L1PadRight(AC_L1ShortTimeText(row.close_time), 17)
@@ -11,6 +22,16 @@ string AC_L1ClosedTradeLine(const AC_L1ClosedTradeRow &row)
       + AC_L1PadLeft(AC_L1PriceText(row.close_price), 12)
       + AC_L1PadLeft(AC_L1MoneyText(row.net_result), 10)
       + "  " + row.source_quality;
+}
+
+string AC_L1ClosedTradeDetailLine(const AC_L1ClosedTradeRow &row)
+{
+   return AC_L1ClosedTradeLine(row)
+      + " | commission=" + AC_L1MoneyText(row.commission)
+      + " swap=" + AC_L1MoneyText(row.swap)
+      + " fee=" + AC_L1MoneyText(row.fee)
+      + " core=" + row.entry_reconstruction_status
+      + " order_ctx=" + row.order_context_status;
 }
 
 string AC_L1PositionLine(const AC_L1PositionRow &row)
@@ -97,17 +118,31 @@ void AC_BuildLayer1Texts()
    double win_rate = (closed_count > 0 ? ((double)win_count * 100.0) / closed_count : 0.0);
    double avg_win = (win_count > 0 ? AC_L1_GROSS_PROFIT / win_count : 0.0);
    double avg_loss = (loss_count > 0 ? AC_L1_GROSS_LOSS / loss_count : 0.0);
+   double avg_duration_seconds = (AC_L1_DURATION_COUNT > 0 ? ((double)AC_L1_DURATION_SUM_SECONDS / AC_L1_DURATION_COUNT) : 0.0);
    double start_balance_estimate = AC_L1_BALANCE - AC_L1_NET_PROFIT;
    double realized_return_pct = (start_balance_estimate > 0.0 ? (AC_L1_NET_PROFIT / start_balance_estimate) * 100.0 : 0.0);
+   double current_dd_money = AC_L1_BALANCE - AC_L1_EQUITY;
+   double current_dd_pct = (AC_L1_BALANCE > 0.0 ? (current_dd_money / AC_L1_BALANCE) * 100.0 : 0.0);
    double daily_dd_limit_money = AC_L1_EQUITY * 0.01;
    double max_dd_limit_money = AC_L1_EQUITY * 0.03;
    double default_risk_money = AC_L1_EQUITY * 0.001;
    double hard_risk_money = AC_L1_EQUITY * 0.002;
    double max_open_risk_money = AC_L1_EQUITY * 0.01;
    double open_profit_pct = (AC_L1_EQUITY > 0.0 ? (AC_L1_FLOATING_PL / AC_L1_EQUITY) * 100.0 : 0.0);
+   double largest_loss_vs_hard_risk = (hard_risk_money > 0.0 && AC_L1_LARGEST_LOSS < 0.0 ? MathAbs(AC_L1_LARGEST_LOSS) / hard_risk_money : 0.0);
    string account_health = "needs_validation";
    if(closed_count > 0 && profit_factor < 1.0) account_health = "negative_expectancy_until_proven_otherwise";
    if(closed_count > 0 && profit_factor >= 1.0 && win_rate >= 50.0) account_health = "historically_positive_but_not_edge_proof";
+
+   string warning_text = "";
+   if(closed_count <= 0) warning_text += "- No closed-trade sample yet; L1 history cannot assess expectancy.\r\n";
+   if(closed_count > 0 && profit_factor < 1.0) warning_text += "- Profit factor below 1.0: negative expectancy until proven otherwise.\r\n";
+   if(closed_count > 0 && expected_payoff < 0.0) warning_text += "- Expected payoff is negative.\r\n";
+   if(closed_count > 0 && win_rate < 45.0) warning_text += "- Win rate is weak for current history sample.\r\n";
+   if(largest_loss_vs_hard_risk > 1.0) warning_text += "- Largest historical loss exceeds 0.2% hard-risk amount.\r\n";
+   if(AC_L1_PARTIAL_RECONSTRUCTION_COUNT > 0) warning_text += "- Some trades have partial core reconstruction; compare with MT5 report before strict parity claims.\r\n";
+   if(AC_L1_ORDER_CONTEXT_PARTIAL_COUNT > 0) warning_text += "- Some trades lack full SL/TP order context; core trade result may still be usable.\r\n";
+   if(warning_text == "") warning_text = "- No L1 warning triggered, but this is still account-history supervision, not edge proof.\r\n";
 
    AC_L1_BOARD_SECTION = "\r\nLAYER 1 - ACCOUNT / PORTFOLIO\r\n";
    AC_L1_BOARD_SECTION += "----------------------------------------\r\n";
@@ -115,26 +150,39 @@ void AC_BuildLayer1Texts()
    AC_L1_BOARD_SECTION += "Mode/Currency:    " + AC_L1_TRADE_MODE + " / " + AC_L1_CURRENCY + "\r\n";
    AC_L1_BOARD_SECTION += "Balance/Equity:   " + AC_L1MoneyText(AC_L1_BALANCE) + " / " + AC_L1MoneyText(AC_L1_EQUITY) + "\r\n";
    AC_L1_BOARD_SECTION += "Floating P/L:     " + AC_L1MoneyText(AC_L1_FLOATING_PL) + " (" + AC_L1PercentText(open_profit_pct) + ")\r\n";
+   AC_L1_BOARD_SECTION += "Current DD:       " + AC_L1MoneyText(current_dd_money) + " (" + AC_L1PercentText(current_dd_pct) + ")\r\n";
    AC_L1_BOARD_SECTION += "Free Margin:      " + AC_L1MoneyText(AC_L1_FREE_MARGIN) + "\r\n";
    AC_L1_BOARD_SECTION += "Open/Pending:     " + IntegerToString(ArraySize(AC_L1_POSITIONS)) + " / " + IntegerToString(ArraySize(AC_L1_PENDING)) + "\r\n";
+   AC_L1_BOARD_SECTION += "History Window:   1970.01.01 -> broker TimeCurrent() | report_compare=not_strict_unless_same_cutoff\r\n";
    AC_L1_BOARD_SECTION += "\r\nPortfolio Health\r\n";
    AC_L1_BOARD_SECTION += "Closed Trades:    " + IntegerToString(closed_count) + "\r\n";
    AC_L1_BOARD_SECTION += "Net P/L:          " + AC_L1MoneyText(AC_L1_NET_PROFIT) + " (" + AC_L1PercentText(realized_return_pct) + " est.)\r\n";
+   AC_L1_BOARD_SECTION += "Gross P/L:        " + AC_L1MoneyText(AC_L1_GROSS_PROFIT) + " / " + AC_L1MoneyText(AC_L1_GROSS_LOSS) + "\r\n";
    AC_L1_BOARD_SECTION += "Profit Factor:    " + DoubleToString(profit_factor, 2) + "\r\n";
-   AC_L1_BOARD_SECTION += "Win Rate:         " + AC_L1PercentText(win_rate) + "\r\n";
+   AC_L1_BOARD_SECTION += "Win Rate:         " + AC_L1PercentText(win_rate) + " (" + IntegerToString(win_count) + "W/" + IntegerToString(loss_count) + "L)\r\n";
    AC_L1_BOARD_SECTION += "Expected Payoff:  " + AC_L1MoneyText(expected_payoff) + "\r\n";
    AC_L1_BOARD_SECTION += "Avg Win/Loss:     " + AC_L1MoneyText(avg_win) + " / " + AC_L1MoneyText(avg_loss) + "\r\n";
    AC_L1_BOARD_SECTION += "Largest W/L:      " + AC_L1MoneyText(AC_L1_LARGEST_WIN) + " / " + AC_L1MoneyText(AC_L1_LARGEST_LOSS) + "\r\n";
+   AC_L1_BOARD_SECTION += "Largest Loss/Risk:" + DoubleToString(largest_loss_vs_hard_risk, 2) + "x 0.2% hard-risk\r\n";
+   AC_L1_BOARD_SECTION += "Avg Duration:     " + AC_L1DurationText((long)avg_duration_seconds) + " from " + IntegerToString(AC_L1_DURATION_COUNT) + " reconstructed trades\r\n";
+   AC_L1_BOARD_SECTION += "Best Symbol:      " + AC_L1_BEST_SYMBOL + " " + AC_L1MoneyText(AC_L1_BEST_SYMBOL_NET) + "\r\n";
    AC_L1_BOARD_SECTION += "Worst Symbol:     " + AC_L1_WORST_SYMBOL + " " + AC_L1MoneyText(AC_L1_WORST_SYMBOL_NET) + "\r\n";
+   AC_L1_BOARD_SECTION += "Best Day:         " + AC_L1_BEST_DAY + " " + AC_L1MoneyText(AC_L1_BEST_DAY_NET) + "\r\n";
    AC_L1_BOARD_SECTION += "Worst Day:        " + AC_L1_WORST_DAY + " " + AC_L1MoneyText(AC_L1_WORST_DAY_NET) + "\r\n";
+   AC_L1_BOARD_SECTION += "Buy/Sell Net:     " + IntegerToString(AC_L1_BUY_COUNT) + " buy " + AC_L1MoneyText(AC_L1_BUY_NET) + " | " + IntegerToString(AC_L1_SELL_COUNT) + " sell " + AC_L1MoneyText(AC_L1_SELL_NET) + "\r\n";
    AC_L1_BOARD_SECTION += "Health:           " + account_health + "\r\n";
    AC_L1_BOARD_SECTION += "History Quality:  " + AC_L1_HISTORY_QUALITY + "\r\n";
+   AC_L1_BOARD_SECTION += "Core Recon:       " + IntegerToString(AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT) + " complete / " + IntegerToString(AC_L1_PARTIAL_RECONSTRUCTION_COUNT) + " partial_core\r\n";
+   AC_L1_BOARD_SECTION += "Order Context:    " + IntegerToString(AC_L1_ORDER_CONTEXT_PARTIAL_COUNT) + " partial_or_missing_SLTP\r\n";
    AC_L1_BOARD_SECTION += "\r\nRisk Envelope - Planning Only\r\n";
    AC_L1_BOARD_SECTION += "0.1% risk:        " + AC_L1MoneyText(default_risk_money) + "\r\n";
    AC_L1_BOARD_SECTION += "0.2% hard max:    " + AC_L1MoneyText(hard_risk_money) + "\r\n";
    AC_L1_BOARD_SECTION += "1% open/daily:    " + AC_L1MoneyText(max_open_risk_money) + " / " + AC_L1MoneyText(daily_dd_limit_money) + "\r\n";
    AC_L1_BOARD_SECTION += "3% max DD guard:  " + AC_L1MoneyText(max_dd_limit_money) + "\r\n";
    AC_L1_BOARD_SECTION += "Trade Permission: FALSE\r\n";
+   AC_L1_BOARD_SECTION += "\r\nL1 Warnings\r\n";
+   AC_L1_BOARD_SECTION += "----------------------------------------\r\n";
+   AC_L1_BOARD_SECTION += warning_text;
 
    if(ArraySize(AC_L1_POSITIONS) > 0)
    {
@@ -164,7 +212,7 @@ void AC_BuildLayer1Texts()
    if(board_closed <= 0) AC_L1_BOARD_SECTION += "none\r\n";
 
    AC_L1_BOARD_SECTION += "\r\nCanceled / Rejected / Expired - summary only\r\n";
-   AC_L1_BOARD_SECTION += "Total: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " | Recent sample in Account Status, not full Board.\r\n";
+   AC_L1_BOARD_SECTION += "Total: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " | Full list in Account Status, not full Board.\r\n";
 
    AC_L1_WORKBENCH_SECTION = "L1_ACCOUNT_PORTFOLIO_SCAN\r\n";
    AC_L1_WORKBENCH_SECTION += "----------------------------------------\r\n";
@@ -173,9 +221,15 @@ void AC_BuildLayer1Texts()
    AC_L1_WORKBENCH_SECTION += "history_status=" + AC_L1_HISTORY_STATUS + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_quality=" + AC_L1_HISTORY_QUALITY + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_note=" + AC_L1_HISTORY_NOTE + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "history_from=0\r\n";
+   AC_L1_WORKBENCH_SECTION += "history_to=TimeCurrent_or_TimeGMT_fallback\r\n";
+   AC_L1_WORKBENCH_SECTION += "report_compare_mode=not_strict_time_window_mismatch_unless_same_cutoff\r\n";
    AC_L1_WORKBENCH_SECTION += "history_deals_total=" + IntegerToString(AC_L1_HISTORY_DEALS_TOTAL) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_orders_total=" + IntegerToString(AC_L1_HISTORY_ORDERS_TOTAL) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "core_reconstruction_complete_count=" + IntegerToString(AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "partial_reconstruction_count=" + IntegerToString(AC_L1_PARTIAL_RECONSTRUCTION_COUNT) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "order_context_partial_count=" + IntegerToString(AC_L1_ORDER_CONTEXT_PARTIAL_COUNT) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "duration_count=" + IntegerToString(AC_L1_DURATION_COUNT) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "scan_failure=" + AC_L1_SCAN_FAILURE + "\r\n";
 
    AC_L1_ACCOUNT_STATUS_TEXT = "AURORA CORE - ACCOUNT STATUS\r\n";
@@ -185,11 +239,15 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "runtime_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "layer_status=" + (AC_L1_HISTORY_STATUS == "available" ? "complete_with_reconstruction_quality" : "partial") + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "history_quality=" + AC_L1_HISTORY_QUALITY + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "report_compare_mode=not_strict_time_window_mismatch_unless_same_cutoff\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nACCOUNT SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Account=" + IntegerToString((int)AC_L1_LOGIN) + " server=" + AC_L1_SERVER + " mode=" + AC_L1_TRADE_MODE + " currency=" + AC_L1_CURRENCY + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Balance=" + AC_L1MoneyText(AC_L1_BALANCE) + " Equity=" + AC_L1MoneyText(AC_L1_EQUITY) + " Floating=" + AC_L1MoneyText(AC_L1_FLOATING_PL) + " FreeMargin=" + AC_L1MoneyText(AC_L1_FREE_MARGIN) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Closed=" + IntegerToString(closed_count) + " Net=" + AC_L1MoneyText(AC_L1_NET_PROFIT) + " PF=" + DoubleToString(profit_factor, 2) + " WinRate=" + AC_L1PercentText(win_rate) + " ExpectedPayoff=" + AC_L1MoneyText(expected_payoff) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "BestSymbol=" + AC_L1_BEST_SYMBOL + " " + AC_L1MoneyText(AC_L1_BEST_SYMBOL_NET) + " WorstSymbol=" + AC_L1_WORST_SYMBOL + " " + AC_L1MoneyText(AC_L1_WORST_SYMBOL_NET) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "BestDay=" + AC_L1_BEST_DAY + " " + AC_L1MoneyText(AC_L1_BEST_DAY_NET) + " WorstDay=" + AC_L1_WORST_DAY + " " + AC_L1MoneyText(AC_L1_WORST_DAY_NET) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "CoreReconComplete=" + IntegerToString(AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT) + " PartialCore=" + IntegerToString(AC_L1_PARTIAL_RECONSTRUCTION_COUNT) + " OrderContextPartial=" + IntegerToString(AC_L1_ORDER_CONTEXT_PARTIAL_COUNT) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "HistoryNote=" + AC_L1_HISTORY_NOTE + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nOpen Positions - Full\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry          SL          TP       P/L\r\n";
@@ -200,8 +258,9 @@ void AC_BuildLayer1Texts()
    for(int fo = 0; fo < ArraySize(AC_L1_PENDING); fo++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PendingLine(AC_L1_PENDING[fo]) + "\r\n";
    if(ArraySize(AC_L1_PENDING) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Full\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry       Close       Net  Quality\r\n";
-   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeLine(AC_L1_CLOSED[fc]) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry       Close       Net  Quality | Cost/Core/Order Context\r\n";
+   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
+   if(ArraySize(AC_L1_CLOSED) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Full\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type           State        Vol       Price\r\n";
    for(int x = 0; x < ArraySize(AC_L1_CANCELS); x++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CancelLine(AC_L1_CANCELS[x]) + "\r\n";
@@ -286,7 +345,7 @@ string AC_AccountTruthText()
 
 string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
 {
-   return "schema_name=layer_status|schema_version=v1.2|layer_id=1|layer_name=" + AC_LAYER_1_NAME
+   return "schema_name=layer_status|schema_version=v1.3|layer_id=1|layer_name=" + AC_LAYER_1_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -297,6 +356,9 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|history_deals_total=" + IntegerToString(AC_L1_HISTORY_DEALS_TOTAL)
       + "|history_orders_total=" + IntegerToString(AC_L1_HISTORY_ORDERS_TOTAL)
       + "|history_quality=" + AC_L1_HISTORY_QUALITY
+      + "|core_reconstruction_complete=" + IntegerToString(AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT)
+      + "|partial_core_reconstruction=" + IntegerToString(AC_L1_PARTIAL_RECONSTRUCTION_COUNT)
+      + "|order_context_partial=" + IntegerToString(AC_L1_ORDER_CONTEXT_PARTIAL_COUNT)
       + "|scan_status=" + AC_L1_SCAN_STATUS
       + "|trade_permission=false";
 }
