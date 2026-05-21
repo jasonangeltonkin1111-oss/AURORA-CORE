@@ -15,6 +15,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.exe_flat_present = false;
    AC_EXTERNAL_WORKER_STATUS.exe_folder_present = false;
    AC_EXTERNAL_WORKER_STATUS.install_status_file_present = false;
+   AC_EXTERNAL_WORKER_STATUS.shared_install_status_file_present = false;
+   AC_EXTERNAL_WORKER_STATUS.shared_status_file_present = false;
    AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
    AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present = false;
    AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
@@ -25,7 +27,7 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.owner_name = AC_RUNTIME3_OWNER;
    AC_EXTERNAL_WORKER_STATUS.worker_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.install_status = "Not checked";
-   AC_EXTERNAL_WORKER_STATUS.install_status_source = "worker_install_status.txt";
+   AC_EXTERNAL_WORKER_STATUS.install_status_source = "worker_install_status.txt_or_shared_worker_install_status.txt";
    AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "";
    AC_EXTERNAL_WORKER_STATUS.install_worker_version = "not_available";
@@ -37,6 +39,15 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.install_task_state = "not_available";
    AC_EXTERNAL_WORKER_STATUS.install_task_error = "not_available";
    AC_EXTERNAL_WORKER_STATUS.install_auto_start_configured = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_validation_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_validation_reason = "";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_worker_version = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_mode = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_loop_count = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_discovered_root_count = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count = "not_available";
    AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "";
@@ -68,6 +79,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.expected_exe_path = AC_ExternalWorkerExePath();
    AC_EXTERNAL_WORKER_STATUS.expected_folder_exe_path = AC_ExternalWorkerPackagedExePath();
    AC_EXTERNAL_WORKER_STATUS.install_status_path = AC_ExternalWorkerInstallStatusPath();
+   AC_EXTERNAL_WORKER_STATUS.shared_install_status_path = AC_SharedExternalWorkerInstallStatusPath();
+   AC_EXTERNAL_WORKER_STATUS.shared_status_path = AC_SharedExternalWorkerStatusPath();
    AC_EXTERNAL_WORKER_STATUS.lifecycle_path = AC_ExternalWorkerProcessStatusPath();
    AC_EXTERNAL_WORKER_STATUS.required_path = AC_ExternalWorkerRequiredPath();
    AC_EXTERNAL_WORKER_STATUS.heartbeat_path = AC_ExternalWorkerHeartbeatPath();
@@ -81,6 +94,7 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.result_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.lifecycle_last_loop_age_seconds = -1;
+   AC_EXTERNAL_WORKER_STATUS.shared_status_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.lifecycle_loop_count = 0;
    AC_EXTERNAL_WORKER_STATUS.lifecycle_last_run_exit_code = -1;
    AC_EXTERNAL_WORKER_STATUS.launch_attempts = 0;
