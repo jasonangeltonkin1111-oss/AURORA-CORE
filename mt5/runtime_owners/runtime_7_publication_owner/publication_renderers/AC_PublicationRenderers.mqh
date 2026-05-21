@@ -87,7 +87,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "LAYER PROGRESS\r\n";
    text += "----------------------------------------\r\n";
    text += "L0_publication=complete\r\n";
-   text += "L1_account_truth=pending\r\n";
+   text += "L1_account_truth=complete_or_degraded_from_layer1_owner\r\n";
    text += "L2_open_closed_truth=pending\r\n";
    text += "L3_broker_specs=pending\r\n";
    text += "L4_market_watch=pending\r\n";
@@ -105,11 +105,11 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "ranking_runtime=false\r\n";
    text += "selection_runtime=false\r\n";
    text += "permission_runtime=false\r\n";
-   text += "\r\n";
-   text += "NEXT_REQUIRED\r\n";
+   text += AC_Layer1DossierSection(symbol);
+   text += "\r\nNEXT_REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += "next_needed_truth=Layer 1 account truth and Layer 2 open/closed truth later\r\n";
-   text += "open_closed_owner=Layer 2 only; not measured by Layer 0\r\n";
+   text += "next_needed_truth=Layer 2 open/closed truth later\r\n";
+   text += "open_closed_owner=Layer 2 only; not measured by Layer 0 or Layer 1\r\n";
    text += "\r\n";
    text += "NO_GO\r\n";
    text += "----------------------------------------\r\n";
@@ -238,7 +238,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0_CACHED_SYMBOLS_TOTAL = total;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass");
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass_with_layer1_slices");
    return AC_L0_CACHED_RESULT;
 }
 
@@ -278,9 +278,9 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "----------------------------------------\r\n";
    text += "Layer 0:          Publication + Dossier Shell Foundation\r\n";
    text += "Layer 0 Status:   " + status.status + "\r\n";
-   text += "Next Layer Needed: Layer 1 account truth / Layer 2 open-closed truth later\r\n";
-   text += "\r\n";
-   text += "TRADING READINESS\r\n";
+   text += "Next Layer Needed: Layer 2 open-closed truth later\r\n";
+   text += AC_Layer1BoardSection();
+   text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: false\r\n";
    text += "Specs Known:        false\r\n";
@@ -292,18 +292,18 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "TRUST BLOCKER\r\n";
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Open/Closed counts belong to Layer 2 and are not measured in Layer 0.\r\n";
+   text += "Open/Closed counts belong to Layer 2 and are not measured in Layer 0 or Layer 1.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
    text += "Board refresh is atomic and writes only when state text changes.\r\n";
-   text += "No trading review, ranking, selection, alerts, or trade permission exists.\r\n";
+   text += "No ranking, selection, alerts, or trade permission exists.\r\n";
    return text;
 }
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.4|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.5|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -350,9 +350,10 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "python_worker=not_used_for_L0_lightweight_stats\r\n";
+   text += "python_worker=not_used_for_L0_or_L1\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "open_closed_counts=not_available_until_L2\r\n";
+   text += "\r\n" + AC_Layer1WorkbenchSection();
    return text;
 }
 
