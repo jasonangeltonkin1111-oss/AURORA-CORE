@@ -148,6 +148,12 @@ void AC_L3InitSymbol(AC_L3SymbolSpecs &s, const string symbol)
    s.sector = "";
    s.industry = "";
    s.country = "";
+   s.isin_status = "Removed from trader-facing metadata";
+   s.exchange_status = "Not checked";
+   s.sector_status = "Not checked";
+   s.industry_status = "Not checked";
+   s.country_status = "Not checked";
+   s.broker_metadata_status = "Not checked";
    s.asset_class = "Unknown";
    s.market_group = "Unknown";
    s.market_segment = "Unknown";
@@ -271,6 +277,7 @@ void AC_L3ScanOneSymbol(const string symbol)
 
    AC_L3_SYMBOLS[next].volume_grid_quality = AC_L3VolumeGridQuality(AC_L3_SYMBOLS[next]);
    AC_L3ClassifySymbol(AC_L3_SYMBOLS[next]);
+   AC_L3LoadBrokerMetadata(AC_L3_SYMBOLS[next]);
    AC_L3BuildFundamentalHints(AC_L3_SYMBOLS[next]);
    AC_L3CalculateValueAndMargin(AC_L3_SYMBOLS[next]);
    AC_L3_SYMBOLS[next].source_quality = AC_L3SpecQualityText(AC_L3_SYMBOLS[next]);
