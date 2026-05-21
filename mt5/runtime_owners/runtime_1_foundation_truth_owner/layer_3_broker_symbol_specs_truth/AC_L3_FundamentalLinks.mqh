@@ -18,9 +18,26 @@ string AC_L3YahooQuoteUrl(const string root)
    return "https://finance.yahoo.com/quote/" + root;
 }
 
+string AC_L3LeftPadZeros(string value, const int width)
+{
+   while(StringLen(value) < width) value = "0" + value;
+   return value;
+}
+
+string AC_L3ExternalQuoteSymbol(const string symbol)
+{
+   string lower = symbol;
+   StringToLower(lower);
+   string root = AC_L3CleanSymbolRoot(symbol);
+   if(StringFind(lower, ".xhkg") > 0)
+      return AC_L3LeftPadZeros(root, 4) + ".HK";
+   return root;
+}
+
 void AC_L3BuildFundamentalHints(AC_L3SymbolSpecs &s)
 {
    string root = AC_L3CleanSymbolRoot(s.symbol);
+   string external_symbol = AC_L3ExternalQuoteSymbol(s.symbol);
    s.fundamental_supported = "Unsupported";
    s.fundamental_identity_quality = "Not available";
    s.yahoo_query = "Not available";
@@ -72,17 +89,17 @@ void AC_L3BuildFundamentalHints(AC_L3SymbolSpecs &s)
       return;
    }
 
-   if(s.isin != "" || s.description != "" || s.asset_class == "Equities" || s.asset_class == "Stocks" || StringFind(s.market_group, "Equity") >= 0 || StringFind(s.ranking_group, "Stock") >= 0)
+   if(s.description != "" || s.asset_class == "Equities" || s.asset_class == "Stocks" || StringFind(s.market_group, "Equity") >= 0 || StringFind(s.ranking_group, "Stock") >= 0)
    {
-      string identity = (s.description != "" ? s.description : root);
+      string identity = (s.description != "" ? s.description : external_symbol);
       s.fundamental_supported = "Equity lookup";
-      s.fundamental_identity_quality = (s.isin != "" ? "ISIN available" : "Symbol and description only");
-      s.yahoo_query = AC_L3YahooQuoteUrl(root);
-      s.google_finance_query = AC_L3SearchUrl("Google Finance " + root + " " + identity);
-      s.marketwatch_query = AC_L3SearchUrl("MarketWatch " + root + " " + identity);
-      s.sec_edgar_query = (StringFind(s.isin, "US") == 0 ? "https://www.sec.gov/edgar/search/#/q=" + s.isin : AC_L3SearchUrl("SEC EDGAR " + root + " " + identity));
-      s.finviz_query = "https://finviz.com/quote.ashx?t=" + root;
-      s.morningstar_query = AC_L3SearchUrl("Morningstar " + root + " " + identity);
+      s.fundamental_identity_quality = "Symbol and description only";
+      s.yahoo_query = AC_L3YahooQuoteUrl(external_symbol);
+      s.google_finance_query = AC_L3SearchUrl("Google Finance " + external_symbol + " " + identity);
+      s.marketwatch_query = AC_L3SearchUrl("MarketWatch " + external_symbol + " " + identity);
+      s.sec_edgar_query = AC_L3SearchUrl("SEC EDGAR " + external_symbol + " " + identity);
+      s.finviz_query = (StringFind(external_symbol, ".HK") > 0 ? "Not applicable - non-US exchange" : "https://finviz.com/quote.ashx?t=" + external_symbol);
+      s.morningstar_query = AC_L3SearchUrl("Morningstar " + external_symbol + " " + identity);
       return;
    }
 
