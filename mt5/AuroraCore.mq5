@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.026"
-#property description "AURORA CORE - L0/L1 compile and schema cache repair"
+#property version   "1.027"
+#property description "AURORA CORE - final L1 account portfolio cockpit depth"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
