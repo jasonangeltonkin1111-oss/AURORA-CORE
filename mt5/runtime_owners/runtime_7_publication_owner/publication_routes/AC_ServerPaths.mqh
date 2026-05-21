@@ -132,6 +132,11 @@ string AC_ExternalWorkerInstallStatusPath()
    return AC_ExternalWorkerStatusFolder() + "\\worker_install_status.txt";
 }
 
+string AC_ExternalWorkerProcessStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_process_status.txt";
+}
+
 string AC_ExternalWorkerHeartbeatPath()
 {
    return AC_ExternalWorkerStatusFolder() + "\\worker_heartbeat.txt";
