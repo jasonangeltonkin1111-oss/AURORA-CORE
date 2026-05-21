@@ -77,6 +77,86 @@ string AC_WorkbenchFolder()
    return AC_RootFolder() + "\\" + AC_WORKBENCH_FOLDER;
 }
 
+string AC_ExternalWorkerFolder()
+{
+   return AC_WorkbenchFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
+}
+
+string AC_ExternalWorkerControlFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_CONTROL_FOLDER;
+}
+
+string AC_ExternalWorkerInboxFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_INBOX_FOLDER;
+}
+
+string AC_ExternalWorkerOutboxFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_OUTBOX_FOLDER;
+}
+
+string AC_ExternalWorkerStatusFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_STATUS_FOLDER;
+}
+
+string AC_ExternalWorkerLogsFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_LOGS_FOLDER;
+}
+
+string AC_ExternalWorkerQuarantineFolder()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_QUARANTINE_FOLDER;
+}
+
+string AC_ExternalWorkerExePath()
+{
+   return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
+}
+
+string AC_ExternalWorkerRequiredPath()
+{
+   return AC_ExternalWorkerControlFolder() + "\\worker_required.txt";
+}
+
+string AC_ExternalWorkerInstallStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_install_status.txt";
+}
+
+string AC_ExternalWorkerHeartbeatPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_heartbeat.txt";
+}
+
+string AC_ExternalWorkerResultStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_result_status.txt";
+}
+
+string AC_ExternalWorkerSnapshotPath()
+{
+   return AC_ExternalWorkerInboxFolder() + "\\snapshot_latest.txt";
+}
+
+string AC_ExternalWorkerSnapshotManifestPath()
+{
+   return AC_ExternalWorkerInboxFolder() + "\\snapshot_latest.manifest";
+}
+
+string AC_ExternalWorkerResultPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\result_latest.txt";
+}
+
+string AC_ExternalWorkerResultManifestPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\result_latest.manifest";
+}
+
 string AC_DossiersFolder()
 {
    return AC_RootFolder() + "\\" + AC_DOSSIERS_FOLDER;
@@ -227,6 +307,13 @@ bool AC_EnsureRuntimeFolders(string &detail)
 {
    string root_detail = "";
    string wb_detail = "";
+   string worker_detail = "";
+   string worker_control_detail = "";
+   string worker_inbox_detail = "";
+   string worker_outbox_detail = "";
+   string worker_status_detail = "";
+   string worker_logs_detail = "";
+   string worker_quarantine_detail = "";
    string dossiers_detail = "";
    string open_detail = "";
    string closed_detail = "";
@@ -237,6 +324,13 @@ bool AC_EnsureRuntimeFolders(string &detail)
 
    bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
    bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
+   bool worker_ok = AC_EnsureFolderPath(AC_ExternalWorkerFolder(), worker_detail);
+   bool worker_control_ok = AC_EnsureFolderPath(AC_ExternalWorkerControlFolder(), worker_control_detail);
+   bool worker_inbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerInboxFolder(), worker_inbox_detail);
+   bool worker_outbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerOutboxFolder(), worker_outbox_detail);
+   bool worker_status_ok = AC_EnsureFolderPath(AC_ExternalWorkerStatusFolder(), worker_status_detail);
+   bool worker_logs_ok = AC_EnsureFolderPath(AC_ExternalWorkerLogsFolder(), worker_logs_detail);
+   bool worker_quarantine_ok = AC_EnsureFolderPath(AC_ExternalWorkerQuarantineFolder(), worker_quarantine_detail);
    bool dossiers_ok = AC_EnsureFolderPath(AC_DossiersFolder(), dossiers_detail);
    bool open_ok = AC_EnsureFolderPath(AC_DossiersOpenFolder(), open_detail);
    bool closed_ok = AC_EnsureFolderPath(AC_DossiersClosedFolder(), closed_detail);
@@ -247,6 +341,13 @@ bool AC_EnsureRuntimeFolders(string &detail)
 
    detail = "root=" + root_detail
       + ";workbench=" + wb_detail
+      + ";external_worker=" + worker_detail
+      + ";external_worker_control=" + worker_control_detail
+      + ";external_worker_inbox=" + worker_inbox_detail
+      + ";external_worker_outbox=" + worker_outbox_detail
+      + ";external_worker_status=" + worker_status_detail
+      + ";external_worker_logs=" + worker_logs_detail
+      + ";external_worker_quarantine=" + worker_quarantine_detail
       + ";dossiers=" + dossiers_detail
       + ";dossiers_open=" + open_detail
       + ";dossiers_closed=" + closed_detail
@@ -255,9 +356,10 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";selection_groups=" + selection_groups_detail
       + ";selection_global=" + selection_global_detail
       + ";market_board_path=" + AC_MarketBoardPath()
+      + ";external_worker_required_path=" + AC_ExternalWorkerRequiredPath()
       + ";selection_index_path=" + AC_SelectionIndexPath();
 
-   return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
+   return root_ok && wb_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
 }
 
 #endif
