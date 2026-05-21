@@ -71,7 +71,6 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "trust_state=INCOMPLETE\r\n";
    text += "trade_permission=false\r\n";
    text += "auto_trade_allowed=false\r\n";
-   text += "generated_at=" + AC_NowText() + "\r\n";
    text += "server=" + AC_ServerNameForRoute() + "\r\n";
    text += "account=" + AC_AccountForRoute() + "\r\n";
    text += "\r\n";
@@ -281,16 +280,6 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 0 Status:   " + status.status + "\r\n";
    text += "Next Layer Needed: Layer 1 account truth / Layer 2 open-closed truth later\r\n";
    text += "\r\n";
-   text += "READINESS\r\n";
-   text += "----------------------------------------\r\n";
-   text += "L0 Publication Shells: " + status.status + "\r\n";
-   text += "L1 Account Truth:      pending\r\n";
-   text += "L2 Open/Closed Truth:  pending\r\n";
-   text += "L3 Broker Specs:       pending\r\n";
-   text += "L4 Market Watch Truth: pending\r\n";
-   text += "L5 Basic Gate:         pending\r\n";
-   text += "L6-L23:                inactive\r\n";
-   text += "\r\n";
    text += "TRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: false\r\n";
@@ -307,10 +296,8 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
-   text += "Board refresh is near-instant and uses cached L0 status after the first universe pass.\r\n";
+   text += "Board refresh is atomic and writes only when state text changes.\r\n";
    text += "No trading review, ranking, selection, alerts, or trade permission exists.\r\n";
-   text += "\r\n";
-   text += "Generated: " + snapshot.generated_at + "\r\n";
    return text;
 }
 
