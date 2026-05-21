@@ -23,6 +23,7 @@ string AC_ExternalWorkerRequiredText()
    text += "server=" + AC_ServerNameForRoute() + "\r\n";
    text += "account=" + AC_AccountForRoute() + "\r\n";
    text += "expected_worker_exe=" + AC_ExternalWorkerExePath() + "\r\n";
+   text += "expected_packaged_worker_exe=" + AC_ExternalWorkerPackagedExePath() + "\r\n";
    text += "snapshot_path=" + AC_ExternalWorkerSnapshotPath() + "\r\n";
    text += "result_path=" + AC_ExternalWorkerResultPath() + "\r\n";
    text += "trade_permission=false\r\n";
@@ -37,8 +38,13 @@ void AC_RefreshExternalWorkerStatus()
 
    int common_flag = AC_CommonFlag();
    ResetLastError();
-   AC_EXTERNAL_WORKER_STATUS.exe_present = FileIsExist(AC_ExternalWorkerExePath(), common_flag);
-   AC_EXTERNAL_WORKER_STATUS.last_error = GetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_flat_present = FileIsExist(AC_ExternalWorkerExePath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.flat_exe_error = GetLastError();
+   ResetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_folder_present = FileIsExist(AC_ExternalWorkerPackagedExePath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.folder_exe_error = GetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
+   AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
@@ -68,11 +74,11 @@ void AC_RefreshExternalWorkerStatus()
    {
       AC_EXTERNAL_WORKER_STATUS.install_status = "Missing";
       AC_EXTERNAL_WORKER_STATUS.worker_status = "Not Installed";
-      AC_EXTERNAL_WORKER_STATUS.missing_reason = "AuroraWorker.exe missing at expected Workbench External Worker path";
+      AC_EXTERNAL_WORKER_STATUS.missing_reason = "AuroraWorker.exe missing at both flat and packaged External Worker paths";
    }
    else
    {
-      AC_EXTERNAL_WORKER_STATUS.install_status = "Installed";
+      AC_EXTERNAL_WORKER_STATUS.install_status = AC_EXTERNAL_WORKER_STATUS.exe_folder_present ? "Installed - packaged folder" : "Installed - flat exe only";
       AC_EXTERNAL_WORKER_STATUS.worker_status = "Installed - heartbeat pending";
    }
 
