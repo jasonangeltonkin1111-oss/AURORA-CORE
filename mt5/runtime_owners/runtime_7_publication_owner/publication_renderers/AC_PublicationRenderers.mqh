@@ -5,10 +5,8 @@
 // Renders prepared owner/status packets only. It must not compute trading truth,
 // ranking, selection, market-open state, broker specs, quotes, or permission.
 
-static int    AC_L0_LAST_SYMBOLS_TOTAL = -1;
-static int    AC_L0_NEXT_SYMBOL_INDEX = 0;
-static int    AC_L0_SHELLS_WRITTEN = 0;
 static string AC_L0_FIRST_FAILURE = "";
+static string AC_L0_FAILURE_ADDENDUM = "";
 
 string AC_PercentText(const int complete_count, const int total_count)
 {
@@ -35,6 +33,8 @@ void AC_Layer0InitStatus(AC_Layer0StatusPacket &status)
    status.batch_attempted = 0;
    status.batch_written = 0;
    status.next_symbol_index = 0;
+   status.failed_symbol_count = 0;
+   status.retry_count_total = 0;
    status.batch_duration_ms = 0;
    status.batch_complete = false;
    status.trade_permission = false;
@@ -112,84 +112,100 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "not_selected=true\r\n";
    text += "no_alert=true\r\n";
    text += "no_permission=true\r\n";
-   text += "\r\n";
-   text += "L0_UNIVERSE_PROGRESS_SNAPSHOT\r\n";
-   text += "----------------------------------------\r\n";
-   text += "broker_symbols_seen=" + IntegerToString(status.broker_symbols_total) + "\r\n";
-   text += "dossier_shells_ready=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
-   text += "dossier_shells_missing=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
-   text += "completion=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
    return text;
+}
+
+bool AC_WriteLayer0ShellWithRetries(const string symbol,
+                                    const int broker_index,
+                                    const AC_Layer0StatusPacket &status,
+                                    int &retries_used,
+                                    string &failure_line)
+{
+   retries_used = 0;
+   failure_line = "";
+   int max_attempts = AC_DOSSIER_SHELL_WRITE_RETRIES;
+   if(max_attempts < 1)
+      max_attempts = 1;
+
+   for(int attempt = 1; attempt <= max_attempts; attempt++)
+   {
+      AC_WriteResult write = AC_WriteTextFileFastAtomic(AC_DossierUnknownSymbolPath(symbol), AC_BuildLayer0DossierShellText(symbol, broker_index, status));
+      if(write.ok)
+      {
+         retries_used = attempt - 1;
+         return true;
+      }
+      retries_used = attempt;
+      failure_line = "symbol=" + symbol + "|index=" + IntegerToString(broker_index) + "|attempt=" + IntegerToString(attempt) + "|status=" + write.status + "|error=" + IntegerToString(write.error_code);
+   }
+   return false;
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
 {
    AC_Layer0InitStatus(status);
+   AC_L0_FIRST_FAILURE = "";
+   AC_L0_FAILURE_ADDENDUM = "";
 
    uint start_ms = GetTickCount();
    int total = SymbolsTotal(false);
    int marketwatch_total = SymbolsTotal(true);
 
-   if(total != AC_L0_LAST_SYMBOLS_TOTAL)
-   {
-      AC_L0_LAST_SYMBOLS_TOTAL = total;
-      AC_L0_NEXT_SYMBOL_INDEX = 0;
-      AC_L0_SHELLS_WRITTEN = 0;
-      AC_L0_FIRST_FAILURE = "";
-   }
-
    status.broker_symbols_total = total;
    status.marketwatch_symbols_total = marketwatch_total;
-   status.batch_start_index = AC_L0_NEXT_SYMBOL_INDEX;
-   status.batch_end_index = AC_L0_NEXT_SYMBOL_INDEX - 1;
+   status.batch_start_index = 0;
+   status.batch_end_index = total - 1;
 
-   int batch_limit = AC_DOSSIER_SHELL_BATCH_SIZE;
-   if(batch_limit < 1)
-      batch_limit = 1;
-
-   bool batch_ok = true;
+   bool all_ok = true;
    int attempted = 0;
    int written = 0;
+   int failed = 0;
+   int retries_total = 0;
 
-   while(AC_L0_NEXT_SYMBOL_INDEX < total && attempted < batch_limit)
+   for(int idx = 0; idx < total; idx++)
    {
-      int idx = AC_L0_NEXT_SYMBOL_INDEX;
-      string symbol = SymbolName(idx, false);
-      AC_L0_NEXT_SYMBOL_INDEX++;
       attempted++;
-      status.batch_end_index = idx;
-
+      string symbol = SymbolName(idx, false);
       if(symbol == "")
       {
-         batch_ok = false;
+         all_ok = false;
+         failed++;
+         string failure = "symbol=<empty>|index=" + IntegerToString(idx) + "|status=empty_symbol_name";
          if(AC_L0_FIRST_FAILURE == "")
-            AC_L0_FIRST_FAILURE = "empty_symbol_name_at_index_" + IntegerToString(idx);
+            AC_L0_FIRST_FAILURE = failure;
+         AC_L0_FAILURE_ADDENDUM += failure + "\r\n";
          continue;
       }
 
-      AC_WriteResult write = AC_WriteTextFile(AC_DossierUnknownSymbolPath(symbol), AC_BuildLayer0DossierShellText(symbol, idx, status));
-      if(write.ok)
+      int retries_used = 0;
+      string failure_line = "";
+      if(AC_WriteLayer0ShellWithRetries(symbol, idx, status, retries_used, failure_line))
       {
-         AC_L0_SHELLS_WRITTEN++;
          written++;
+         retries_total += retries_used;
       }
       else
       {
-         batch_ok = false;
+         all_ok = false;
+         failed++;
+         retries_total += retries_used;
          if(AC_L0_FIRST_FAILURE == "")
-            AC_L0_FIRST_FAILURE = symbol + "=" + write.status;
+            AC_L0_FIRST_FAILURE = failure_line;
+         AC_L0_FAILURE_ADDENDUM += failure_line + "\r\n";
       }
    }
 
    status.batch_attempted = attempted;
    status.batch_written = written;
-   status.dossier_shells_ready = AC_L0_SHELLS_WRITTEN;
-   status.dossier_shells_missing = total - AC_L0_SHELLS_WRITTEN;
+   status.dossier_shells_ready = written;
+   status.dossier_shells_missing = total - written;
    if(status.dossier_shells_missing < 0)
       status.dossier_shells_missing = 0;
-   status.next_symbol_index = AC_L0_NEXT_SYMBOL_INDEX;
-   status.batch_complete = (total > 0 && AC_L0_SHELLS_WRITTEN >= total);
+   status.next_symbol_index = total;
+   status.batch_complete = (total > 0 && written == total);
    status.batch_duration_ms = GetTickCount() - start_ms;
+   status.failed_symbol_count = failed;
+   status.retry_count_total = retries_total;
    status.first_failure = AC_L0_FIRST_FAILURE;
 
    if(total <= 0)
@@ -197,28 +213,21 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       status.status = "waiting_for_broker_symbol_universe";
       status.main_blocker = "SymbolsTotal_false_returned_zero";
    }
-   else if(status.batch_complete && AC_L0_FIRST_FAILURE == "")
+   else if(status.batch_complete && failed == 0)
    {
       status.status = "complete";
       status.trust_state = "L0_SHELLS_READY";
       status.main_blocker = "Layer 2 open_closed_truth_not_started";
    }
-   else if(AC_L0_FIRST_FAILURE != "")
-   {
-      status.status = "filling_with_degraded";
-      status.main_blocker = AC_L0_FIRST_FAILURE;
-   }
    else
    {
-      status.status = "filling";
-      status.main_blocker = "dossier_shell_coverage_incomplete";
+      status.status = "complete_with_degraded";
+      status.trust_state = "L0_SHELLS_DEGRADED";
+      status.main_blocker = "some_symbol_shell_packets_failed_see_upgrade_addendum";
    }
 
-   string batch_status = batch_ok ? "dossier_batch_ok" : "dossier_batch_degraded";
-   if(status.batch_complete && AC_L0_FIRST_FAILURE == "")
-      batch_status = "dossier_shells_complete";
-
-   return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), batch_ok, batch_status, (ulong)written, "bounded_dossier_shell_batch");
+   string batch_status = all_ok ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded";
+   return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass");
 }
 
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
@@ -238,6 +247,8 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Dossier Shells Ready:   " + IntegerToString(status.dossier_shells_ready) + " / " + IntegerToString(status.broker_symbols_total) + "\r\n";
    text += "Dossier Shells Missing: " + IntegerToString(status.dossier_shells_missing) + "\r\n";
    text += "Completion:             " + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
+   text += "Failed Shell Packets:   " + IntegerToString(status.failed_symbol_count) + "\r\n";
+   text += "L0 Pass Duration:       " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "\r\n";
    text += "CURRENT LAYER\r\n";
    text += "----------------------------------------\r\n";
@@ -271,7 +282,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
-   text += "Wait. Aurora is building the per-symbol foundation only.\r\n";
+   text += "Layer 0 shell universe pass has no artificial timer throttle.\r\n";
    text += "No trading review, ranking, selection, alerts, or trade permission exists.\r\n";
    text += "\r\n";
    text += "Generated: " + snapshot.generated_at + "\r\n";
@@ -280,7 +291,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.2|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.3|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -288,12 +299,13 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total)
       + "|dossier_shells_ready=" + IntegerToString(status.dossier_shells_ready)
       + "|dossier_shells_missing=" + IntegerToString(status.dossier_shells_missing)
+      + "|failed_symbol_count=" + IntegerToString(status.failed_symbol_count)
+      + "|retry_count_total=" + IntegerToString(status.retry_count_total)
       + "|completion=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total)
-      + "|batch_start_index=" + IntegerToString(status.batch_start_index)
-      + "|batch_end_index=" + IntegerToString(status.batch_end_index)
-      + "|batch_attempted=" + IntegerToString(status.batch_attempted)
-      + "|batch_written=" + IntegerToString(status.batch_written)
-      + "|next_symbol_index=" + IntegerToString(status.next_symbol_index)
+      + "|pass_start_index=" + IntegerToString(status.batch_start_index)
+      + "|pass_end_index=" + IntegerToString(status.batch_end_index)
+      + "|symbols_attempted=" + IntegerToString(status.batch_attempted)
+      + "|symbols_written=" + IntegerToString(status.batch_written)
       + "|batch_duration_ms=" + IntegerToString((int)status.batch_duration_ms)
       + "|main_blocker=" + status.main_blocker
       + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=false";
@@ -313,13 +325,14 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total) + "\r\n";
    text += "dossier_shells_ready=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
    text += "dossier_shells_missing=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
+   text += "failed_symbol_count=" + IntegerToString(status.failed_symbol_count) + "\r\n";
+   text += "retry_count_total=" + IntegerToString(status.retry_count_total) + "\r\n";
    text += "completion=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
-   text += "batch_start_index=" + IntegerToString(status.batch_start_index) + "\r\n";
-   text += "batch_end_index=" + IntegerToString(status.batch_end_index) + "\r\n";
-   text += "batch_attempted=" + IntegerToString(status.batch_attempted) + "\r\n";
-   text += "batch_written=" + IntegerToString(status.batch_written) + "\r\n";
-   text += "next_symbol_index=" + IntegerToString(status.next_symbol_index) + "\r\n";
-   text += "batch_duration_ms=" + IntegerToString((int)status.batch_duration_ms) + "\r\n";
+   text += "pass_start_index=" + IntegerToString(status.batch_start_index) + "\r\n";
+   text += "pass_end_index=" + IntegerToString(status.batch_end_index) + "\r\n";
+   text += "symbols_attempted=" + IntegerToString(status.batch_attempted) + "\r\n";
+   text += "symbols_written=" + IntegerToString(status.batch_written) + "\r\n";
+   text += "pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms) + "\r\n";
    text += "batch_complete=" + (status.batch_complete ? "true" : "false") + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
@@ -327,6 +340,18 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "python_worker=not_used_for_L0_lightweight_stats\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "open_closed_counts=not_available_until_L2\r\n";
+   return text;
+}
+
+string AC_Layer0FailureAddendumText()
+{
+   string text = "";
+   text += "L0_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "----------------------------------------\r\n";
+   if(AC_L0_FAILURE_ADDENDUM == "")
+      text += "none\r\n";
+   else
+      text += AC_L0_FAILURE_ADDENDUM;
    return text;
 }
 
