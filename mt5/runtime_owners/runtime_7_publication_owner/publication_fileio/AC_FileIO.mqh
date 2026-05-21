@@ -2,7 +2,8 @@
 #define AC_FILEIO_MQH
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Publication / FileIO / Route Service owns atomic file writes only. It does not own routes, types, or trading truth.
+// Publication / FileIO / Route Service owns atomic file writes and safe file cleanup only.
+// It does not own routes, types, or trading truth.
 
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
@@ -221,6 +222,43 @@ AC_WriteResult AC_WriteTextFileIfChanged(const string final_path,
    AC_WriteResult result = AC_WriteTextFile(final_path, content);
    if(result.ok)
       last_content = content;
+   return result;
+}
+
+AC_WriteResult AC_DeleteFileIfExists(const string final_path)
+{
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(!FileIsExist(final_path, common_flag))
+      return AC_MakeSyntheticWriteResult(final_path, true, "not_present_no_delete", 0, "cleanup_not_needed");
+
+   AC_WriteResult result;
+   result.attempted = true;
+   result.ok = false;
+   result.temp_open_ok = true;
+   result.temp_write_ok = true;
+   result.move_ok = false;
+   result.final_exists = true;
+   result.final_size = 0;
+   result.error_code = 0;
+   result.status = "delete_attempted";
+   result.detail = "";
+   result.final_path = final_path;
+   result.temp_path = "";
+
+   ResetLastError();
+   if(!FileDelete(final_path, common_flag))
+   {
+      result.error_code = GetLastError();
+      result.status = "delete_failed";
+      result.detail = "FileDelete failed";
+      return result;
+   }
+
+   result.final_exists = FileIsExist(final_path, common_flag);
+   result.ok = !result.final_exists;
+   result.move_ok = result.ok;
+   result.status = result.ok ? "deleted" : "delete_verify_failed";
+   result.detail = result.ok ? "duplicate_route_cleanup_complete" : "file_still_exists_after_delete";
    return result;
 }
 
