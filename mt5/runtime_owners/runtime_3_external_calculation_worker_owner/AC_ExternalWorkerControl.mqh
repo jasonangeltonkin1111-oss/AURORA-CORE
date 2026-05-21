@@ -90,6 +90,9 @@ void AC_RefreshExternalWorkerStatus()
    else
       AC_EXTERNAL_WORKER_STATUS.result_status = "No result yet";
 
+   if(AC_L4_READY)
+      AC_ExportExternalWorkerSnapshot();
+
    AC_BuildExternalWorkerTexts();
 }
 
