@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer3_truth_completion";
-static const string AC_BUILD_VERSION      = "1.032";
-static const string AC_UPGRADE_ID         = "L3_TRUTH_COMPLETION";
-static const string AC_UPGRADE_SUMMARY    = "Completes Layer 3 broker specs/value display truth: closed symbols keep Layer 3, failed value/margin calculations render as Not available, literal fundamental links are trader-facing, and Layer 4 remains quote/tick/spread prep only.";
-static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account/portfolio report polish, Layer 2 market open/closed/unknown session truth, and Layer 3 broker specs/value truth for Layer 2 known open and closed symbols. Unknown symbols may stop earlier. No Layer 4 live quote freshness, ranking, selection, alerts, strategy, Python worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; confirm Board, Dossiers, and Account Status show clean trader-facing labels, closed symbols retain Layer 3 sections, value/margin failures show Not available instead of 0.00, broker tick value fallback is labelled, literal URLs are visible, and no trade permission exists.";
-static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l1_report_polish_l3_truth";
+static const string AC_BUILD_PHASE        = "layer3_zero_cause_diagnostics";
+static const string AC_BUILD_VERSION      = "1.033";
+static const string AC_UPGRADE_ID         = "L3_ZERO_CAUSE_DIAGNOSTICS";
+static const string AC_UPGRADE_SUMMARY    = "Adds Layer 3 value and margin cause diagnostics so 0.00 outputs explain whether the result came from a successful API call, API failure, missing SymbolInfoTick reference, unsupported broker data, or broker tick-value fallback.";
+static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account/portfolio report polish, Layer 2 market open/closed/unknown session truth, and Layer 3 broker specs/value diagnostics for Layer 2 known open and closed symbols. Unknown symbols may stop earlier. No Layer 4 live quote freshness, ranking, selection, alerts, strategy, Python worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; confirm Dossiers keep numeric 0.00 where observed but show status/reason lines for Money Per Point, Money Per Tick, Margin One Lot, Margin Minimum Volume, Margin Rate, SymbolInfoTick reference, OrderCalcProfit, OrderCalcMargin, and tick-value fallback.";
+static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l3_zero_cause_diagnostics";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_PUBLICATION_SERVICE_OWNER = "Publication / FileIO / Route Service";
@@ -20,7 +20,7 @@ static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier F
 static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Prop Rule Truth";
 static const string AC_LAYER_2_NAME       = "Layer 2 - Market Open / Closed Truth";
 static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Truth";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.032_l3_truth_completion";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.033_l3_zero_cause_diagnostics";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
