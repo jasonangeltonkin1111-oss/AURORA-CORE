@@ -59,6 +59,12 @@ void AC_ValidateExternalWorkerInstallStatus()
    AC_EXTERNAL_WORKER_STATUS.install_worker_version = AC_EWValue(install_text, "worker_version");
    AC_EXTERNAL_WORKER_STATUS.install_flat_exe_present = AC_EWValue(install_text, "flat_exe_present");
    AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_present = AC_EWValue(install_text, "packaged_exe_present");
+   AC_EXTERNAL_WORKER_STATUS.install_daemon_method = AC_EWValue(install_text, "daemon_install_method");
+   AC_EXTERNAL_WORKER_STATUS.install_task_name = AC_EWValue(install_text, "scheduled_task_name");
+   AC_EXTERNAL_WORKER_STATUS.install_task_registered = AC_EWValue(install_text, "scheduled_task_registered");
+   AC_EXTERNAL_WORKER_STATUS.install_task_state = AC_EWValue(install_text, "scheduled_task_state");
+   AC_EXTERNAL_WORKER_STATUS.install_task_error = AC_EWValue(install_text, "scheduled_task_error");
+   AC_EXTERNAL_WORKER_STATUS.install_auto_start_configured = AC_EWValue(install_text, "auto_start_configured");
 
    if(installed != "true")
    {
@@ -101,6 +107,91 @@ void AC_ValidateExternalWorkerInstallStatus()
    AC_EXTERNAL_WORKER_STATUS.install_status = "Installed";
    AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Accepted";
    AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "worker_install_status.txt accepted";
+}
+
+void AC_ValidateExternalWorkerLifecycle()
+{
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present = FileIsExist(AC_ExternalWorkerProcessStatusPath(), AC_CommonFlag());
+   if(!AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present)
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "worker_process_status.txt missing";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_last_loop_age_seconds = -1;
+      return;
+   }
+
+   string lifecycle_text = AC_EWReadTextFile(AC_ExternalWorkerProcessStatusPath(), 8000);
+   if(lifecycle_text == "")
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "worker_process_status.txt could not be read";
+      return;
+   }
+
+   string authority = AC_EWValue(lifecycle_text, "authority");
+   string trade_permission = AC_EWValue(lifecycle_text, "trade_permission");
+   string generated_unix = AC_EWValue(lifecycle_text, "generated_unix");
+   string last_loop_unix = AC_EWValue(lifecycle_text, "last_loop_unix");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_worker_version = AC_EWValue(lifecycle_text, "worker_version");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_pid = AC_EWValue(lifecycle_text, "process_id");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_mode = AC_EWValue(lifecycle_text, "mode");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_start_utc = AC_EWValue(lifecycle_text, "process_start_utc");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_loop_utc = AC_EWValue(lifecycle_text, "last_loop_utc");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_loop_count = (int)StringToInteger(AC_EWValue(lifecycle_text, "loop_count"));
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_run_exit_code = (int)StringToInteger(AC_EWValue(lifecycle_text, "last_run_exit_code"));
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_status = AC_EWValue(lifecycle_text, "last_validation_status");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_reason = AC_EWValue(lifecycle_text, "last_validation_reason");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_snapshot_id = AC_EWValue(lifecycle_text, "last_snapshot_id");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_payload_checksum = AC_EWValue(lifecycle_text, "payload_checksum");
+
+   if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "lifecycle authority mismatch";
+      return;
+   }
+   if(trade_permission != "false")
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "lifecycle trade permission is not false";
+      return;
+   }
+
+   long generated = (long)StringToInteger(generated_unix);
+   long last_loop = (long)StringToInteger(last_loop_unix);
+   if(generated <= 0 || last_loop <= 0)
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "lifecycle timestamp missing";
+      return;
+   }
+
+   long age = (long)TimeGMT() - last_loop;
+   if(age < 0) age = 0;
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_loop_age_seconds = (int)age;
+   if(age > AC_EXTERNAL_WORKER_HEARTBEAT_MAX_AGE_SECONDS)
+   {
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = false;
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Stale";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Stale";
+      AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "worker lifecycle loop older than allowed max age";
+      return;
+   }
+
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh = true;
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_status = "Fresh";
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status = "Fresh";
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason = "worker_process_status.txt accepted";
 }
 
 void AC_ValidateExternalWorkerHeartbeat()
