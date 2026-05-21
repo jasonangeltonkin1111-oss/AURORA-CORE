@@ -2,7 +2,7 @@
 #define AC_SERVER_PATHS_MQH
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Runtime 7 owns route building; config is supplied by the main include chain.
+// Publication / FileIO / Route Service owns route building only. It does not own trading truth.
 
 string AC_SanitizePathPart(string value)
 {
@@ -117,6 +117,16 @@ string AC_SelectionIndexPath()
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_INDEX_FILE;
 }
 
+string AC_MarketBoardPath()
+{
+   return AC_RootFolder() + "\\" + AC_MARKET_BOARD_FILE;
+}
+
+string AC_DossierUnknownSymbolPath(const string symbol)
+{
+   return AC_DossiersUnknownFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+}
+
 string AC_RuntimeStatusPath()
 {
    return AC_RootFolder() + "\\Runtime Status.txt";
@@ -227,6 +237,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";selection_desk=" + selection_desk_detail
       + ";selection_groups=" + selection_groups_detail
       + ";selection_global=" + selection_global_detail
+      + ";market_board_path=" + AC_MarketBoardPath()
       + ";selection_index_path=" + AC_SelectionIndexPath();
 
    return root_ok && wb_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
