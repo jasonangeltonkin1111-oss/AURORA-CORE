@@ -12,6 +12,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.auto_launch_desired = AC_EXTERNAL_WORKER_AUTO_LAUNCH_DESIRED;
    AC_EXTERNAL_WORKER_STATUS.popup_alerts = AC_EXTERNAL_WORKER_POPUP_ALERTS;
    AC_EXTERNAL_WORKER_STATUS.exe_present = false;
+   AC_EXTERNAL_WORKER_STATUS.exe_flat_present = false;
+   AC_EXTERNAL_WORKER_STATUS.exe_folder_present = false;
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = false;
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = false;
    AC_EXTERNAL_WORKER_STATUS.result_present = false;
@@ -36,6 +38,7 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.launch_blocker = "";
    AC_EXTERNAL_WORKER_STATUS.missing_reason = "";
    AC_EXTERNAL_WORKER_STATUS.expected_exe_path = AC_ExternalWorkerExePath();
+   AC_EXTERNAL_WORKER_STATUS.expected_folder_exe_path = AC_ExternalWorkerPackagedExePath();
    AC_EXTERNAL_WORKER_STATUS.required_path = AC_ExternalWorkerRequiredPath();
    AC_EXTERNAL_WORKER_STATUS.heartbeat_path = AC_ExternalWorkerHeartbeatPath();
    AC_EXTERNAL_WORKER_STATUS.result_path = AC_ExternalWorkerResultPath();
@@ -48,6 +51,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.result_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.launch_attempts = 0;
    AC_EXTERNAL_WORKER_STATUS.last_error = 0;
+   AC_EXTERNAL_WORKER_STATUS.flat_exe_error = 0;
+   AC_EXTERNAL_WORKER_STATUS.folder_exe_error = 0;
 }
 
 #endif
