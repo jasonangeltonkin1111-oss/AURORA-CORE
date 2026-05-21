@@ -1,6 +1,6 @@
 #property strict
-#property version   "0.019"
-#property description "AURORA CORE - Selection Desk stable parent routes"
+#property version   "0.020"
+#property description "AURORA CORE - L0 Board and Dossier shell foundation"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -11,8 +11,10 @@
 #include "runtime_owners/runtime_0_governance_internal_control/layer_0_4_governance_manifest_telemetry/AC_GovernanceRows.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh"
 #include "runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh"
+#include "runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
+AC_Layer0StatusPacket AC_L0_STATUS;
 bool AC_TIMER_READY = false;
 int  AC_TIMER_SETUP_ERROR = 0;
 int  AC_TIMER_TICKS_SINCE_PUBLICATION = 0;
@@ -48,7 +50,8 @@ void AC_ResetSnapshot()
    AC_SNAPSHOT.file_publication_blocked = false;
    AC_SNAPSHOT.degraded_reason = "";
    AC_SNAPSHOT.blocked_reason = "";
-   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.1\r\n";
+   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.2\r\n";
+   AC_Layer0InitStatus(AC_L0_STATUS);
 }
 
 void AC_AddMicroLog(const string function_name, const uint start_ms, const string status)
@@ -64,9 +67,16 @@ void AC_RecordWriteProblem(const string surface, const AC_WriteResult &result)
    AC_AppendReason(surface + "=" + result.status);
 }
 
-string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write)
+string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
+                                   const AC_Layer0StatusPacket &layer0_status)
 {
-   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n" + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n" + AC_LayerStatusRows(AC_SNAPSHOT) + AC_AccountTruthStatusRow(account_write) + "\r\n" + AC_UniverseStatusRow() + "\r\n";
+   return AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n"
+      + AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n"
+      + AC_LayerStatusRows(AC_SNAPSHOT)
+      + AC_Layer0StatusRow(layer0_status) + "\r\n"
+      + AC_AccountTruthStatusRow(account_write) + "\r\n"
+      + AC_UniverseStatusRow() + "\r\n\r\n"
+      + AC_Layer0WorkbenchText(layer0_status);
 }
 
 string AC_BuildRuntimeStatusText()
@@ -89,8 +99,8 @@ string AC_PlaceholderText(const string surface)
       text += "surface_role=per_symbol_case_file_route_shell\r\n";
       text += "route_status=stable_parent_placeholder\r\n";
       text += "folder_meaning=open_closed_unknown_partition_later\r\n";
-      text += "no_symbol_files_runtime_yet=true\r\n";
-      text += "dossier_truth_runtime=false\r\n";
+      text += "symbol_shell_runtime=true\r\n";
+      text += "dossier_truth_runtime=L0_shell_only\r\n";
       text += "selected_evidence_runtime=false\r\n";
       text += "ranking_group_runtime=false\r\n";
       text += "selection_logic_runtime=false\r\n";
@@ -100,7 +110,7 @@ string AC_PlaceholderText(const string surface)
       text += "file_publication_allowed=true\r\n";
       text += "review_allowed=false\r\n";
       text += "trade_allowed=false\r\n";
-      text += "reason=no_symbol_case_file_runtime_yet\r\n";
+      text += "reason=folder_shell_only_symbol_dossiers_fill_in_bounded_batches_under_unknown\r\n";
       text += "future_owner=Board/Dossier Renderer Services consume Trading/System Truth Owner outputs later\r\n";
    }
    else if(surface == "Selection Desk/Groups")
@@ -143,7 +153,7 @@ string AC_PlaceholderText(const string surface)
       text += "selection_logic_runtime=false\r\n";
       text += "trade_permission=false\r\n";
    }
-   text += "scope_guard=no_symbols_no_ranking_no_selection_claim_no_strategy_no_execution\r\n";
+   text += "scope_guard=no_open_closed_no_specs_no_quotes_no_ranking_no_selection_claim_no_strategy_no_execution\r\n";
    text += "route_contract=stable_parent_folder_numbers_live_inside_child_files_not_folder_names\r\n";
    text += "generated_at=" + AC_NowText() + "\r\n";
    return text;
@@ -196,7 +206,9 @@ void AC_FinalizeState(const AC_WriteResult &runtime_write,
                       const AC_WriteResult &status_write,
                       const AC_WriteResult &manifest_write,
                       const AC_WriteResult &diagnostics_write,
-                      const AC_WriteResult &account_write)
+                      const AC_WriteResult &account_write,
+                      const AC_WriteResult &board_write,
+                      const AC_WriteResult &dossier_batch_write)
 {
    AC_SNAPSHOT.fileio_status = runtime_write.ok ? "runtime_status_written" : runtime_write.status;
    AC_SNAPSHOT.telemetry_status = status_write.ok ? "workbench_status_written" : status_write.status;
@@ -207,7 +219,9 @@ void AC_FinalizeState(const AC_WriteResult &runtime_write,
    AC_RecordWriteProblem("Manifest", manifest_write);
    AC_RecordWriteProblem("Diagnostics", diagnostics_write);
    AC_RecordWriteProblem("Account Status", account_write);
-   AC_SNAPSHOT.layer_0_4_status = (status_write.ok && manifest_write.ok && diagnostics_write.ok) ? "complete" : "complete_with_degraded";
+   AC_RecordWriteProblem("Market Board", board_write);
+   AC_RecordWriteProblem("Dossier Shell Batch", dossier_batch_write);
+   AC_SNAPSHOT.layer_0_4_status = (status_write.ok && manifest_write.ok && diagnostics_write.ok && board_write.ok && dossier_batch_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
 }
 
@@ -247,6 +261,11 @@ void AC_PublishRuntime0()
    AC_AddMicroLog("ensure_runtime_folders", phase_start, AC_SNAPSHOT.folder_create_status);
 
    phase_start = GetTickCount();
+   AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
+   AC_RecordWriteProblem("Dossier Shell Batch", dossier_batch_write);
+   AC_AddMicroLog("write_l0_dossier_batch", phase_start, dossier_batch_write.status);
+
+   phase_start = GetTickCount();
    AC_WriteResult ph_dossiers_root = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersFolder()), AC_PlaceholderText("Dossiers"));
    AC_WriteResult ph_dossiers_open = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersOpenFolder()), AC_PlaceholderText("Dossiers/Open"));
    AC_WriteResult ph_dossiers_closed = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersClosedFolder()), AC_PlaceholderText("Dossiers/Closed"));
@@ -269,12 +288,15 @@ void AC_PublishRuntime0()
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
 
    phase_start = GetTickCount();
+   AC_WriteResult board_write = AC_WriteTextFile(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS));
    AC_WriteResult account_write = AC_WriteTextFile(AC_AccountStatusPath(), AC_AccountTruthText());
    AC_WriteResult runtime_write = AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   AC_WriteResult status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
-   AC_AddMicroLog("write_primary_surfaces", phase_start, (account_write.ok && runtime_write.ok && status_write.ok) ? "complete" : "degraded");
+   AC_WriteResult status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS));
+   AC_AddMicroLog("write_primary_surfaces", phase_start, (board_write.ok && account_write.ok && runtime_write.ok && status_write.ok) ? "complete" : "degraded");
 
    string manifest = "";
+   manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "trader_board") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Shell Batch", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_batch") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
@@ -292,35 +314,45 @@ void AC_PublishRuntime0()
    diagnostics += "build_version=" + AC_BUILD_VERSION + "\r\n";
    diagnostics += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    diagnostics += "runtime_owner=" + AC_RUNTIME0_OWNER + "\r\n";
+   diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
+   diagnostics += "board_dossier_renderer_owner=" + AC_BOARD_DOSSIER_RENDERER_OWNER + "\r\n";
    diagnostics += "timer_setup_status=" + AC_SNAPSHOT.timer_setup_status + "\r\n";
    diagnostics += "timer_setup_error=" + IntegerToString(AC_SNAPSHOT.timer_setup_error) + "\r\n";
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
    diagnostics += "placeholder_status=" + AC_SNAPSHOT.placeholder_status + "\r\n";
+   diagnostics += "market_board_write=" + AC_WriteResultLine("Market Board", board_write) + "\r\n";
+   diagnostics += "dossier_batch_write=" + AC_WriteResultLine("Dossier Shell Batch", dossier_batch_write) + "\r\n";
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
    diagnostics += "selection_index_write=" + AC_WriteResultLine("Selection Index", selection_index_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
+   diagnostics += "board_contract=trading_side_summary_only_symbol_shell_counts_trust_blocker_no_layer2_open_closed_counts\r\n";
+   diagnostics += "workbench_contract=developer_status_layer_packets_batch_progress_no_trader_bloat\r\n";
+   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0\r\n";
+   diagnostics += "dossier_batch_size=" + IntegerToString(AC_DOSSIER_SHELL_BATCH_SIZE) + "\r\n";
    diagnostics += "selection_desk_structure=Groups + Global stable parent placeholders plus Selection Index file; top/rank numbering belongs inside child files or the index, not folder names\r\n";
-   diagnostics += "selection_index_contract=sidecar_file_for_future_group_order_symbol_order_metadata_gate_status_reject_reason_child_paths\r\n";
    diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
    diagnostics += "publication_interval_heartbeats=" + IntegerToString(AC_PUBLICATION_INTERVAL_HEARTBEATS) + "\r\n";
-   diagnostics += "scope_check=runtime1_layer1_account_truth_placeholders_only_no_symbols_no_ranking_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_board_dossier_shell_foundation_only_no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
 
-   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write, account_write);
+   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write, account_write, board_write, dossier_batch_write);
 
    phase_start = GetTickCount();
+   board_write = AC_WriteTextFile(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS));
    runtime_write = AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
-   AC_AddMicroLog("republish_final_status", phase_start, (runtime_write.ok && status_write.ok) ? "complete" : "degraded");
+   status_write = AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS));
+   AC_AddMicroLog("republish_final_status", phase_start, (board_write.ok && runtime_write.ok && status_write.ok) ? "complete" : "degraded");
 
    manifest = "";
+   manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Shell Batch", dossier_batch_write, AC_SNAPSHOT, "l0_dossier_batch") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
@@ -354,10 +386,11 @@ void AC_PublishRuntime0()
    AC_WriteResult manifest_final_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_ApplyLateWriteStatus("Manifest With Micro Logs", manifest_final_write);
    AC_SNAPSHOT.manifest_status = manifest_final_write.ok ? "manifest_written" : manifest_final_write.status;
-   AC_SNAPSHOT.layer_0_4_status = (runtime_write.ok && status_write.ok && diagnostics_write.ok && manifest_write.ok && manifest_final_write.ok && upgrade_addendum_write.ok && micro_log_write.ok && upgrade_log_write.ok) ? "complete" : "complete_with_degraded";
+   AC_SNAPSHOT.layer_0_4_status = (board_write.ok && runtime_write.ok && status_write.ok && diagnostics_write.ok && manifest_write.ok && manifest_final_write.ok && upgrade_addendum_write.ok && micro_log_write.ok && upgrade_log_write.ok && dossier_batch_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
+   AC_WriteTextFile(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS));
    AC_WriteTextFile(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText());
-   AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write));
+   AC_WriteTextFile(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS));
 }
 
 int OnInit()
@@ -385,6 +418,7 @@ void OnDeinit(const int reason)
    diagnostics += "build_version=" + AC_BUILD_VERSION + "\r\n";
    diagnostics += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    diagnostics += "runtime_owner=" + AC_RUNTIME0_OWNER + "\r\n";
+   diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
    diagnostics += "deinit_reason=" + IntegerToString(reason) + "\r\n";
    diagnostics += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
