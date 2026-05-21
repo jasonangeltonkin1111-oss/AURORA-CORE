@@ -16,6 +16,13 @@ struct AC_ExternalWorkerStatus
    string install_status;
    string heartbeat_status;
    string result_status;
+   string result_validation_status;
+   string result_validation_reason;
+   string result_snapshot_id;
+   string result_authority;
+   string result_trade_permission;
+   string result_payload_checksum;
+   int result_row_count;
    string launch_mode;
    string launch_implementation;
    string launch_status;
