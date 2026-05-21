@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "l0_l1_compile_and_schema_cache_repair";
-static const string AC_BUILD_VERSION      = "1.026";
-static const string AC_UPGRADE_ID         = "L0_L1_COMPILE_SCHEMA_CACHE_REPAIR";
-static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 1 account-history compile compatibility and forces one-time Dossier shell rebuild when the embedded Dossier schema changes.";
-static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account, portfolio, current exposure, reconstructed closed history, canceled order context, Board account report, Account Status report, and per-symbol Dossier slices. No Layer 2 open/closed, specs, quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; verify AC_L1_Scan.mqh no longer rejects DEAL_FEE/HistoryDealGetDouble usage; run EA; confirm Dossiers rebuild once for dossier_shell_schema_version change and then cache without rewrite storms; inspect Market Board, Account Status, Workbench, Manifest, and symbol Dossiers.";
-static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_layer1_scan_addendum";
+static const string AC_BUILD_PHASE        = "final_layer1_account_portfolio_cockpit_depth";
+static const string AC_BUILD_VERSION      = "1.027";
+static const string AC_UPGRADE_ID         = "FINAL_L1_ACCOUNT_PORTFOLIO_COCKPIT_DEPTH";
+static const string AC_UPGRADE_SUMMARY    = "Deepens Layer 1 Market Board account supervision, separates core trade reconstruction from SL/TP order-context availability, and preserves L0 publication/cache safety before Layer 2.";
+static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus final Layer 1 account, portfolio, current exposure, reconstructed closed history, quality split, risk envelope, Board cockpit, Account Status report, and per-symbol Dossier slices. No Layer 2 open/closed, specs, quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; inspect Market Board for deeper L1 cockpit metrics and warnings; inspect Account Status for cost/core/order-context detail; confirm Dossiers rebuild once for dossier_shell_schema_version change and then cache without rewrite storms; inspect Workbench Status, Manifest, and Diagnostics.";
+static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_final_layer1_cockpit_depth";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_PUBLICATION_SERVICE_OWNER = "Publication / FileIO / Route Service";
@@ -18,7 +18,7 @@ static const string AC_LAYER_0_2_NAME     = "Layer 0.2 - Scheduler / Heartbeat /
 static const string AC_LAYER_0_4_NAME     = "Layer 0.4 - Governance / Manifest / Telemetry";
 static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier Shell Foundation";
 static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Prop Rule Truth";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.026_l1_account_slices";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.027_final_l1_cockpit_depth";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
