@@ -76,11 +76,14 @@ void AC_RefreshExternalWorkerStatus()
    if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
    {
       AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Present";
-      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.exe_present ? "Heartbeat present - freshness not parsed yet" : "Heartbeat present but exe missing";
+      AC_ValidateExternalWorkerHeartbeat();
+      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.exe_present ? "Heartbeat present - " + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status : "Heartbeat present but exe missing";
    }
    else
    {
       AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat file missing";
    }
 
    if(AC_EXTERNAL_WORKER_STATUS.result_present && AC_EXTERNAL_WORKER_STATUS.result_manifest_present)
