@@ -199,6 +199,15 @@ void AC_ValidateExternalWorkerResult()
    AC_EXTERNAL_WORKER_STATUS.result_payload_checksum = result_checksum;
    AC_EXTERNAL_WORKER_STATUS.result_row_count = (int)StringToInteger(result_row_count);
 
+   if(!AC_EXTERNAL_WORKER_STATUS.install_status_file_present
+      || !AC_EXTERNAL_WORKER_STATUS.worker_installed
+      || AC_EXTERNAL_WORKER_STATUS.install_validation_status != "Accepted")
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Install status proof is not accepted";
+      return;
+   }
    if(AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status != "Fresh")
    {
       AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
@@ -298,7 +307,7 @@ void AC_ValidateExternalWorkerResult()
 
    AC_EXTERNAL_WORKER_STATUS.accepted_result = true;
    AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Accepted";
-   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to latest MT5 snapshot and accepted";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to accepted install proof, fresh heartbeat, and latest MT5 snapshot";
 }
 
 #endif
