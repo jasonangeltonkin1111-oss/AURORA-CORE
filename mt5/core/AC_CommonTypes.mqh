@@ -70,6 +70,8 @@ struct AC_Layer0StatusPacket
    int    batch_attempted;
    int    batch_written;
    int    next_symbol_index;
+   int    failed_symbol_count;
+   int    retry_count_total;
    uint   batch_duration_ms;
    bool   batch_complete;
    bool   trade_permission;
