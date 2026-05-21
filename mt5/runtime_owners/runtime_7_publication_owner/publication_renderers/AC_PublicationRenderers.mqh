@@ -7,6 +7,10 @@
 
 static string AC_L0_FIRST_FAILURE = "";
 static string AC_L0_FAILURE_ADDENDUM = "";
+static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
+static bool   AC_L0_CACHED_PASS_VALID = false;
+static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
+static AC_WriteResult AC_L0_CACHED_RESULT;
 
 string AC_PercentText(const int complete_count, const int total_count)
 {
@@ -45,6 +49,11 @@ void AC_Layer0InitStatus(AC_Layer0StatusPacket &status)
    status.specs_known = false;
    status.quotes_known = false;
    status.first_failure = "";
+}
+
+AC_WriteResult AC_EmptySyntheticResult()
+{
+   return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), true, "not_started", 0, "not_started");
 }
 
 string AC_BuildLayer0DossierShellText(const string symbol,
@@ -141,7 +150,7 @@ bool AC_WriteLayer0ShellWithRetries(const string symbol,
    return false;
 }
 
-AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
+AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 {
    AC_Layer0InitStatus(status);
    AC_L0_FIRST_FAILURE = "";
@@ -227,7 +236,23 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
    }
 
    string batch_status = all_ok ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded";
-   return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass");
+   AC_L0_CACHED_SYMBOLS_TOTAL = total;
+   AC_L0_CACHED_PASS_VALID = true;
+   AC_L0_CACHED_STATUS = status;
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass");
+   return AC_L0_CACHED_RESULT;
+}
+
+AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
+{
+   int total = SymbolsTotal(false);
+   if(AC_L0_CACHED_PASS_VALID && total == AC_L0_CACHED_SYMBOLS_TOTAL)
+   {
+      status = AC_L0_CACHED_STATUS;
+      status.marketwatch_symbols_total = SymbolsTotal(true);
+      return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_l0_universe_status_no_symbol_rewrite");
+   }
+   return AC_RunLayer0UniverseShellPass(status);
 }
 
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
@@ -282,7 +307,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
-   text += "Layer 0 shell universe pass has no artificial timer throttle.\r\n";
+   text += "Board refresh is near-instant and uses cached L0 status after the first universe pass.\r\n";
    text += "No trading review, ranking, selection, alerts, or trade permission exists.\r\n";
    text += "\r\n";
    text += "Generated: " + snapshot.generated_at + "\r\n";
@@ -291,7 +316,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.3|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.4|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -306,7 +331,8 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|pass_end_index=" + IntegerToString(status.batch_end_index)
       + "|symbols_attempted=" + IntegerToString(status.batch_attempted)
       + "|symbols_written=" + IntegerToString(status.batch_written)
-      + "|batch_duration_ms=" + IntegerToString((int)status.batch_duration_ms)
+      + "|pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms)
+      + "|cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false")
       + "|main_blocker=" + status.main_blocker
       + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=false";
 }
@@ -333,7 +359,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "symbols_attempted=" + IntegerToString(status.batch_attempted) + "\r\n";
    text += "symbols_written=" + IntegerToString(status.batch_written) + "\r\n";
    text += "pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms) + "\r\n";
-   text += "batch_complete=" + (status.batch_complete ? "true" : "false") + "\r\n";
+   text += "cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false") + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
