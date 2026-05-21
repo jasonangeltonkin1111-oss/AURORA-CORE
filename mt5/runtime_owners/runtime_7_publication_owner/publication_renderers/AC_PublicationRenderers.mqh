@@ -8,6 +8,7 @@
 static string AC_L0_FIRST_FAILURE = "";
 static string AC_L0_FAILURE_ADDENDUM = "";
 static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
+static string AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = "";
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -63,6 +64,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    string text = "";
    text += "AURORA CORE - SYMBOL DOSSIER\r\n";
    text += "----------------------------------------\r\n";
+   text += "dossier_shell_schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION + "\r\n";
    text += "symbol=" + symbol + "\r\n";
    text += "broker_symbol=" + symbol + "\r\n";
    text += "canonical_symbol=pending\r\n";
@@ -236,6 +238,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 
    string batch_status = all_ok ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded";
    AC_L0_CACHED_SYMBOLS_TOTAL = total;
+   AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = AC_DOSSIER_SHELL_SCHEMA_VERSION;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
    AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), all_ok, batch_status, (ulong)written, "fast_full_universe_dossier_shell_pass_with_layer1_slices");
@@ -245,11 +248,11 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
 {
    int total = SymbolsTotal(false);
-   if(AC_L0_CACHED_PASS_VALID && total == AC_L0_CACHED_SYMBOLS_TOTAL)
+   if(AC_L0_CACHED_PASS_VALID && total == AC_L0_CACHED_SYMBOLS_TOTAL && AC_L0_CACHED_DOSSIER_SCHEMA_VERSION == AC_DOSSIER_SHELL_SCHEMA_VERSION)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_l0_universe_status_no_symbol_rewrite");
+      return AC_MakeSyntheticWriteResult(AC_DossiersUnknownFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_l0_universe_status_no_symbol_rewrite_schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
@@ -320,6 +323,8 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|symbols_written=" + IntegerToString(status.batch_written)
       + "|pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms)
       + "|cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false")
+      + "|dossier_shell_schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + "|cached_dossier_shell_schema_version=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION
       + "|main_blocker=" + status.main_blocker
       + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=false";
 }
@@ -347,6 +352,8 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "symbols_written=" + IntegerToString(status.batch_written) + "\r\n";
    text += "pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms) + "\r\n";
    text += "cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false") + "\r\n";
+   text += "dossier_shell_schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION + "\r\n";
+   text += "cached_dossier_shell_schema_version=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
