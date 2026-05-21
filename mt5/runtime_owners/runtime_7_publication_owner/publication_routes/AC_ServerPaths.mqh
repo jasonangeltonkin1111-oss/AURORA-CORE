@@ -117,6 +117,11 @@ string AC_ExternalWorkerExePath()
    return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
 }
 
+string AC_ExternalWorkerPackagedExePath()
+{
+   return AC_ExternalWorkerFolder() + "\\AuroraWorker\\" + AC_EXTERNAL_WORKER_EXE_FILE;
+}
+
 string AC_ExternalWorkerRequiredPath()
 {
    return AC_ExternalWorkerControlFolder() + "\\worker_required.txt";
