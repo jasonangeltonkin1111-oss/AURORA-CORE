@@ -635,3 +635,24 @@ Claims can be killed explicitly.
 AURORA CORE does not earn belief by looking intelligent.
 It earns belief by surviving falsification.
 ```
+
+## Restoration Addendum — Validation Field Completeness
+Validation/outcome datasets must include:
+- sample_count_by_symbol
+- sample_count_by_session
+- sample_count_by_regime
+- in_sample_expectancy
+- out_of_sample_expectancy
+- walk_forward_result
+- cost_adjusted_expectancy
+- slippage_adjusted_expectancy
+- MAE
+- MFE
+- time_to_target_distribution
+- false_positive_rate
+- setup_decay_time
+- regime_dependency
+- broker_dependency
+- null_model_comparison
+
+Clarification law: calculation verification is not edge validation.

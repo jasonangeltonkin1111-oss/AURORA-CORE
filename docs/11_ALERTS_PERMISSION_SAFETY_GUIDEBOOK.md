@@ -630,3 +630,11 @@ No permission state hidden in scores or selection.
 Aurora may warn about danger.
 It may not manufacture permission from excitement.
 ```
+
+## Restoration Addendum — Alert/Permission Alignment
+- Class 1 system alerts allowed now, but must be rare, actionable, state-change based, and cooldown controlled.
+- Class 2 setup alerts remain blocked until validation criteria are met.
+- No per-symbol progress alerts and no data-complete spam alerts.
+- `SendNotification` rate/size limitations remain mandatory constraints where push alerts are used.
+- Future Class 2 requires L18-L22 complete, strategy validation complete, and Layer 1 prop/risk/news pass.
+- Defaults remain strict: `class_2_setup_alert_allowed=false`, `directional_alert_allowed=false`, `auto_trade_allowed=false`, `live_allowed=false`, `trade_allowed=false`.

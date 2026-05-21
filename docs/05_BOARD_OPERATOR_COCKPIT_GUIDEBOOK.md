@@ -367,13 +367,13 @@ This section must expose the real state of the broker universe.
 Should show:
 
 ```text
-bucket_count
-selected_bucket_count
+ranking_group_count
+selected_ranking_group_count
 classification_complete_count
 classification_unknown_count
-top_buckets
-bucket_heat_summary
-bucket_degraded_count
+top_ranking_groups
+ranking_group_heat_summary
+ranking_group_degraded_count
 ```
 
 It must not dump every symbol.
@@ -439,7 +439,7 @@ Core heatmaps:
 
 ```text
 Global Top 10 Correlation Heatmap
-Bucket Strength / Heat Heatmap
+Ranking Group Strength / Heat Heatmap
 Session Relevance Heatmap
 Cost vs Movement Heatmap
 Evidence Completeness Heatmap
@@ -758,3 +758,11 @@ Board shows publication age and starvation state.
 The Board is the cockpit, not the engine.
 It must show what matters first, expose degraded truth, and never pretend inspection means permission.
 ```
+
+## Restoration Addendum — 23-Layer Atomic Board Contract
+- Atomic Update Overview must show layer completion state for L1-L23 (complete/partial/degraded/blocked/stale).
+- Selected evidence progress must explicitly track L18 Selected Raw OHLC, L19 Wick / Candle Geometry, L20 Rolling Tick, L21 Indicator / Reference, L22 Liquidity + Order-Flow Proxy.
+- Board heatmap set must include five views: Ranking Group Strength, Ranking Group Heat/Quality, Global Top 10 Correlation, Session Relevance, Selected Evidence Completeness.
+- Board shows governance status (manifest write, route health, telemetry freshness) but no permission implication.
+- Board must never dump raw OHLC/tick arrays; board is summary/control surface only.
+- Selected evidence is selected-symbol only; no all-symbol OHLC, all-symbol tick, all-symbol indicators, or all-symbol DOM.

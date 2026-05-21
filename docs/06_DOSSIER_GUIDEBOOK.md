@@ -18,7 +18,7 @@ It answers:
 
 ```text
 What is this symbol?
-What bucket owns it?
+Which asset_class / market_group / market_segment / ranking_group describes it?
 Is it open?
 Are broker specs valid?
 Is the quote fresh?
@@ -237,7 +237,7 @@ For non-selected symbols:
 
 ```text
 deep_evidence_status = not_selected_this_cycle
-reason = not_global_top10 / not_bucket_leader / not_backup / not_manual_watch
+reason = not_global_top10 / not_ranking_group_leader / not_backup / not_manual_watch
 ```
 
 For selected symbols:
@@ -282,7 +282,7 @@ Dossier should summarize owner state for the symbol:
 ```text
 Foundation Truth Owner status
 Surface Scoring Owner status
-Bucket Intelligence Owner status
+Taxonomy / Ranking Group Owner status
 Basket Selection Owner status
 Selected Evidence Owner status
 Permission / Alert Owner status
@@ -366,17 +366,17 @@ Dossier must not imply that a high score means buy/sell.
 Bucket sections include:
 
 ```text
-broker_group
-broker_subgroup
-aggregation_group
+market_group
+market_segment
+ranking_group
 classification_source
 classification_confidence
 main_bucket_rank
 sub_bucket_rank
 aggregation_rank
-bucket_top5_flag
+ranking_group_top_n_visible_flag
 backup_rank
-bucket_degraded_reason
+ranking_group_degraded_reason
 ```
 
 If classification is unknown:
@@ -668,7 +668,7 @@ Dossier may include short recent history:
 ```text
 last_selected_time
 last_global_rank
-last_bucket_rank
+last_ranking_group_rank
 last_degraded_reason
 last_permission_state
 last_deep_evidence_status
@@ -790,3 +790,17 @@ Dossier is richer than Board but not a raw ledger dump.
 A Dossier is the symbol's honest case file.
 It must explain the symbol's state, not sell a trade idea.
 ```
+
+## Restoration Addendum — Full 23-Layer Dossier Story
+- Dossier story follows L1-L23 ownership chain and asks: identity/truth, gate status, scoring context, ranking_group position, basket status, selected evidence readiness, permission state.
+- Taxonomy question is: which `asset_class`, `market_group`, `market_segment`, and `ranking_group` describe this symbol.
+- Deep evidence sections cover L18-L22 only when symbol is selected for evidence depth.
+- Display policy:
+  - raw OHLC = ML_JSON only
+  - wick geometry = ML_JSON only
+  - rolling tick = ML_JSON only (compressed)
+  - indicator/reference summary = HR + ML_JSON
+  - deep evidence/risk geometry/liquidity/order-flow proxy = HR + ML_JSON
+  - permission/alerts = HR + ML_JSON
+- Dossier must not imply strategy edge, trade approval, or live readiness.
+- Selected evidence only law applies: no all-symbol OHLC/tick/indicator/DOM dumps.

@@ -74,7 +74,7 @@ Old names are retired for active source fields, route names, and publication lab
 ```text
 major_bucket
 minor_bucket
-aggregation_group
+ranking_group
 bucket_top5
 sub_bucket_top5
 ```
@@ -532,7 +532,7 @@ Retired active names:
 ```text
 major_bucket
 minor_bucket
-aggregation_group
+ranking_group
 bucket_top5
 sub_bucket_top5
 ```
@@ -543,3 +543,11 @@ Current status:
 This contract locks professional naming and stable parent routes.
 No real ranking, selection, candidate pool, strategy, execution, edge proof, or trade permission exists yet.
 ```
+
+## Restoration Addendum — Spine Alignment (L10-L16)
+- Ranking Group Top-N alternatives remain visible even when not in Global Top 10.
+- Global Top 10 means diversified inspection basket, not best 10 trades.
+- Correlation rejects apply to Global Top 10 construction only; ranking_group alternatives remain visible for operator review.
+- Candidate pool sources: selected ranking_group leaders, backup leaders, ranking_group heat leaders, raw global leaders if policy allows, manual pins later.
+- Dynamic selection: max 7 ranking_groups; if valid groups 3-6 select all; if <=2 use market_segment fallback.
+- No route folders may encode ranks, Top-N values, or cycle IDs.

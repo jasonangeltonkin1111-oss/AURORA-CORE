@@ -642,3 +642,36 @@ External worker outputs later must be schema/freshness/hash validated before use
 AURORA CORE may calculate beautiful numbers.
 It may not believe them until evidence earns that belief.
 ```
+
+## Restoration Addendum — Score / Formula / Evidence Integrity Expansion
+### Score families in scope
+- L6 cost/friction score
+- L7 session relevance score
+- L8 movement/range score
+- L9 structure/location score
+- L11 ranking_group rank score
+- L12 ranking_group heat/quality score
+- L15 diversity/correlation utility
+- L16 global basket utility
+- heatmap metrics and stability/change signals
+
+### Evidence integrity families
+- OHLC completeness
+- Wick one-to-one parity with OHLC
+- Rolling tick window sufficiency
+- Indicator/reference readiness
+- VWAP source confidence (`real_volume`, `tick_volume_proxy`, `unavailable`)
+- Bollinger fields completeness
+- Liquidity map confidence
+- DOM/order-flow proxy availability
+- Selected evidence integrity passed/failed
+
+### Formula verification requirements
+- synthetic_verified
+- manual_chart_verified
+- source_inspected
+- compile_verified (later)
+- runtime_observed (later)
+- live_verified (later, if ever)
+
+No formula may be declared correct without corresponding evidence state.
