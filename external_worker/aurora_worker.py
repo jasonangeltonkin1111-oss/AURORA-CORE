@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import argparse
 import sys
+import time
 import traceback
 
 from aurora_worker_io import (
@@ -18,7 +19,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.1.0"
+WORKER_VERSION = "0.2.0"
 EXPECTED_AUTHORITY = "calculation_support_only"
 
 
@@ -83,11 +84,12 @@ def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, s
 
 
 def build_heartbeat(result: ValidationResult) -> str:
+    now_unix = unix_time()
     return "\n".join([
         "schema_name=aurora_worker_heartbeat",
         "schema_version=1",
         f"worker_version={WORKER_VERSION}",
-        "worker_mode=validator_skeleton",
+        "worker_mode=validator_daemon_capable",
         f"worker_status={'alive' if result.ok else 'alive_degraded'}",
         f"last_validation_status={result.status}",
         f"last_validation_reason={result.reason}",
@@ -97,7 +99,7 @@ def build_heartbeat(result: ValidationResult) -> str:
         f"row_count={result.row_count}",
         f"payload_checksum={result.payload_checksum}",
         f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
+        f"generated_unix={now_unix}",
         "authority=calculation_support_only",
         "trade_permission=false",
         "",
@@ -123,11 +125,12 @@ def build_result(result: ValidationResult, rows: List[str]) -> str:
             if parts[4] in {"Missing Tick", "Stale", "not_available"}:
                 stale_or_missing += 1
 
+    now_unix = unix_time()
     return "\n".join([
         "schema_name=aurora_worker_result",
         "schema_version=1",
         f"worker_version={WORKER_VERSION}",
-        "worker_mode=validator_skeleton",
+        "worker_mode=validator_daemon_capable",
         "authority=calculation_support_only",
         "trade_permission=false",
         f"source_snapshot_id={result.snapshot_id}",
@@ -140,12 +143,14 @@ def build_result(result: ValidationResult, rows: List[str]) -> str:
         f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}",
         f"generated_utc={utc_stamp()}",
+        f"generated_unix={now_unix}",
         "notes=validator_skeleton_only_no_ranking_no_selection_no_permission_no_broker_polling",
         "",
     ])
 
 
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
+    now_unix = unix_time()
     return "\n".join([
         "schema_name=aurora_worker_result_manifest",
         "schema_version=1",
@@ -159,6 +164,7 @@ def build_result_manifest(result: ValidationResult, result_text: str) -> str:
         "authority=calculation_support_only",
         "trade_permission=false",
         f"generated_utc={utc_stamp()}",
+        f"generated_unix={now_unix}",
         "",
     ])
 
@@ -184,6 +190,7 @@ def run_once(root: Path) -> int:
             "traceback=",
             traceback.format_exc(),
             f"generated_utc={utc_stamp()}",
+            f"generated_unix={unix_time()}",
             "trade_permission=false",
             "",
         ])
@@ -193,11 +200,24 @@ def run_once(root: Path) -> int:
         return 1
 
 
+def run_daemon(root: Path, poll_seconds: float) -> int:
+    if poll_seconds < 0.25:
+        poll_seconds = 0.25
+    while True:
+        run_once(root)
+        time.sleep(poll_seconds)
+
+
 def main(argv: List[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Aurora external worker validator skeleton")
+    parser = argparse.ArgumentParser(description="Aurora external worker validator")
     parser.add_argument("--root", required=True, help="Aurora account root folder, e.g. Common Files/Aurora Core/Server/Account")
+    parser.add_argument("--mode", choices=("once", "daemon"), default="once")
+    parser.add_argument("--poll-seconds", type=float, default=1.0)
     args = parser.parse_args(argv)
-    return run_once(Path(args.root))
+    root = Path(args.root)
+    if args.mode == "daemon":
+        return run_daemon(root, args.poll_seconds)
+    return run_once(root)
 
 
 if __name__ == "__main__":
