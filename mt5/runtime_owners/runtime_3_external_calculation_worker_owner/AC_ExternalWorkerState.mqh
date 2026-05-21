@@ -14,6 +14,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.exe_present = false;
    AC_EXTERNAL_WORKER_STATUS.exe_flat_present = false;
    AC_EXTERNAL_WORKER_STATUS.exe_folder_present = false;
+   AC_EXTERNAL_WORKER_STATUS.install_status_file_present = false;
+   AC_EXTERNAL_WORKER_STATUS.worker_installed = false;
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = false;
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = false;
    AC_EXTERNAL_WORKER_STATUS.result_present = false;
@@ -21,6 +23,12 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.owner_name = AC_RUNTIME3_OWNER;
    AC_EXTERNAL_WORKER_STATUS.worker_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.install_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.install_status_source = "worker_install_status.txt";
+   AC_EXTERNAL_WORKER_STATUS.install_validation_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.install_validation_reason = "";
+   AC_EXTERNAL_WORKER_STATUS.install_worker_version = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.install_flat_exe_present = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_present = "not_available";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "";
@@ -39,6 +47,7 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.missing_reason = "";
    AC_EXTERNAL_WORKER_STATUS.expected_exe_path = AC_ExternalWorkerExePath();
    AC_EXTERNAL_WORKER_STATUS.expected_folder_exe_path = AC_ExternalWorkerPackagedExePath();
+   AC_EXTERNAL_WORKER_STATUS.install_status_path = AC_ExternalWorkerInstallStatusPath();
    AC_EXTERNAL_WORKER_STATUS.required_path = AC_ExternalWorkerRequiredPath();
    AC_EXTERNAL_WORKER_STATUS.heartbeat_path = AC_ExternalWorkerHeartbeatPath();
    AC_EXTERNAL_WORKER_STATUS.result_path = AC_ExternalWorkerResultPath();
@@ -49,6 +58,7 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.last_launch_attempt_time = 0;
    AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.result_age_seconds = -1;
+   AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds = -1;
    AC_EXTERNAL_WORKER_STATUS.launch_attempts = 0;
    AC_EXTERNAL_WORKER_STATUS.last_error = 0;
    AC_EXTERNAL_WORKER_STATUS.flat_exe_error = 0;
