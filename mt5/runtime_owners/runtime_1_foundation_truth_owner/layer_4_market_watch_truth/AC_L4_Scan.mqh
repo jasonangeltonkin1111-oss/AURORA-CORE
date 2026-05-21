@@ -93,6 +93,8 @@ void AC_L4FinalizeCounters(const AC_L4SymbolPacket &p)
    if(p.zero_spread_state == "Fresh Zero Spread") AC_L4_ZERO_SPREAD_FRESH++;
    if(p.daily_change_status == "Available") AC_L4_DAILY_CHANGE_AVAILABLE++;
    if(p.spread_score == "Hostile") AC_L4_HIGH_SPREAD_WARNINGS++;
+   if(p.activity_status == "Activity Available - Nonzero") AC_L4_ACTIVITY_NONZERO++;
+   else if(p.activity_status == "Activity API Available - Zero Values") AC_L4_ACTIVITY_API_AVAILABLE++;
    if(p.failure_reason != "" && AC_L4_WORST_FAILURE_REASON == "None") AC_L4_WORST_FAILURE_REASON = p.failure_reason;
 }
 
@@ -209,15 +211,19 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
    if(AC_L4_SYMBOLS[next].daily_high_bid > AC_L4_SYMBOLS[next].daily_low_bid && AC_L4_SYMBOLS[next].bid > 0.0)
       AC_L4_SYMBOLS[next].daily_range_position_pct = ((AC_L4_SYMBOLS[next].bid - AC_L4_SYMBOLS[next].daily_low_bid) / (AC_L4_SYMBOLS[next].daily_high_bid - AC_L4_SYMBOLS[next].daily_low_bid)) * 100.0;
 
-   bool activity = false;
-   activity = AC_L4GetDouble(symbol, SYMBOL_SESSION_AW, AC_L4_SYMBOLS[next].session_aw) || activity;
-   activity = AC_L4GetDouble(symbol, SYMBOL_SESSION_VOLUME, AC_L4_SYMBOLS[next].session_volume) || activity;
-   activity = AC_L4GetDouble(symbol, SYMBOL_SESSION_TURNOVER, AC_L4_SYMBOLS[next].session_turnover) || activity;
-   activity = AC_L4GetDouble(symbol, SYMBOL_SESSION_INTEREST, AC_L4_SYMBOLS[next].session_interest) || activity;
-   AC_L4GetInteger(symbol, SYMBOL_SESSION_DEALS, AC_L4_SYMBOLS[next].session_deals);
-   AC_L4GetInteger(symbol, SYMBOL_SESSION_BUY_ORDERS, AC_L4_SYMBOLS[next].session_buy_orders);
-   AC_L4GetInteger(symbol, SYMBOL_SESSION_SELL_ORDERS, AC_L4_SYMBOLS[next].session_sell_orders);
-   AC_L4_SYMBOLS[next].activity_status = activity ? "Available" : "Broker Not Providing";
+   bool activity_api = false;
+   activity_api = AC_L4GetDouble(symbol, SYMBOL_SESSION_AW, AC_L4_SYMBOLS[next].session_aw) || activity_api;
+   activity_api = AC_L4GetDouble(symbol, SYMBOL_SESSION_VOLUME, AC_L4_SYMBOLS[next].session_volume) || activity_api;
+   activity_api = AC_L4GetDouble(symbol, SYMBOL_SESSION_TURNOVER, AC_L4_SYMBOLS[next].session_turnover) || activity_api;
+   activity_api = AC_L4GetDouble(symbol, SYMBOL_SESSION_INTEREST, AC_L4_SYMBOLS[next].session_interest) || activity_api;
+   bool deals_api = AC_L4GetInteger(symbol, SYMBOL_SESSION_DEALS, AC_L4_SYMBOLS[next].session_deals);
+   bool buy_orders_api = AC_L4GetInteger(symbol, SYMBOL_SESSION_BUY_ORDERS, AC_L4_SYMBOLS[next].session_buy_orders);
+   bool sell_orders_api = AC_L4GetInteger(symbol, SYMBOL_SESSION_SELL_ORDERS, AC_L4_SYMBOLS[next].session_sell_orders);
+   activity_api = activity_api || deals_api || buy_orders_api || sell_orders_api;
+   bool activity_nonzero = (AC_L4_SYMBOLS[next].session_aw != 0.0 || AC_L4_SYMBOLS[next].session_volume != 0.0 || AC_L4_SYMBOLS[next].session_turnover != 0.0 || AC_L4_SYMBOLS[next].session_interest != 0.0 || AC_L4_SYMBOLS[next].session_deals != 0 || AC_L4_SYMBOLS[next].session_buy_orders != 0 || AC_L4_SYMBOLS[next].session_sell_orders != 0);
+   if(activity_nonzero) AC_L4_SYMBOLS[next].activity_status = "Activity Available - Nonzero";
+   else if(activity_api) AC_L4_SYMBOLS[next].activity_status = "Activity API Available - Zero Values";
+   else AC_L4_SYMBOLS[next].activity_status = "Broker Not Providing";
 
    if(AC_L4_SYMBOLS[next].quote_quality == "Fresh" && AC_L4_SYMBOLS[next].spread_score != "Hostile")
       AC_L4_SYMBOLS[next].surface_quality = "Surface Usable";
@@ -234,7 +240,8 @@ void AC_RefreshLayer4MarketWatchTruth()
    AC_L4Reset();
    int total = SymbolsTotal(false);
    string refreshed_at = TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
-   AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | L4 refreshed " + refreshed_at + " | symbols " + IntegerToString(total);
+   AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
+   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | refreshed " + refreshed_at;
 
    for(int idx=0; idx<total; idx++)
    {
