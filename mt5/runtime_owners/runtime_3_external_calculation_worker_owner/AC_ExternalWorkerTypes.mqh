@@ -15,6 +15,8 @@ struct AC_ExternalWorkerStatus
    string worker_status;
    string install_status;
    string heartbeat_status;
+   string heartbeat_validation_status;
+   string heartbeat_validation_reason;
    string result_status;
    string result_validation_status;
    string result_validation_reason;
