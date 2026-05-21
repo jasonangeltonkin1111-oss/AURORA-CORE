@@ -122,9 +122,26 @@ string AC_MarketBoardPath()
    return AC_RootFolder() + "\\" + AC_MARKET_BOARD_FILE;
 }
 
+string AC_DossierOpenSymbolPath(const string symbol)
+{
+   return AC_DossiersOpenFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+}
+
+string AC_DossierClosedSymbolPath(const string symbol)
+{
+   return AC_DossiersClosedFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+}
+
 string AC_DossierUnknownSymbolPath(const string symbol)
 {
    return AC_DossiersUnknownFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+}
+
+string AC_DossierSymbolPathByState(const string symbol, const string market_state)
+{
+   if(market_state == "open") return AC_DossierOpenSymbolPath(symbol);
+   if(market_state == "closed") return AC_DossierClosedSymbolPath(symbol);
+   return AC_DossierUnknownSymbolPath(symbol);
 }
 
 string AC_RuntimeStatusPath()
