@@ -84,124 +84,6 @@ string AC_BuildRuntimeStatusText()
    return AC_RuntimeIdentityText() + AC_RuntimeStatusText(AC_SNAPSHOT) + AC_HeartbeatStatusText(AC_SNAPSHOT);
 }
 
-string AC_PlaceholderText(const string surface)
-{
-   string text = "";
-   text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
-   text += "build_version=" + AC_BUILD_VERSION + "\r\n";
-   text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
-   text += "placeholder_surface=" + surface + "\r\n";
-   text += "placeholder_status=shell_printed\r\n";
-   text += "publication_state=structure_only\r\n";
-   if(surface == "Dossiers" || surface == "Dossiers/Open" || surface == "Dossiers/Closed" || surface == "Dossiers/Unknown")
-   {
-      text += "surface_type=dossier_route_placeholder\r\n";
-      text += "surface_role=per_symbol_case_file_route_shell\r\n";
-      text += "route_status=stable_parent_placeholder\r\n";
-      text += "folder_meaning=open_closed_unknown_partition_later\r\n";
-      text += "symbol_shell_runtime=true\r\n";
-      text += "dossier_truth_runtime=L0_shell_only\r\n";
-      text += "selected_evidence_runtime=false\r\n";
-      text += "ranking_group_runtime=false\r\n";
-      text += "selection_logic_runtime=false\r\n";
-      text += "permission_runtime=false\r\n";
-      text += "trade_permission=false\r\n";
-      text += "auto_trade_allowed=false\r\n";
-      text += "file_publication_allowed=true\r\n";
-      text += "review_allowed=false\r\n";
-      text += "trade_allowed=false\r\n";
-      text += "reason=folder_shell_only_symbol_dossiers_fill_in_bounded_batches_under_unknown\r\n";
-      text += "future_owner=Board/Dossier Renderer Services consume Trading/System Truth Owner outputs later\r\n";
-   }
-   else if(surface == "Selection Desk/Groups")
-   {
-      text += "surface_type=selection_groups_route_placeholder\r\n";
-      text += "stable_parent_route=true\r\n";
-      text += "route_status=route_shell_only\r\n";
-      text += "ranking_group_child_files_runtime=false\r\n";
-      text += "ranking_group_top_n_runtime=false\r\n";
-      text += "ranking_group_runtime=false\r\n";
-      text += "selection_logic_runtime=false\r\n";
-      text += "trade_permission=false\r\n";
-      text += "auto_trade_allowed=false\r\n";
-      text += "review_allowed=false\r\n";
-      text += "trade_allowed=false\r\n";
-      text += "reason=route_shell_only_no_group_selection_truth_yet\r\n";
-   }
-   else if(surface == "Selection Desk/Global")
-   {
-      text += "surface_type=selection_global_route_placeholder\r\n";
-      text += "stable_parent_route=true\r\n";
-      text += "route_status=route_shell_only\r\n";
-      text += "global_inspection_basket_runtime=false\r\n";
-      text += "global_top10_runtime=false\r\n";
-      text += "correlation_filter_runtime=false\r\n";
-      text += "backup_fill_runtime=false\r\n";
-      text += "ranking_group_runtime=false\r\n";
-      text += "selection_logic_runtime=false\r\n";
-      text += "trade_permission=false\r\n";
-      text += "auto_trade_allowed=false\r\n";
-      text += "review_allowed=false\r\n";
-      text += "trade_allowed=false\r\n";
-      text += "reason=route_shell_only_no_global_selection_truth_yet\r\n";
-   }
-   else
-   {
-      text += "surface_type=route_placeholder\r\n";
-      text += "truth_status=no_runtime_truth_yet\r\n";
-      text += "ranking_group_runtime=false\r\n";
-      text += "selection_logic_runtime=false\r\n";
-      text += "trade_permission=false\r\n";
-   }
-   text += "scope_guard=no_open_closed_no_specs_no_quotes_no_ranking_no_selection_claim_no_strategy_no_execution\r\n";
-   text += "route_contract=stable_parent_folder_numbers_live_inside_child_files_not_folder_names\r\n";
-   text += "generated_at=" + AC_NowText() + "\r\n";
-   return text;
-}
-
-string AC_SelectionIndexPlaceholderText()
-{
-   string text = "";
-   text += "schema_name=selection_index\r\n";
-   text += "schema_version=v0.1\r\n";
-   text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
-   text += "build_version=" + AC_BUILD_VERSION + "\r\n";
-   text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
-   text += "selection_index_path=" + AC_SelectionIndexPath() + "\r\n";
-   text += "selection_groups_folder=" + AC_SelectionGroupsFolder() + "\r\n";
-   text += "selection_global_folder=" + AC_SelectionGlobalFolder() + "\r\n";
-   text += "index_status=structure_only\r\n";
-   text += "truth_status=no_runtime_selection_truth_yet\r\n";
-   text += "stable_parent_routes_present=true\r\n";
-   text += "groups_route_present=true\r\n";
-   text += "global_route_present=true\r\n";
-   text += "ranking_group_child_files_runtime=false\r\n";
-   text += "global_inspection_basket_runtime=false\r\n";
-   text += "global_top10_runtime=false\r\n";
-   text += "rank_order_runtime=false\r\n";
-   text += "correlation_filter_runtime=false\r\n";
-   text += "backup_fill_runtime=false\r\n";
-   text += "selection_logic_runtime=false\r\n";
-   text += "trade_permission=false\r\n";
-   text += "review_allowed=false\r\n";
-   text += "auto_trade_allowed=false\r\n";
-   text += "intended_future_fields=cycle_id,generated_at,group_rank,symbol_rank,asset_class,market_group,market_segment,ranking_group,symbol,score_summary,evidence_status,gate_status,reject_reason,child_file_path\r\n";
-   text += "route_contract=stable_parent_folders_groups_and_global; ranking_numbers_live_inside_index_or_child_files_not_folder_names\r\n";
-   text += "generated_at=" + AC_NowText() + "\r\n";
-   return text;
-}
-
-bool AC_AllPlaceholdersOk(const AC_WriteResult &dossiers_root,
-                          const AC_WriteResult &dossiers_open,
-                          const AC_WriteResult &dossiers_closed,
-                          const AC_WriteResult &dossiers_unknown,
-                          const AC_WriteResult &selection_groups,
-                          const AC_WriteResult &selection_global,
-                          const AC_WriteResult &selection_index)
-{
-   return dossiers_root.ok && dossiers_open.ok && dossiers_closed.ok && dossiers_unknown.ok && selection_groups.ok && selection_global.ok && selection_index.ok;
-}
-
 void AC_FinalizeState(const AC_WriteResult &runtime_write,
                       const AC_WriteResult &status_write,
                       const AC_WriteResult &manifest_write,
@@ -266,23 +148,8 @@ void AC_PublishRuntime0()
    AC_AddMicroLog("write_l0_dossier_batch", phase_start, dossier_batch_write.status);
 
    phase_start = GetTickCount();
-   AC_WriteResult ph_dossiers_root = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersFolder()), AC_PlaceholderText("Dossiers"));
-   AC_WriteResult ph_dossiers_open = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersOpenFolder()), AC_PlaceholderText("Dossiers/Open"));
-   AC_WriteResult ph_dossiers_closed = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersClosedFolder()), AC_PlaceholderText("Dossiers/Closed"));
-   AC_WriteResult ph_dossiers_unknown = AC_WriteTextFile(AC_PlaceholderPath(AC_DossiersUnknownFolder()), AC_PlaceholderText("Dossiers/Unknown"));
-   AC_WriteResult ph_selection_groups = AC_WriteTextFile(AC_PlaceholderPath(AC_SelectionGroupsFolder()), AC_PlaceholderText("Selection Desk/Groups"));
-   AC_WriteResult ph_selection_global = AC_WriteTextFile(AC_PlaceholderPath(AC_SelectionGlobalFolder()), AC_PlaceholderText("Selection Desk/Global"));
-   AC_WriteResult selection_index_write = AC_WriteTextFile(AC_SelectionIndexPath(), AC_SelectionIndexPlaceholderText());
-   bool placeholders_ok = AC_AllPlaceholdersOk(ph_dossiers_root, ph_dossiers_open, ph_dossiers_closed, ph_dossiers_unknown, ph_selection_groups, ph_selection_global, selection_index_write);
-   AC_SNAPSHOT.placeholder_status = placeholders_ok ? "placeholders_written" : "placeholder_write_degraded";
-   AC_RecordWriteProblem("Placeholder Dossiers", ph_dossiers_root);
-   AC_RecordWriteProblem("Placeholder Dossiers Open", ph_dossiers_open);
-   AC_RecordWriteProblem("Placeholder Dossiers Closed", ph_dossiers_closed);
-   AC_RecordWriteProblem("Placeholder Dossiers Unknown", ph_dossiers_unknown);
-   AC_RecordWriteProblem("Placeholder Selection Groups", ph_selection_groups);
-   AC_RecordWriteProblem("Placeholder Selection Global", ph_selection_global);
-   AC_RecordWriteProblem("Selection Index", selection_index_write);
-   AC_AddMicroLog("write_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
+   AC_SNAPSHOT.placeholder_status = "route_folders_ensured_no_placeholder_file_spam";
+   AC_AddMicroLog("skip_placeholder_file_spam", phase_start, AC_SNAPSHOT.placeholder_status);
 
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
@@ -300,13 +167,6 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Placeholder", ph_dossiers_root, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Groups Placeholder", ph_selection_groups, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Global Placeholder", ph_selection_global, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Index", selection_index_write, AC_SNAPSHOT, "placeholder") + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
    string diagnostics = "";
@@ -325,13 +185,12 @@ void AC_PublishRuntime0()
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
-   diagnostics += "selection_index_write=" + AC_WriteResultLine("Selection Index", selection_index_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
    diagnostics += "board_contract=trading_side_summary_only_symbol_shell_counts_trust_blocker_no_layer2_open_closed_counts\r\n";
    diagnostics += "workbench_contract=developer_status_layer_packets_batch_progress_no_trader_bloat\r\n";
    diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0\r\n";
    diagnostics += "dossier_batch_size=" + IntegerToString(AC_DOSSIER_SHELL_BATCH_SIZE) + "\r\n";
-   diagnostics += "selection_desk_structure=Groups + Global stable parent placeholders plus Selection Index file; top/rank numbering belongs inside child files or the index, not folder names\r\n";
+   diagnostics += "selection_desk_structure=Groups + Global stable parent folders only in L0; no selection files are spam-written in this pass\r\n";
    diagnostics += "taxonomy_contract=asset_class -> market_group -> market_segment -> symbol; ranking_group is the selection/cap/diversification grouping field\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
@@ -357,13 +216,6 @@ void AC_PublishRuntime0()
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_status_rewrite") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "primary") + "\r\n";
    manifest += AC_ManifestRow("Diagnostics", diagnostics_write, AC_SNAPSHOT, "diagnostics") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Placeholder", ph_dossiers_root, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Open Placeholder", ph_dossiers_open, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Closed Placeholder", ph_dossiers_closed, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Dossiers Unknown Placeholder", ph_dossiers_unknown, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Groups Placeholder", ph_selection_groups, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Global Placeholder", ph_selection_global, AC_SNAPSHOT, "placeholder") + "\r\n";
-   manifest += AC_ManifestRow("Selection Index", selection_index_write, AC_SNAPSHOT, "placeholder") + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? "manifest_written" : manifest_write.status;
    AC_ApplyLateWriteStatus("Manifest Final", manifest_write);
