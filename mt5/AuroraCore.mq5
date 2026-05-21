@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.029"
-#property description "AURORA CORE - L2 runtime polish before L3 plan"
+#property version   "1.030"
+#property description "AURORA CORE - L3 broker specs and value truth"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -12,6 +12,7 @@
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_AccountTruth.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_2_market_open_closed_truth/AC_MarketSessionTruth.mqh"
 #include "runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh"
+#include "runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_BrokerSpecsTruth.mqh"
 #include "runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
@@ -81,6 +82,7 @@ string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
       + AC_Layer0StatusRow(layer0_status) + "\r\n"
       + AC_AccountTruthStatusRow(account_write) + "\r\n"
       + AC_Layer2StatusRow() + "\r\n"
+      + AC_Layer3StatusRow() + "\r\n"
       + AC_UniverseStatusRow() + "\r\n\r\n"
       + AC_Layer0WorkbenchText(layer0_status);
 }
@@ -128,8 +130,8 @@ AC_WriteResult AC_PublishMarketBoardOnly()
       AC_RefreshLayer1SnapshotOnly();
       AC_BuildLayer1Texts();
    }
-   if(AC_L2_READY)
-      AC_BuildLayer2Texts();
+   if(AC_L2_READY) AC_BuildLayer2Texts();
+   if(AC_L3_READY) AC_BuildLayer3Texts();
    string board_text = AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS);
    return AC_WriteTextFileIfChanged(AC_MarketBoardPath(), board_text, AC_LAST_BOARD_TEXT, false);
 }
@@ -171,16 +173,19 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_AddMicroLog("refresh_layer1_account_truth", phase_start, AC_L1_SCAN_STATUS);
 
    phase_start = GetTickCount();
-   if(AC_L2ShouldRunFullScan())
-      AC_RefreshLayer2MarketSessionTruth();
-   else
-      AC_BuildLayer2Texts();
+   if(AC_L2ShouldRunFullScan()) AC_RefreshLayer2MarketSessionTruth();
+   else AC_BuildLayer2Texts();
    AC_AddMicroLog("refresh_layer2_market_session_truth", phase_start, AC_L2_SCAN_STATUS);
+
+   phase_start = GetTickCount();
+   if(AC_L3ShouldRunFullScan()) AC_RefreshLayer3BrokerSpecsTruth();
+   else AC_BuildLayer3Texts();
+   AC_AddMicroLog("refresh_layer3_broker_specs_truth", phase_start, AC_L3_SCAN_STATUS);
 
    phase_start = GetTickCount();
    AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
    AC_RecordWriteProblem("Dossier Universe", dossier_batch_write);
-   AC_AddMicroLog("l0_l2_dossier_universe", phase_start, dossier_batch_write.status);
+   AC_AddMicroLog("l0_l2_l3_dossier_universe", phase_start, dossier_batch_write.status);
 
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
@@ -194,7 +199,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
 
    string manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "trader_board_if_changed") + "\r\n";
-   manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_dossier_universe_cached_or_run") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_l3_dossier_universe_cached_or_run") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
@@ -226,10 +231,17 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer2_closed_count=" + IntegerToString(AC_L2_CLOSED_COUNT) + "\r\n";
    diagnostics += "layer2_unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT) + "\r\n";
    diagnostics += "layer2_route_generation_key=" + AC_L2_ROUTE_GENERATION_KEY + "\r\n";
+   diagnostics += "layer3_scan_status=" + AC_L3_SCAN_STATUS + "\r\n";
+   diagnostics += "layer3_scan_duration_ms=" + IntegerToString((int)AC_L3_SCAN_DURATION_MS) + "\r\n";
+   diagnostics += "layer3_eligible_from_l2=" + IntegerToString(AC_L3_ELIGIBLE_FROM_L2) + "\r\n";
+   diagnostics += "layer3_spec_ready_count=" + IntegerToString(AC_L3_SPEC_READY_COUNT) + "\r\n";
+   diagnostics += "layer3_value_ready_count=" + IntegerToString(AC_L3_VALUE_READY_COUNT) + "\r\n";
+   diagnostics += "layer3_margin_ready_count=" + IntegerToString(AC_L3_MARGIN_READY_COUNT) + "\r\n";
+   diagnostics += "layer3_cache_key=" + AC_L3_CACHE_KEY + "\r\n";
    diagnostics += "layer2_cutoff_rule=closed_symbols_block_deeper_layer_publication_until_next_recheck_due\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_not_trader_bloat\r\n";
-   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_or_L2\r\n";
+   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_or_L3\r\n";
    diagnostics += "symbol_packet_retry_limit=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    diagnostics += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
    diagnostics += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
@@ -237,7 +249,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_session_truth_no_specs_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_session_truth_plus_L3_broker_specs_value_truth_no_quotes_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
@@ -252,7 +264,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
 
    manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "final_status_if_changed") + "\r\n";
-   manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_dossier_universe_cached_or_run") + "\r\n";
+   manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_l3_dossier_universe_cached_or_run") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "final_runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
@@ -298,7 +310,7 @@ int OnInit()
 
 void OnTimer()
 {
-   if(AC_L2ShouldRunFullScan())
+   if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan())
    {
       AC_PublishRuntime0Full(false);
       return;
