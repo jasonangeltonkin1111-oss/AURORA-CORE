@@ -10,12 +10,12 @@ $python = "python"
 try {
     & $python --version
 } catch {
-    Write-Host "python command not available. Try running with your full Python path."
+    Write-Host "python command not available. Run this script from a PowerShell session where Python is on PATH, or edit `$python to your full Python.exe path."
     throw
 }
 
 & $python -m pip install --upgrade pip
-& $python -m pip install pyinstaller
+& $python -m pip install -r requirements.txt
 & $python -m PyInstaller --noconfirm --clean AuroraWorker.spec
 
 $distExe = Join-Path $ScriptDir "dist\AuroraWorker\AuroraWorker.exe"
@@ -24,4 +24,4 @@ if (!(Test-Path $distExe)) {
 }
 
 Write-Host "Build complete: $distExe"
-Write-Host "Copy the dist\AuroraWorker folder to the MT5 External Worker folder when ready."
+Write-Host "Next: run install_worker_for_18503.ps1, then run_worker_for_18503.ps1 for packaged-worker proof."
