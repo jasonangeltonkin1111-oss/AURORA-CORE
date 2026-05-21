@@ -43,6 +43,9 @@ void AC_RefreshExternalWorkerStatus()
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
 
+   if(AC_L4_READY)
+      AC_ExportExternalWorkerSnapshot();
+
    if(AC_EXTERNAL_WORKER_STATUS.auto_launch_desired)
    {
       if(AC_EXTERNAL_WORKER_STATUS.launch_implementation == "not_implemented_yet")
@@ -107,9 +110,6 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Pending";
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "No result files present";
    }
-
-   if(AC_L4_READY)
-      AC_ExportExternalWorkerSnapshot();
 
    AC_BuildExternalWorkerTexts();
 }
