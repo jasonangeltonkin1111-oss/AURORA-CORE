@@ -95,6 +95,21 @@ string AC_SharedExternalWorkerPackageFolder()
    return AC_SharedExternalWorkerFolder() + "\\AuroraWorker";
 }
 
+string AC_SharedExternalWorkerStatusFolder()
+{
+   return AC_SharedExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_STATUS_FOLDER;
+}
+
+string AC_SharedExternalWorkerInstallStatusPath()
+{
+   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_install_status.txt";
+}
+
+string AC_SharedExternalWorkerStatusPath()
+{
+   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_status.txt";
+}
+
 string AC_ExternalWorkerFolder()
 {
    return AC_WorkbenchFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
@@ -337,6 +352,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
    string wb_detail = "";
    string shared_worker_detail = "";
    string shared_worker_package_detail = "";
+   string shared_worker_status_detail = "";
    string worker_detail = "";
    string worker_control_detail = "";
    string worker_inbox_detail = "";
@@ -356,6 +372,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
    bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
    bool shared_worker_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerFolder(), shared_worker_detail);
    bool shared_worker_package_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerPackageFolder(), shared_worker_package_detail);
+   bool shared_worker_status_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerStatusFolder(), shared_worker_status_detail);
    bool worker_ok = AC_EnsureFolderPath(AC_ExternalWorkerFolder(), worker_detail);
    bool worker_control_ok = AC_EnsureFolderPath(AC_ExternalWorkerControlFolder(), worker_control_detail);
    bool worker_inbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerInboxFolder(), worker_inbox_detail);
@@ -375,6 +392,7 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";workbench=" + wb_detail
       + ";shared_external_worker=" + shared_worker_detail
       + ";shared_external_worker_package=" + shared_worker_package_detail
+      + ";shared_external_worker_status=" + shared_worker_status_detail
       + ";external_worker_account_io=" + worker_detail
       + ";external_worker_control=" + worker_control_detail
       + ";external_worker_inbox=" + worker_inbox_detail
@@ -392,9 +410,11 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";market_board_path=" + AC_MarketBoardPath()
       + ";external_worker_required_path=" + AC_ExternalWorkerRequiredPath()
       + ";shared_external_worker_exe_path=" + AC_ExternalWorkerPackagedExePath()
+      + ";shared_worker_install_status_path=" + AC_SharedExternalWorkerInstallStatusPath()
+      + ";shared_worker_status_path=" + AC_SharedExternalWorkerStatusPath()
       + ";selection_index_path=" + AC_SelectionIndexPath();
 
-   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
+   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
 }
 
 #endif
