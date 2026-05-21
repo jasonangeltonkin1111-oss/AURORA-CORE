@@ -7,6 +7,7 @@ static uint     AC_L2_SCAN_DURATION_MS = 0;
 static string   AC_L2_SCAN_STATUS = "not_started";
 static string   AC_L2_SCAN_FAILURE = "";
 static datetime AC_L2_LAST_FULL_SCAN_TIME = 0;
+static string   AC_L2_ROUTE_GENERATION_KEY = "not_scanned";
 static int      AC_L2_LAST_SERVER_DAY_OF_WEEK = -1;
 static int      AC_L2_LAST_SYMBOLS_TOTAL = -1;
 
@@ -69,6 +70,15 @@ int AC_L2FindIndex(const string symbol)
    for(int i = 0; i < ArraySize(AC_L2_SYMBOLS); i++)
       if(AC_L2_SYMBOLS[i].symbol == symbol) return i;
    return -1;
+}
+
+string AC_L2MarketStateForSymbol(const string symbol)
+{
+   int idx = AC_L2FindIndex(symbol);
+   if(idx < 0) return "unknown";
+   if(AC_L2_SYMBOLS[idx].market_state == "open") return "open";
+   if(AC_L2_SYMBOLS[idx].market_state == "closed") return "closed";
+   return "unknown";
 }
 
 #endif
