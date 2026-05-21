@@ -528,7 +528,7 @@ FolderCreate
 Owner:
 
 ```text
-Publication Owner / FileIO owner later
+Publication / FileIO / Route Service
 ```
 
 Official references:
@@ -545,7 +545,7 @@ No-go:
 
 ```text
 no scattered FileOpen/FileWrite
-no final path invention outside Publication Owner
+no final path invention outside Publication / FileIO / Route Service
 no FileFlush spam inside loops
 ```
 

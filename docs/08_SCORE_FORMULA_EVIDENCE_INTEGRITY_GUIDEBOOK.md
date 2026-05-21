@@ -63,7 +63,7 @@ evidence integrity contract
 This guidebook must not own:
 
 ```text
-final bucket taxonomy
+final taxonomy / ranking_group model
 Global Top 10 final construction
 trade permission
 strategy validation outcome
@@ -611,7 +611,7 @@ formula handles missing input with fake zero
 normalized score changes without version update
 indicator context becomes strategy signal
 correlation score becomes trade permission
-bucket heat becomes trade conviction
+ranking_group heat becomes trade conviction
 external worker result used without freshness/hash/schema validation
 ```
 

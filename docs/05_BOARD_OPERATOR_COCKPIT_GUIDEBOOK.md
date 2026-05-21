@@ -48,7 +48,7 @@ system-level health display
 Atomic Update Overview display
 account/risk summary display
 foundation truth summary display
-bucket summary display
+ranking_group summary display
 Global Top 10 display
 selected evidence progress display
 heatmap status display
@@ -74,7 +74,7 @@ Dossier section details
 Governance ledger schemas
 rank computation
 score computation
-bucket classification
+taxonomy / ranking_group classification
 Global Top 10 computation
 selected evidence computation
 permission decisions
@@ -127,7 +127,7 @@ breath phase
 lane pressure
 account/risk summary
 foundation truth summary
-bucket state
+ranking_group state
 Global Top 10
 selected evidence progress
 heatmap status
@@ -215,7 +215,7 @@ Standard Board sections:
 3. Atomic Update Overview
 4. Account / Risk Snapshot
 5. Foundation Truth Summary
-6. Bucket Summary
+6. Ranking Group Summary
 7. Global Top 10
 8. Selected Evidence Progress
 9. Heatmap Status
@@ -362,7 +362,7 @@ This section must expose the real state of the broker universe.
 
 ---
 
-## 12. Bucket Summary Section
+## 12. Ranking Group Summary Section
 
 Should show:
 
@@ -378,7 +378,7 @@ ranking_group_degraded_count
 
 It must not dump every symbol.
 
-Full per-symbol bucket truth belongs in Dossier / Selection Desk / Governance.
+Full per-symbol ranking_group truth belongs in Dossier / Selection Desk / Governance.
 
 ---
 
@@ -389,7 +389,7 @@ Should show:
 ```text
 global_rank
 symbol
-bucket
+ranking_group
 reason
 score_summary
 correlation_note
@@ -704,7 +704,7 @@ formula registry details
 Move to Selection Desk:
 
 ```text
-full bucket Top 5 lists
+full ranking_group Top-N lists
 correlation rejects
 candidate pool detail
 backup fill detail
@@ -723,7 +723,7 @@ Publication prints.
 Board summarizes.
 Dossier explains per symbol.
 Governance proves.
-Runtime Owners own truth.
+Trading/System Truth Owners own truth; System Services publish/render/prove truth.
 ```
 
 The Board may consume truth from all Runtime Owners.

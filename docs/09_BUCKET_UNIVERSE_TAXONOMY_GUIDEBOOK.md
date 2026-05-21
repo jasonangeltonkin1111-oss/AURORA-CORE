@@ -262,7 +262,7 @@ Non-equity symbols should use market-native groups and segments.
 It answers:
 
 ```text
-Which EA-safe aggregation group should this symbol use for later ranking, caps, diversification, and selection controls?
+Which EA-safe ranking_group should this symbol use for later ranking, caps, diversification, and selection controls?
 ```
 
 Why separate it:
