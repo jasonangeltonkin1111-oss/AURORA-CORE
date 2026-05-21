@@ -186,6 +186,12 @@ void AC_L1AddClosedStats(const AC_L1ClosedTradeRow &row)
    if(row.side == "buy") { AC_L1_BUY_COUNT++; AC_L1_BUY_NET += row.net_result; }
    if(row.side == "sell") { AC_L1_SELL_COUNT++; AC_L1_SELL_NET += row.net_result; }
 
+   if(row.entry_time > 0 && row.close_time > row.entry_time)
+   {
+      AC_L1_DURATION_SUM_SECONDS += (long)(row.close_time - row.entry_time);
+      AC_L1_DURATION_COUNT++;
+   }
+
    int s = AC_L1FindSymbolStats(row.symbol);
    AC_L1_SYMBOL_STATS[s].net_result += row.net_result;
    AC_L1_SYMBOL_STATS[s].closed_count++;
@@ -214,7 +220,7 @@ void AC_L1ScanHistory()
 
    AC_L1_HISTORY_STATUS = "available";
    AC_L1_HISTORY_QUALITY = "complete";
-   AC_L1_HISTORY_NOTE = "history selected from broker account history; closed rows are reconstructed from exit deals plus same-position entry/order/cost records";
+   AC_L1_HISTORY_NOTE = "history selected from broker account history; closed rows are reconstructed from exit deals plus same-position entry/order/cost records; SL/TP order context is labeled separately and does not alone downgrade core trade reconstruction";
    AC_L1_HISTORY_DEALS_TOTAL = HistoryDealsTotal();
    AC_L1_HISTORY_ORDERS_TOTAL = HistoryOrdersTotal();
 
@@ -248,13 +254,15 @@ void AC_L1ScanHistory()
       AC_L1_CLOSED[next].profit = HistoryDealGetDouble(deal_ticket, DEAL_PROFIT);
       double fee_sum = 0.0;
       AC_L1PositionCostSums(AC_L1_CLOSED[next].position_id, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, fee_sum);
-      AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap + fee_sum;
+      AC_L1_CLOSED[next].fee = fee_sum;
+      AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap + AC_L1_CLOSED[next].fee;
       AC_L1_CLOSED[next].magic = HistoryDealGetInteger(deal_ticket, DEAL_MAGIC);
       AC_L1_CLOSED[next].comment = HistoryDealGetString(deal_ticket, DEAL_COMMENT);
       AC_L1_CLOSED[next].close_reason = HistoryDealGetInteger(deal_ticket, DEAL_REASON);
-      AC_L1_CLOSED[next].source_quality = "partial";
+      AC_L1_CLOSED[next].source_quality = "partial_core";
       AC_L1_CLOSED[next].entry_reconstruction_status = "unavailable";
       AC_L1_CLOSED[next].paired_entry_status = "paired_entry_unavailable";
+      AC_L1_CLOSED[next].order_context_status = "order_context_unavailable";
       AC_L1_CLOSED[next].stop_loss_source = "unavailable";
       AC_L1_CLOSED[next].take_profit_source = "unavailable";
 
@@ -268,7 +276,8 @@ void AC_L1ScanHistory()
          AC_L1_CLOSED[next].side = entry_side;
          AC_L1_CLOSED[next].entry_reconstruction_status = "complete";
          AC_L1_CLOSED[next].paired_entry_status = "paired_entry_found";
-         AC_L1_CLOSED[next].source_quality = "complete";
+         AC_L1_CLOSED[next].source_quality = "core_complete";
+         AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT++;
       }
 
       ulong entry_order = 0;
@@ -281,7 +290,7 @@ void AC_L1ScanHistory()
          if(AC_L1_CLOSED[next].entry_price <= 0.0 && order_entry > 0.0)
          {
             AC_L1_CLOSED[next].entry_price = order_entry;
-            AC_L1_CLOSED[next].entry_reconstruction_status = "partial";
+            AC_L1_CLOSED[next].entry_reconstruction_status = "partial_order_entry_only";
          }
          if(sl > 0.0)
          {
@@ -295,11 +304,21 @@ void AC_L1ScanHistory()
          }
       }
 
-      if(AC_L1_CLOSED[next].entry_reconstruction_status != "complete" || AC_L1_CLOSED[next].stop_loss <= 0.0 || AC_L1_CLOSED[next].take_profit <= 0.0)
+      if(AC_L1_CLOSED[next].stop_loss > 0.0 && AC_L1_CLOSED[next].take_profit > 0.0)
+         AC_L1_CLOSED[next].order_context_status = "protective_context_complete";
+      else if(AC_L1_CLOSED[next].entry_order_ticket > 0 || AC_L1_CLOSED[next].stop_loss > 0.0 || AC_L1_CLOSED[next].take_profit > 0.0)
+         AC_L1_CLOSED[next].order_context_status = "protective_context_partial";
+
+      if(AC_L1_CLOSED[next].entry_reconstruction_status != "complete")
       {
-         AC_L1_CLOSED[next].source_quality = "partial";
+         AC_L1_CLOSED[next].source_quality = "partial_core";
          AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
-         AC_L1_HISTORY_QUALITY = "partial";
+         AC_L1_HISTORY_QUALITY = "partial_core";
+      }
+      else if(AC_L1_CLOSED[next].order_context_status != "protective_context_complete")
+      {
+         AC_L1_ORDER_CONTEXT_PARTIAL_COUNT++;
+         if(AC_L1_HISTORY_QUALITY == "complete") AC_L1_HISTORY_QUALITY = "core_complete_order_context_partial";
       }
 
       AC_L1AddClosedStats(AC_L1_CLOSED[next]);
