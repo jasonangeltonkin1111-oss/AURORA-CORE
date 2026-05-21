@@ -20,6 +20,8 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.worker_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.install_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "";
    AC_EXTERNAL_WORKER_STATUS.result_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "";
