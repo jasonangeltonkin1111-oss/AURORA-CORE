@@ -84,11 +84,26 @@ void AC_RefreshExternalWorkerStatus()
    }
 
    if(AC_EXTERNAL_WORKER_STATUS.result_present && AC_EXTERNAL_WORKER_STATUS.result_manifest_present)
-      AC_EXTERNAL_WORKER_STATUS.result_status = "Result files present - validation pending future pass";
+   {
+      AC_EXTERNAL_WORKER_STATUS.result_status = "Result files present - validating";
+      AC_ValidateExternalWorkerResult();
+      if(AC_EXTERNAL_WORKER_STATUS.accepted_result)
+         AC_EXTERNAL_WORKER_STATUS.result_status = "Accepted";
+      else
+         AC_EXTERNAL_WORKER_STATUS.result_status = "Rejected";
+   }
    else if(AC_EXTERNAL_WORKER_STATUS.result_present || AC_EXTERNAL_WORKER_STATUS.result_manifest_present)
+   {
       AC_EXTERNAL_WORKER_STATUS.result_status = "Partial result files present - rejected until manifest/result pair complete";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result and manifest pair not complete";
+   }
    else
+   {
       AC_EXTERNAL_WORKER_STATUS.result_status = "No result yet";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Pending";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "No result files present";
+   }
 
    if(AC_L4_READY)
       AC_ExportExternalWorkerSnapshot();
