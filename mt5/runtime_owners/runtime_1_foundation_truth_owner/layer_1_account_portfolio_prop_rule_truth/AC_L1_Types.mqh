@@ -52,6 +52,7 @@ struct AC_L1ClosedTradeRow
    double profit;
    double commission;
    double swap;
+   double fee;
    double net_result;
    long magic;
    string comment;
@@ -59,6 +60,7 @@ struct AC_L1ClosedTradeRow
    string source_quality;
    string entry_reconstruction_status;
    string paired_entry_status;
+   string order_context_status;
    string stop_loss_source;
    string take_profit_source;
 };
