@@ -258,8 +258,41 @@ AC_WriteResult AC_DeleteFileIfExists(const string final_path)
    result.ok = !result.final_exists;
    result.move_ok = result.ok;
    result.status = result.ok ? "deleted" : "delete_verify_failed";
-   result.detail = result.ok ? "duplicate_route_cleanup_complete" : "file_still_exists_after_delete";
+   result.detail = result.ok ? "safe_file_cleanup_complete" : "file_still_exists_after_delete";
    return result;
+}
+
+string AC_CleanupLegacyPlaceholderFiles()
+{
+   string targets[8];
+   targets[0] = AC_PlaceholderPath(AC_DossiersFolder());
+   targets[1] = AC_PlaceholderPath(AC_DossiersOpenFolder());
+   targets[2] = AC_PlaceholderPath(AC_DossiersClosedFolder());
+   targets[3] = AC_PlaceholderPath(AC_DossiersUnknownFolder());
+   targets[4] = AC_PlaceholderPath(AC_SelectionDeskFolder());
+   targets[5] = AC_PlaceholderPath(AC_SelectionGroupsFolder());
+   targets[6] = AC_PlaceholderPath(AC_SelectionGlobalFolder());
+   targets[7] = AC_PlaceholderPath(AC_WorkbenchFolder());
+
+   int deleted = 0;
+   int failed = 0;
+   string failed_paths = "";
+   for(int i = 0; i < 8; i++)
+   {
+      AC_WriteResult result = AC_DeleteFileIfExists(targets[i]);
+      if(result.status == "deleted") deleted++;
+      else if(!result.ok)
+      {
+         failed++;
+         failed_paths += targets[i] + "|error=" + IntegerToString(result.error_code) + ";";
+      }
+   }
+
+   string status = failed == 0 ? "complete" : "degraded";
+   return "placeholder_cleanup_status=" + status
+      + "|deleted=" + IntegerToString(deleted)
+      + "|failed=" + IntegerToString(failed)
+      + "|failed_paths=" + failed_paths;
 }
 
 string AC_WriteResultLine(const string surface, const AC_WriteResult &result)
