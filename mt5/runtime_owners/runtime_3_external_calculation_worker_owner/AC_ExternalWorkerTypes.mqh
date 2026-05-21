@@ -9,6 +9,8 @@ struct AC_ExternalWorkerStatus
    bool exe_present;
    bool exe_flat_present;
    bool exe_folder_present;
+   bool install_status_file_present;
+   bool worker_installed;
    bool heartbeat_present;
    bool result_manifest_present;
    bool result_present;
@@ -16,6 +18,12 @@ struct AC_ExternalWorkerStatus
    string owner_name;
    string worker_status;
    string install_status;
+   string install_status_source;
+   string install_validation_status;
+   string install_validation_reason;
+   string install_worker_version;
+   string install_flat_exe_present;
+   string install_packaged_exe_present;
    string heartbeat_status;
    string heartbeat_validation_status;
    string heartbeat_validation_reason;
@@ -34,6 +42,7 @@ struct AC_ExternalWorkerStatus
    string missing_reason;
    string expected_exe_path;
    string expected_folder_exe_path;
+   string install_status_path;
    string required_path;
    string heartbeat_path;
    string result_path;
@@ -44,6 +53,7 @@ struct AC_ExternalWorkerStatus
    datetime last_launch_attempt_time;
    int heartbeat_age_seconds;
    int result_age_seconds;
+   int install_status_age_seconds;
    int launch_attempts;
    int last_error;
    int flat_exe_error;
