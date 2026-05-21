@@ -33,6 +33,12 @@ bool AC_L3GetDouble(const string symbol, const ENUM_SYMBOL_INFO_DOUBLE prop, dou
    return false;
 }
 
+bool AC_L3GetOptionalInteger(const string symbol, const ENUM_SYMBOL_INFO_INTEGER prop, long &value)
+{
+   ResetLastError();
+   return SymbolInfoInteger(symbol, prop, value);
+}
+
 bool AC_L3GetString(const string symbol, const ENUM_SYMBOL_INFO_STRING prop, string &value, const string field)
 {
    ResetLastError();
@@ -96,12 +102,15 @@ void AC_L3InitSymbol(AC_L3SymbolSpecs &s, const string symbol)
    s.margin_rate_sell_maintenance = 0.0;
    s.order_calc_margin_buy_ok = false;
    s.order_calc_margin_sell_ok = false;
+   s.margin_min_buy_ok = false;
+   s.margin_min_sell_ok = false;
    s.margin_buy_1lot_account_ccy = 0.0;
    s.margin_sell_1lot_account_ccy = 0.0;
    s.margin_buy_minlot_account_ccy = 0.0;
    s.margin_sell_minlot_account_ccy = 0.0;
    s.order_calc_profit_buy_ok = false;
    s.order_calc_profit_sell_ok = false;
+   s.value_from_tick_value = false;
    s.money_per_point_buy_1lot = 0.0;
    s.money_per_point_sell_1lot = 0.0;
    s.money_per_tick_buy_1lot = 0.0;
@@ -110,6 +119,7 @@ void AC_L3InitSymbol(AC_L3SymbolSpecs &s, const string symbol)
    s.money_per_price_unit_sell_1lot = 0.0;
    s.tick_value_crosscheck_status = "Not available";
    s.price_reference_status = "Not available";
+   s.value_source = "Not available";
    s.isin = "";
    s.exchange = "";
    s.sector = "";
@@ -130,7 +140,7 @@ void AC_L3InitSymbol(AC_L3SymbolSpecs &s, const string symbol)
    s.sec_edgar_query = "Not available";
    s.finviz_query = "Not available";
    s.morningstar_query = "Not available";
-   s.link_truth = "Lookup hints only - not verified";
+   s.link_truth = "Literal lookup links - not verified market data";
    s.required_fields_ok = 0;
    s.required_fields_failed = 0;
    s.missing_required_fields = "";
@@ -144,8 +154,8 @@ void AC_L3InitSymbol(AC_L3SymbolSpecs &s, const string symbol)
 
 void AC_L3FinalizeCounters(const AC_L3SymbolSpecs &s)
 {
-   if(s.scan_state == "Skipped Closed") { AC_L3_SKIPPED_CLOSED++; return; }
    if(s.scan_state == "Skipped Unknown") { AC_L3_SKIPPED_UNKNOWN++; return; }
+   if(s.l2_market_state == "closed") AC_L3_SKIPPED_CLOSED++;
 
    AC_L3_SCANNED_COUNT++;
    if(s.source_quality == "Specs Ready") AC_L3_SPEC_READY_COUNT++;
@@ -182,25 +192,19 @@ void AC_L3ScanOneSymbol(const string symbol)
    ArrayResize(AC_L3_SYMBOLS, next + 1);
    AC_L3InitSymbol(AC_L3_SYMBOLS[next], symbol);
 
-   if(AC_L3_SYMBOLS[next].l2_market_state == "closed")
-   {
-      AC_L3_SYMBOLS[next].scan_state = "Skipped Closed";
-      AC_L3_SYMBOLS[next].source_quality = "Skipped - Market Closed";
-      AC_L3_SYMBOLS[next].failure_reason = "Layer 2 says market is closed. Specs wait until the symbol reopens.";
-      AC_L3FinalizeCounters(AC_L3_SYMBOLS[next]);
-      return;
-   }
-   if(!AC_L3_SYMBOLS[next].l2_allows_deeper_layers)
+   if(AC_L3_SYMBOLS[next].l2_market_state == "unknown")
    {
       AC_L3_SYMBOLS[next].scan_state = "Skipped Unknown";
       AC_L3_SYMBOLS[next].source_quality = "Skipped - Market Unknown";
-      AC_L3_SYMBOLS[next].failure_reason = "Layer 2 did not confirm an open market.";
+      AC_L3_SYMBOLS[next].failure_reason = "Layer 2 did not establish a known market state.";
       AC_L3FinalizeCounters(AC_L3_SYMBOLS[next]);
       return;
    }
 
    AC_L3_ELIGIBLE_FROM_L2++;
    AC_L3_SYMBOLS[next].scan_state = "Scanned";
+   if(AC_L3_SYMBOLS[next].l2_market_state == "closed")
+      AC_L3_SYMBOLS[next].failure_reason = "Layer 2 market is closed; Layer 3 specs still scanned. Layer 4 is the first cutoff layer. ";
 
    AC_L3GetString(symbol, SYMBOL_DESCRIPTION, AC_L3_SYMBOLS[next].description, "Description");
    AC_L3GetString(symbol, SYMBOL_PATH, AC_L3_SYMBOLS[next].path, "Path");
@@ -221,7 +225,8 @@ void AC_L3ScanOneSymbol(const string symbol)
    AC_L3GetInteger(symbol, SYMBOL_CHART_MODE, AC_L3_SYMBOLS[next].chart_mode, "Chart mode", AC_L3_SYMBOLS[next]);
    long spread_float_int = 0;
    if(AC_L3GetInteger(symbol, SYMBOL_SPREAD_FLOAT, spread_float_int, "Spread type", AC_L3_SYMBOLS[next])) AC_L3_SYMBOLS[next].spread_float = (spread_float_int != 0);
-   AC_L3GetInteger(symbol, SYMBOL_SPREAD, AC_L3_SYMBOLS[next].spread_points_spec, "Spread points", AC_L3_SYMBOLS[next]);
+   long spread_points = 0;
+   if(AC_L3GetOptionalInteger(symbol, SYMBOL_SPREAD, spread_points)) AC_L3_SYMBOLS[next].spread_points_spec = spread_points;
    AC_L3GetInteger(symbol, SYMBOL_SWAP_MODE, AC_L3_SYMBOLS[next].swap_mode, "Swap mode", AC_L3_SYMBOLS[next]);
    AC_L3GetInteger(symbol, SYMBOL_SWAP_ROLLOVER3DAYS, AC_L3_SYMBOLS[next].swap_rollover3days, "Swap rollover day", AC_L3_SYMBOLS[next]);
 
