@@ -4,10 +4,12 @@
 bool AC_L1FindEntryDealForPosition(const long position_id,
                                    const int close_deal_index,
                                    datetime &entry_time,
-                                   double &entry_price)
+                                   double &entry_price,
+                                   string &entry_side)
 {
    entry_time = 0;
    entry_price = 0.0;
+   entry_side = "unknown";
    if(position_id <= 0) return false;
 
    for(int i = close_deal_index - 1; i >= 0; i--)
@@ -18,9 +20,32 @@ bool AC_L1FindEntryDealForPosition(const long position_id,
       if(HistoryDealGetInteger(ticket, DEAL_ENTRY) != DEAL_ENTRY_IN) continue;
       entry_time = (datetime)HistoryDealGetInteger(ticket, DEAL_TIME);
       entry_price = HistoryDealGetDouble(ticket, DEAL_PRICE);
+      entry_side = AC_L1DealTypeText(HistoryDealGetInteger(ticket, DEAL_TYPE));
       return (entry_time > 0 || entry_price > 0.0);
    }
    return false;
+}
+
+void AC_L1PositionCostSums(const long position_id,
+                           double &commission_sum,
+                           double &swap_sum,
+                           double &fee_sum)
+{
+   commission_sum = 0.0;
+   swap_sum = 0.0;
+   fee_sum = 0.0;
+   if(position_id <= 0) return;
+
+   int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++)
+   {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_POSITION_ID) != position_id) continue;
+      commission_sum += HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      swap_sum += HistoryDealGetDouble(ticket, DEAL_SWAP);
+      fee_sum += HistoryDealGetDouble(ticket, DEAL_FEE);
+   }
 }
 
 bool AC_L1FindHistoryOrderForPosition(const long position_id,
@@ -177,7 +202,7 @@ void AC_L1ScanHistory()
 
    AC_L1_HISTORY_STATUS = "available";
    AC_L1_HISTORY_QUALITY = "complete";
-   AC_L1_HISTORY_NOTE = "history selected from broker account history; closed trades are reconstructed from exit deals and same-position entry/order records when available";
+   AC_L1_HISTORY_NOTE = "history selected from broker account history; closed rows are reconstructed from exit deals plus same-position entry/order/cost records";
    AC_L1_HISTORY_DEALS_TOTAL = HistoryDealsTotal();
    AC_L1_HISTORY_ORDERS_TOTAL = HistoryOrdersTotal();
 
@@ -209,9 +234,9 @@ void AC_L1ScanHistory()
       AC_L1_CLOSED[next].stop_loss = 0.0;
       AC_L1_CLOSED[next].take_profit = 0.0;
       AC_L1_CLOSED[next].profit = HistoryDealGetDouble(deal_ticket, DEAL_PROFIT);
-      AC_L1_CLOSED[next].commission = HistoryDealGetDouble(deal_ticket, DEAL_COMMISSION);
-      AC_L1_CLOSED[next].swap = HistoryDealGetDouble(deal_ticket, DEAL_SWAP);
-      AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap;
+      double fee_sum = 0.0;
+      AC_L1PositionCostSums(AC_L1_CLOSED[next].position_id, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, fee_sum);
+      AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap + fee_sum;
       AC_L1_CLOSED[next].magic = HistoryDealGetInteger(deal_ticket, DEAL_MAGIC);
       AC_L1_CLOSED[next].comment = HistoryDealGetString(deal_ticket, DEAL_COMMENT);
       AC_L1_CLOSED[next].close_reason = HistoryDealGetInteger(deal_ticket, DEAL_REASON);
@@ -223,10 +248,12 @@ void AC_L1ScanHistory()
 
       datetime entry_time = 0;
       double entry_price = 0.0;
-      if(AC_L1FindEntryDealForPosition(AC_L1_CLOSED[next].position_id, i, entry_time, entry_price))
+      string entry_side = "unknown";
+      if(AC_L1FindEntryDealForPosition(AC_L1_CLOSED[next].position_id, i, entry_time, entry_price, entry_side))
       {
          AC_L1_CLOSED[next].entry_time = entry_time;
          AC_L1_CLOSED[next].entry_price = entry_price;
+         AC_L1_CLOSED[next].side = entry_side;
          AC_L1_CLOSED[next].entry_reconstruction_status = "complete";
          AC_L1_CLOSED[next].paired_entry_status = "paired_entry_found";
          AC_L1_CLOSED[next].source_quality = "complete";
