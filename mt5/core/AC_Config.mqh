@@ -2,12 +2,12 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "l1_compile_compatibility_repair";
-static const string AC_BUILD_VERSION      = "1.025";
-static const string AC_UPGRADE_ID         = "L1_DEAL_FEE_COMPILE_COMPAT_REPAIR";
-static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 1 account-history compile compatibility by isolating DEAL_FEE access behind a safe helper while preserving the split Runtime 1 owner structure.";
+static const string AC_BUILD_PHASE        = "l0_l1_compile_and_schema_cache_repair";
+static const string AC_BUILD_VERSION      = "1.026";
+static const string AC_UPGRADE_ID         = "L0_L1_COMPILE_SCHEMA_CACHE_REPAIR";
+static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 1 account-history compile compatibility and forces one-time Dossier shell rebuild when the embedded Dossier schema changes.";
 static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account, portfolio, current exposure, reconstructed closed history, canceled order context, Board account report, Account Status report, and per-symbol Dossier slices. No Layer 2 open/closed, specs, quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; verify AC_L1_Scan.mqh no longer rejects DEAL_FEE/HistoryDealGetDouble usage; run EA; inspect Market Board for readable Layer 1 account report; inspect Account Status for full closed history, symbol/day/direction summaries, and reconstruction quality; inspect Dossiers for symbol-specific Layer 1 context only.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; verify AC_L1_Scan.mqh no longer rejects DEAL_FEE/HistoryDealGetDouble usage; run EA; confirm Dossiers rebuild once for dossier_shell_schema_version change and then cache without rewrite storms; inspect Market Board, Account Status, Workbench, Manifest, and symbol Dossiers.";
 static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_layer1_scan_addendum";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
@@ -18,6 +18,7 @@ static const string AC_LAYER_0_2_NAME     = "Layer 0.2 - Scheduler / Heartbeat /
 static const string AC_LAYER_0_4_NAME     = "Layer 0.4 - Governance / Manifest / Telemetry";
 static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier Shell Foundation";
 static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Prop Rule Truth";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.026_l1_account_slices";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
