@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.028"
-#property description "AURORA CORE - L2 market open closed truth"
+#property version   "1.029"
+#property description "AURORA CORE - L2 runtime polish before L3 plan"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -163,6 +163,10 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_AddMicroLog("ensure_runtime_folders", phase_start, AC_SNAPSHOT.folder_create_status);
 
    phase_start = GetTickCount();
+   AC_SNAPSHOT.placeholder_status = AC_CleanupLegacyPlaceholderFiles();
+   AC_AddMicroLog("cleanup_legacy_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
+
+   phase_start = GetTickCount();
    AC_RefreshLayer1AccountTruth();
    AC_AddMicroLog("refresh_layer1_account_truth", phase_start, AC_L1_SCAN_STATUS);
 
@@ -177,10 +181,6 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
    AC_RecordWriteProblem("Dossier Universe", dossier_batch_write);
    AC_AddMicroLog("l0_l2_dossier_universe", phase_start, dossier_batch_write.status);
-
-   phase_start = GetTickCount();
-   AC_SNAPSHOT.placeholder_status = "route_folders_ensured_no_placeholder_file_spam";
-   AC_AddMicroLog("skip_placeholder_file_spam", phase_start, AC_SNAPSHOT.placeholder_status);
 
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
