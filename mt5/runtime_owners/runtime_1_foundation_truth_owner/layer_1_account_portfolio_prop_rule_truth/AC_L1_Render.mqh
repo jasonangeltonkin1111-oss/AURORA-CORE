@@ -12,6 +12,21 @@ string AC_L1DurationText(const long seconds)
    return IntegerToString((int)minutes) + "m";
 }
 
+string AC_L1ClosedTradeQualityText(const AC_L1ClosedTradeRow &row)
+{
+   string outcome = "FLAT";
+   if(row.net_result > 0.0) outcome = "WIN";
+   else if(row.net_result < 0.0) outcome = "LOSS";
+
+   bool core_ok = (row.entry_reconstruction_status == "complete" || row.source_quality == "core_complete");
+   bool order_ok = (row.order_context_status == "protective_context_complete");
+
+   if(core_ok && order_ok) return outcome + "_OK";
+   if(core_ok) return outcome + "_OK_SLTP_MISSING";
+   if(row.entry_reconstruction_status == "partial_order_entry_only") return outcome + "_PARTIAL_ENTRY";
+   return outcome + "_CORE_PARTIAL";
+}
+
 string AC_L1ClosedTradeLine(const AC_L1ClosedTradeRow &row)
 {
    return AC_L1PadRight(AC_L1ShortTimeText(row.close_time), 17)
@@ -21,7 +36,7 @@ string AC_L1ClosedTradeLine(const AC_L1ClosedTradeRow &row)
       + AC_L1PadLeft(AC_L1PriceText(row.entry_price), 12)
       + AC_L1PadLeft(AC_L1PriceText(row.close_price), 12)
       + AC_L1PadLeft(AC_L1MoneyText(row.net_result), 10)
-      + "  " + row.source_quality;
+      + "  " + AC_L1ClosedTradeQualityText(row);
 }
 
 string AC_L1ClosedTradeDetailLine(const AC_L1ClosedTradeRow &row)
@@ -258,7 +273,7 @@ void AC_BuildLayer1Texts()
    for(int fo = 0; fo < ArraySize(AC_L1_PENDING); fo++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PendingLine(AC_L1_PENDING[fo]) + "\r\n";
    if(ArraySize(AC_L1_PENDING) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Full\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry       Close       Net  Quality | Cost/Core/Order Context\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry       Close       Net  Result | Cost/Core/Order Context\r\n";
    for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
    if(ArraySize(AC_L1_CLOSED) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Full\r\n";
@@ -313,7 +328,7 @@ string AC_Layer1DossierSection(const string symbol)
    text += "symbol_win_rate=" + AC_L1PercentText(symbol_win_rate) + "\r\n";
 
    text += "\r\nSymbol Closed Trades\r\n";
-   text += "Time             Symbol        Side      Vol       Entry       Close       Net  Quality\r\n";
+   text += "Time             Symbol        Side      Vol       Entry       Close       Net  Result\r\n";
    int shown = 0;
    for(int c = 0; c < ArraySize(AC_L1_CLOSED) && shown < AC_DOSSIER_SYMBOL_ACTIVITY_MAX_ROWS; c++)
    {
