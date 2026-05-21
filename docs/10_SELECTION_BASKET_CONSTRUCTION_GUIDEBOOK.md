@@ -25,7 +25,7 @@ Selection is not permission.
 Folder parents are stable ownership surfaces.
 Ranking/order/Top-N numbers are child-file content, not parent-folder names.
 Ranking Group is the selection/cap/diversification grouping field.
-Market Segment is classification detail, not automatically the ranking bucket.
+Market Segment is classification detail, not automatically the ranking_group.
 ```
 
 The enemy:
@@ -74,7 +74,6 @@ Old names are retired for active source fields, route names, and publication lab
 ```text
 major_bucket
 minor_bucket
-ranking_group
 bucket_top5
 sub_bucket_top5
 ```
@@ -166,7 +165,7 @@ Use ranking_group for selection/cap/diversification rules unless a later owner e
 
 ## 4. Selection Desk Folder Contract
 
-Runtime 7 Publication Owner owns the folder routes.
+Publication / FileIO / Route Service owns physical route publication; Selection/Basket owners own selection truth.
 
 Allowed current stable parent folders:
 
@@ -532,7 +531,6 @@ Retired active names:
 ```text
 major_bucket
 minor_bucket
-ranking_group
 bucket_top5
 sub_bucket_top5
 ```

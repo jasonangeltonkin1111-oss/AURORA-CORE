@@ -52,7 +52,7 @@ symbol header contract
 runtime owner summary contract
 foundation truth sections
 surface score sections
-bucket identity and rank sections
+taxonomy and ranking_group identity/rank sections
 basket / Global Top 10 sections
 selected evidence sections
 permission / alert sections
@@ -76,7 +76,7 @@ Board layout
 Governance schemas
 account truth computation
 surface score computation
-bucket classification computation
+taxonomy / ranking_group classification computation
 Global Top 10 computation
 selected evidence computation
 permission decisions
@@ -132,14 +132,14 @@ It should show:
 
 ```text
 symbol identity
-bucket identity
+taxonomy / ranking_group identity
 account context
 market/session state
 broker specs
 quote truth
 basic gate result
 surface scores
-bucket rank
+ranking_group rank
 basket state
 selected evidence state
 permission state
@@ -169,7 +169,7 @@ Publication prints.
 Board summarizes.
 Dossier explains per symbol.
 Governance proves.
-Runtime Owners own truth.
+Trading/System Truth Owners own truth; System Services publish/render/prove truth.
 ```
 
 Board answers:
@@ -203,7 +203,7 @@ Minimum Dossier shell:
 ```text
 symbol
 server/account context
-bucket identity or unknown state
+taxonomy / ranking_group identity or unknown state
 market open/closed state
 broker spec summary
 quote freshness summary
@@ -286,7 +286,7 @@ Taxonomy / Ranking Group Owner status
 Basket Selection Owner status
 Selected Evidence Owner status
 Permission / Alert Owner status
-Publication Owner status
+Publication / FileIO / Route Service status
 Validation / Outcome Owner status later
 ```
 
@@ -361,7 +361,7 @@ Dossier must not imply that a high score means buy/sell.
 
 ---
 
-## 12. Bucket Identity and Rank Sections
+## 12. Taxonomy and Ranking Group Identity / Rank Sections
 
 Bucket sections include:
 
@@ -371,9 +371,9 @@ market_segment
 ranking_group
 classification_source
 classification_confidence
-main_bucket_rank
-sub_bucket_rank
-aggregation_rank
+ranking_group_rank
+market_segment_rank
+asset_class_rank
 ranking_group_top_n_visible_flag
 backup_rank
 ranking_group_degraded_reason
@@ -739,14 +739,14 @@ prop-firm safe
 
 ## 26. Dossier Surface Boundary
 
-The Dossier consumes truth from Runtime Owners.
+The Dossier consumes truth from Trading/System Truth Owners and System Services.
 
 It may not recompute:
 
 ```text
 account state
 surface score
-bucket rank
+ranking_group rank
 Global Top 10
 OHLC evidence
 permission state
@@ -757,7 +757,7 @@ If a required truth is missing:
 
 ```text
 show missing/degraded state
-show source owner
+show source owner/service
 show dependency
 ```
 
