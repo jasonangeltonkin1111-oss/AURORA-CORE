@@ -18,7 +18,7 @@ struct AC_L4SymbolPacket
    double bid;
    double ask;
    double last;
-   long volume;
+   ulong volume;
    double volume_real;
 
    bool bid_valid;
