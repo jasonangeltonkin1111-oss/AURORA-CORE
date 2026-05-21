@@ -2,12 +2,12 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "l1_account_portfolio_status";
-static const string AC_BUILD_VERSION      = "1.023";
-static const string AC_UPGRADE_ID         = "L1_ACCOUNT_PORTFOLIO_STATUS";
-static const string AC_UPGRADE_SUMMARY    = "Adds Layer 1 account and portfolio status while preserving L0 cached universe and write-if-changed Board publication.";
-static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account and portfolio status.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5 and inspect Market Board, Account Status, Workbench, and symbol Dossiers.";
+static const string AC_BUILD_PHASE        = "l1_split_account_portfolio_history_truth";
+static const string AC_BUILD_VERSION      = "1.024";
+static const string AC_UPGRADE_ID         = "L1_SPLIT_ACCOUNT_PORTFOLIO_HISTORY_TRUTH";
+static const string AC_UPGRADE_SUMMARY    = "Refactors Layer 1 into smaller owner-owned MQH files and upgrades account history rendering with Sentinel-style trade reconstruction quality labels.";
+static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account, portfolio, current exposure, reconstructed closed history, canceled order context, Board account report, Account Status report, and per-symbol Dossier slices. No Layer 2 open/closed, specs, quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; inspect Market Board for readable Layer 1 account report with closed trades before canceled orders; inspect Account Status for full closed history, symbol/day/direction summaries, and reconstruction quality; inspect Dossiers for symbol-specific Layer 1 context only.";
 static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_layer1_scan_addendum";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
