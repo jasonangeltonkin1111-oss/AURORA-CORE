@@ -363,7 +363,7 @@ Dossier must not imply that a high score means buy/sell.
 
 ## 12. Taxonomy and Ranking Group Identity / Rank Sections
 
-Bucket sections include:
+Taxonomy / ranking_group sections include:
 
 ```text
 market_group

@@ -15,7 +15,7 @@ Key guidebooks:
 - `docs/14_MT5_FUNCTION_GUIDEBOOK.md`
 
 TODO_NEXT_PASS:
-- Harmonize remaining docs not touched in this pass (including historical naming references in docs/09 and adjacent legacy-context pages).
+- Harmonize remaining docs not touched in this pass (adjacent legacy-context pages still carrying historical terminology outside this cleanup scope).
 
 ## Folder Governance
 - **Purpose:** keep doctrine/runbooks for human reference and system/trading architecture explanation.
