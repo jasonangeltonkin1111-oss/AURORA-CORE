@@ -1,6 +1,10 @@
 #ifndef AC_COMMON_TYPES_MQH
 #define AC_COMMON_TYPES_MQH
 
+#ifndef DEAL_TYPE_SWAP
+#define DEAL_TYPE_SWAP -1000001
+#endif
+
 string AC_UlongToText(const ulong value)
 {
    return StringFormat("%I64u", value);
