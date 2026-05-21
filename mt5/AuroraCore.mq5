@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.036"
-#property description "AURORA CORE - L4 market watch truth"
+#property version   "1.037"
+#property description "AURORA CORE - external worker foundation"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -14,6 +14,7 @@
 #include "runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_BrokerSpecsTruth.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_4_market_watch_truth/AC_MarketWatchTruth.mqh"
+#include "runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerOwner.mqh"
 #include "runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
@@ -57,7 +58,7 @@ void AC_ResetSnapshot()
    AC_SNAPSHOT.file_publication_blocked = false;
    AC_SNAPSHOT.degraded_reason = "";
    AC_SNAPSHOT.blocked_reason = "";
-   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.5\r\n";
+   AC_MICRO_LOG = "schema_name=micro_log_snapshot\r\nschema_version=v0.6\r\n";
    AC_Layer0InitStatus(AC_L0_STATUS);
 }
 
@@ -85,8 +86,10 @@ string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
       + AC_Layer2StatusRow() + "\r\n"
       + AC_Layer3StatusRow() + "\r\n"
       + AC_Layer4StatusRow() + "\r\n"
+      + AC_ExternalWorkerStatusRow() + "\r\n"
       + AC_UniverseStatusRow() + "\r\n\r\n"
-      + AC_Layer0WorkbenchText(layer0_status);
+      + AC_Layer0WorkbenchText(layer0_status)
+      + AC_ExternalWorkerWorkbenchSection();
 }
 
 string AC_BuildRuntimeStatusText()
@@ -172,6 +175,11 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_AddMicroLog("cleanup_legacy_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
 
    phase_start = GetTickCount();
+   AC_RefreshExternalWorkerStatus();
+   AC_WriteResult worker_required_write = AC_WriteExternalWorkerRequired();
+   AC_AddMicroLog("external_worker_status_and_required", phase_start, worker_required_write.status);
+
+   phase_start = GetTickCount();
    AC_RefreshLayer1AccountTruth();
    AC_AddMicroLog("refresh_layer1_account_truth", phase_start, AC_L1_SCAN_STATUS);
 
@@ -211,6 +219,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
+   manifest += AC_ManifestRow("External Worker Required", worker_required_write, AC_SNAPSHOT, "worker_required_control") + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
    string diagnostics = "";
@@ -221,6 +230,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
    diagnostics += "board_dossier_renderer_owner=" + AC_BOARD_DOSSIER_RENDERER_OWNER + "\r\n";
    diagnostics += "foundation_truth_owner=" + AC_RUNTIME1_OWNER + "\r\n";
+   diagnostics += "external_worker_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    diagnostics += "timer_setup_status=" + AC_SNAPSHOT.timer_setup_status + "\r\n";
    diagnostics += "timer_setup_error=" + IntegerToString(AC_SNAPSHOT.timer_setup_error) + "\r\n";
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
@@ -230,7 +240,15 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
+   diagnostics += "external_worker_required_write=" + AC_WriteResultLine("External Worker Required", worker_required_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
+   diagnostics += "external_worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
+   diagnostics += "external_worker_install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
+   diagnostics += "external_worker_expected_exe=" + AC_ExternalWorkerExePath() + "\r\n";
+   diagnostics += "external_worker_required_path=" + AC_ExternalWorkerRequiredPath() + "\r\n";
+   diagnostics += "external_worker_authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
+   diagnostics += "external_worker_popup_alerts=false\r\n";
+   diagnostics += "external_worker_core_blocking=false\r\n";
    diagnostics += "layer1_scan_status=" + AC_L1_SCAN_STATUS + "\r\n";
    diagnostics += "layer1_scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS) + "\r\n";
    diagnostics += "layer2_scan_status=" + AC_L2_SCAN_STATUS + "\r\n";
@@ -256,6 +274,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer2_to_layer3_contract=layer3_scans_known_open_and_closed_symbols_unknown_symbols_may_stop_earlier\r\n";
    diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "layer4_owner_contract=runtime1_foundation_truth_symbolinfotick_marketwatch_only_no_history_no_dom_no_indicators_no_ranking_no_permission\r\n";
+   diagnostics += "external_worker_contract=runtime3_relationship_only_workbench_status_control_file_no_popup_no_launch_yet_no_permission_no_board_dossier_authority\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_not_trader_bloat\r\n";
    diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_L3_or_L4\r\n";
@@ -266,12 +285,13 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "l4_dossier_refresh_seconds=" + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + "\r\n";
    diagnostics += "l4_top_list_refresh_seconds=" + IntegerToString(AC_L4_TOP_LIST_REFRESH_SECONDS) + "\r\n";
    diagnostics += "calculation_runtime_refresh_seconds=" + IntegerToString(AC_CALCULATION_RUNTIME_REFRESH_SECONDS) + "\r\n";
+   diagnostics += "external_worker_health_check_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS) + "\r\n";
    diagnostics += "experimental_timer_100ms=" + IntegerToString(AC_EXPERIMENTAL_TIMER_100MS) + "\r\n";
    diagnostics += "experimental_timer_10ms=" + IntegerToString(AC_EXPERIMENTAL_TIMER_10MS) + "\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_known_market_state_truth_plus_L3_broker_specs_value_truth_plus_L4_live_marketwatch_truth_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_known_market_state_truth_plus_L3_broker_specs_value_truth_plus_L4_live_marketwatch_truth_plus_runtime3_external_worker_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
@@ -291,6 +311,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Diagnostics", diagnostics_write, AC_SNAPSHOT, "diagnostics") + "\r\n";
+   manifest += AC_ManifestRow("External Worker Required", worker_required_write, AC_SNAPSHOT, "worker_required_control") + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? manifest_write.status : manifest_write.status;
    AC_ApplyLateWriteStatus("Manifest Final", manifest_write);
@@ -332,7 +353,7 @@ int OnInit()
 
 void OnTimer()
 {
-   if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan())
+   if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan() || AC_ExternalWorkerShouldCheck())
    {
       AC_PublishRuntime0Full(false);
       return;
@@ -359,6 +380,7 @@ void OnDeinit(const int reason)
    diagnostics += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    diagnostics += "runtime_owner=" + AC_RUNTIME0_OWNER + "\r\n";
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
+   diagnostics += "external_worker_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    diagnostics += "deinit_reason=" + IntegerToString(reason) + "\r\n";
    diagnostics += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
