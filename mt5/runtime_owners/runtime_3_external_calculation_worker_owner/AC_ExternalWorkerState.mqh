@@ -21,6 +21,13 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.install_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Not checked";
    AC_EXTERNAL_WORKER_STATUS.result_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Not checked";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "";
+   AC_EXTERNAL_WORKER_STATUS.result_snapshot_id = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.result_authority = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.result_trade_permission = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.result_payload_checksum = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.result_row_count = 0;
    AC_EXTERNAL_WORKER_STATUS.launch_mode = AC_EXTERNAL_WORKER_LAUNCH_MODE;
    AC_EXTERNAL_WORKER_STATUS.launch_implementation = AC_EXTERNAL_WORKER_LAUNCH_IMPLEMENTATION;
    AC_EXTERNAL_WORKER_STATUS.launch_status = "Not attempted";
