@@ -14,8 +14,8 @@ Key guidebooks:
 - `docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md`
 - `docs/14_MT5_FUNCTION_GUIDEBOOK.md`
 
-TODO next pass enrichment targets:
-03, 05, 06, 08, 10, 11, 12, 14.
+TODO_NEXT_PASS:
+- Harmonize remaining docs not touched in this pass (including historical naming references in docs/09 and adjacent legacy-context pages).
 
 ## Folder Governance
 - **Purpose:** keep doctrine/runbooks for human reference and system/trading architecture explanation.

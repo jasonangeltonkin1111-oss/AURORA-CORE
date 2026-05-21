@@ -229,7 +229,7 @@ Owner:
 
 ```text
 Foundation Truth Owner
-Bucket Intelligence Owner consumes classification-related metadata
+Taxonomy / Ranking Group Owner consumes classification-related metadata
 ```
 
 Purpose:
@@ -747,3 +747,15 @@ Function existence does not equal adoption permission.
 MT5 gives Aurora power.
 Owners, lanes, and evidence decide whether that power is safe to use.
 ```
+
+## Restoration Addendum — Required MT5 Function Family Coverage
+- OHLC/bar pack: `CopyRates`, `MqlRates` (+ CopyOpen/High/Low/Close family where used).
+- Rolling ticks: `CopyTicks`, `CopyTicksRange`.
+- DOM proxy: `MarketBookAdd`, `MarketBookGet`, `MarketBookRelease`, `OnBookEvent`.
+- Indicators: `iATR`, `iBands`, `iMA`, `iStdDev`, `CopyBuffer`, `BarsCalculated`, `IndicatorRelease`.
+- Quote freshness: `SymbolInfoTick`.
+- Session truth: `SymbolInfoSessionTrade`, `SymbolInfoSessionQuote`.
+- Publication/FileIO: `FileOpen`, `FileWrite`, `FileFlush`, `FileMove`, `FileIsExist`, `FolderCreate`.
+- Alerts transport constraints: `SendNotification` limitations where applicable.
+- Validation-later hooks: Strategy Tester / `OnTester` / `TesterStatistics`.
+- Custom symbol/replay functions are future research scope only, not base build scope.
