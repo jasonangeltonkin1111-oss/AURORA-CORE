@@ -8,6 +8,11 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "owner=" + AC_RUNTIME3_OWNER + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "required=" + (AC_EXTERNAL_WORKER_STATUS.required ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "auto_launch_desired=" + (AC_EXTERNAL_WORKER_STATUS.auto_launch_desired ? "true" : "false") + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "launch_mode=" + AC_EXTERNAL_WORKER_STATUS.launch_mode + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "launch_implementation=" + AC_EXTERNAL_WORKER_STATUS.launch_implementation + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "launch_status=" + AC_EXTERNAL_WORKER_STATUS.launch_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "launch_blocker=" + AC_EXTERNAL_WORKER_STATUS.launch_blocker + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "launch_attempts=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.launch_attempts) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "popup_alerts=false\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "authority=" + AC_EXTERNAL_WORKER_STATUS.authority + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
@@ -29,11 +34,14 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "board_alerts=disabled_for_now\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_core_continues_if_worker_missing=true\r\n";
 
-   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.1|source_owner=" + AC_RUNTIME3_OWNER
+   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.2|source_owner=" + AC_RUNTIME3_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|required=" + (AC_EXTERNAL_WORKER_STATUS.required ? "true" : "false")
       + "|auto_launch_desired=" + (AC_EXTERNAL_WORKER_STATUS.auto_launch_desired ? "true" : "false")
+      + "|launch_mode=" + AC_EXTERNAL_WORKER_STATUS.launch_mode
+      + "|launch_implementation=" + AC_EXTERNAL_WORKER_STATUS.launch_implementation
+      + "|launch_status=" + AC_EXTERNAL_WORKER_STATUS.launch_status
       + "|worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status
       + "|install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status
       + "|heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status
@@ -53,7 +61,7 @@ string AC_ExternalWorkerWorkbenchSection()
 string AC_ExternalWorkerStatusRow()
 {
    if(AC_EXTERNAL_WORKER_STATUS_ROW == "")
-      return "schema_name=external_worker_status|schema_version=v0.1|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
+      return "schema_name=external_worker_status|schema_version=v0.2|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
    return AC_EXTERNAL_WORKER_STATUS_ROW;
 }
 
