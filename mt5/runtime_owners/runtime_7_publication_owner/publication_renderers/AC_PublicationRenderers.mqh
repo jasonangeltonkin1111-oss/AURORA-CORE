@@ -11,6 +11,7 @@ static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
 static string AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = "";
 static string AC_L0_CACHED_L2_ROUTE_GENERATION_KEY = "";
 static string AC_L0_CACHED_L3_CACHE_KEY = "";
+static string AC_L0_CACHED_L4_CACHE_KEY = "";
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -89,7 +90,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 1 Account and Portfolio: " + (AC_L1_READY ? "Available" : "Pending") + "\r\n";
    text += "Layer 2 Market State: " + (AC_L2_READY ? AC_L2_SCAN_STATUS : "Pending") + "\r\n";
    text += "Layer 3 Broker Specs and Value: " + (AC_L3_READY ? AC_L3_SCAN_STATUS : "Pending") + "\r\n";
-   text += "Layer 4 Quote, Tick, and Spread: " + (market_state == "open" ? "Pending" : "Cut off until market reopens") + "\r\n";
+   text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
    text += "Layer 5 Basic Gate: " + (market_state == "open" ? "Pending" : "Cut off until market reopens") + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
@@ -97,16 +98,17 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Broker Symbol Exists: Yes\r\n";
    text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
-   text += "Live Quote Truth: " + (market_state == "closed" ? "Unavailable - market closed / no fresh tick" : "Unavailable - Layer 4 not scanned yet") + "\r\n";
+   text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
    text += "Ranking Active: No\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
    text += AC_Layer1DossierSection(symbol);
    text += AC_Layer2DossierSection(symbol);
    text += AC_Layer3DossierSection(symbol);
+   text += AC_Layer4DossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 4 quote, tick, and spread truth\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
+   text += (market_state == "open" ? "Next step: Layer 5 basic eligibility gate after Layer 4 surface truth\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
@@ -258,7 +260,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    {
       status.status = "Complete";
       status.trust_state = "Dossiers Ready";
-      status.main_blocker = "Layer 4 quote, tick, and spread truth not started";
+      status.main_blocker = AC_L4_READY ? "Layer 5 basic eligibility gate not started" : "Layer 4 live quote and spread truth not started";
    }
    else
    {
@@ -272,11 +274,13 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = AC_DOSSIER_SHELL_SCHEMA_VERSION;
    AC_L0_CACHED_L2_ROUTE_GENERATION_KEY = AC_L2_ROUTE_GENERATION_KEY;
    AC_L0_CACHED_L3_CACHE_KEY = AC_L3_CACHE_KEY;
+   AC_L0_CACHED_L4_CACHE_KEY = AC_L4_CACHE_KEY;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
    AC_BuildLayer2Texts();
    AC_BuildLayer3Texts();
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_with_l2_routes_and_l3_sections");
+   AC_BuildLayer4Texts();
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_with_l2_routes_l3_sections_and_l4_open_symbol_sections");
    return AC_L0_CACHED_RESULT;
 }
 
@@ -287,11 +291,12 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && total == AC_L0_CACHED_SYMBOLS_TOTAL
       && AC_L0_CACHED_DOSSIER_SCHEMA_VERSION == AC_DOSSIER_SHELL_SCHEMA_VERSION
       && AC_L0_CACHED_L2_ROUTE_GENERATION_KEY == AC_L2_ROUTE_GENERATION_KEY
-      && AC_L0_CACHED_L3_CACHE_KEY == AC_L3_CACHE_KEY)
+      && AC_L0_CACHED_L3_CACHE_KEY == AC_L3_CACHE_KEY
+      && AC_L0_CACHED_L4_CACHE_KEY == AC_L4_CACHE_KEY)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY);
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
@@ -322,15 +327,17 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 1: Account / Portfolio Truth\r\n";
    text += "Layer 2: Market Open / Closed Truth\r\n";
    text += "Layer 3: Broker Specs and Value Truth\r\n";
-   text += "Next Layer Needed: Layer 4 quote, tick, and spread truth\r\n";
+   text += "Layer 4: Live Quote and Spread Truth\r\n";
+   text += "Next Layer Needed: Layer 5 basic eligibility gate\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
+   text += AC_Layer4BoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
    text += "Specs Known:        " + (AC_L3_READY ? "See Layer 3 readiness" : "No") + "\r\n";
-   text += "Quotes Known:       No\r\n";
+   text += "Quotes Known:       " + (AC_L4_READY ? "See Layer 4 readiness" : "No") + "\r\n";
    text += "Ranking Active:     No\r\n";
    text += "Selection Active:   No\r\n";
    text += "Permission Active:  No\r\n";
@@ -349,7 +356,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.7|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.8|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -370,6 +377,7 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_dossier_shell_schema_version=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION
       + "|cached_l2_route_generation_key=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY
       + "|cached_l3_cache_key=" + AC_L0_CACHED_L3_CACHE_KEY
+      + "|cached_l4_cache_key=" + AC_L0_CACHED_L4_CACHE_KEY
       + "|main_blocker=" + status.main_blocker
       + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
@@ -403,21 +411,24 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l2_route_generation_key=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "\r\n";
    text += "l3_cache_key=" + AC_L3_CACHE_KEY + "\r\n";
    text += "cached_l3_cache_key=" + AC_L0_CACHED_L3_CACHE_KEY + "\r\n";
+   text += "l4_cache_key=" + AC_L4_CACHE_KEY + "\r\n";
+   text += "cached_l4_cache_key=" + AC_L0_CACHED_L4_CACHE_KEY + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "python_worker=not_used_for_L0_L1_L2_or_L3\r\n";
+   text += "python_worker=not_used_for_L0_L1_L2_L3_or_L4\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
    text += AC_Layer3WorkbenchSection();
+   text += AC_Layer4WorkbenchSection();
    return text;
 }
 
 string AC_Layer0FailureAddendumText()
 {
    string text = "";
-   text += "L0_L2_L3_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "L0_L2_L3_L4_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
    text += "----------------------------------------\r\n";
    if(AC_L0_FAILURE_ADDENDUM == "")
       text += "none\r\n";
