@@ -96,8 +96,8 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "----------------------------------------\r\n";
    text += "Broker Symbol Exists: Yes\r\n";
    text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
-   text += "Broker Specs Known: " + (AC_L3_READY && market_state == "open" ? "See Layer 3" : "No") + "\r\n";
-   text += "Live Quote Truth Known: No\r\n";
+   text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
+   text += "Live Quote Truth: " + (market_state == "closed" ? "Unavailable - market closed / no fresh tick" : "Unavailable - Layer 4 not scanned yet") + "\r\n";
    text += "Ranking Active: No\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
