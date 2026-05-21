@@ -38,7 +38,7 @@ Active location rules:
 
 ```text
 docs/ remains the active guidebook folder.
-control/01_CURRENT_SOURCE_TRUTH_MAP.md is the current navigation bridge.
+control/01_CONTROL_GOVERNANCE.md is the current navigation bridge.
 Runtime-generated MT5 output files do not belong in Git unless explicitly provided as evidence samples.
 ```
 
@@ -50,10 +50,10 @@ A new chat must read these first, in order:
 
 ```text
 README.md
-control/01_CURRENT_SOURCE_TRUTH_MAP.md
-control/00_MUST_READ_INDEX.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/05_DECISION_STATE_REGISTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
@@ -69,7 +69,7 @@ No serious run may proceed from memory alone.
 
 ```text
 README.md: current repo-level direction
-control/01_CURRENT_SOURCE_TRUTH_MAP.md: current navigation and contradiction-prevention bridge
+control/01_CONTROL_GOVERNANCE.md: current navigation and contradiction-prevention bridge
 Super Index / Run Router: CURRENT ROUTER, must be read with current truth map
 Decision State Register: operational but may still need status sync after source changes
 Runtime 0: source exists, governance/status/manifest/diagnostics/micro-log support
@@ -350,9 +350,9 @@ Current AURORA CORE contracts are held in:
 
 ```text
 README.md
-control/01_CURRENT_SOURCE_TRUTH_MAP.md
-control/00_MUST_READ_INDEX.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
 docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md
@@ -399,9 +399,9 @@ Next serious run should start by checking:
 
 ```text
 README.md
-control/01_CURRENT_SOURCE_TRUTH_MAP.md
-control/00_MUST_READ_INDEX.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
 docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md

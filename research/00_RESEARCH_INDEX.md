@@ -1,50 +1,20 @@
 # 00 RESEARCH INDEX
 
 ## Purpose
-Research index for bounded evidence folders and curation rules.
+Research index for bounded references and research-only context.
 
-## What belongs here
-- Index-level structure, boundaries, and ownership statements for this folder scope.
-- References to active guidebooks in `docs/` as the current source for detailed doctrine.
-- Short, enforceable scaffold notes only (no full guidebook migration content).
+## Navigation
+- `research/mt5_official_docs/00_MT5_OFFICIAL_DOCS_INDEX.md`
+- `research/validation_methods/00_VALIDATION_METHODS_INDEX.md`
+- `research/external_worker/00_EXTERNAL_WORKER_RESEARCH_INDEX.md`
+- `research/order_flow_limits/00_ORDER_FLOW_LIMITS_INDEX.md`
+- `research/prop_firm_rules/00_PROP_FIRM_RULES_INDEX.md`
 
-## What must not belong here
-- Full guidebook rewrites, duplicated doctrine, or long narrative copies from `docs/`.
-- MT5 implementation code, EA files, `.mqh` logic, Python worker implementation, or execution logic.
-- Any text that approves live trading, directional alerts, auto-trading, or prop-firm readiness.
-
-
-## Mandatory first read
-- README.md
-- control/01_CURRENT_SOURCE_TRUTH_MAP.md
-- control/00_MUST_READ_INDEX.md
-- control/00_SUPER_INDEX_RUN_ROUTER.md
-- control/05_DECISION_STATE_REGISTER.md
-- control/02_MASTER_REPO_FILE_INDEX.md
-
-## Current status
-- Scaffold status: created in Post-Guidebook Phase 1 (index/control spine only).
-- Guidebook tracker status: 16 / 16 complete in `docs/` and still active.
-- External worker status: design-stage only; no production authority granted.
-
-## Source-of-truth relationship
-- Active doctrinal source remains `docs/00` through `docs/15` guidebooks.
-- MT5 remains owner of broker truth, publication, permission blocks, and validation of worker outputs.
-- External worker may calculate only; it may not become broker truth, publication owner, permission owner, or execution brain.
-
-## Next acceptable work
-- Add concise folder-local indexes, schemas, templates, or checklists that reference `docs/` authority.
-- Prepare migration plans and acceptance criteria without moving guidebook content in this run.
-- Add non-runtime examples that improve auditability without creating live runtime outputs.
-
-## No-go rules
-- Do not move existing active guidebooks out of `docs/` without an explicit migration run.
-- Do not duplicate guidebook content in this folder.
-- Do not introduce implementation files, execution permissions, or runtime-output spam in Git.
-
-## Scaffold notice
-```text
-This folder scaffold is now created.
-Existing guidebooks remain in docs/ until an explicit migration run is approved.
-Do not duplicate guidebook content here.
-```
+## Folder Governance
+- **Purpose:** store research references for later architecture/enrichment passes.
+- **What belongs here:** research notes, references, and curated evidence context.
+- **What must not belong here:** active implementation truth claims or control-router law.
+- **Authority boundary:** research informs decisions; it does not override source/control truth.
+- **Update rules:** keep references indexed and scoped; add source notes when new research folders are introduced.
+- **No-go rules:** do not convert research-only content into readiness claims.
+- **Relationship to master index:** this folder is listed in `control/02_MASTER_REPO_FILE_INDEX.md`.
