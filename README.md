@@ -26,8 +26,6 @@ relevant folder index
 relevant real content file
 ```
 
-
-
 All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
 
 ```text
@@ -54,6 +52,8 @@ Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
 Layer 0.4 - Governance / Manifest / Telemetry
 Runtime 1 - Foundation Truth Owner
 Layer 1 - Account / Portfolio / Prop Rule Truth
+Layer 2 - Market Open / Closed Truth
+Layer 3 - Broker Specs and Value Truth
 Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source present in current source
 Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
@@ -61,6 +61,8 @@ Publication / FileIO / Route Service support (implementation inheritance may sti
 Do not confuse active source owners with complete logical layers.
 
 Publication/FileIO/Route support may exist early only as infrastructure service support. It does not make publication a trading truth owner.
+
+Layer 3 is the current broker/spec/value foundation layer. It scans Layer 2 known open and closed symbols, skips unknown symbols, prints literal fundamental lookup links where available, and must never show failed value or margin calculations as fake `0.00`. Layer 4 is the first open-symbol-only cutoff layer and owns live quote, tick, and spread truth.
 
 Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow the logical placement in `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
 
