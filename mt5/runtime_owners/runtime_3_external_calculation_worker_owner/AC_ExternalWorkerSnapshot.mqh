@@ -89,9 +89,17 @@ string AC_ExternalWorkerSnapshotRows()
 
 AC_WriteResult AC_ExportExternalWorkerSnapshot()
 {
-   string snapshot_id = AC_ExternalWorkerSnapshotId();
    string rows = AC_ExternalWorkerSnapshotRows();
    string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
+   if(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID != "not_exported"
+      && AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM == payload_checksum)
+   {
+      AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "unchanged_cached";
+      AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "unchanged_cached";
+      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite");
+   }
+
+   string snapshot_id = AC_ExternalWorkerSnapshotId();
    string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
    string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=1\r\nsnapshot_id=" + snapshot_id + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
