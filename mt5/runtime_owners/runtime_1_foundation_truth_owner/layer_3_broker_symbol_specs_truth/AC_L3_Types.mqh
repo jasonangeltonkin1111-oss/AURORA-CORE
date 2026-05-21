@@ -57,6 +57,10 @@ struct AC_L3SymbolSpecs
    double margin_rate_buy_maintenance;
    double margin_rate_sell_initial;
    double margin_rate_sell_maintenance;
+   int margin_rate_buy_error;
+   int margin_rate_sell_error;
+   string margin_rate_buy_status;
+   string margin_rate_sell_status;
 
    bool order_calc_margin_buy_ok;
    bool order_calc_margin_sell_ok;
@@ -66,6 +70,14 @@ struct AC_L3SymbolSpecs
    double margin_sell_1lot_account_ccy;
    double margin_buy_minlot_account_ccy;
    double margin_sell_minlot_account_ccy;
+   int order_calc_margin_buy_error;
+   int order_calc_margin_sell_error;
+   int margin_min_buy_error;
+   int margin_min_sell_error;
+   string margin_buy_status;
+   string margin_sell_status;
+   string margin_min_buy_status;
+   string margin_min_sell_status;
 
    bool order_calc_profit_buy_ok;
    bool order_calc_profit_sell_ok;
@@ -76,6 +88,17 @@ struct AC_L3SymbolSpecs
    double money_per_tick_sell_1lot;
    double money_per_price_unit_buy_1lot;
    double money_per_price_unit_sell_1lot;
+   double value_reference_buy_price;
+   double value_reference_sell_price;
+   bool value_reference_buy_ok;
+   bool value_reference_sell_ok;
+   int value_reference_error;
+   int order_calc_profit_buy_error;
+   int order_calc_profit_sell_error;
+   string value_reference_detail;
+   string value_buy_status;
+   string value_sell_status;
+   string tick_value_fallback_status;
    string tick_value_crosscheck_status;
    string price_reference_status;
    string value_source;
