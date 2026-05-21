@@ -2,7 +2,7 @@
 #define AC_FILEIO_MQH
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Runtime 7 owns FileIO; it does not own routes/types/config.
+// Publication / FileIO / Route Service owns atomic file writes only. It does not own routes, types, or trading truth.
 
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
@@ -114,6 +114,28 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    result.ok = true;
    result.status = "file_written_clean";
    result.detail = "write_verified";
+   return result;
+}
+
+AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
+                                           const bool ok,
+                                           const string status,
+                                           const ulong final_size,
+                                           const string detail)
+{
+   AC_WriteResult result;
+   result.attempted = true;
+   result.ok = ok;
+   result.temp_open_ok = ok;
+   result.temp_write_ok = ok;
+   result.move_ok = ok;
+   result.final_exists = ok;
+   result.final_size = final_size;
+   result.error_code = 0;
+   result.status = status;
+   result.detail = detail;
+   result.final_path = surface_path;
+   result.temp_path = "";
    return result;
 }
 
