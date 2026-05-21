@@ -29,6 +29,59 @@ string AC_EWValue(const string text, const string key)
    return value;
 }
 
+void AC_ValidateExternalWorkerHeartbeat()
+{
+   if(!AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Missing";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat file missing";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds = -1;
+      return;
+   }
+   string heartbeat_text = AC_EWReadTextFile(AC_ExternalWorkerHeartbeatPath(), 8000);
+   if(heartbeat_text == "")
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat could not be read";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds = -1;
+      return;
+   }
+   string authority = AC_EWValue(heartbeat_text, "authority");
+   string trade_permission = AC_EWValue(heartbeat_text, "trade_permission");
+   string generated_unix = AC_EWValue(heartbeat_text, "generated_unix");
+   if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat authority mismatch";
+      return;
+   }
+   if(trade_permission != "false")
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat trade permission is not false";
+      return;
+   }
+   long generated = (long)StringToInteger(generated_unix);
+   if(generated <= 0)
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat generated_unix missing";
+      return;
+   }
+   long age = (long)TimeGMT() - generated;
+   if(age < 0) age = 0;
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds = (int)age;
+   AC_EXTERNAL_WORKER_STATUS.last_heartbeat_seen = (datetime)generated;
+   if(age > AC_EXTERNAL_WORKER_HEARTBEAT_MAX_AGE_SECONDS)
+   {
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Stale";
+      AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat older than allowed max age";
+      return;
+   }
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Fresh";
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat accepted";
+}
+
 void AC_ValidateExternalWorkerResult()
 {
    if(!AC_EXTERNAL_WORKER_STATUS.result_present || !AC_EXTERNAL_WORKER_STATUS.result_manifest_present)
@@ -56,6 +109,7 @@ void AC_ValidateExternalWorkerResult()
    string result_snapshot_id = AC_EWValue(result_text, "source_snapshot_id");
    string result_row_count = AC_EWValue(result_text, "row_count");
    string result_checksum = AC_EWValue(result_text, "payload_checksum");
+   string result_generated_unix = AC_EWValue(result_text, "generated_unix");
 
    string manifest_status = AC_EWValue(manifest_text, "result_status");
    string manifest_authority = AC_EWValue(manifest_text, "authority");
@@ -63,6 +117,7 @@ void AC_ValidateExternalWorkerResult()
    string manifest_snapshot_id = AC_EWValue(manifest_text, "source_snapshot_id");
    string manifest_row_count = AC_EWValue(manifest_text, "row_count");
    string manifest_checksum = AC_EWValue(manifest_text, "payload_checksum");
+   string manifest_generated_unix = AC_EWValue(manifest_text, "generated_unix");
 
    AC_EXTERNAL_WORKER_STATUS.result_snapshot_id = result_snapshot_id;
    AC_EXTERNAL_WORKER_STATUS.result_authority = result_authority;
@@ -70,6 +125,13 @@ void AC_ValidateExternalWorkerResult()
    AC_EXTERNAL_WORKER_STATUS.result_payload_checksum = result_checksum;
    AC_EXTERNAL_WORKER_STATUS.result_row_count = (int)StringToInteger(result_row_count);
 
+   if(AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status != "Fresh")
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Heartbeat is not fresh";
+      return;
+   }
    if(result_authority != AC_EXTERNAL_WORKER_AUTHORITY || manifest_authority != AC_EXTERNAL_WORKER_AUTHORITY)
    {
       AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
@@ -98,11 +160,25 @@ void AC_ValidateExternalWorkerResult()
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Snapshot id mismatch";
       return;
    }
+   if(result_snapshot_id != AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result snapshot id does not match latest MT5 snapshot";
+      return;
+   }
    if(result_row_count == "" || result_row_count != manifest_row_count)
    {
       AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
       AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Row count mismatch";
+      return;
+   }
+   if((int)StringToInteger(result_row_count) != AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result row count does not match latest MT5 snapshot";
       return;
    }
    if(result_checksum == "" || result_checksum != manifest_checksum)
@@ -112,10 +188,43 @@ void AC_ValidateExternalWorkerResult()
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Payload checksum mismatch";
       return;
    }
+   if(result_checksum != AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result checksum does not match latest MT5 snapshot";
+      return;
+   }
+   if(result_generated_unix == "" || result_generated_unix != manifest_generated_unix)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result generated_unix mismatch";
+      return;
+   }
+   long generated = (long)StringToInteger(result_generated_unix);
+   if(generated <= 0)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result generated_unix missing";
+      return;
+   }
+   long age = (long)TimeGMT() - generated;
+   if(age < 0) age = 0;
+   AC_EXTERNAL_WORKER_STATUS.result_age_seconds = (int)age;
+   AC_EXTERNAL_WORKER_STATUS.last_result_seen = (datetime)generated;
+   if(age > AC_EXTERNAL_WORKER_RESULT_MAX_AGE_SECONDS)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result older than allowed max age";
+      return;
+   }
 
    AC_EXTERNAL_WORKER_STATUS.accepted_result = true;
    AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Accepted";
-   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result and manifest accepted";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to latest MT5 snapshot and accepted";
 }
 
 #endif
