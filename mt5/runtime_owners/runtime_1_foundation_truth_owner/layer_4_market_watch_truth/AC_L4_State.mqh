@@ -6,6 +6,7 @@ static uint AC_L4_SCAN_STARTED_MS = 0;
 static uint AC_L4_SCAN_DURATION_MS = 0;
 static string AC_L4_SCAN_STATUS = "Not started";
 static string AC_L4_CACHE_KEY = "not_scanned";
+static string AC_L4_REFRESH_KEY = "not_refreshed";
 static datetime AC_L4_LAST_REFRESH_TIME = 0;
 
 static AC_L4SymbolPacket AC_L4_SYMBOLS[];
@@ -22,6 +23,8 @@ static int AC_L4_DAILY_CHANGE_AVAILABLE = 0;
 static int AC_L4_HIGH_SPREAD_WARNINGS = 0;
 static int AC_L4_SYMBOLINFO_TICK_SUCCESS = 0;
 static int AC_L4_SYMBOLINFO_TICK_FAILURE = 0;
+static int AC_L4_ACTIVITY_API_AVAILABLE = 0;
+static int AC_L4_ACTIVITY_NONZERO = 0;
 
 static string AC_L4_BOARD_SECTION = "";
 static string AC_L4_WORKBENCH_SECTION = "";
@@ -48,6 +51,8 @@ void AC_L4Reset()
    AC_L4_HIGH_SPREAD_WARNINGS = 0;
    AC_L4_SYMBOLINFO_TICK_SUCCESS = 0;
    AC_L4_SYMBOLINFO_TICK_FAILURE = 0;
+   AC_L4_ACTIVITY_API_AVAILABLE = 0;
+   AC_L4_ACTIVITY_NONZERO = 0;
 
    AC_L4_BOARD_SECTION = "";
    AC_L4_WORKBENCH_SECTION = "";
