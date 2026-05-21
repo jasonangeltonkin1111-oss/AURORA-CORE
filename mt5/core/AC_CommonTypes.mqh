@@ -5,6 +5,10 @@
 #define DEAL_TYPE_SWAP -1000001
 #endif
 
+#ifndef DEAL_FEE
+#define DEAL_FEE -1000002
+#endif
+
 string AC_UlongToText(const ulong value)
 {
    return StringFormat("%I64u", value);
