@@ -42,7 +42,7 @@ string AC_L3VolumeGridQuality(const AC_L3SymbolSpecs &s)
 string AC_L3ValueQualityText(const AC_L3SymbolSpecs &s)
 {
    if(s.money_per_point_buy_1lot > 0.0 && s.money_per_point_sell_1lot > 0.0 && s.point > 0.0 && s.volume_step > 0.0) return "Value Formula Ready";
-   if(s.order_calc_profit_buy_ok || s.order_calc_profit_sell_ok) return "Value Formula Partial";
+   if(s.order_calc_profit_buy_ok || s.order_calc_profit_sell_ok || s.value_from_tick_value) return "Value Formula Partial";
    return "Value Formula Unavailable";
 }
 
@@ -55,7 +55,6 @@ string AC_L3MarginQualityText(const AC_L3SymbolSpecs &s)
 
 string AC_L3SpecQualityText(const AC_L3SymbolSpecs &s)
 {
-   if(s.scan_state == "Skipped Closed") return "Skipped - Market Closed";
    if(s.scan_state == "Skipped Unknown") return "Skipped - Market Unknown";
    if(s.required_fields_failed <= 0) return "Specs Ready";
    if(s.required_fields_ok > 0) return "Specs Partial";
