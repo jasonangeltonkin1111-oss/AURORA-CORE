@@ -53,4 +53,33 @@ struct AC_Runtime0Snapshot
    string blocked_reason;
 };
 
+struct AC_Layer0StatusPacket
+{
+   string layer_id;
+   string layer_name;
+   string owner_name;
+   string status;
+   string trust_state;
+   string main_blocker;
+   int    broker_symbols_total;
+   int    marketwatch_symbols_total;
+   int    dossier_shells_ready;
+   int    dossier_shells_missing;
+   int    batch_start_index;
+   int    batch_end_index;
+   int    batch_attempted;
+   int    batch_written;
+   int    next_symbol_index;
+   uint   batch_duration_ms;
+   bool   batch_complete;
+   bool   trade_permission;
+   bool   auto_trade_allowed;
+   bool   ranking_runtime;
+   bool   selection_runtime;
+   bool   market_state_known;
+   bool   specs_known;
+   bool   quotes_known;
+   string first_failure;
+};
+
 #endif
