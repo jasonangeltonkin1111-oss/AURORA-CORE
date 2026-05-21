@@ -25,6 +25,7 @@ string AC_ExternalWorkerRequiredText()
    text += "expected_worker_exe=" + AC_ExternalWorkerExePath() + "\r\n";
    text += "expected_packaged_worker_exe=" + AC_ExternalWorkerPackagedExePath() + "\r\n";
    text += "install_status_path=" + AC_ExternalWorkerInstallStatusPath() + "\r\n";
+   text += "lifecycle_status_path=" + AC_ExternalWorkerProcessStatusPath() + "\r\n";
    text += "snapshot_path=" + AC_ExternalWorkerSnapshotPath() + "\r\n";
    text += "result_path=" + AC_ExternalWorkerResultPath() + "\r\n";
    text += "trade_permission=false\r\n";
@@ -47,6 +48,7 @@ void AC_RefreshExternalWorkerStatus()
    AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
    AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
    AC_ValidateExternalWorkerInstallStatus();
+   AC_ValidateExternalWorkerLifecycle();
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
@@ -56,10 +58,15 @@ void AC_RefreshExternalWorkerStatus()
 
    if(AC_EXTERNAL_WORKER_STATUS.auto_launch_desired)
    {
-      if(AC_EXTERNAL_WORKER_STATUS.launch_implementation == "not_implemented_yet")
+      if(AC_EXTERNAL_WORKER_STATUS.install_task_registered == "true")
+      {
+         AC_EXTERNAL_WORKER_STATUS.launch_status = "Windows task registered";
+         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "EA launch bridge not wired yet; use start_worker_for_18503.ps1 or scheduled task";
+      }
+      else if(AC_EXTERNAL_WORKER_STATUS.launch_implementation == "not_implemented_yet")
       {
          AC_EXTERNAL_WORKER_STATUS.launch_status = "Desired - not implemented yet";
-         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Windows/process launch bridge not wired in this pass";
+         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Windows task not registered or unavailable; EA process launch bridge not wired";
       }
       else
       {
@@ -83,6 +90,14 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.install_status = "Installed";
       AC_EXTERNAL_WORKER_STATUS.worker_status = "Installed - heartbeat pending";
       AC_EXTERNAL_WORKER_STATUS.missing_reason = "";
+   }
+
+   if(AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present)
+   {
+      if(AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh)
+         AC_EXTERNAL_WORKER_STATUS.worker_status = "Lifecycle fresh - heartbeat pending";
+      else if(AC_EXTERNAL_WORKER_STATUS.worker_installed)
+         AC_EXTERNAL_WORKER_STATUS.worker_status = "Lifecycle present - " + AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_status;
    }
 
    if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
