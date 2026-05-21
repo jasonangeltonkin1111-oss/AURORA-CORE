@@ -60,6 +60,8 @@ struct AC_L3SymbolSpecs
 
    bool order_calc_margin_buy_ok;
    bool order_calc_margin_sell_ok;
+   bool margin_min_buy_ok;
+   bool margin_min_sell_ok;
    double margin_buy_1lot_account_ccy;
    double margin_sell_1lot_account_ccy;
    double margin_buy_minlot_account_ccy;
@@ -67,6 +69,7 @@ struct AC_L3SymbolSpecs
 
    bool order_calc_profit_buy_ok;
    bool order_calc_profit_sell_ok;
+   bool value_from_tick_value;
    double money_per_point_buy_1lot;
    double money_per_point_sell_1lot;
    double money_per_tick_buy_1lot;
@@ -75,6 +78,7 @@ struct AC_L3SymbolSpecs
    double money_per_price_unit_sell_1lot;
    string tick_value_crosscheck_status;
    string price_reference_status;
+   string value_source;
 
    string isin;
    string exchange;
