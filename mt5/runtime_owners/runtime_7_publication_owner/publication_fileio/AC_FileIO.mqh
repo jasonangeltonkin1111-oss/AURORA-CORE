@@ -117,6 +117,75 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    return result;
 }
 
+AC_WriteResult AC_WriteTextFileFastAtomic(const string final_path, const string content)
+{
+   AC_WriteResult result;
+   result.attempted = true;
+   result.ok = false;
+   result.temp_open_ok = false;
+   result.temp_write_ok = false;
+   result.move_ok = false;
+   result.final_exists = false;
+   result.final_size = 0;
+   result.error_code = 0;
+   result.status = "attempted";
+   result.detail = "";
+   result.final_path = final_path;
+   result.temp_path = final_path + ".tmp";
+
+   ResetLastError();
+   int handle = FileOpen(result.temp_path, AC_FileFlags() | FILE_WRITE);
+   if(handle == INVALID_HANDLE)
+   {
+      result.error_code = GetLastError();
+      result.status = "temp_open_failed";
+      result.detail = "Fast atomic FileOpen temp failed";
+      return result;
+   }
+   result.temp_open_ok = true;
+
+   ResetLastError();
+   uint written = FileWriteString(handle, content);
+   uint expected = (uint)StringLen(content);
+   if(written < expected)
+   {
+      result.error_code = GetLastError();
+      result.status = "temp_write_failed";
+      result.detail = "Fast atomic FileWriteString short write";
+      FileClose(handle);
+      return result;
+   }
+   result.temp_write_ok = true;
+   FileClose(handle);
+
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   ResetLastError();
+   if(!FileMove(result.temp_path, common_flag, result.final_path, FILE_REWRITE | common_flag))
+   {
+      result.error_code = GetLastError();
+      result.status = "move_failed";
+      result.detail = "Fast atomic FileMove temp to final failed";
+      return result;
+   }
+   result.move_ok = true;
+
+   ResetLastError();
+   result.final_exists = FileIsExist(result.final_path, common_flag);
+   if(!result.final_exists)
+   {
+      result.error_code = GetLastError();
+      result.status = "verify_failed";
+      result.detail = "Fast atomic final file missing after move";
+      return result;
+   }
+
+   result.ok = true;
+   result.status = "file_written_clean";
+   result.detail = "fast_atomic_write_verified_exists_no_flush_no_size_probe";
+   result.final_size = (ulong)StringLen(content);
+   return result;
+}
+
 AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
                                            const bool ok,
                                            const string status,
