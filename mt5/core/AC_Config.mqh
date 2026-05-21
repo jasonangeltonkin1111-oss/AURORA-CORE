@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "l2_runtime_polish_before_layer3_plan";
-static const string AC_BUILD_VERSION      = "1.029";
-static const string AC_UPGRADE_ID         = "L2_RUNTIME_POLISH_BEFORE_LAYER3_PLAN";
-static const string AC_UPGRADE_SUMMARY    = "Polishes L1 closed-trade result labels for trader readability and adds safe legacy placeholder cleanup while preserving Layer 2 market open/closed/unknown session truth.";
-static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account/portfolio truth and Layer 2 market open/closed/unknown session truth. L2 may route Dossiers to Open/Closed/Unknown and expose downstream cutoff state. No Layer 3 specs, Layer 4 quotes, ranking, selection, alerts, strategy, Python worker, or trade execution.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; confirm closed-trade tables show Result labels such as WIN_OK_SLTP_MISSING or LOSS_OK_SLTP_MISSING instead of core_complete; confirm placeholder cleanup removes legacy _PLACEHOLDER.txt files; inspect Market Board L2 summary, Workbench Status, Manifest, Diagnostics, and no trade permission.";
-static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l2_session_truth_route_publication_placeholder_cleanup";
+static const string AC_BUILD_PHASE        = "layer3_broker_specs_value_truth";
+static const string AC_BUILD_VERSION      = "1.030";
+static const string AC_UPGRADE_ID         = "L3_BROKER_SPECS_VALUE_TRUTH";
+static const string AC_UPGRADE_SUMMARY    = "Adds Layer 3 broker specification, classification fallback, fundamental lookup hints, and value/margin formula primitives while keeping Board and Dossiers professional and trader-readable.";
+static const string AC_UPGRADE_SCOPE      = "Layer 0 cached universe publication plus Layer 1 account/portfolio truth, Layer 2 market open/closed/unknown session truth, and Layer 3 broker specs/value truth for Layer 2 open symbols. No Layer 4 live quote freshness, ranking, selection, alerts, strategy, Python worker, or trade execution.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile AuroraCore.mq5; run EA; confirm Board shows Layer 3 readiness counts out of Layer 2 open symbols; confirm Dossiers show professional Layer 3 sections without underscore labels; confirm closed symbols show Layer 3 skipped due market closed; inspect Workbench proof counters, Manifest, Diagnostics, and no trade permission.";
+static const string AC_LOGGING_POLICY     = "near_instant_board_write_if_changed_plus_l3_broker_specs_value_truth";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_PUBLICATION_SERVICE_OWNER = "Publication / FileIO / Route Service";
@@ -16,10 +16,11 @@ static const string AC_BOARD_DOSSIER_RENDERER_OWNER = "Board / Dossier Renderer 
 static const string AC_LAYER_0_1_NAME     = "Layer 0.1 - Startup / Runtime Identity";
 static const string AC_LAYER_0_2_NAME     = "Layer 0.2 - Scheduler / Heartbeat / Breathing Spine";
 static const string AC_LAYER_0_4_NAME     = "Layer 0.4 - Governance / Manifest / Telemetry";
-static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier Shell Foundation";
+static const string AC_LAYER_0_BOARD_DOSSIER_NAME = "Layer 0 - Board + Dossier Foundation";
 static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Prop Rule Truth";
 static const string AC_LAYER_2_NAME       = "Layer 2 - Market Open / Closed Truth";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_shell_v1.029_l2_routes_l1_result_labels";
+static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Truth";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.030_l3_broker_specs_value_truth";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
