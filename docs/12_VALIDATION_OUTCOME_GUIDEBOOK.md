@@ -212,10 +212,13 @@ Outcome Ledger fields:
 cycle_id
 experiment_id
 symbol
-bucket
+asset_class
+market_group
+market_segment
+ranking_group
 rank_at_time
 global_top10_flag
-evidence_complete_flag
+selected_evidence_complete_flag
 setup_candidate_flag
 direction_if_any
 entry_time_if_simulated
@@ -223,7 +226,9 @@ entry_price_if_simulated
 stop_model
 target_model
 spread_at_signal
+commission_if_known
 slippage_model
+cost_model
 session
 regime_label
 mfe
@@ -251,7 +256,7 @@ Every validation claim needs a null model.
 Possible nulls:
 
 ```text
-random symbol from same bucket
+random symbol from same ranking_group
 random time same symbol
 random direction
 top-ranked vs shuffled rank
@@ -358,10 +363,10 @@ Did higher-ranked symbols outperform lower-ranked or random alternatives after c
 Required comparisons:
 
 ```text
-top-ranked vs random same bucket
+top-ranked vs random same ranking_group
 top-ranked vs shuffled rank
 top-ranked vs next-best rejected candidate
-Global Top 10 vs bucket alternatives
+Global Top 10 vs ranking_group alternatives
 ```
 
 Ranking validation does not imply trade permission.
@@ -435,7 +440,7 @@ Possible tests:
 
 ```text
 Global Top 10 vs random eligible symbols
-Global Top 10 vs bucket-only Top 5 alternatives
+Global Top 10 vs ranking_group-only Top-N alternatives
 correlation-filtered basket vs unfiltered basket
 backup fill impact analysis
 ```
