@@ -110,6 +110,10 @@ void AC_BuildLayer3Texts()
    AC_L3_WORKBENCH_SECTION += "margin_rate_sell_success=" + IntegerToString(AC_L3_MARGIN_RATE_SELL_SUCCESS) + "\r\n";
    AC_L3_WORKBENCH_SECTION += "margin_rate_sell_failure=" + IntegerToString(AC_L3_MARGIN_RATE_SELL_FAILURE) + "\r\n";
    AC_L3_WORKBENCH_SECTION += "cache_key=" + AC_L3_CACHE_KEY + "\r\n";
+   AC_L3_WORKBENCH_SECTION += "broker_metadata_contradiction_count=" + IntegerToString(AC_L3_BROKER_METADATA_CONTRADICTION_COUNT) + "\r\n";
+   AC_L3_WORKBENCH_SECTION += "hk_country_us_hidden_count=" + IntegerToString(AC_L3_HK_COUNTRY_US_HIDDEN_COUNT) + "\r\n";
+   AC_L3_WORKBENCH_SECTION += "hk_exchange_xnym_hidden_count=" + IntegerToString(AC_L3_HK_EXCHANGE_XNYM_HIDDEN_COUNT) + "\r\n";
+   AC_L3_WORKBENCH_SECTION += "broker_sector_industry_poison_count=" + IntegerToString(AC_L3_BROKER_SECTOR_INDUSTRY_POISON_COUNT) + "\r\n";
    AC_L3_WORKBENCH_SECTION += "trade_permission=false\r\n";
 }
 
@@ -139,7 +143,11 @@ string AC_Layer3DossierSection(const string symbol)
 
    AC_L3SymbolSpecs s = AC_L3_SYMBOLS[idx];
    text += AC_L3DossierLine("Status", s.scan_state);
-   text += AC_L3DossierLine("Specification Quality", s.source_quality);
+   text += AC_L3DossierLine("Broker Static Specs", s.source_quality);
+   if(s.l2_market_state == "closed")
+      text += AC_L3DossierLine("Live Quote Truth", "Unavailable - market closed / no fresh tick");
+   else
+      text += AC_L3DossierLine("Live Quote Truth", "Pending Layer 4 quote/tick scan");
    text += AC_L3DossierLine("Value Formula", s.value_quality);
    text += AC_L3DossierLine("Margin Formula", s.margin_quality);
    text += AC_L3DossierLine("Volume Grid", s.volume_grid_quality);

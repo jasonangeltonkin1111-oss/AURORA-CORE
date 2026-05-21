@@ -47,6 +47,13 @@ bool AC_L3BrokerMetadataLooksContradictory(const AC_L3SymbolSpecs &s)
    return false;
 }
 
+bool AC_L3IsHongKongSymbol(const string symbol)
+{
+   string lower = symbol;
+   StringToLower(lower);
+   return StringFind(lower, ".xhkg") >= 0;
+}
+
 void AC_L3LoadBrokerMetadata(AC_L3SymbolSpecs &s)
 {
    int value_count = 0;
@@ -75,10 +82,32 @@ void AC_L3LoadBrokerMetadata(AC_L3SymbolSpecs &s)
    else s.country = "";
    s.country_status = status;
 
+   bool hk_symbol = AC_L3IsHongKongSymbol(s.symbol);
+   if(hk_symbol && (s.country == "USA" || s.country == "United States"))
+   {
+      s.country = "";
+      s.country_status = "Hidden for HK symbol - broker country poison filtered";
+      AC_L3_HK_COUNTRY_US_HIDDEN_COUNT++;
+      if(value_count > 0) value_count--;
+   }
+   if(hk_symbol && s.exchange == "XNYM")
+   {
+      s.exchange = "";
+      s.exchange_status = "Hidden for HK symbol - broker exchange poison filtered";
+      AC_L3_HK_EXCHANGE_XNYM_HIDDEN_COUNT++;
+      if(value_count > 0) value_count--;
+   }
+
    if(value_count <= 0)
       s.broker_metadata_status = "Hidden - broker returned no displayable advisory metadata";
    else if(AC_L3BrokerMetadataLooksContradictory(s))
+   {
       s.broker_metadata_status = "Advisory only - broker metadata may contradict workbook taxonomy";
+      AC_L3_BROKER_METADATA_CONTRADICTION_COUNT++;
+      if((s.sector == "Technology" && s.industry == "Consumer Electronics") ||
+         (s.sector == "Communication Services" && s.industry == "Entertainment"))
+         AC_L3_BROKER_SECTOR_INDUSTRY_POISON_COUNT++;
+   }
    else
       s.broker_metadata_status = "Advisory only - broker metadata displayed when non-empty";
 }
