@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 import argparse
-import sys
+import os
 import time
 import traceback
 
@@ -19,8 +19,11 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.2.0"
+WORKER_VERSION = "0.2.1"
 EXPECTED_AUTHORITY = "calculation_support_only"
+PROCESS_START_UNIX = unix_time()
+PROCESS_START_UTC = utc_stamp()
+PROCESS_ID = os.getpid()
 
 
 @dataclass
@@ -169,7 +172,45 @@ def build_result_manifest(result: ValidationResult, result_text: str) -> str:
     ])
 
 
-def run_once(root: Path) -> int:
+def build_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None) -> str:
+    now_unix = unix_time()
+    if result is None:
+        result = ValidationResult(False, "not_available", "no validation result yet")
+    return "\n".join([
+        "schema_name=aurora_worker_process_status",
+        "schema_version=1",
+        f"worker_version={WORKER_VERSION}",
+        f"process_id={PROCESS_ID}",
+        f"mode={mode}",
+        f"root={root}",
+        f"process_start_utc={PROCESS_START_UTC}",
+        f"process_start_unix={PROCESS_START_UNIX}",
+        f"last_loop_utc={utc_stamp()}",
+        f"last_loop_unix={now_unix}",
+        f"loop_count={loop_count}",
+        f"last_run_exit_code={last_run_exit_code}",
+        f"last_validation_status={result.status}",
+        f"last_validation_reason={result.reason}",
+        f"last_snapshot_id={result.snapshot_id}",
+        f"row_count={result.row_count}",
+        f"payload_checksum={result.payload_checksum}",
+        "last_exception_type=none",
+        "last_exception=none",
+        "authority=calculation_support_only",
+        "trade_permission=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={now_unix}",
+        "",
+    ])
+
+
+def write_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None) -> None:
+    paths = WorkerPaths.from_root(root)
+    paths.ensure()
+    atomic_write_text(paths.status / "worker_process_status.txt", build_process_status(root, mode, loop_count, last_run_exit_code, result))
+
+
+def run_once(root: Path) -> Tuple[int, ValidationResult]:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
     try:
@@ -180,7 +221,7 @@ def run_once(root: Path) -> int:
         atomic_write_text(paths.status / "worker_heartbeat.txt", heartbeat)
         atomic_write_text(paths.outbox / "result_latest.txt", result_text)
         atomic_write_text(paths.outbox / "result_latest.manifest", result_manifest)
-        return 0 if result.ok else 2
+        return (0 if result.ok else 2), result
     except Exception as exc:  # keep worker failure visible, not silent
         error_text = "\n".join([
             "schema_name=aurora_worker_error",
@@ -191,20 +232,26 @@ def run_once(root: Path) -> int:
             traceback.format_exc(),
             f"generated_utc={utc_stamp()}",
             f"generated_unix={unix_time()}",
+            "authority=calculation_support_only",
             "trade_permission=false",
             "",
         ])
         paths.ensure()
         atomic_write_text(paths.logs / "worker_errors.txt", error_text)
         atomic_write_text(paths.status / "worker_heartbeat.txt", error_text)
-        return 1
+        failed = ValidationResult(False, "exception", f"{type(exc).__name__}: {exc}")
+        return 1, failed
 
 
 def run_daemon(root: Path, poll_seconds: float) -> int:
     if poll_seconds < 0.25:
         poll_seconds = 0.25
+    loop_count = 0
+    write_process_status(root, "daemon", loop_count, -1, None)
     while True:
-        run_once(root)
+        loop_count += 1
+        exit_code, result = run_once(root)
+        write_process_status(root, "daemon", loop_count, exit_code, result)
         time.sleep(poll_seconds)
 
 
@@ -217,7 +264,9 @@ def main(argv: List[str] | None = None) -> int:
     root = Path(args.root)
     if args.mode == "daemon":
         return run_daemon(root, args.poll_seconds)
-    return run_once(root)
+    exit_code, result = run_once(root)
+    write_process_status(root, "once", 1, exit_code, result)
+    return exit_code
 
 
 if __name__ == "__main__":
