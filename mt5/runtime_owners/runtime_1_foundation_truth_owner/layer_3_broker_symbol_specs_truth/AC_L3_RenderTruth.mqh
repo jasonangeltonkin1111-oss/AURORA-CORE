@@ -132,6 +132,7 @@ string AC_Layer3DossierSection(const string symbol)
    }
 
    AC_L3SymbolSpecs s = AC_L3_SYMBOLS[idx];
+   AC_L3LoadBrokerMetadata(s);
    text += AC_L3DossierLine("Status", s.scan_state);
    text += AC_L3DossierLine("Specification Quality", s.source_quality);
    text += AC_L3DossierLine("Value Formula", s.value_quality);
@@ -151,10 +152,17 @@ string AC_Layer3DossierSection(const string symbol)
    text += AC_L3DossierLine("Description", AC_L3TextOrNA(s.description));
    text += AC_L3DossierLine("Path", AC_L3TextOrNA(s.path));
    text += AC_L3DossierLine("ISIN", AC_L3TextOrNA(s.isin));
+   text += AC_L3DossierLine("ISIN Status", s.isin_status);
    text += AC_L3DossierLine("Exchange", AC_L3TextOrNA(s.exchange));
+   text += AC_L3DossierLine("Exchange Status", s.exchange_status);
    text += AC_L3DossierLine("Sector", AC_L3TextOrNA(s.sector));
+   text += AC_L3DossierLine("Sector Status", s.sector_status);
    text += AC_L3DossierLine("Industry", AC_L3TextOrNA(s.industry));
+   text += AC_L3DossierLine("Industry Status", s.industry_status);
    text += AC_L3DossierLine("Country", AC_L3TextOrNA(s.country));
+   text += AC_L3DossierLine("Country Status", s.country_status);
+   text += AC_L3DossierLine("Broker Metadata", s.broker_metadata_status);
+   text += AC_L3DossierLine("Metadata Truth", "Broker-provided only; external links may support review but must not overwrite broker metadata or Runtime 2 taxonomy");
 
    text += "\r\nClassification\r\n";
    text += AC_L3DossierLine("Asset Class", s.asset_class);
@@ -254,7 +262,7 @@ string AC_Layer3DossierSection(const string symbol)
 
 string AC_Layer3StatusRow()
 {
-   return "schema_name=layer_status|schema_version=v3.2|layer_id=3|layer_name=" + AC_LAYER_3_NAME
+   return "schema_name=layer_status|schema_version=v3.3|layer_id=3|layer_name=" + AC_LAYER_3_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
