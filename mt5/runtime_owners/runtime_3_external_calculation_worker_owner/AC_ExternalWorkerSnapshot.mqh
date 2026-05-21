@@ -84,7 +84,7 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = snapshot_write.status;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = manifest_write.status;
-   AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = snapshot_write.bytes_written;
+   AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = snapshot_write.final_size;
    return snapshot_write;
 }
 
