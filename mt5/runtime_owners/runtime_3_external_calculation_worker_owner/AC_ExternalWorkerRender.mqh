@@ -18,9 +18,13 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_validation_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_status=" + AC_EXTERNAL_WORKER_STATUS.result_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_validation_status=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.result_validation_reason + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_age_seconds) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "accepted_result=" + (AC_EXTERNAL_WORKER_STATUS.accepted_result ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_snapshot_id=" + AC_EXTERNAL_WORKER_STATUS.result_snapshot_id + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_row_count=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_row_count) + "\r\n";
@@ -49,7 +53,7 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "board_alerts=disabled_for_now\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_core_continues_if_worker_missing=true\r\n";
 
-   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.5|source_owner=" + AC_RUNTIME3_OWNER
+   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.6|source_owner=" + AC_RUNTIME3_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|required=" + (AC_EXTERNAL_WORKER_STATUS.required ? "true" : "false")
@@ -60,8 +64,11 @@ void AC_BuildExternalWorkerTexts()
       + "|worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status
       + "|install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status
       + "|heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status
+      + "|heartbeat_validation_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status
+      + "|heartbeat_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds)
       + "|result_status=" + AC_EXTERNAL_WORKER_STATUS.result_status
       + "|result_validation_status=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status
+      + "|result_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_age_seconds)
       + "|accepted_result=" + (AC_EXTERNAL_WORKER_STATUS.accepted_result ? "true" : "false")
       + "|result_snapshot_id=" + AC_EXTERNAL_WORKER_STATUS.result_snapshot_id
       + "|result_row_count=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_row_count)
@@ -84,7 +91,7 @@ string AC_ExternalWorkerWorkbenchSection()
 string AC_ExternalWorkerStatusRow()
 {
    if(AC_EXTERNAL_WORKER_STATUS_ROW == "")
-      return "schema_name=external_worker_status|schema_version=v0.5|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
+      return "schema_name=external_worker_status|schema_version=v0.6|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
    return AC_EXTERNAL_WORKER_STATUS_ROW;
 }
 
