@@ -24,4 +24,4 @@ if (!(Test-Path $distExe)) {
 }
 
 Write-Host "Build complete: $distExe"
-Write-Host "Next: run install_worker_for_18503.ps1, then run_worker_for_18503.ps1 for packaged-worker proof."
+Write-Host "Next: run install_worker_for_18503.ps1, then start_worker_for_18503.ps1 for packaged daemon proof."
