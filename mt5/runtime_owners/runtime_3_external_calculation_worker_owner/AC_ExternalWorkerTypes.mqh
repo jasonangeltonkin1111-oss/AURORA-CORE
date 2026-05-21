@@ -16,6 +16,10 @@ struct AC_ExternalWorkerStatus
    string install_status;
    string heartbeat_status;
    string result_status;
+   string launch_mode;
+   string launch_implementation;
+   string launch_status;
+   string launch_blocker;
    string missing_reason;
    string expected_exe_path;
    string required_path;
@@ -25,8 +29,10 @@ struct AC_ExternalWorkerStatus
    datetime checked_at;
    datetime last_heartbeat_seen;
    datetime last_result_seen;
+   datetime last_launch_attempt_time;
    int heartbeat_age_seconds;
    int result_age_seconds;
+   int launch_attempts;
    int last_error;
 };
 
