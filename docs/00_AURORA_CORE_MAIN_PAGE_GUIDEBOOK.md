@@ -14,9 +14,9 @@ It does not replace:
 
 ```text
 README.md
-control/01_CURRENT_SOURCE_TRUTH_MAP.md
-control/00_MUST_READ_INDEX.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 ```
 
 A new worker must read those files before acting.
@@ -76,10 +76,10 @@ Every serious run must first read:
 
 ```text
 README.md
-control/01_CURRENT_SOURCE_TRUTH_MAP.md
-control/00_MUST_READ_INDEX.md
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/05_DECISION_STATE_REGISTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
 ```
 
@@ -95,9 +95,9 @@ No serious run may proceed from memory alone.
 1. Current active MT5 source files for implementation truth
 2. Runtime/generated file evidence supplied by the user for observed behavior
 3. README.md for current repo-level direction
-4. control/01_CURRENT_SOURCE_TRUTH_MAP.md for current navigation and contradiction prevention
-5. control/00_SUPER_INDEX_RUN_ROUTER.md for work routing
-6. control/05_DECISION_STATE_REGISTER.md for decision/evidence gates
+4. control/01_CONTROL_GOVERNANCE.md for current navigation and contradiction prevention
+5. control/01_CONTROL_GOVERNANCE.md for work routing
+6. control/01_CONTROL_GOVERNANCE.md for decision/evidence gates
 7. Active docs/ guidebooks for doctrine
 8. Active blueprint/ contracts for structure
 9. governance/ schemas and ledgers

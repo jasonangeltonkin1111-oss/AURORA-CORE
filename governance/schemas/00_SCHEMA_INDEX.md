@@ -15,9 +15,9 @@ Schema index for static governance schema artifacts only.
 
 ## Mandatory first read
 - README.md
-- control/01_CURRENT_SOURCE_TRUTH_MAP.md
-- control/00_MUST_READ_INDEX.md
-- control/00_SUPER_INDEX_RUN_ROUTER.md
+- control/01_CONTROL_GOVERNANCE.md
+- control/01_CONTROL_GOVERNANCE.md
+- control/01_CONTROL_GOVERNANCE.md
 - control/02_MASTER_REPO_FILE_INDEX.md
 
 ## Current status

@@ -16,6 +16,18 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 
 ## Mandatory Reading Spine
 
+Scaffold control startup path (active):
+
+```text
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
+control/01_CONTROL_GOVERNANCE.md
+relevant folder index
+relevant real content file
+```
+
+
+
 All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
 
 ```text

@@ -150,10 +150,10 @@ Every serious worker run must:
 
 ```text
 1. Read README.md.
-2. Read control/01_CURRENT_SOURCE_TRUTH_MAP.md.
-3. Read control/00_MUST_READ_INDEX.md.
-4. Read control/00_SUPER_INDEX_RUN_ROUTER.md.
-5. Read control/05_DECISION_STATE_REGISTER.md.
+2. Read control/01_CONTROL_GOVERNANCE.md.
+3. Read control/01_CONTROL_GOVERNANCE.md.
+4. Read control/01_CONTROL_GOVERNANCE.md.
+5. Read control/01_CONTROL_GOVERNANCE.md.
 6. Read control/02_MASTER_REPO_FILE_INDEX.md.
 7. Read docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md.
 8. Read the task-specific guidebooks/files from the Super Index.
@@ -284,8 +284,8 @@ Before implementing Runtime 1 — Foundation Truth Owner / Layer 1 — Account /
 Read:
 
 ```text
-control/00_SUPER_INDEX_RUN_ROUTER.md
-control/05_DECISION_STATE_REGISTER.md
+control/01_CONTROL_GOVERNANCE.md
+control/01_CONTROL_GOVERNANCE.md
 blueprint/02_RUNTIME_OWNER_BLUEPRINT.md
 blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 blueprint/04_BUILD_PHASE_BLUEPRINT.md
