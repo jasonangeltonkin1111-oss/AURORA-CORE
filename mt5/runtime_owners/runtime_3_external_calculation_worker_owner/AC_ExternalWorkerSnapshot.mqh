@@ -4,6 +4,7 @@
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = "not_exported";
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "not_exported";
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "not_exported";
+static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM = "not_available";
 static ulong  AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = 0;
 static int    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS = 0;
 
@@ -12,7 +13,19 @@ string AC_ExternalWorkerSnapshotId()
    return AC_AccountForRoute() + "_" + IntegerToString((int)TimeCurrent()) + "_" + IntegerToString((int)GetTickCount());
 }
 
-string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const int rows)
+string AC_ExternalWorkerPayloadChecksum(const string payload)
+{
+   long checksum = 0;
+   int len = StringLen(payload);
+   for(int i = 0; i < len; i++)
+   {
+      ushort ch = StringGetCharacter(payload, i);
+      checksum = (checksum + ((long)ch * (long)(i + 1))) % 2147483647;
+   }
+   return IntegerToString((int)checksum);
+}
+
+string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const int rows, const string payload_checksum)
 {
    string text = "";
    text += "schema_name=aurora_external_worker_snapshot\r\n";
@@ -29,6 +42,7 @@ string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const int rows)
    text += "source_layers=L1,L2,L3,L4\r\n";
    text += "future_layer_5_status=not_implemented_yet\r\n";
    text += "row_count=" + IntegerToString(rows) + "\r\n";
+   text += "payload_checksum=" + payload_checksum + "\r\n";
    text += "snapshot_complete=true\r\n";
    text += "trade_permission=false\r\n";
    text += "ranking_runtime=false\r\n";
@@ -77,13 +91,15 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
 {
    string snapshot_id = AC_ExternalWorkerSnapshotId();
    string rows = AC_ExternalWorkerSnapshotRows();
-   string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + rows;
+   string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
+   string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=1\r\nsnapshot_id=" + snapshot_id + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=1\r\nsnapshot_id=" + snapshot_id + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = snapshot_write.status;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = manifest_write.status;
+   AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM = payload_checksum;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = snapshot_write.final_size;
    return snapshot_write;
 }
