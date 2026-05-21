@@ -3,7 +3,7 @@
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
 static const string AC_BUILD_PHASE        = "external_worker_launch_contract";
-static const string AC_BUILD_VERSION      = "1.038";
+static const string AC_BUILD_VERSION      = "1.037";
 static const string AC_UPGRADE_ID         = "EXTERNAL_WORKER_LAUNCH_CONTRACT";
 static const string AC_UPGRADE_SUMMARY    = "Adds Runtime 3 External Calculation Worker launch-state contract: Workbench-only auto-launch desired/not-implemented truth, retry/cooldown settings, launcher authority labels, and no blocking/no popup/no permission guarantees before any Windows process launch implementation.";
 static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship only: install/status detection, worker_required control output, heartbeat/result path contracts, launch-state truth, and Workbench diagnostics. It does not own broker truth, L1-L4 truth, FileIO internals, Board/Dossier rendering authority, ranking, selection, permission, strategy, execution, WebRequest, Python direct broker authority, or popup alerts.";
@@ -23,7 +23,7 @@ static const string AC_LAYER_2_NAME       = "Layer 2 - Market Open / Closed Trut
 static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Truth";
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "External Calculation Worker Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.038_external_worker_launch_contract";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.037_external_worker_launch_contract";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_EXTERNAL_WORKER_FOLDER = "External Worker";
