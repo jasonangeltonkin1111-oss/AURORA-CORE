@@ -54,7 +54,7 @@ Layer 0.2 - Scheduler / Heartbeat / Breathing Spine
 Layer 0.4 - Governance / Manifest / Telemetry
 Runtime 1 - Foundation Truth Owner
 Layer 1 - Account / Portfolio / Prop Rule Truth
-Runtime 2 - Market Universe / Taxonomy Lookup skeleton in current source
+Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source present in current source
 Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
 
@@ -140,11 +140,12 @@ DOM is not fundamentals. DOM is not current Runtime 2 taxonomy. DOM must be boun
 Current runtime-2 source state is treated as source-inspection truth only:
 
 ```text
-source workbook/audit may define generated rows
-generated row include presence: present (mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh exists)
-EA runtime loaded truth: unproven without compile/runtime output evidence
-compile proof: unknown in this markdown-only pass
-no ranking/selection permission from generated rows alone
+generated row include presence: present (mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh exists and is included)
+AC_UniverseRowsGenerated()=true; AC_UniverseLoadedRowCount() maps to AC_UNIVERSE_GENERATED_ROW_COUNT
+contract_status=generated_copy_present_lookup_only
+runtime permission: lookup-only; ranking_group_runtime=false; selection_logic_runtime=false; trade_permission=false
+compile proof: unavailable unless explicit MetaEditor compile output exists
+runtime loaded proof: unavailable unless explicit MT5 runtime output exists
 ```
 
 Generated row include presence alone does not prove runtime loading, ranking completion, or permission state.
@@ -176,7 +177,10 @@ These old names may appear only as historical references. They must not be used 
 
 ## Runtime Ownership Rules
 
-- Publication / FileIO / Route Service support owns folder routes and FileIO boundaries (current source may still use runtime_7_publication_owner naming as implementation inheritance).
+- Publication / FileIO / Route Service support owns folder routes and FileIO boundaries (current source uses inherited `runtime_7_publication_owner` folder naming as implementation inheritance only; do not infer trading Runtime Owner status from folder name; no source-folder rename performed in this run).
+- Placeholder route shells (Dossiers and Selection Desk stable parent routes) are structure-only publication surfaces; they do not prove Board/Dossier/Selection runtime truth.
+- Publication/status/manifest truth repair is source-present; late write failures are intended to surface in final status outputs.
+- Physical publication success proves file publication behavior only; it does not prove trading truth, ranking truth, or selection truth.
 - Selection Desk parent folders must be stable: `Groups` and `Global`.
 - Do not create route folders named after changing ranks such as Top 5, Top 10, Rank 1, or active cycle numbers.
 - Top 5 per group and Global Top 10 are planned child output views, not parent folder owners.
