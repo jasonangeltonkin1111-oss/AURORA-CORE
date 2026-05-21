@@ -7,9 +7,11 @@
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
    if(result.ok)
-      return "file_written_clean";
+      return result.status;
    if(result.status == "flush_failed")
       return "flush_failed";
+   if(result.status == "unchanged_no_write")
+      return "unchanged_no_write";
    if(!result.temp_open_ok)
       return "temp_open_failed";
    if(!result.temp_write_ok)
@@ -205,6 +207,20 @@ AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
    result.detail = detail;
    result.final_path = surface_path;
    result.temp_path = "";
+   return result;
+}
+
+AC_WriteResult AC_WriteTextFileIfChanged(const string final_path,
+                                         const string content,
+                                         string &last_content,
+                                         const bool force_write = false)
+{
+   if(!force_write && last_content == content)
+      return AC_MakeSyntheticWriteResult(final_path, true, "unchanged_no_write", (ulong)StringLen(content), "content_unchanged_atomic_move_skipped");
+
+   AC_WriteResult result = AC_WriteTextFile(final_path, content);
+   if(result.ok)
+      last_content = content;
    return result;
 }
 
