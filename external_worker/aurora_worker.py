@@ -237,12 +237,18 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
     p.ensure()
     try:
         result, _h, rows = validate_snapshot(p)
+        l6_start_ns = time.perf_counter_ns()
         l6_summary = publish_l6_cost_friction_rankings(p.outbox)
+        l6_duration_ms = max(0, (time.perf_counter_ns() - l6_start_ns) // 1_000_000)
+        l6_reused_existing_outputs = l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
         result_text = build_result(result, rows, worker_mode)
         result_text += "l6_rank_status=" + l6_summary.status + "\n"
         result_text += "l6_rank_reason=" + l6_summary.reason + "\n"
         result_text += "l6_rank_input_count=" + str(l6_summary.input_count) + "\n"
         result_text += "l6_rank_row_count=" + str(l6_summary.row_count) + "\n"
+        result_text += "l6_rank_duration_ms=" + str(l6_duration_ms) + "\n"
+        result_text += "l6_rank_reused_existing_outputs=" + ("true" if l6_reused_existing_outputs else "false") + "\n"
+        result_text += "l6_rank_instrumentation_schema=1\n"
         result_text += "l6_ranked_csv_path=" + l6_summary.ranked_csv_path + "\n"
         manifest_text = build_result_manifest(result, result_text)
         write_targets: List[Tuple[Path, str]] = [
