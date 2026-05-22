@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +21,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.6.1_gateway_write_lock_retry"
+WORKER_VERSION = "0.6.2_r3_snapshot_validation_labels"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -127,13 +127,13 @@ def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, s
     expected_checksum = manifest.get("payload_checksum", snapshot_header.get("payload_checksum", ""))
     if calculated_checksum != expected_checksum:
         return _result_from_header(False, "rejected", f"payload checksum mismatch expected={expected_checksum} calculated={calculated_checksum}", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
-    return _result_from_header(True, "accepted", "snapshot and job envelope accepted", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
+    return _result_from_header(True, "accepted", "R3 snapshot validation envelope accepted", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
 
 
 def build_heartbeat(result: ValidationResult, worker_mode: str) -> str:
     now_unix = unix_time()
     return "\n".join([
-        "schema_name=aurora_worker_heartbeat", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_heartbeat", "schema_version=3", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", f"worker_status={'alive' if result.ok else 'alive_degraded'}",
         f"last_validation_status={result.status}", f"last_validation_reason={result.reason}",
         f"last_snapshot_id={result.snapshot_id}", f"last_job_bus_schema_version={result.job_bus_schema_version}",
@@ -157,7 +157,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         stale_or_missing += 1 if parts[4] in {"Missing Tick", "Stale", "not_available"} else 0
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result", "schema_version=3", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", "authority=calculation_support_only", "trade_permission=false",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
@@ -166,21 +166,21 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
         f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=job_bus_shell_only_no_ranking_no_selection_no_permission_no_broker_polling", ""
+        "notes=r3_snapshot_validation_only_no_layer5_advisory_no_l6_ranking_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result_manifest", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result_manifest", "schema_version=3", f"worker_version={WORKER_VERSION}",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
         f"job_max_runtime_ms={result.job_max_runtime_ms}", f"job_status={job_status}",
         f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
-        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+        "result_scope=r3_snapshot_validation_only_no_layer5_advisory_no_l6_ranking", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
 
 
@@ -544,5 +544,4 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
