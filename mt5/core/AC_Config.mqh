@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime_scheduler_and_gateway_write_truth_cleanup";
-static const string AC_BUILD_VERSION      = "1.048";
-static const string AC_UPGRADE_ID         = "RUNTIME_SCHEDULER_AND_GATEWAY_WRITE_TRUTH_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Adds Gateway worker write-failure truth and reduces Workbench/full-publication cadence pressure. Layer 5 remains Basic System Gate. Runtime 3 remains Gateway snapshot validation and calculation support only. No compile/runtime proof is claimed by source changes alone.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 Gateway worker now reports degraded write publication instead of silently accepting failed atomic replacements. Workbench/full-publication cadence is throttled away from every-second pressure on the 250 ms timer. Runtime 3 snapshot validation does not rank symbols, select candidates, grant permission, or execute trades. Layer 6+ owns future friction/scoring work after explicit implementation. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.048 and EA property version=1.048; confirm L5 Board still shows BASIC SYSTEM GATE; confirm Gateway worker reports 0.6.3_write_failure_truth after rebuild/install only; confirm write_degraded_root_count appears only on worker write failures; confirm Workbench/full-publication cadence no longer fires every second from AC_WORKBENCH_INTERVAL_HEARTBEATS; confirm Runtime 3 Gateway remains calculation_support_only and trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime_scheduler_gateway_write_truth_cleanup_no_duplicate_owner_no_ranking_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "gateway_folder_route_alignment";
+static const string AC_BUILD_VERSION      = "1.049";
+static const string AC_UPGRADE_ID         = "GATEWAY_FOLDER_ROUTE_ALIGNMENT";
+static const string AC_UPGRADE_SUMMARY    = "Aligns physical Runtime 3 support folders to Gateway naming through the existing path owner. Existing ExternalWorker function/internal names remain compatibility implementation names; displayed and physical Common\\Files folders now target Gateway. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 remains Gateway snapshot validation and calculation support only. This patch changes route naming through existing path constants rather than creating a new route owner. Shared Gateway package/status paths and per-account Workbench Gateway IO paths must align with Python worker and installer scripts. Runtime 3 does not rank symbols, select candidates, grant permission, or execute trades. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.049 and EA property version is updated in a later compile patch if needed; confirm Common\\Files\\Aurora Core\\Gateway exists; confirm per-account Workbench\\Gateway contains Control, Inbox, Outbox, Status, Logs, Quarantine; confirm worker_required.txt path matches Python WorkerPaths; confirm shared_worker_status.txt and shared_worker_install_status.txt are under Gateway\\Status; confirm legacy External Worker folders are not required for new runtime proof.";
+static const string AC_LOGGING_POLICY     = "event_boundary_gateway_folder_route_alignment_no_duplicate_owner_no_ranking_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -26,16 +26,16 @@ static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Tru
 static const string AC_LAYER_5_NAME       = "Layer 5 - Basic System Gate";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "Calculation Gateway Foundation";
 static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
-static const string AC_GATEWAY_LEGACY_PATH_POLICY = "display_renamed_to_gateway_physical_external_worker_paths_preserved_until_migration_proof";
+static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.048_runtime_scheduler_gateway_write_truth_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.049_gateway_folder_route_alignment";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
-static const string AC_EXTERNAL_WORKER_FOLDER = "External Worker";
+static const string AC_EXTERNAL_WORKER_FOLDER = "Gateway";
 static const string AC_EXTERNAL_WORKER_CONTROL_FOLDER = "Control";
 static const string AC_EXTERNAL_WORKER_INBOX_FOLDER = "Inbox";
 static const string AC_EXTERNAL_WORKER_OUTBOX_FOLDER = "Outbox";
