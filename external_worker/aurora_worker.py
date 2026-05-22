@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +21,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.6.0_3c_job_bus_no_powershell_daemon"
+WORKER_VERSION = "0.6.1_gateway_write_lock_retry"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -544,3 +544,5 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
