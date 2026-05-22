@@ -11,6 +11,15 @@
 #include "AC_L1_State.mqh"
 #include "AC_L1_Scan.mqh"
 #include "AC_L1_Maps.mqh"
+#define AC_Layer1BoardSection AC_Layer1BoardSection_Base
 #include "AC_L1_Render.mqh"
+#undef AC_Layer1BoardSection
+
+string AC_Layer1BoardSection()
+{
+   if(!AC_L1_READY)
+      return "\r\nLAYER 1 - ACCOUNT AND PORTFOLIO\r\n----------------------------------------\r\nStatus: Pending\r\n";
+   return AC_Layer1BoardSection_Base() + AC_L1PortfolioMapSummary();
+}
 
 #endif
