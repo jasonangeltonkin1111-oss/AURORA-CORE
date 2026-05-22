@@ -2,6 +2,8 @@
 #define AC_PUBLICATION_RENDERERS_MQH
 
 // Board / Dossier Renderer Service.
+#include "AC_Layer7SessionRelevanceRenderer.mqh"
+
 // Renders prepared owner/status packets only. It must not compute trading truth,
 // selection, market-open state, broker specs, quotes, or permission.
 // L6-E reads tiny Gateway sidecar proof files only: manifest, top20, and one per-symbol rank file.
@@ -553,6 +555,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer4DossierSection(symbol);
    text += AC_Layer5DossierSection(symbol);
    text += AC_Layer6DossierSection(symbol);
+   text += AC_Layer7DossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
    text += (market_state == "open" ? "Next step: Layer 7 only after L6 live proof is accepted\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
@@ -778,6 +781,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_Layer4BoardSection();
    text += AC_Layer5BoardSection();
    text += AC_Layer6BoardSection();
+   text += AC_Layer7BoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
@@ -878,6 +882,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer4WorkbenchSection();
    text += AC_Layer5WorkbenchSection();
    text += AC_Layer6WorkbenchSection();
+   text += AC_Layer7WorkbenchSection();
    return text;
 }
 

@@ -17,6 +17,7 @@ MT5 planning index for runtime-owner source modules.
 - Scaffold status: created in Post-Guidebook Phase 1 (index/control spine only).
 - Guidebook tracker status: 16 / 16 complete in `docs/` and still active.
 - External worker status: design-stage only; no production authority granted.
+- Runtime 7 publication owner now includes Layer 7 Session Relevance placeholder renderer support (render-only; no scoring authority).
 
 ## Source-of-truth relationship
 - Active doctrinal source remains `docs/00` through `docs/15` guidebooks.
