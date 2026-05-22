@@ -4,8 +4,19 @@
 static string AC_L7_LAST_INPUT_EXPORT_STATUS = "not_exported";
 static string AC_L7_LAST_INPUT_MANIFEST_STATUS = "not_exported";
 static string AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM = "not_available";
+static string AC_L7_LAST_INPUT_UPSTREAM_KEY = "not_exported";
 static int    AC_L7_LAST_INPUT_ROWS = 0;
 static ulong  AC_L7_LAST_INPUT_SIZE = 0;
+
+string AC_L7InputUpstreamKey()
+{
+   return "l5_upstream=" + AC_L5UpstreamKey()
+      + "|l5_pass=" + IntegerToString(AC_L5_GATE_PASS)
+      + "|l3_cache=" + AC_L3_CACHE_KEY
+      + "|l4_cache=" + AC_L4_CACHE_KEY
+      + "|l4_refresh=" + AC_L4_REFRESH_KEY
+      + "|symbols_total=" + IntegerToString(SymbolsTotal(false));
+}
 
 string AC_L7CsvSafe(string value)
 {
@@ -144,6 +155,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 
    string rows = AC_L7BuildInputPrimitiveRows();
    string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
+   string upstream_key = AC_L7InputUpstreamKey();
    AC_WriteResult csv_write = AC_WriteTextFile(AC_L7SessionInputCsvPath(), rows);
 
    string manifest = "";
@@ -158,6 +170,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "folder_detail=" + folder_detail + "\r\n";
    manifest += "row_count=" + IntegerToString(AC_L7_LAST_INPUT_ROWS) + "\r\n";
    manifest += "l5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   manifest += "upstream_key=" + upstream_key + "\r\n";
    manifest += "payload_checksum=" + payload_checksum + "\r\n";
    manifest += "csv_path=" + AC_L7SessionInputCsvPath() + "\r\n";
    manifest += "csv_precision_policy=price_10_decimals_spread_bps_6_decimals_tick_age_6_decimals\r\n";
@@ -177,6 +190,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    AC_L7_LAST_INPUT_EXPORT_STATUS = csv_write.status;
    AC_L7_LAST_INPUT_MANIFEST_STATUS = manifest_write.status;
    AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
+   AC_L7_LAST_INPUT_UPSTREAM_KEY = upstream_key;
    AC_L7_LAST_INPUT_SIZE = csv_write.final_size;
    return csv_write;
 }
