@@ -91,6 +91,7 @@ string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
       + AC_ExternalWorkerStatusRow() + "\r\n"
       + AC_UniverseStatusRow() + "\r\n\r\n"
       + AC_Layer0WorkbenchText(layer0_status)
+      + AC_Layer5WorkbenchSection()
       + AC_ExternalWorkerWorkbenchSection();
 }
 
@@ -280,18 +281,19 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer4_invalid_bidask=" + IntegerToString(AC_L4_INVALID_BIDASK) + "\r\n";
    diagnostics += "layer4_cache_key=" + AC_L4_CACHE_KEY + "\r\n";
    diagnostics += "layer5_status=" + AC_L5_STATUS + "\r\n";
-   diagnostics += "layer5_eligible_open=" + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
+   diagnostics += "layer5_eligible_gate_count=" + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
    diagnostics += "layer5_ready_symbols=" + IntegerToString(AC_L5_READY_SYMBOLS) + "\r\n";
    diagnostics += "layer5_pending_symbols=" + IntegerToString(AC_L5_PENDING_SYMBOLS) + "\r\n";
+   diagnostics += "layer5_owner_gate_summary=" + AC_L5LayerGateSummary() + "\r\n";
    diagnostics += "layer5_refresh_duration_ms=" + IntegerToString((int)AC_L5_REFRESH_DURATION_MS) + "\r\n";
    diagnostics += "layer2_to_layer3_contract=layer3_scans_known_open_and_closed_symbols_unknown_symbols_may_stop_earlier\r\n";
    diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "layer4_owner_contract=runtime1_foundation_truth_symbolinfotick_marketwatch_only_no_history_no_dom_no_indicators_no_ranking_no_permission\r\n";
-   diagnostics += "layer5_owner_contract=runtime5_advisory_shell_only_consumes_l1_l2_l3_l4_status_no_heavy_calculation_no_ranking_no_selection_no_permission\r\n";
-   diagnostics += "external_worker_contract=runtime3_relationship_only_workbench_status_control_file_no_popup_no_launch_yet_no_permission_no_board_dossier_authority\r\n";
+   diagnostics += "layer5_owner_contract=runtime5_advisory_shell_only_consumes_l1_l2_l3_l4_owner_gates_plus_runtime3_accepted_worker_result_no_raw_previous_layer_duplication_no_heavy_calculation_no_ranking_no_selection_no_permission\r\n";
+   diagnostics += "external_worker_contract=runtime3_global_daemon_watchdog_job_bus_result_acceptance_no_popup_no_board_dossier_authority_no_permission\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
-   diagnostics += "workbench_contract=slower_developer_status_refresh_not_trader_bloat\r\n";
-   diagnostics += "statistics_contract=layer_owner_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_L3_or_L4\r\n";
+   diagnostics += "workbench_contract=slower_developer_status_refresh_meta_non_trading_proof_not_trader_bloat\r\n";
+   diagnostics += "statistics_contract=owner_gate_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_L3_or_L4\r\n";
    diagnostics += "symbol_packet_retry_limit=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    diagnostics += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
    diagnostics += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
@@ -305,7 +307,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_known_market_state_truth_plus_L3_broker_specs_value_truth_plus_L4_live_marketwatch_truth_plus_L5_advisory_shell_plus_runtime3_external_worker_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_advisory_shell_plus_runtime3_external_worker_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
