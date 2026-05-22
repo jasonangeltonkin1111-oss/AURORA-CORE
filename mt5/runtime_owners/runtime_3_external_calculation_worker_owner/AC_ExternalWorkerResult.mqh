@@ -17,16 +17,27 @@ string AC_EWReadTextFile(const string path, const int max_chars)
 string AC_EWValue(const string text, const string key)
 {
    string pattern = key + "=";
-   int start = StringFind(text, pattern);
-   if(start < 0) return "";
-   start += StringLen(pattern);
-   int end = StringFind(text, "\n", start);
-   if(end < 0) end = StringLen(text);
-   string value = StringSubstr(text, start, end - start);
-   StringTrimLeft(value);
-   StringTrimRight(value);
-   StringReplace(value, "\r", "");
-   return value;
+   string lines[];
+   ushort separator = StringGetCharacter("\n", 0);
+   int count = StringSplit(text, separator, lines);
+
+   for(int i = 0; i < count; i++)
+   {
+      string line = lines[i];
+      StringReplace(line, "\r", "");
+      StringTrimLeft(line);
+      StringTrimRight(line);
+
+      if(StringFind(line, pattern) != 0)
+         continue;
+
+      string value = StringSubstr(line, StringLen(pattern));
+      StringTrimLeft(value);
+      StringTrimRight(value);
+      return value;
+   }
+
+   return "";
 }
 
 bool AC_LoadExternalWorkerInstallText(string &install_text)
