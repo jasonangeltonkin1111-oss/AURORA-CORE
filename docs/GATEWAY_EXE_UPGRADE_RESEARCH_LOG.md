@@ -1,8 +1,8 @@
 # Gateway EXE Upgrade Research Log
 
-Status: audit and research only. This document does not change runtime behavior.
+Status: living research and upgrade ledger. Runtime code changes must remain small, measured, and reversible.
 
-Last updated from runtime evidence bundle: 18503(26).7z
+Last updated from runtime evidence bundle: 18503(26).7z plus EXE-003 instrumentation run.
 
 ## Purpose
 
@@ -170,6 +170,47 @@ System implication:
 - Account isolation must remain server/account scoped.
 - No absolute external file path authority should bypass the route owner.
 
+### Python perf counter timing
+
+Official source: https://docs.python.org/3/library/time.html#time.perf_counter_ns
+
+Relevant truth:
+
+- `time.perf_counter_ns()` returns an integer nanosecond performance counter.
+- It is intended for short-duration performance measurement and avoids float precision loss.
+
+System implication:
+
+- Gateway duration instrumentation should use `perf_counter_ns`, not wall-clock time.
+- Duration fields should be proof/diagnostic only and must not drive permission.
+- Timing measurement should stay low-cost and local to the layer call.
+
+### Python CSV parsing
+
+Official source: https://docs.python.org/3/library/csv.html#csv.DictReader
+
+Relevant truth:
+
+- `csv.DictReader` maps rows to dictionaries using the first row as field names by default.
+
+System implication:
+
+- CSV parsing remains acceptable for current L6 size, but future full-universe multi-layer work should avoid repeated parsing when the input manifest is unchanged.
+- Manifest-delta skipping is safer than early process-pool optimization.
+
+### Python dataclass use
+
+Official source: https://docs.python.org/3/library/dataclasses.html
+
+Relevant truth:
+
+- `dataclass` is appropriate for compact structured state with default fields.
+
+System implication:
+
+- Layer summary objects are acceptable for proof packets, as long as they do not grow into hidden runtime authority.
+- Future job registry state should remain explicit and serializable.
+
 ### Python concurrent futures constraints
 
 Official source: https://docs.python.org/3/library/concurrent.futures.html
@@ -253,6 +294,53 @@ Reason:
 - The lowest-risk CPU upgrade is manifest-delta scheduling.
 - Process pools/shared memory add packaging, lifecycle, and debugging risk.
 
+## Completed upgrade log
+
+### 2026-05-22: EXE-003A L6 result-level instrumentation
+
+Runtime file patched:
+
+```text
+external_worker/aurora_worker.py
+```
+
+Reason:
+
+- Stage B skip proof existed, but result output did not show how long the L6 call took or whether the current call reused existing outputs as a separate boolean.
+- The safest surface is the already-existing `result_latest.txt` append block in `run_once`, not the L6 math module and not the daemon scheduler.
+
+Added result fields:
+
+```text
+l6_rank_duration_ms=<integer>
+l6_rank_reused_existing_outputs=true|false
+l6_rank_instrumentation_schema=1
+```
+
+Implementation notes:
+
+- Uses `time.perf_counter_ns()` around `publish_l6_cost_friction_rankings(...)`.
+- Reuse detection is based on the existing reason prefix `skipped_unchanged_input_reused_existing_ranked_outputs;`.
+- Does not change L6 scoring, output manifests, scheduler behavior, daemon launch, FileIO routes, permissions, or selection.
+
+Acceptance proof required in next runtime bundle:
+
+```text
+result_latest.txt contains l6_rank_duration_ms
+result_latest.txt contains l6_rank_reused_existing_outputs
+result_latest.txt contains l6_rank_instrumentation_schema=1
+L6 remains complete or truthfully degraded
+Gateway result remains accepted
+No popup/window
+Daemon loop continues rising
+trade_permission=false
+selection_runtime=false
+```
+
+Rollback:
+
+- Remove the three appended fields and the two local timing/reuse variables in `run_once`.
+
 ## Upgrade backlog
 
 ### EXE-001: Layer job registry
@@ -330,6 +418,12 @@ l6_last_skip_status
 l6_last_input_checksum
 l6_last_output_checksum
 ```
+
+Current status:
+
+- Partially started through EXE-003A.
+- Current implementation adds result-level L6 duration/reuse fields only.
+- Shared/account process aggregate counters are still pending.
 
 Safe implementation rule:
 
@@ -513,28 +607,27 @@ Heavy evidence layers run only after candidate selection. Default full-universe 
 
 ## Recommended next safe work
 
-Do not patch the working Gateway immediately.
-
 Next audit/research step:
 
-1. Measure MT5 timer/rendering pressure from runtime outputs.
-2. Identify which MT5 renderer reads are repeated every heartbeat.
-3. Create a renderer cache invalidation plan that reads compact manifests only.
-4. Only then patch MT5 rendering if a tiny safe surface exists.
+1. Rebuild/install the packaged Gateway EXE.
+2. Run at least 2-3 daemon cycles.
+3. Confirm EXE-003A instrumentation fields appear in `result_latest.txt`.
+4. Compare skip duration vs rerank duration across a changed-input and unchanged-input run.
+5. Only then consider account/shared aggregate counters.
 
 Next EXE implementation step when ready:
 
-1. Add low-cost L6 duration and skip counters to Gateway status.
+1. Add low-cost L6 aggregate counters to account process status or shared status.
 2. Do not change L6 math.
 3. Do not change daemon launch behavior.
 4. Do not add threads/processes.
 
 ## Decision gate
 
-Current decision: HOLD on runtime code changes.
+Current decision: TEST FIRST.
 
 Reason:
 
-The EXE is healthy in the latest runtime evidence. The correct move is to keep accumulating research and measured proof, then upgrade through small guardrail patches only.
+EXE-003A is intentionally tiny, but it still changes runtime output fields. It must be packaged and runtime-tested before any broader scheduler or counter work.
 
-Next likely implementation decision: TEST FIRST on instrumentation-only metrics, not concurrency.
+Next likely implementation decision: after proof, add aggregate counters only if `result_latest.txt` fields are stable and no MT5 consumer breaks.
