@@ -113,8 +113,10 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
         sidecar = path.with_name(path.name + ".write_failed.txt")
         text = "\n".join([
             "schema_name=aurora_gateway_write_failure",
-            "schema_version=1",
+            "schema_version=2",
             f"target_path={path}",
+            "write_status=failed",
+            "write_ok=false",
             f"error_type={type(exc).__name__}",
             f"error={str(exc).replace(chr(13), ' ').replace(chr(10), ' ')}",
             f"generated_utc={utc_stamp()}",
@@ -133,13 +135,17 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
         pass
 
 
-def atomic_write_text(path: Path, text: str) -> None:
+def atomic_write_text(path: Path, text: str) -> bool:
     """Durable best-effort atomic text write for Windows/MT5 shared files.
 
     Windows can briefly lock the final status file while MT5, Explorer, antivirus,
     or another reader opens it. A transient WinError 32 must not kill the packaged
     Gateway daemon or create popup storms. Use a unique tmp per process/write,
     retry boundedly, and degrade with a sidecar proof if replacement stays locked.
+
+    Returns True only when the final replace succeeded. Returns False after a
+    bounded replace failure and best-effort sidecar proof. Callers that publish
+    heartbeat/result/status files must propagate False as degraded write truth.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f"{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
@@ -149,7 +155,7 @@ def atomic_write_text(path: Path, text: str) -> None:
         for attempt in range(WRITE_REPLACE_RETRY_ATTEMPTS):
             try:
                 os.replace(tmp, path)
-                return
+                return True
             except (PermissionError, OSError) as exc:
                 last_error = exc
                 if attempt + 1 >= WRITE_REPLACE_RETRY_ATTEMPTS:
@@ -157,6 +163,7 @@ def atomic_write_text(path: Path, text: str) -> None:
                 time.sleep(WRITE_REPLACE_RETRY_BACKOFF_SECONDS * (attempt + 1))
         assert last_error is not None
         _write_atomic_failure_sidecar(path, last_error)
+        return False
     finally:
         _cleanup_stale_tmp(tmp)
 
