@@ -10,7 +10,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$WorkerVersion = "0.6.3_write_failure_truth"
+$WorkerVersion = "0.6.4_l6_friction_ranked_csv"
 
 if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
