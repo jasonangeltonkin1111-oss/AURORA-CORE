@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "stable_gateway_required_control_writes";
-static const string AC_BUILD_VERSION      = "1.054";
-static const string AC_UPGRADE_ID         = "STABLE_GATEWAY_REQUIRED_CONTROL_WRITES";
-static const string AC_UPGRADE_SUMMARY    = "Removes volatile generated_at from worker_required.txt and writes the Gateway required control file only when the contract text changes. Runtime proof from build 1.053 showed Gateway validation was accepted but gateway_status_and_required consumed roughly 281 ms and pushed the 250 ms timer over budget. This patch reduces avoidable FileIO churn without changing Gateway authority, result validation, L6 ranking acceptance, selection, permission, or execution. No compile/runtime proof is claimed by source changes alone.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 remains Gateway calculation support only. worker_required.txt is a stable control contract and must not be physically rewritten every Gateway check just because time changed. This patch does not create trade permission, selection runtime, basket logic, active Layer 7 scoring, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.054; fix EA property version locally if needed; confirm worker_required.txt schema_version=3 and contract_timing=stable_control_contract_written_only_when_changed; confirm Manifest Gateway Required can show unchanged_no_write after the first write; confirm gateway_status_and_required duration drops materially below the previous ~281 ms; confirm accepted_result remains true; confirm L6 remains accepted only when sidecar proof matches; confirm L7 remains placeholder with ranking_runtime=false, selection_runtime=false, trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_stable_gateway_required_control_writes_no_duplicate_owner_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "l6_input_upstream_cache_performance";
+static const string AC_BUILD_VERSION      = "1.055";
+static const string AC_UPGRADE_ID         = "L6_INPUT_UPSTREAM_CACHE_PERFORMANCE";
+static const string AC_UPGRADE_SUMMARY    = "Caches Layer 6 input primitive export by an upstream key so unchanged L5/L3/L4 truth skips the expensive L6 input row rebuild, OrderCalcProfit loop, and CSV rewrite. This follows runtime evidence where Gateway validation was accepted but gateway_status_and_required exceeded the 250 ms timer budget. No ranking math, selection, trade permission, execution, FileIO owner, route owner, or Gateway authority is changed. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 remains Gateway calculation support only. L6 input primitives are exported only when upstream L5/L3/L4 truth changes; unchanged inputs return synthetic unchanged_cached proof before row construction. This patch does not create trade permission, selection runtime, basket logic, active Layer 7 scoring, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.055; fix EA property version locally if needed; confirm l6_input_primitives.manifest schema_version=4 and contains upstream_key; confirm repeated unchanged Gateway checks report l6_input_upstream_unchanged_no_ordercalcprofit_no_csv_rewrite or unchanged_cached; confirm gateway_status_and_required duration drops materially; confirm accepted_result remains true; confirm L6 ranked sidecar acceptance remains honest; confirm L7 remains placeholder with ranking_runtime=false, selection_runtime=false, trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_l6_input_upstream_cache_performance_no_duplicate_owner_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.054_stable_gateway_required_control_writes";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.055_l6_input_upstream_cache_performance";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
