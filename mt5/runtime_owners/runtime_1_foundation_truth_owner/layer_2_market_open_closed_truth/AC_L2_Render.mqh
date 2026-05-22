@@ -28,6 +28,45 @@ string AC_L2BoolTitle(const bool value)
    return value ? "Yes" : "No";
 }
 
+string AC_L2DurationText(const int minutes)
+{
+   if(minutes < 0) return "unavailable";
+   int days = minutes / 1440;
+   int rem = minutes % 1440;
+   int hours = rem / 60;
+   int mins = rem % 60;
+
+   string text = "";
+   if(days > 0) text += IntegerToString(days) + (days == 1 ? " day" : " days");
+   if(hours > 0)
+   {
+      if(text != "") text += " ";
+      text += IntegerToString(hours) + "h";
+   }
+   if(mins > 0 || text == "")
+   {
+      if(text != "") text += " ";
+      text += IntegerToString(mins) + "m";
+   }
+   return text;
+}
+
+string AC_L2NextTradeSessionText(const AC_L2SymbolState &state)
+{
+   if(state.next_trade_session_from == "unavailable" || state.next_trade_session_to == "unavailable")
+      return "unavailable";
+
+   string window = state.next_trade_session_from + " - " + state.next_trade_session_to;
+   if(state.minutes_until_next_open < 0)
+      return window;
+
+   string prefix = "in " + AC_L2DurationText(state.minutes_until_next_open);
+   if(state.market_state == "open")
+      prefix = "already active; next scheduled open in " + AC_L2DurationText(state.minutes_until_next_open);
+
+   return prefix + " (" + window + ")";
+}
+
 string AC_L2StatusLine(const AC_L2SymbolState &state)
 {
    return state.symbol
@@ -58,7 +97,7 @@ void AC_BuildLayer2Texts()
    AC_L2_BOARD_SECTION += "Trade Sessions OK:   " + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Quote Sessions OK:   " + IntegerToString(AC_L2_QUOTE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "API Failures:         Trade Sessions " + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT) + " | Symbol Info " + IntegerToString(AC_L2_SYMBOL_INFO_FAILURE_COUNT) + "\r\n";
-   AC_L2_BOARD_SECTION += "Route Writes:         Open " + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT) + " | Closed " + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT) + " | Unknown " + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT) + " | Failed " + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT) + "\r\n";
+   AC_L2_BOARD_SECTION += "Route Write Attempts: Open " + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT) + " | Closed " + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT) + " | Unknown " + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT) + " | Failed " + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Route Cleanup:        Removed Duplicates " + IntegerToString(AC_L2_DUPLICATE_CLEANUP_COUNT) + " | Failed " + IntegerToString(AC_L2_DUPLICATE_CLEANUP_FAILURE_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Session Basis:        Server session time of day; session dates ignored by design\r\n";
    AC_L2_BOARD_SECTION += "Server Time Source:   TimeCurrent with broker / MarketWatch caveat\r\n";
@@ -80,6 +119,7 @@ void AC_BuildLayer2Texts()
    AC_L2_WORKBENCH_SECTION += "quote_session_success_count=" + IntegerToString(AC_L2_QUOTE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "quote_session_failure_count=" + IntegerToString(AC_L2_QUOTE_SESSION_FAILURE_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "symbol_info_failure_count=" + IntegerToString(AC_L2_SYMBOL_INFO_FAILURE_COUNT) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "route_write_counter_semantics=attempts_not_unique_final_files\r\n";
    AC_L2_WORKBENCH_SECTION += "route_write_open_count=" + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "route_write_closed_count=" + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "route_write_unknown_count=" + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT) + "\r\n";
@@ -133,7 +173,7 @@ string AC_Layer2DossierSection(const string symbol)
    text += "Server Day: " + s.current_day_of_week + "\r\n";
    text += "Server Time Of Day: " + AC_L2SecondsOfDayText(s.server_seconds_of_day) + "\r\n";
    text += "Active Trade Session: " + s.active_trade_session_from + " - " + s.active_trade_session_to + "\r\n";
-   text += "Next Trade Session: " + s.next_trade_session_from + " - " + s.next_trade_session_to + "\r\n";
+   text += "Next Trade Session: " + AC_L2NextTradeSessionText(s) + "\r\n";
    text += "Minutes Since Session Open: " + IntegerToString(s.minutes_since_session_open) + "\r\n";
    text += "Minutes Until Session Close: " + IntegerToString(s.minutes_until_session_close) + "\r\n";
    text += "Minutes Until Next Open: " + IntegerToString(s.minutes_until_next_open) + "\r\n";
@@ -161,6 +201,7 @@ string AC_Layer2StatusRow()
       + "|unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
       + "|trade_session_success=" + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT)
       + "|trade_session_failure=" + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT)
+      + "|route_write_counter_semantics=attempts_not_unique_final_files"
       + "|route_write_failures=" + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT)
       + "|cutoff_rule=closed_symbols_block_deeper_layers"
       + "|trade_permission=false";
