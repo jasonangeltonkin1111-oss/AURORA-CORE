@@ -1,6 +1,6 @@
-﻿$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Continue"
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
-$exe = Join-Path $sharedRoot "External Worker\AuroraWorker\AuroraWorker.exe"
+$exe = Join-Path $sharedRoot "Gateway\AuroraWorker\AuroraWorker.exe"
 $daemonTask = "AuroraWorker_Global"
 
 $proc = Get-Process AuroraWorker -ErrorAction SilentlyContinue
