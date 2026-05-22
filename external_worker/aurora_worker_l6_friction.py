@@ -557,6 +557,80 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
     ])
 
 
+def _summary_from_ranked_manifest(manifest_text: str, fallback: L6RankSummary) -> L6RankSummary:
+    data = _parse_kv_text(manifest_text)
+    summary = L6RankSummary(
+        status=data.get("status", fallback.status),
+        reason=data.get("reason", fallback.reason),
+        input_count=_safe_int(data.get("input_count"), fallback.input_count),
+        source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
+        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count),
+        source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass),
+        source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
+        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum),
+        input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank),
+        input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
+        stale_tmp_files_removed=fallback.stale_tmp_files_removed,
+        stale_tmp_files_failed=fallback.stale_tmp_files_failed,
+        row_count=_safe_int(data.get("row_count"), fallback.row_count),
+        ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count),
+        ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count),
+        not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
+        elite_count=_safe_int(data.get("elite_friction_count"), fallback.elite_count),
+        good_count=_safe_int(data.get("good_friction_count"), fallback.good_count),
+        acceptable_count=_safe_int(data.get("acceptable_friction_count"), fallback.acceptable_count),
+        expensive_count=_safe_int(data.get("expensive_friction_count"), fallback.expensive_count),
+        hostile_count=_safe_int(data.get("hostile_friction_count"), fallback.hostile_count),
+        zero_cost_suspicious_count=_safe_int(data.get("zero_cost_nonzero_spread_suspicious_count"), fallback.zero_cost_suspicious_count),
+        mismatch_count=_safe_int(data.get("cost_model_mismatch_count"), fallback.mismatch_count),
+        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written),
+        payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
+        ranked_csv_path=fallback.ranked_csv_path,
+        manifest_path=fallback.manifest_path,
+        top20_path=fallback.top20_path,
+        symbol_rank_folder_path=fallback.symbol_rank_folder_path,
+    )
+    return summary
+
+
+def _try_reuse_unchanged_rank_outputs(
+    summary: L6RankSummary,
+    manifest_path: Path,
+    ranked_path: Path,
+    top20_path: Path,
+) -> L6RankSummary | None:
+    if not summary.source_input_manifest_present:
+        return None
+    if summary.source_input_payload_checksum in {"", "not_available"}:
+        return None
+    if summary.input_payload_checksum != summary.source_input_payload_checksum:
+        return None
+    if not manifest_path.exists() or not ranked_path.exists() or not top20_path.exists():
+        return None
+
+    ranked_manifest_text = read_text(manifest_path)
+    existing = _summary_from_ranked_manifest(ranked_manifest_text, summary)
+    if existing.status not in {"complete", "input_degraded"}:
+        return None
+    if not existing.input_generation_stable:
+        return None
+    if existing.input_payload_checksum != summary.input_payload_checksum:
+        return None
+    if existing.input_payload_checksum_after_rank != summary.input_payload_checksum:
+        return None
+    if existing.source_input_payload_checksum != summary.source_input_payload_checksum:
+        return None
+    if existing.input_count <= 0 or existing.row_count != existing.input_count:
+        return None
+    if existing.symbol_rank_files_written != existing.row_count:
+        return None
+
+    existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
+    existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
+    existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
+    return existing
+
+
 def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     layer_dir = outbox / "Layers" / L6_LAYER_FOLDER
     input_path = layer_dir / L6_INPUT_NAME
@@ -597,6 +671,11 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
 
     text = read_text(input_path)
     summary.input_payload_checksum = _csv_payload_checksum(text)
+
+    reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path)
+    if reused is not None:
+        return reused
+
     reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
     rows = [row for row in reader]
     summary.input_count = len(rows)
