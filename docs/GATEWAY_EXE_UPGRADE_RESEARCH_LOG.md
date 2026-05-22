@@ -2,7 +2,7 @@
 
 Status: living research and upgrade ledger. Runtime code changes must remain small, measured, and reversible.
 
-Last updated from runtime evidence bundle: 18503(26).7z plus EXE-003 instrumentation run.
+Last updated from runtime evidence bundle: 18503(26).7z plus EXE-003 instrumentation/proof-script runs.
 
 ## Purpose
 
@@ -169,6 +169,26 @@ System implication:
 - Aurora Core/Gateway and per-account Workbench/Gateway are the right communication bridge.
 - Account isolation must remain server/account scoped.
 - No absolute external file path authority should bypass the route owner.
+
+### PowerShell read-only proof commands
+
+Official sources:
+
+- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/test-path
+- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-content
+- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/select-string
+
+Relevant truth:
+
+- `Test-Path` can verify whether a file/path exists.
+- `Get-Content` can read existing file content.
+- `Select-String` can search text/patterns.
+
+System implication:
+
+- A read-only proof script can validate output fields without starting/stopping/rebuilding/installing Gateway.
+- Proof scripts must not become runtime owners.
+- The script added in EXE-003B intentionally reads files only.
 
 ### Python perf counter timing
 
@@ -341,6 +361,53 @@ Rollback:
 
 - Remove the three appended fields and the two local timing/reuse variables in `run_once`.
 
+### 2026-05-22: EXE-003B read-only proof script
+
+Script added:
+
+```text
+external_worker/proof_gateway_l6_instrumentation.ps1
+```
+
+Reason:
+
+- After EXE-003A, the next safest job is not another runtime patch. It is a repeatable read-only verifier.
+- The script proves whether the packaged EXE is emitting the new fields after rebuild/install and whether core Gateway safety fields remain intact.
+
+Script guarantees:
+
+- Does not start Gateway.
+- Does not stop Gateway.
+- Does not repair Gateway.
+- Does not install or rebuild Gateway.
+- Does not launch the EXE.
+- Reads Common Files proof only.
+
+Proof fields checked:
+
+```text
+l6_rank_duration_ms
+l6_rank_reused_existing_outputs
+l6_rank_instrumentation_schema
+result_status
+authority
+trade_permission
+l6_rank_status
+worker_process_status.txt
+worker_heartbeat.txt
+shared_worker_status.txt
+ranked_symbols.manifest
+```
+
+Acceptance proof required:
+
+- Script prints PASS for duration integer, reuse flag, schema 1, result complete, authority safe, trade permission false.
+- Script does not produce popups or modify runtime files.
+
+Rollback:
+
+- Delete `external_worker/proof_gateway_l6_instrumentation.ps1`.
+
 ## Upgrade backlog
 
 ### EXE-001: Layer job registry
@@ -423,6 +490,7 @@ Current status:
 
 - Partially started through EXE-003A.
 - Current implementation adds result-level L6 duration/reuse fields only.
+- EXE-003B added a read-only proof script.
 - Shared/account process aggregate counters are still pending.
 
 Safe implementation rule:
@@ -611,9 +679,10 @@ Next audit/research step:
 
 1. Rebuild/install the packaged Gateway EXE.
 2. Run at least 2-3 daemon cycles.
-3. Confirm EXE-003A instrumentation fields appear in `result_latest.txt`.
-4. Compare skip duration vs rerank duration across a changed-input and unchanged-input run.
-5. Only then consider account/shared aggregate counters.
+3. Run `external_worker/proof_gateway_l6_instrumentation.ps1`.
+4. Confirm EXE-003A instrumentation fields appear in `result_latest.txt`.
+5. Compare skip duration vs rerank duration across a changed-input and unchanged-input run.
+6. Only then consider account/shared aggregate counters.
 
 Next EXE implementation step when ready:
 
@@ -628,6 +697,6 @@ Current decision: TEST FIRST.
 
 Reason:
 
-EXE-003A is intentionally tiny, but it still changes runtime output fields. It must be packaged and runtime-tested before any broader scheduler or counter work.
+EXE-003A is intentionally tiny, but it still changes runtime output fields. EXE-003B only adds a read-only proof script. Runtime proof must come before any broader scheduler or counter work.
 
-Next likely implementation decision: after proof, add aggregate counters only if `result_latest.txt` fields are stable and no MT5 consumer breaks.
+Next likely implementation decision: after proof, add aggregate counters only if `result_latest.txt` fields are stable, the proof script passes, and no MT5 consumer breaks.
