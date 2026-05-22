@@ -21,7 +21,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.5.1_hotfix_no_powershell_daemon"
+WORKER_VERSION = "0.6.0_3c_job_bus_no_powershell_daemon"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -41,6 +41,11 @@ class ValidationResult:
     payload_checksum: str = "not_available"
     server: str = "not_available"
     account: str = "not_available"
+    job_bus_schema_version: str = "not_available"
+    job_id: str = "not_available"
+    job_type: str = "not_available"
+    job_resource_class: str = "not_available"
+    job_max_runtime_ms: str = "not_available"
 
 
 @dataclass
@@ -50,6 +55,24 @@ class WatchdogProof:
     last_reason: str = "not_available"
     restart_attempted: str = "false"
     restart_result: str = "not_available"
+
+
+def _result_from_header(ok: bool, status: str, reason: str, header: Dict[str, str], row_count: int = 0, checksum: str = "not_available") -> ValidationResult:
+    return ValidationResult(
+        ok=ok,
+        status=status,
+        reason=reason,
+        snapshot_id=header.get("snapshot_id", "not_available"),
+        row_count=row_count,
+        payload_checksum=checksum,
+        server=header.get("server", "not_available"),
+        account=header.get("account", "not_available"),
+        job_bus_schema_version=header.get("job_bus_schema_version", "not_available"),
+        job_id=header.get("job_id", "not_available"),
+        job_type=header.get("job_type", "not_available"),
+        job_resource_class=header.get("job_resource_class", "not_available"),
+        job_max_runtime_ms=header.get("job_max_runtime_ms", "not_available"),
+    )
 
 
 def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, str], List[str]]:
@@ -66,37 +89,56 @@ def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, s
     manifest = read_kv(manifest_path)
     snapshot_header, snapshot_rows = split_snapshot(read_text(snapshot_path))
     snapshot_id = snapshot_header.get("snapshot_id", manifest.get("snapshot_id", "not_available"))
+    snapshot_header.setdefault("snapshot_id", snapshot_id)
     server = snapshot_header.get("server", "not_available")
     account = snapshot_header.get("account", "not_available")
     expected_server = required.get("server", "")
     expected_account = required.get("account", "")
     if expected_server and server != expected_server:
-        return ValidationResult(False, "rejected", f"server mismatch snapshot={server} required={expected_server}", snapshot_id, 0, "not_available", server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", f"server mismatch snapshot={server} required={expected_server}", snapshot_header), snapshot_header, snapshot_rows
     if expected_account and account != expected_account:
-        return ValidationResult(False, "rejected", f"account mismatch snapshot={account} required={expected_account}", snapshot_id, 0, "not_available", server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", f"account mismatch snapshot={account} required={expected_account}", snapshot_header), snapshot_header, snapshot_rows
     if snapshot_header.get("authority") != EXPECTED_AUTHORITY or manifest.get("authority") != EXPECTED_AUTHORITY:
-        return ValidationResult(False, "rejected", "authority is not calculation_support_only", snapshot_id, 0, "not_available", server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", "authority is not calculation_support_only", snapshot_header), snapshot_header, snapshot_rows
     if snapshot_header.get("trade_permission") != "false" or manifest.get("trade_permission") != "false":
-        return ValidationResult(False, "rejected", "trade_permission must remain false", snapshot_id, 0, "not_available", server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", "trade_permission must remain false", snapshot_header), snapshot_header, snapshot_rows
+
+    header_job_id = snapshot_header.get("job_id", "not_available")
+    manifest_job_id = manifest.get("job_id", "not_available")
+    header_job_type = snapshot_header.get("job_type", "not_available")
+    manifest_job_type = manifest.get("job_type", "not_available")
+    header_job_bus = snapshot_header.get("job_bus_schema_version", "not_available")
+    manifest_job_bus = manifest.get("job_bus_schema_version", "not_available")
+    if header_job_id == "not_available" or manifest_job_id == "not_available":
+        return _result_from_header(False, "rejected", "job_id missing from snapshot or manifest", snapshot_header), snapshot_header, snapshot_rows
+    if header_job_id != manifest_job_id:
+        return _result_from_header(False, "rejected", f"job_id mismatch header={header_job_id} manifest={manifest_job_id}", snapshot_header), snapshot_header, snapshot_rows
+    if header_job_type == "not_available" or manifest_job_type == "not_available" or header_job_type != manifest_job_type:
+        return _result_from_header(False, "rejected", "job_type mismatch between snapshot and manifest", snapshot_header), snapshot_header, snapshot_rows
+    if header_job_bus == "not_available" or manifest_job_bus == "not_available" or header_job_bus != manifest_job_bus:
+        return _result_from_header(False, "rejected", "job_bus_schema_version mismatch between snapshot and manifest", snapshot_header), snapshot_header, snapshot_rows
+
     manifest_rows = int(manifest.get("row_count", "-1"))
     header_rows = int(snapshot_header.get("row_count", "-1"))
     data_rows = max(0, len(snapshot_rows) - 1)
     if manifest_rows != data_rows or header_rows != data_rows:
-        return ValidationResult(False, "rejected", f"row_count mismatch header={header_rows} manifest={manifest_rows} actual={data_rows}", snapshot_id, data_rows, "not_available", server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", f"row_count mismatch header={header_rows} manifest={manifest_rows} actual={data_rows}", snapshot_header, data_rows), snapshot_header, snapshot_rows
     calculated_checksum = payload_checksum(snapshot_rows)
     expected_checksum = manifest.get("payload_checksum", snapshot_header.get("payload_checksum", ""))
     if calculated_checksum != expected_checksum:
-        return ValidationResult(False, "rejected", f"payload checksum mismatch expected={expected_checksum} calculated={calculated_checksum}", snapshot_id, data_rows, calculated_checksum, server, account), snapshot_header, snapshot_rows
-    return ValidationResult(True, "accepted", "snapshot accepted", snapshot_id, data_rows, calculated_checksum, server, account), snapshot_header, snapshot_rows
+        return _result_from_header(False, "rejected", f"payload checksum mismatch expected={expected_checksum} calculated={calculated_checksum}", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
+    return _result_from_header(True, "accepted", "snapshot and job envelope accepted", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
 
 
 def build_heartbeat(result: ValidationResult, worker_mode: str) -> str:
     now_unix = unix_time()
     return "\n".join([
-        "schema_name=aurora_worker_heartbeat", "schema_version=1", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_heartbeat", "schema_version=2", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", f"worker_status={'alive' if result.ok else 'alive_degraded'}",
         f"last_validation_status={result.status}", f"last_validation_reason={result.reason}",
-        f"last_snapshot_id={result.snapshot_id}", f"server={result.server}", f"account={result.account}",
+        f"last_snapshot_id={result.snapshot_id}", f"last_job_bus_schema_version={result.job_bus_schema_version}",
+        f"last_job_id={result.job_id}", f"last_job_type={result.job_type}",
+        f"server={result.server}", f"account={result.account}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"generated_utc={utc_stamp()}", f"generated_unix={now_unix}",
         "authority=calculation_support_only", "trade_permission=false", ""
@@ -113,23 +155,30 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         closed_count += 1 if parts[1] == "closed" else 0
         l4_ready_count += 1 if parts[3] == "true" else 0
         stale_or_missing += 1 if parts[4] in {"Missing Tick", "Stale", "not_available"} else 0
+    job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result", "schema_version=1", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result", "schema_version=2", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", "authority=calculation_support_only", "trade_permission=false",
-        f"source_snapshot_id={result.snapshot_id}", f"result_status={'complete' if result.ok else 'rejected'}",
-        f"result_reason={result.reason}", f"row_count={result.row_count}", f"open_count={open_count}",
-        f"closed_count={closed_count}", f"l4_ready_count={l4_ready_count}",
-        f"stale_or_missing_quote_rows={stale_or_missing}", f"payload_checksum={result.payload_checksum}",
-        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=validator_skeleton_only_no_ranking_no_selection_no_permission_no_broker_polling", ""
+        f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
+        f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
+        f"job_max_runtime_ms={result.job_max_runtime_ms}", f"job_status={job_status}",
+        f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
+        f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
+        f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
+        f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
+        "notes=job_bus_shell_only_no_ranking_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
+    job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result_manifest", "schema_version=1", f"worker_version={WORKER_VERSION}",
-        f"source_snapshot_id={result.snapshot_id}", f"result_status={'complete' if result.ok else 'rejected'}",
-        f"result_reason={result.reason}", f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
+        "schema_name=aurora_worker_result_manifest", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
+        f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
+        f"job_max_runtime_ms={result.job_max_runtime_ms}", f"job_status={job_status}",
+        f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
+        f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
         f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
@@ -139,13 +188,14 @@ def build_process_status(root: Path, mode: str, loop_count: int, last_run_exit_c
     r = result or ValidationResult(False, "not_available", "no validation result yet")
     now = unix_time()
     return "\n".join([
-        "schema_name=aurora_worker_process_status", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_process_status", "schema_version=3", f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}", f"mode={mode}", f"root={root}", f"root_count={root_count}",
         f"active_root_index={active_root_index}", f"process_start_utc={PROCESS_START_UTC}",
         f"process_start_unix={PROCESS_START_UNIX}", f"last_loop_utc={utc_stamp()}", f"last_loop_unix={now}",
         f"loop_count={loop_count}", f"last_run_exit_code={last_run_exit_code}",
         f"last_validation_status={r.status}", f"last_validation_reason={r.reason}",
-        f"last_snapshot_id={r.snapshot_id}", f"row_count={r.row_count}", f"payload_checksum={r.payload_checksum}",
+        f"last_snapshot_id={r.snapshot_id}", f"last_job_id={r.job_id}", f"last_job_type={r.job_type}",
+        f"row_count={r.row_count}", f"payload_checksum={r.payload_checksum}",
         "last_exception_type=none", "last_exception=none", "authority=calculation_support_only", "trade_permission=false",
         f"generated_utc={utc_stamp()}", f"generated_unix={now}", ""
     ])
@@ -321,7 +371,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
 
     lines = [
         "schema_name=aurora_shared_worker_status",
-        "schema_version=3",
+        "schema_version=4",
         f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}",
         "mode=shared-daemon",
@@ -361,9 +411,9 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         "authority=calculation_support_only",
         "trade_permission=false",
         "",
-        "root|exit_code|status|reason|snapshot_id|payload_checksum",
+        "root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum",
     ]
-    lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.payload_checksum}" for root, code, res in results]
+    lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.job_id}|{res.job_type}|{res.payload_checksum}" for root, code, res in results]
     lines.append("")
     return "\n".join(lines)
 
