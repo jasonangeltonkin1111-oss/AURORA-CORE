@@ -42,9 +42,95 @@ static string AC_L5_BOARD_LAYOUT_CONTRACT = "compact_operator_summary_same_style
 static string AC_L5_DOSSIER_LAYOUT_CONTRACT = "rich_per_symbol_advisory_packet_same_style_as_L3_L4_dossier_sections_without_repeating_raw_previous_layer_data";
 static string AC_L5_WORKBENCH_LAYOUT_CONTRACT = "machine_meta_diagnostics_same_style_as_L1_L2_L3_L4_workbench_sections";
 
+// L5-C advisory packet shell fields.
+// These are real owner fields, but values remain shell/degraded until Runtime 3 returns accepted deep-calculation payloads.
+static string AC_L5_PACKET_SCHEMA_VERSION = "l5_advisory_packet_v1";
+static string AC_L5_PACKET_STATUS = "not_ready";
+static string AC_L5_PACKET_SOURCE = "runtime3_accepted_worker_result_required";
+static string AC_L5_PACKET_BINDING_STATUS = "not_bound_to_worker_payload";
+static string AC_L5_FRICTION_ADVISORY = "pending_runtime3_deep_result";
+static string AC_L5_VOLATILITY_ADVISORY = "pending_runtime3_deep_result";
+static string AC_L5_STRUCTURE_ADVISORY = "pending_runtime3_deep_result";
+static string AC_L5_SESSION_ADVISORY = "pending_runtime3_deep_result";
+static string AC_L5_RISK_ADVISORY = "pending_runtime3_deep_result";
+static string AC_L5_KILL_REASON = "pending_runtime3_deep_result";
+static string AC_L5_QUALITY_STATE = "degraded_shell_only";
+static string AC_L5_PACKET_REASON = "Deep advisory calculation payload not implemented yet";
+static string AC_L5_PACKET_OWNER_BOUNDARY = "advisory_packet_shell_only_no_ranking_no_selection_no_permission_no_execution";
+
 string AC_L5BoolText(const bool value)
 {
    return value ? "TRUE" : "FALSE";
+}
+
+void AC_L5ResetAdvisoryPacket()
+{
+   AC_L5_PACKET_SCHEMA_VERSION = "l5_advisory_packet_v1";
+   AC_L5_PACKET_STATUS = "not_ready";
+   AC_L5_PACKET_SOURCE = "runtime3_accepted_worker_result_required";
+   AC_L5_PACKET_BINDING_STATUS = "not_bound_to_worker_payload";
+   AC_L5_FRICTION_ADVISORY = "pending_runtime3_deep_result";
+   AC_L5_VOLATILITY_ADVISORY = "pending_runtime3_deep_result";
+   AC_L5_STRUCTURE_ADVISORY = "pending_runtime3_deep_result";
+   AC_L5_SESSION_ADVISORY = "pending_runtime3_deep_result";
+   AC_L5_RISK_ADVISORY = "pending_runtime3_deep_result";
+   AC_L5_KILL_REASON = "pending_runtime3_deep_result";
+   AC_L5_QUALITY_STATE = "degraded_shell_only";
+   AC_L5_PACKET_REASON = "Deep advisory calculation payload not implemented yet";
+   AC_L5_PACKET_OWNER_BOUNDARY = "advisory_packet_shell_only_no_ranking_no_selection_no_permission_no_execution";
+}
+
+void AC_L5BindAdvisoryPacketShell()
+{
+   AC_L5ResetAdvisoryPacket();
+
+   if(AC_L5_READINESS_STATE == "blocked_l2_gate_not_ready" ||
+      AC_L5_READINESS_STATE == "blocked_l3_gate_not_ready" ||
+      AC_L5_READINESS_STATE == "blocked_l4_gate_not_ready" ||
+      AC_L5_READINESS_STATE == "blocked_no_eligible_symbols")
+   {
+      AC_L5_PACKET_STATUS = "blocked_by_owner_gate";
+      AC_L5_PACKET_BINDING_STATUS = "not_bound_owner_gate_blocked";
+      AC_L5_QUALITY_STATE = "blocked_before_deep_packet";
+      AC_L5_PACKET_REASON = AC_L5_READINESS_REASON;
+      AC_L5_FRICTION_ADVISORY = "not_available_gate_blocked";
+      AC_L5_VOLATILITY_ADVISORY = "not_available_gate_blocked";
+      AC_L5_STRUCTURE_ADVISORY = "not_available_gate_blocked";
+      AC_L5_SESSION_ADVISORY = "not_available_gate_blocked";
+      AC_L5_RISK_ADVISORY = "not_available_gate_blocked";
+      AC_L5_KILL_REASON = AC_L5_MAIN_BLOCKER;
+      return;
+   }
+
+   if(AC_L5_READINESS_STATE == "blocked_runtime3_not_accepted")
+   {
+      AC_L5_PACKET_STATUS = "waiting_for_runtime3_result";
+      AC_L5_PACKET_BINDING_STATUS = "not_bound_runtime3_result_not_accepted";
+      AC_L5_QUALITY_STATE = "degraded_waiting_for_worker";
+      AC_L5_PACKET_REASON = "Runtime 3 accepted worker result is required before Layer 5 can bind advisory packet fields";
+      AC_L5_FRICTION_ADVISORY = "pending_runtime3_deep_result";
+      AC_L5_VOLATILITY_ADVISORY = "pending_runtime3_deep_result";
+      AC_L5_STRUCTURE_ADVISORY = "pending_runtime3_deep_result";
+      AC_L5_SESSION_ADVISORY = "pending_runtime3_deep_result";
+      AC_L5_RISK_ADVISORY = "pending_runtime3_deep_result";
+      AC_L5_KILL_REASON = "runtime3_result_not_accepted";
+      return;
+   }
+
+   if(AC_L5_READINESS_STATE == "ready_for_deep_packet")
+   {
+      AC_L5_PACKET_STATUS = "ready_shell_waiting_for_deep_payload";
+      AC_L5_PACKET_BINDING_STATUS = "runtime3_gate_accepted_payload_not_implemented";
+      AC_L5_QUALITY_STATE = "advisory_gate_ready_payload_pending";
+      AC_L5_PACKET_REASON = "Runtime 3 gate is accepted; deep advisory payload parser/calculator is intentionally not implemented yet";
+      AC_L5_FRICTION_ADVISORY = "payload_pending";
+      AC_L5_VOLATILITY_ADVISORY = "payload_pending";
+      AC_L5_STRUCTURE_ADVISORY = "payload_pending";
+      AC_L5_SESSION_ADVISORY = "payload_pending";
+      AC_L5_RISK_ADVISORY = "payload_pending";
+      AC_L5_KILL_REASON = "deep_payload_not_implemented";
+      return;
+   }
 }
 
 void AC_L5ResetReadinessPacket()
@@ -67,6 +153,7 @@ void AC_L5ResetReadinessPacket()
    AC_L5_L3_GATE_STATUS = AC_L3_READY ? "ready" : "blocked";
    AC_L5_L4_GATE_STATUS = AC_L4_READY ? "ready" : "blocked";
    AC_L5_RUNTIME3_GATE_STATUS = AC_EXTERNAL_WORKER_STATUS.accepted_result ? "accepted" : "blocked";
+   AC_L5ResetAdvisoryPacket();
 }
 
 void AC_L5EvaluateReadinessPacket()
@@ -80,6 +167,7 @@ void AC_L5EvaluateReadinessPacket()
       AC_L5_READINESS_REASON = "Layer 2 owner gate is not ready; see Layer 2 section";
       AC_L5_MAIN_BLOCKER = "Layer 2 owner gate not ready";
       AC_L5_BLOCKED_L2_GATE = 1;
+      AC_L5BindAdvisoryPacketShell();
       return;
    }
    if(!AC_L3_READY)
@@ -88,6 +176,7 @@ void AC_L5EvaluateReadinessPacket()
       AC_L5_READINESS_REASON = "Layer 3 owner gate is not ready; see Layer 3 section";
       AC_L5_MAIN_BLOCKER = "Layer 3 owner gate not ready";
       AC_L5_BLOCKED_L3_GATE = 1;
+      AC_L5BindAdvisoryPacketShell();
       return;
    }
    if(!AC_L4_READY)
@@ -96,6 +185,7 @@ void AC_L5EvaluateReadinessPacket()
       AC_L5_READINESS_REASON = "Layer 4 owner gate is not ready; see Layer 4 section";
       AC_L5_MAIN_BLOCKER = "Layer 4 owner gate not ready";
       AC_L5_BLOCKED_L4_GATE = 1;
+      AC_L5BindAdvisoryPacketShell();
       return;
    }
    if(AC_L5_ELIGIBLE_OPEN <= 0)
@@ -104,6 +194,7 @@ void AC_L5EvaluateReadinessPacket()
       AC_L5_READINESS_REASON = "Layer 4 reports no eligible open-symbol gate count";
       AC_L5_MAIN_BLOCKER = "No Layer 4 eligible open-symbol gate count";
       AC_L5_BLOCKED_NO_ELIGIBLE = 1;
+      AC_L5BindAdvisoryPacketShell();
       return;
    }
    if(!AC_EXTERNAL_WORKER_STATUS.accepted_result)
@@ -113,6 +204,7 @@ void AC_L5EvaluateReadinessPacket()
       AC_L5_MAIN_BLOCKER = "Waiting for Runtime 3 accepted external-worker result gate";
       AC_L5_BLOCKED_RUNTIME3_GATE = AC_L5_ELIGIBLE_OPEN;
       AC_L5_PENDING_SYMBOLS = AC_L5_ELIGIBLE_OPEN;
+      AC_L5BindAdvisoryPacketShell();
       return;
    }
 
@@ -122,6 +214,7 @@ void AC_L5EvaluateReadinessPacket()
    AC_L5_TRUST_STATE = "Advisory Gate Ready";
    AC_L5_DEEP_PACKET_PENDING = AC_L5_ELIGIBLE_OPEN;
    AC_L5_PENDING_SYMBOLS = AC_L5_ELIGIBLE_OPEN;
+   AC_L5BindAdvisoryPacketShell();
 }
 
 string AC_L5ReadinessText()
@@ -154,6 +247,8 @@ void AC_BuildLayer5Texts()
    AC_L5_BOARD_SECTION += "Eligible Gate Count:        " + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
    AC_L5_BOARD_SECTION += "Ready Advisory Packets:     " + IntegerToString(AC_L5_READY_SYMBOLS) + "\r\n";
    AC_L5_BOARD_SECTION += "Pending Advisory Packets:   " + IntegerToString(AC_L5_PENDING_SYMBOLS) + "\r\n";
+   AC_L5_BOARD_SECTION += "Packet Status:              " + AC_L5_PACKET_STATUS + "\r\n";
+   AC_L5_BOARD_SECTION += "Packet Quality:             " + AC_L5_QUALITY_STATE + "\r\n";
    AC_L5_BOARD_SECTION += "Readiness:                  " + AC_L5ReadinessText() + "\r\n";
    AC_L5_BOARD_SECTION += "Worst Blocker:              " + AC_L5_MAIN_BLOCKER + "\r\n";
    AC_L5_BOARD_SECTION += "Scan Duration:              " + IntegerToString((int)AC_L5_REFRESH_DURATION_MS) + " ms\r\n";
@@ -169,6 +264,12 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "trust_state=" + AC_L5_TRUST_STATE + "\r\n";
    AC_L5_WORKBENCH_SECTION += "readiness_state=" + AC_L5_READINESS_STATE + "\r\n";
    AC_L5_WORKBENCH_SECTION += "readiness_reason=" + AC_L5_READINESS_REASON + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_schema_version=" + AC_L5_PACKET_SCHEMA_VERSION + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_status=" + AC_L5_PACKET_STATUS + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_source=" + AC_L5_PACKET_SOURCE + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_binding_status=" + AC_L5_PACKET_BINDING_STATUS + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_reason=" + AC_L5_PACKET_REASON + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "packet_owner_boundary=" + AC_L5_PACKET_OWNER_BOUNDARY + "\r\n";
    AC_L5_WORKBENCH_SECTION += "calculation_lane=" + AC_L5_CALCULATION_LANE + "\r\n";
    AC_L5_WORKBENCH_SECTION += "execution_owner=" + AC_L5_EXECUTION_OWNER + "\r\n";
    AC_L5_WORKBENCH_SECTION += "source_truth_owner=" + AC_L5_SOURCE_TRUTH_OWNER + "\r\n";
@@ -196,9 +297,16 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "blocked_runtime3_gate=" + IntegerToString(AC_L5_BLOCKED_RUNTIME3_GATE) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "blocked_no_eligible=" + IntegerToString(AC_L5_BLOCKED_NO_ELIGIBLE) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "deep_packet_pending=" + IntegerToString(AC_L5_DEEP_PACKET_PENDING) + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "friction_advisory=" + AC_L5_FRICTION_ADVISORY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "volatility_advisory=" + AC_L5_VOLATILITY_ADVISORY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "structure_advisory=" + AC_L5_STRUCTURE_ADVISORY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "session_advisory=" + AC_L5_SESSION_ADVISORY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "risk_advisory=" + AC_L5_RISK_ADVISORY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "kill_reason=" + AC_L5_KILL_REASON + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "quality_state=" + AC_L5_QUALITY_STATE + "\r\n";
    AC_L5_WORKBENCH_SECTION += "main_blocker=" + AC_L5_MAIN_BLOCKER + "\r\n";
    AC_L5_WORKBENCH_SECTION += "inputs_consumed=L1_L2_L3_L4_owner_gates_plus_Runtime3_accepted_worker_result_only\r\n";
-   AC_L5_WORKBENCH_SECTION += "outputs_published=board_summary_dossier_advisory_section_workbench_machine_meta_status_row\r\n";
+   AC_L5_WORKBENCH_SECTION += "outputs_published=board_summary_dossier_advisory_packet_workbench_machine_meta_status_row\r\n";
    AC_L5_WORKBENCH_SECTION += "permission=false\r\n";
    AC_L5_WORKBENCH_SECTION += "ranking_runtime=false\r\n";
    AC_L5_WORKBENCH_SECTION += "selection_runtime=false\r\n";
@@ -220,19 +328,23 @@ string AC_Layer5DossierSection(const string symbol)
    text += "L4 Quote Gate: See Layer 4 section\r\n";
    text += "Readiness State: " + AC_L5_READINESS_STATE + "\r\n";
    text += "Readiness Reason: " + AC_L5_READINESS_REASON + "\r\n";
+   text += "Packet Status: " + AC_L5_PACKET_STATUS + "\r\n";
+   text += "Packet Binding: " + AC_L5_PACKET_BINDING_STATUS + "\r\n";
+   text += "Packet Reason: " + AC_L5_PACKET_REASON + "\r\n";
    text += "Blocker: " + AC_L5_MAIN_BLOCKER + "\r\n";
 
    text += "\r\nAdvisory Packet\r\n";
    text += "----------------------------------------\r\n";
-   text += "Friction Advisory: not_implemented\r\n";
-   text += "Volatility Advisory: not_implemented\r\n";
-   text += "Structure Advisory: not_implemented\r\n";
-   text += "Session Advisory: not_implemented\r\n";
-   text += "Risk Advisory: not_implemented\r\n";
-   text += "Invalidation / Kill Reason: not_implemented\r\n";
+   text += "Friction Advisory: " + AC_L5_FRICTION_ADVISORY + "\r\n";
+   text += "Volatility Advisory: " + AC_L5_VOLATILITY_ADVISORY + "\r\n";
+   text += "Structure Advisory: " + AC_L5_STRUCTURE_ADVISORY + "\r\n";
+   text += "Session Advisory: " + AC_L5_SESSION_ADVISORY + "\r\n";
+   text += "Risk Advisory: " + AC_L5_RISK_ADVISORY + "\r\n";
+   text += "Invalidation / Kill Reason: " + AC_L5_KILL_REASON + "\r\n";
 
    text += "\r\nQuality\r\n";
    text += "----------------------------------------\r\n";
+   text += "Quality State: " + AC_L5_QUALITY_STATE + "\r\n";
    text += "Deep Calculations Active: FALSE\r\n";
    text += "MT5 Heavy Calculation Active: FALSE\r\n";
    text += "Degraded Publication: TRUE\r\n";
@@ -257,7 +369,7 @@ string AC_Layer5WorkbenchSection()
 
 string AC_Layer5StatusRow()
 {
-   return "schema_name=layer_status|schema_version=v5.2|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5.3|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME5_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -265,6 +377,10 @@ string AC_Layer5StatusRow()
       + "|trust_state=" + AC_L5_TRUST_STATE
       + "|readiness_state=" + AC_L5_READINESS_STATE
       + "|readiness_reason=" + AC_L5_READINESS_REASON
+      + "|packet_schema_version=" + AC_L5_PACKET_SCHEMA_VERSION
+      + "|packet_status=" + AC_L5_PACKET_STATUS
+      + "|packet_binding_status=" + AC_L5_PACKET_BINDING_STATUS
+      + "|packet_reason=" + AC_L5_PACKET_REASON
       + "|calculation_lane=" + AC_L5_CALCULATION_LANE
       + "|execution_owner=" + AC_L5_EXECUTION_OWNER
       + "|source_truth_owner=" + AC_L5_SOURCE_TRUTH_OWNER
@@ -281,6 +397,13 @@ string AC_Layer5StatusRow()
       + "|blocked_runtime3_gate=" + IntegerToString(AC_L5_BLOCKED_RUNTIME3_GATE)
       + "|blocked_no_eligible=" + IntegerToString(AC_L5_BLOCKED_NO_ELIGIBLE)
       + "|deep_packet_pending=" + IntegerToString(AC_L5_DEEP_PACKET_PENDING)
+      + "|friction_advisory=" + AC_L5_FRICTION_ADVISORY
+      + "|volatility_advisory=" + AC_L5_VOLATILITY_ADVISORY
+      + "|structure_advisory=" + AC_L5_STRUCTURE_ADVISORY
+      + "|session_advisory=" + AC_L5_SESSION_ADVISORY
+      + "|risk_advisory=" + AC_L5_RISK_ADVISORY
+      + "|kill_reason=" + AC_L5_KILL_REASON
+      + "|quality_state=" + AC_L5_QUALITY_STATE
       + "|main_blocker=" + AC_L5_MAIN_BLOCKER
       + "|permission=false|ranking_runtime=false|selection_runtime=false|mt5_heavy_calculation_allowed=false";
 }
