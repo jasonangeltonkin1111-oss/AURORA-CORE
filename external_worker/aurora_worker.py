@@ -21,7 +21,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.6.2_r3_snapshot_validation_labels"
+WORKER_VERSION = "0.6.3_write_failure_truth"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -130,10 +130,29 @@ def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, s
     return _result_from_header(True, "accepted", "R3 snapshot validation envelope accepted", snapshot_header, data_rows, calculated_checksum), snapshot_header, snapshot_rows
 
 
+def mark_write_failure(result: ValidationResult, failed_paths: List[Path]) -> ValidationResult:
+    paths = ";".join(str(p) for p in failed_paths)
+    return ValidationResult(
+        ok=False,
+        status="write_degraded",
+        reason=f"atomic write failed for published worker output path(s): {paths}",
+        snapshot_id=result.snapshot_id,
+        row_count=result.row_count,
+        payload_checksum=result.payload_checksum,
+        server=result.server,
+        account=result.account,
+        job_bus_schema_version=result.job_bus_schema_version,
+        job_id=result.job_id,
+        job_type=result.job_type,
+        job_resource_class=result.job_resource_class,
+        job_max_runtime_ms=result.job_max_runtime_ms,
+    )
+
+
 def build_heartbeat(result: ValidationResult, worker_mode: str) -> str:
     now_unix = unix_time()
     return "\n".join([
-        "schema_name=aurora_worker_heartbeat", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_heartbeat", "schema_version=4", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", f"worker_status={'alive' if result.ok else 'alive_degraded'}",
         f"last_validation_status={result.status}", f"last_validation_reason={result.reason}",
         f"last_snapshot_id={result.snapshot_id}", f"last_job_bus_schema_version={result.job_bus_schema_version}",
@@ -157,7 +176,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         stale_or_missing += 1 if parts[4] in {"Missing Tick", "Stale", "not_available"} else 0
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result", "schema_version=4", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", "authority=calculation_support_only", "trade_permission=false",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
@@ -173,7 +192,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result_manifest", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result_manifest", "schema_version=4", f"worker_version={WORKER_VERSION}",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
         f"job_max_runtime_ms={result.job_max_runtime_ms}", f"job_status={job_status}",
@@ -188,7 +207,7 @@ def build_process_status(root: Path, mode: str, loop_count: int, last_run_exit_c
     r = result or ValidationResult(False, "not_available", "no validation result yet")
     now = unix_time()
     return "\n".join([
-        "schema_name=aurora_worker_process_status", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_process_status", "schema_version=4", f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}", f"mode={mode}", f"root={root}", f"root_count={root_count}",
         f"active_root_index={active_root_index}", f"process_start_utc={PROCESS_START_UTC}",
         f"process_start_unix={PROCESS_START_UNIX}", f"last_loop_utc={utc_stamp()}", f"last_loop_unix={now}",
@@ -201,10 +220,10 @@ def build_process_status(root: Path, mode: str, loop_count: int, last_run_exit_c
     ])
 
 
-def write_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None, root_count: int = 1, active_root_index: int = 0) -> None:
+def write_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None, root_count: int = 1, active_root_index: int = 0) -> bool:
     p = WorkerPaths.from_root(root)
     p.ensure()
-    atomic_write_text(p.status / "worker_process_status.txt", build_process_status(root, mode, loop_count, last_run_exit_code, result, root_count, active_root_index))
+    return atomic_write_text(p.status / "worker_process_status.txt", build_process_status(root, mode, loop_count, last_run_exit_code, result, root_count, active_root_index))
 
 
 def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple[int, ValidationResult]:
@@ -212,14 +231,26 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
     p.ensure()
     try:
         result, _h, rows = validate_snapshot(p)
-        atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode))
         result_text = build_result(result, rows, worker_mode)
-        atomic_write_text(p.outbox / "result_latest.txt", result_text)
-        atomic_write_text(p.outbox / "result_latest.manifest", build_result_manifest(result, result_text))
+        manifest_text = build_result_manifest(result, result_text)
+        write_targets: List[Tuple[Path, str]] = [
+            (p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode)),
+            (p.outbox / "result_latest.txt", result_text),
+            (p.outbox / "result_latest.manifest", manifest_text),
+        ]
+        failed_paths: List[Path] = []
+        for target, text in write_targets:
+            if not atomic_write_text(target, text):
+                failed_paths.append(target)
+        if failed_paths:
+            degraded = mark_write_failure(result, failed_paths)
+            # Best-effort degraded heartbeat. If this also fails, sidecar proof from atomic_write_text remains.
+            atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(degraded, worker_mode))
+            return 3, degraded
         return (0 if result.ok else 2), result
     except Exception as exc:
         error_text = "\n".join([
-            "schema_name=aurora_worker_error", "schema_version=1", f"worker_version={WORKER_VERSION}",
+            "schema_name=aurora_worker_error", "schema_version=2", f"worker_version={WORKER_VERSION}",
             f"error={type(exc).__name__}: {exc}", "traceback=", traceback.format_exc(),
             f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
             "authority=calculation_support_only", "trade_permission=false", ""
@@ -358,6 +389,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
     """
     accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
     degraded = len(results) - accepted
+    write_degraded = sum(1 for _r, code, result in results if code == 3 or result.status == "write_degraded")
     cpu = os.cpu_count() or 1
     mem_total, mem_avail, mem_used = _windows_memory()
 
@@ -371,7 +403,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
 
     lines = [
         "schema_name=aurora_shared_worker_status",
-        "schema_version=4",
+        "schema_version=5",
         f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}",
         "mode=shared-daemon",
@@ -385,6 +417,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         f"processed_root_count={len(results)}",
         f"accepted_root_count={accepted}",
         f"degraded_root_count={degraded}",
+        f"write_degraded_root_count={write_degraded}",
         "daemon_task_registered=not_checked_by_daemon",
         "daemon_task_state=not_checked_by_daemon",
         "watchdog_task_registered=not_checked_by_daemon",
@@ -418,8 +451,8 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
     return "\n".join(lines)
 
 
-def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> None:
-    atomic_write_text(shared_root / "External Worker" / "Status" / "shared_worker_status.txt", build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
+def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> bool:
+    return atomic_write_text(shared_root / "External Worker" / "Status" / "shared_worker_status.txt", build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
 
 
 def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
@@ -431,7 +464,10 @@ def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
         results: List[Tuple[Path, int, ValidationResult]] = []
         for idx, root in enumerate(roots):
             code, res = run_once(root, "shared_validator_daemon")
-            write_process_status(root, "shared-daemon", loop, code, res, len(roots), idx)
+            process_ok = write_process_status(root, "shared-daemon", loop, code, res, len(roots), idx)
+            if not process_ok:
+                res = mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
+                code = 3
             results.append((root, code, res))
         write_shared_status(shared_root, loop, roots, results)
         time.sleep(poll_seconds)
@@ -443,8 +479,8 @@ def run_status_probe(shared_root: Path) -> int:
     for root in roots:
         code, res = run_once(root, "shared_status_probe")
         results.append((root, code, res))
-    write_shared_status(shared_root, 1, roots, results)
-    return 0
+    ok = write_shared_status(shared_root, 1, roots, results)
+    return 0 if ok else 3
 
 
 def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
@@ -496,8 +532,8 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
         restart_attempted=attempted,
         restart_result=restart_result,
     )
-    write_shared_status(shared_root, 1, roots, results, proof, repair_success)
-    return 0 if restart_result.startswith("not_needed") or repair_success else 2
+    shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success)
+    return 0 if shared_ok and (restart_result.startswith("not_needed") or repair_success) else 2
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -535,13 +571,14 @@ def main(argv: List[str] | None = None) -> int:
         while True:
             loop += 1
             code, res = run_once(root, "validator_daemon_capable")
-            write_process_status(root, "daemon", loop, code, res)
+            process_ok = write_process_status(root, "daemon", loop, code, res)
+            if not process_ok:
+                code = 3
             time.sleep(max(0.25, args.poll_seconds))
     code, res = run_once(root)
-    write_process_status(root, "once", 1, code, res)
-    return code
+    process_ok = write_process_status(root, "once", 1, code, res)
+    return code if process_ok else 3
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
