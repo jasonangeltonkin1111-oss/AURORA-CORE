@@ -2,17 +2,17 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime_3d_l5_advisory_packet_shell";
-static const string AC_BUILD_VERSION      = "1.044";
-static const string AC_UPGRADE_ID         = "RUNTIME_3D_L5_ADVISORY_PACKET_SHELL";
-static const string AC_UPGRADE_SUMMARY    = "Adds real Runtime 5 advisory packet shell fields and publication wiring for packet status, binding, reason, friction, volatility, structure, session, risk, kill reason, and quality state, while keeping values degraded/pending until Runtime 3 returns accepted deep payloads.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and worker result acceptance. Runtime 5 owns advisory readiness and advisory packet presentation only. L1-L4, FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated by later layers.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.044; confirm L5 Board shows owner gates, readiness state, packet status, packet quality, and Runtime 3 accepted state without repeating raw L2/L3/L4 data; confirm L5 Dossier shows gate references plus advisory packet fields from Runtime 5 owner state; confirm Workbench shows L5_DEEP_INSPECTION_ADVISORY with readiness fields, packet_schema_version, packet_status, packet_source, packet_binding_status, packet_reason, packet_owner_boundary, advisory field values, quality_state, no_repeat_data_contract, and Runtime 3 job-bus binding; confirm Runtime 3D acceptance still shows accepted_result=true, job_bus_status=Accepted, job_bus_validation_status=Accepted, authority=calculation_support_only, trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime3d_l5_advisory_packet_shell_external_worker_job_bus_watchdog_proof_resource_telemetry_no_duplicate_owner_no_popup_no_timer_blocking";
+static const string AC_BUILD_PHASE        = "runtime1_layer5_basic_system_gate";
+static const string AC_BUILD_VERSION      = "1.045";
+static const string AC_UPGRADE_ID         = "RUNTIME1_LAYER5_BASIC_SYSTEM_GATE";
+static const string AC_UPGRADE_SUMMARY    = "Corrects Layer 5 to the original Basic System Gate: the first all-symbol hard eligibility gate under Runtime 1/Foundation Truth. Layer 5 blocks garbage symbols before scoring/ranking layers and does not own friction, volatility, structure, session scoring, advisory packets, Gateway transport, ranking, selection, permission, or execution.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Layer 6+ owns future friction/scoring work. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.045; confirm L5 Board shows BASIC SYSTEM GATE, scanned_symbols, gate_pass, gate_blocked, closed/not-open, stale quote, missing tick, invalid bid/ask, missing specs, trade-mode blocked, absurd spread, classification-review counts; confirm Dossier shows per-symbol gate_status and gate_reason; confirm Workbench shows L5_BASIC_SYSTEM_GATE and gateway_required=false; confirm no Layer 5 friction/volatility/structure/session advisory ownership remains except compatibility lines marked not_layer5; confirm Runtime 3 Gateway still remains calculation_support_only and trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime1_l5_basic_system_gate_no_duplicate_owner_no_gateway_no_ranking_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
-static const string AC_RUNTIME3_OWNER     = "Runtime 3 - External Calculation Worker Owner";
-static const string AC_RUNTIME5_OWNER     = "Runtime 5 - Deep Inspection Advisory Owner";
+static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
+static const string AC_RUNTIME5_OWNER     = "Runtime 5 - Reserved / Not Layer 5 Owner";
 static const string AC_PUBLICATION_SERVICE_OWNER = "Publication / FileIO / Route Service";
 static const string AC_BOARD_DOSSIER_RENDERER_OWNER = "Board / Dossier Renderer Service";
 static const string AC_LAYER_0_1_NAME     = "Layer 0.1 - Startup / Runtime Identity";
@@ -23,12 +23,12 @@ static const string AC_LAYER_1_NAME       = "Layer 1 - Account / Portfolio / Pro
 static const string AC_LAYER_2_NAME       = "Layer 2 - Market Open / Closed Truth";
 static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Truth";
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
-static const string AC_LAYER_5_NAME       = "Layer 5 - Deep Inspection Advisory Truth";
-static const string AC_LAYER_EXTERNAL_WORKER_NAME = "External Calculation Worker Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.044_runtime3d_l5_advisory_packet_shell";
-static const string AC_L5_CALCULATION_EXECUTION_OWNER = "Runtime3_External_Worker_Job_Bus";
-static const string AC_L5_ADVISORY_SURFACE_OWNER = "Runtime5_Deep_Inspection_Advisory";
-static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_must_consume_l1_l2_l3_l4_owner_gates_and_runtime3_accepted_worker_result_only";
+static const string AC_LAYER_5_NAME       = "Layer 5 - Basic System Gate";
+static const string AC_LAYER_EXTERNAL_WORKER_NAME = "Calculation Gateway Foundation";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.045_runtime1_l5_basic_system_gate";
+static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
+static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
+static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_EXTERNAL_WORKER_FOLDER = "External Worker";
