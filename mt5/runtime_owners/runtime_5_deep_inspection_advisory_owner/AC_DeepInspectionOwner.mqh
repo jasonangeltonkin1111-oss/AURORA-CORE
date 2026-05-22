@@ -7,8 +7,9 @@
 // Runtime 5 must not duplicate L1 account truth, L2 market-state truth, L3 broker specs/value truth,
 // L4 live quote/spread truth, Runtime 3 worker transport/result validation, FileIO/routes,
 // Board/Dossier rendering authority, ranking, selection, permission, strategy, or execution.
-// Surface rule: Board = compact operator summary; Dossier = rich per-symbol truth;
+// Surface rule: Board = compact operator summary; Dossier = rich per-symbol advisory truth;
 // Workbench = machine/meta diagnostics, owner contract, job binding, counters, timings, rejections.
+// No-repeat rule: L5 references L1-L4 gates only. It does not restate raw earlier-layer data.
 
 static bool   AC_L5_READY = false;
 static string AC_L5_STATUS = "Shell only";
@@ -22,11 +23,11 @@ static int    AC_L5_READY_SYMBOLS = 0;
 static int    AC_L5_PENDING_SYMBOLS = 0;
 static string AC_L5_CALCULATION_LANE = "Runtime3_external_worker_job_bus_required_for_deep_calculation";
 static string AC_L5_EXECUTION_OWNER = "Runtime_3_external_worker_job_bus_and_result_acceptance";
-static string AC_L5_SOURCE_TRUTH_OWNER = "L1_L2_L3_L4_existing_owner_packets_only";
+static string AC_L5_SOURCE_TRUTH_OWNER = "L1_L2_L3_L4_existing_owner_gates_only";
 static string AC_L5_SURFACE_OWNER = "Runtime_5_advisory_interpretation_shell_only";
 static string AC_L5_NO_DUPLICATE_OWNER_CONTRACT = "no_duplicate_L1_L2_L3_L4_Runtime3_FileIO_route_board_dossier_ranking_selection_permission_execution_owner";
 static string AC_L5_BOARD_LAYOUT_CONTRACT = "compact_operator_summary_same_style_as_L1_L2_L3_L4";
-static string AC_L5_DOSSIER_LAYOUT_CONTRACT = "rich_per_symbol_advisory_packet_same_style_as_L3_L4_dossier_sections";
+static string AC_L5_DOSSIER_LAYOUT_CONTRACT = "rich_per_symbol_advisory_packet_same_style_as_L3_L4_dossier_sections_without_repeating_raw_previous_layer_data";
 static string AC_L5_WORKBENCH_LAYOUT_CONTRACT = "machine_meta_diagnostics_same_style_as_L1_L2_L3_L4_workbench_sections";
 
 string AC_L5BoolText(const bool value)
@@ -36,10 +37,19 @@ string AC_L5BoolText(const bool value)
 
 string AC_L5ReadinessText()
 {
-   if(!AC_L4_READY) return "Blocked by Layer 4";
-   if(AC_L5_ELIGIBLE_OPEN <= 0) return "No eligible open symbols";
-   if(!AC_EXTERNAL_WORKER_STATUS.accepted_result) return "Waiting for Runtime 3 worker";
+   if(!AC_L4_READY) return "Blocked by Layer 4 gate";
+   if(AC_L5_ELIGIBLE_OPEN <= 0) return "No eligible open-symbol gate count from Layer 4";
+   if(!AC_EXTERNAL_WORKER_STATUS.accepted_result) return "Waiting for Runtime 3 worker gate";
    return "Shell ready; deep packet pending";
+}
+
+string AC_L5LayerGateSummary()
+{
+   string l2_gate = AC_L2_READY ? "L2=ready" : "L2=not_ready";
+   string l3_gate = AC_L3_READY ? "L3=ready" : "L3=not_ready";
+   string l4_gate = AC_L4_READY ? "L4=ready" : "L4=not_ready";
+   string r3_gate = AC_EXTERNAL_WORKER_STATUS.accepted_result ? "R3=accepted" : "R3=not_accepted";
+   return l2_gate + ";" + l3_gate + ";" + l4_gate + ";" + r3_gate;
 }
 
 void AC_BuildLayer5Texts()
@@ -52,13 +62,15 @@ void AC_BuildLayer5Texts()
    AC_L5_STATUS = "Shell only";
    AC_L5_TRUST_STATE = "Advisory Not Ready";
    if(!AC_L4_READY)
-      AC_L5_MAIN_BLOCKER = "Waiting for Layer 4 live quote and spread truth";
+      AC_L5_MAIN_BLOCKER = "Waiting for Layer 4 owner gate";
    else if(AC_L5_ELIGIBLE_OPEN <= 0)
-      AC_L5_MAIN_BLOCKER = "No open symbols eligible for Layer 5 advisory shell";
+      AC_L5_MAIN_BLOCKER = "No Layer 4 eligible open-symbol gate count";
    else if(!AC_EXTERNAL_WORKER_STATUS.accepted_result)
-      AC_L5_MAIN_BLOCKER = "Waiting for Runtime 3 accepted external-worker job result before deep advisory calculations";
+      AC_L5_MAIN_BLOCKER = "Waiting for Runtime 3 accepted external-worker result gate";
    else
-      AC_L5_MAIN_BLOCKER = "Runtime 3 job bus accepted; Layer 5 deep advisory calculation packet not implemented yet; degraded shell published";
+      AC_L5_MAIN_BLOCKER = "Runtime 3 gate accepted; Layer 5 advisory packet not implemented yet; degraded shell published";
+
+   AC_L5_REFRESH_DURATION_MS = GetTickCount() - start_ms;
 
    AC_L5_BOARD_SECTION = "\r\nLAYER 5 - DEEP INSPECTION ADVISORY\r\n";
    AC_L5_BOARD_SECTION += "----------------------------------------\r\n";
@@ -66,7 +78,8 @@ void AC_BuildLayer5Texts()
    AC_L5_BOARD_SECTION += "Trust:                      " + AC_L5_TRUST_STATE + "\r\n";
    AC_L5_BOARD_SECTION += "Calculation Lane:           External Worker via Runtime 3\r\n";
    AC_L5_BOARD_SECTION += "Runtime 3 Result Accepted:  " + AC_L5BoolText(AC_EXTERNAL_WORKER_STATUS.accepted_result) + "\r\n";
-   AC_L5_BOARD_SECTION += "Eligible Open Symbols:      " + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
+   AC_L5_BOARD_SECTION += "Owner Gates:                See L2/L3/L4 sections\r\n";
+   AC_L5_BOARD_SECTION += "Eligible Gate Count:        " + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
    AC_L5_BOARD_SECTION += "Ready Advisory Packets:     " + IntegerToString(AC_L5_READY_SYMBOLS) + "\r\n";
    AC_L5_BOARD_SECTION += "Pending Advisory Packets:   " + IntegerToString(AC_L5_PENDING_SYMBOLS) + "\r\n";
    AC_L5_BOARD_SECTION += "Readiness:                  " + AC_L5ReadinessText() + "\r\n";
@@ -87,6 +100,7 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "source_truth_owner=" + AC_L5_SOURCE_TRUTH_OWNER + "\r\n";
    AC_L5_WORKBENCH_SECTION += "surface_owner=" + AC_L5_SURFACE_OWNER + "\r\n";
    AC_L5_WORKBENCH_SECTION += "duplicate_owner_contract=" + AC_L5_NO_DUPLICATE_OWNER_CONTRACT + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "no_repeat_data_contract=L5_references_owner_gates_only_no_raw_L1_L2_L3_L4_packet_duplication\r\n";
    AC_L5_WORKBENCH_SECTION += "board_layout_contract=" + AC_L5_BOARD_LAYOUT_CONTRACT + "\r\n";
    AC_L5_WORKBENCH_SECTION += "dossier_layout_contract=" + AC_L5_DOSSIER_LAYOUT_CONTRACT + "\r\n";
    AC_L5_WORKBENCH_SECTION += "workbench_layout_contract=" + AC_L5_WORKBENCH_LAYOUT_CONTRACT + "\r\n";
@@ -98,33 +112,33 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "runtime3_result_job_id=" + AC_EXTERNAL_WORKER_STATUS.result_job_id + "\r\n";
    AC_L5_WORKBENCH_SECTION += "runtime3_result_job_type=" + AC_EXTERNAL_WORKER_STATUS.result_job_type + "\r\n";
    AC_L5_WORKBENCH_SECTION += "runtime3_result_job_status=" + AC_EXTERNAL_WORKER_STATUS.result_job_status + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "eligible_open=" + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "owner_gate_summary=" + AC_L5LayerGateSummary() + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "eligible_gate_count=" + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "ready_symbols=" + IntegerToString(AC_L5_READY_SYMBOLS) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "pending_symbols=" + IntegerToString(AC_L5_PENDING_SYMBOLS) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "readiness=" + AC_L5ReadinessText() + "\r\n";
    AC_L5_WORKBENCH_SECTION += "main_blocker=" + AC_L5_MAIN_BLOCKER + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "inputs_consumed=L1_L2_L3_L4_owner_packets_plus_Runtime3_accepted_worker_result_only\r\n";
+   AC_L5_WORKBENCH_SECTION += "inputs_consumed=L1_L2_L3_L4_owner_gates_plus_Runtime3_accepted_worker_result_only\r\n";
    AC_L5_WORKBENCH_SECTION += "outputs_published=board_summary_dossier_advisory_section_workbench_machine_meta_status_row\r\n";
    AC_L5_WORKBENCH_SECTION += "permission=false\r\n";
    AC_L5_WORKBENCH_SECTION += "ranking_runtime=false\r\n";
    AC_L5_WORKBENCH_SECTION += "selection_runtime=false\r\n";
    AC_L5_WORKBENCH_SECTION += "fileio_owner=Publication_FileIO_Route_Service_only\r\n";
    AC_L5_WORKBENCH_SECTION += "publication_policy=print_degraded_truth_do_not_block_files\r\n";
-   AC_L5_REFRESH_DURATION_MS = GetTickCount() - start_ms;
    AC_L5_WORKBENCH_SECTION += "refresh_duration_ms=" + IntegerToString((int)AC_L5_REFRESH_DURATION_MS) + "\r\n";
 }
 
 string AC_Layer5DossierSection(const string symbol)
 {
-   string market_state = AC_L2MarketStateForSymbol(symbol);
    string text = "\r\nLAYER 5 - DEEP INSPECTION ADVISORY\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L5_STATUS + "\r\n";
    text += "Trust: " + AC_L5_TRUST_STATE + "\r\n";
-   text += "Market State Source: Layer 2\r\n";
-   text += "Market State: " + market_state + "\r\n";
    text += "Calculation Lane: Runtime 3 external worker\r\n";
    text += "Runtime 3 Result Accepted: " + AC_L5BoolText(AC_EXTERNAL_WORKER_STATUS.accepted_result) + "\r\n";
+   text += "L2 Market Gate: See Layer 2 section\r\n";
+   text += "L3 Specs Gate: See Layer 3 section\r\n";
+   text += "L4 Quote Gate: See Layer 4 section\r\n";
    text += "Readiness: " + AC_L5ReadinessText() + "\r\n";
    text += "Blocker: " + AC_L5_MAIN_BLOCKER + "\r\n";
 
@@ -145,7 +159,7 @@ string AC_Layer5DossierSection(const string symbol)
    text += "Trade Permission: FALSE\r\n";
    text += "Ranking Runtime: FALSE\r\n";
    text += "Selection Runtime: FALSE\r\n";
-   text += "Owner Boundary: Consumes L1-L4 owner packets and Runtime 3 accepted worker result only; does not recalculate earlier-layer truth.\r\n";
+   text += "Owner Boundary: Consumes L1-L4 owner gates and Runtime 3 accepted worker result only; does not recalculate or repeat earlier-layer truth.\r\n";
    return text;
 }
 
@@ -163,7 +177,7 @@ string AC_Layer5WorkbenchSection()
 
 string AC_Layer5StatusRow()
 {
-   return "schema_name=layer_status|schema_version=v5.0|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5.1|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME5_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -175,7 +189,8 @@ string AC_Layer5StatusRow()
       + "|runtime3_worker_required_for_deep_calculation=true"
       + "|runtime3_result_accepted=" + (AC_EXTERNAL_WORKER_STATUS.accepted_result ? "true" : "false")
       + "|runtime3_job_bus_status=" + AC_EXTERNAL_WORKER_STATUS.job_bus_status
-      + "|eligible_open=" + IntegerToString(AC_L5_ELIGIBLE_OPEN)
+      + "|owner_gate_summary=" + AC_L5LayerGateSummary()
+      + "|eligible_gate_count=" + IntegerToString(AC_L5_ELIGIBLE_OPEN)
       + "|ready_symbols=" + IntegerToString(AC_L5_READY_SYMBOLS)
       + "|pending_symbols=" + IntegerToString(AC_L5_PENDING_SYMBOLS)
       + "|readiness=" + AC_L5ReadinessText()
