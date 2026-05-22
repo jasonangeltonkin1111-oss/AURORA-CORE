@@ -81,12 +81,21 @@ void AC_ValidateExternalWorkerInstallStatus()
    AC_EXTERNAL_WORKER_STATUS.install_worker_version = AC_EWValue(install_text, "worker_version");
    AC_EXTERNAL_WORKER_STATUS.install_flat_exe_present = AC_EWValue(install_text, "flat_exe_present");
    AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_present = AC_EWValue(install_text, "packaged_exe_present");
+   AC_EXTERNAL_WORKER_STATUS.install_flat_exe_runtime_authority = AC_EWValue(install_text, "flat_exe_runtime_authority");
+   AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_runtime_authority = AC_EWValue(install_text, "packaged_exe_runtime_authority");
+   AC_EXTERNAL_WORKER_STATUS.install_packaged_internal_python_dll_present = AC_EWValue(install_text, "packaged_internal_python_dll_present");
    AC_EXTERNAL_WORKER_STATUS.install_daemon_method = AC_EWValue(install_text, "daemon_install_method");
    AC_EXTERNAL_WORKER_STATUS.install_task_name = AC_EWValue(install_text, "scheduled_task_name");
    AC_EXTERNAL_WORKER_STATUS.install_task_registered = AC_EWValue(install_text, "scheduled_task_registered");
    AC_EXTERNAL_WORKER_STATUS.install_task_state = AC_EWValue(install_text, "scheduled_task_state");
    AC_EXTERNAL_WORKER_STATUS.install_task_error = AC_EWValue(install_text, "scheduled_task_error");
    AC_EXTERNAL_WORKER_STATUS.install_auto_start_configured = AC_EWValue(install_text, "auto_start_configured");
+   AC_EXTERNAL_WORKER_STATUS.install_watchdog_method = AC_EWValue(install_text, "watchdog_install_method");
+   AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_name = AC_EWValue(install_text, "watchdog_task_name");
+   AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_registered = AC_EWValue(install_text, "watchdog_task_registered");
+   AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_state = AC_EWValue(install_text, "watchdog_task_state");
+   AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_error = AC_EWValue(install_text, "watchdog_task_error");
+   AC_EXTERNAL_WORKER_STATUS.install_operator_cmd_required = AC_EWValue(install_text, "operator_cmd_required");
 
    if(installed != "true")
    {
@@ -251,6 +260,8 @@ void AC_ValidateExternalWorkerLifecycle()
    AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_status = AC_EWValue(lifecycle_text, "last_validation_status");
    AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_reason = AC_EWValue(lifecycle_text, "last_validation_reason");
    AC_EXTERNAL_WORKER_STATUS.lifecycle_last_snapshot_id = AC_EWValue(lifecycle_text, "last_snapshot_id");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_job_id = AC_EWValue(lifecycle_text, "last_job_id");
+   AC_EXTERNAL_WORKER_STATUS.lifecycle_last_job_type = AC_EWValue(lifecycle_text, "last_job_type");
    AC_EXTERNAL_WORKER_STATUS.lifecycle_payload_checksum = AC_EWValue(lifecycle_text, "payload_checksum");
 
    if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
@@ -319,6 +330,9 @@ void AC_ValidateExternalWorkerHeartbeat()
    string authority = AC_EWValue(heartbeat_text, "authority");
    string trade_permission = AC_EWValue(heartbeat_text, "trade_permission");
    string generated_unix = AC_EWValue(heartbeat_text, "generated_unix");
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_job_bus_schema_version = AC_EWValue(heartbeat_text, "last_job_bus_schema_version");
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_job_id = AC_EWValue(heartbeat_text, "last_job_id");
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_job_type = AC_EWValue(heartbeat_text, "last_job_type");
    if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
    {
       AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status = "Rejected";
@@ -380,6 +394,12 @@ void AC_ValidateExternalWorkerResult()
    string result_row_count = AC_EWValue(result_text, "row_count");
    string result_checksum = AC_EWValue(result_text, "payload_checksum");
    string result_generated_unix = AC_EWValue(result_text, "generated_unix");
+   string result_job_bus_schema = AC_EWValue(result_text, "job_bus_schema_version");
+   string result_job_id = AC_EWValue(result_text, "job_id");
+   string result_job_type = AC_EWValue(result_text, "job_type");
+   string result_job_resource_class = AC_EWValue(result_text, "job_resource_class");
+   string result_job_max_runtime_ms = AC_EWValue(result_text, "job_max_runtime_ms");
+   string result_job_status = AC_EWValue(result_text, "job_status");
 
    string manifest_status = AC_EWValue(manifest_text, "result_status");
    string manifest_authority = AC_EWValue(manifest_text, "authority");
@@ -388,8 +408,26 @@ void AC_ValidateExternalWorkerResult()
    string manifest_row_count = AC_EWValue(manifest_text, "row_count");
    string manifest_checksum = AC_EWValue(manifest_text, "payload_checksum");
    string manifest_generated_unix = AC_EWValue(manifest_text, "generated_unix");
+   string manifest_job_bus_schema = AC_EWValue(manifest_text, "job_bus_schema_version");
+   string manifest_job_id = AC_EWValue(manifest_text, "job_id");
+   string manifest_job_type = AC_EWValue(manifest_text, "job_type");
+   string manifest_job_resource_class = AC_EWValue(manifest_text, "job_resource_class");
+   string manifest_job_max_runtime_ms = AC_EWValue(manifest_text, "job_max_runtime_ms");
+   string manifest_job_status = AC_EWValue(manifest_text, "job_status");
 
    AC_EXTERNAL_WORKER_STATUS.result_snapshot_id = result_snapshot_id;
+   AC_EXTERNAL_WORKER_STATUS.result_job_bus_schema_version = result_job_bus_schema;
+   AC_EXTERNAL_WORKER_STATUS.result_job_id = result_job_id;
+   AC_EXTERNAL_WORKER_STATUS.result_job_type = result_job_type;
+   AC_EXTERNAL_WORKER_STATUS.result_job_resource_class = result_job_resource_class;
+   AC_EXTERNAL_WORKER_STATUS.result_job_max_runtime_ms = result_job_max_runtime_ms;
+   AC_EXTERNAL_WORKER_STATUS.result_job_status = result_job_status;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_expected_job_id = AC_EXTERNAL_WORKER_LAST_JOB_ID;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_expected_job_type = AC_EXTERNAL_WORKER_LAST_JOB_TYPE;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_expected_schema_version = AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_result_job_id = result_job_id;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_result_job_type = result_job_type;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_result_schema_version = result_job_bus_schema;
    AC_EXTERNAL_WORKER_STATUS.result_authority = result_authority;
    AC_EXTERNAL_WORKER_STATUS.result_trade_permission = result_trade_permission;
    AC_EXTERNAL_WORKER_STATUS.result_payload_checksum = result_checksum;
@@ -444,6 +482,66 @@ void AC_ValidateExternalWorkerResult()
       AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
       AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result snapshot id does not match latest MT5 snapshot";
+      return;
+   }
+   if(result_job_bus_schema == "" || result_job_bus_schema != manifest_job_bus_schema || result_job_bus_schema != AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job bus schema mismatch";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job bus schema mismatch";
+      return;
+   }
+   if(result_job_id == "" || result_job_id != manifest_job_id || result_job_id != AC_EXTERNAL_WORKER_LAST_JOB_ID)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job id mismatch";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job id mismatch";
+      return;
+   }
+   if(result_job_type == "" || result_job_type != manifest_job_type || result_job_type != AC_EXTERNAL_WORKER_LAST_JOB_TYPE)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job type mismatch";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job type mismatch";
+      return;
+   }
+   if(result_job_resource_class == "" || result_job_resource_class != manifest_job_resource_class)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job resource class mismatch";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job resource class mismatch";
+      return;
+   }
+   if(result_job_max_runtime_ms == "" || result_job_max_runtime_ms != manifest_job_max_runtime_ms)
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job max runtime mismatch";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job max runtime mismatch";
+      return;
+   }
+   if(result_job_status != "complete" || manifest_job_status != "complete")
+   {
+      AC_EXTERNAL_WORKER_STATUS.accepted_result = false;
+      AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Job status is not complete";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Rejected";
+      AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Job status is not complete";
       return;
    }
    if(result_row_count == "" || result_row_count != manifest_row_count)
@@ -502,8 +600,11 @@ void AC_ValidateExternalWorkerResult()
    }
 
    AC_EXTERNAL_WORKER_STATUS.accepted_result = true;
+   AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Accepted";
+   AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Accepted";
+   AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Worker result bound to latest MT5 job envelope";
    AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Accepted";
-   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to accepted install proof, fresh heartbeat, and latest MT5 snapshot";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to accepted install proof, fresh heartbeat, latest MT5 snapshot, and latest MT5 job envelope";
 }
 
 #endif
