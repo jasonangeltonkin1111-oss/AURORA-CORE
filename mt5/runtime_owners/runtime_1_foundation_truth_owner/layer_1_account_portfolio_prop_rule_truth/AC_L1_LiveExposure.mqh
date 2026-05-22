@@ -92,8 +92,8 @@ string AC_L1OpenPendingLiveMap()
    text += AC_L1LiveExposureLine("buy_pending", pending_buy_count, pending_buy_volume, 0.0);
    text += AC_L1LiveExposureLine("sell_pending", pending_sell_count, pending_sell_volume, 0.0);
    text += AC_L1LiveExposureLine("pending_total", pending_total, pending_total_volume, 0.0);
-   text += "Pending Rows Without SL:" + IntegerToString(pending_no_sl_count) + "\r\n";
-   text += "Pending Rows Without TP:" + IntegerToString(pending_no_tp_count) + "\r\n";
+   text += "Pending Rows Without SL: " + IntegerToString(pending_no_sl_count) + "\r\n";
+   text += "Pending Rows Without TP: " + IntegerToString(pending_no_tp_count) + "\r\n";
    text += "Trade Permission:       FALSE\r\n";
    return text;
 }
@@ -104,21 +104,37 @@ string AC_L1OpenPendingBoardSummary()
    int pending_total = ArraySize(AC_L1_PENDING);
    double open_volume = 0.0;
    double open_pl = 0.0;
-   int no_sl = 0;
+   double pending_volume = 0.0;
+   int open_no_sl = 0;
+   int open_no_tp = 0;
+   int pending_no_sl = 0;
+   int pending_no_tp = 0;
+
    for(int i = 0; i < open_total; i++)
    {
       open_volume += AC_L1_POSITIONS[i].volume;
       open_pl += AC_L1_POSITIONS[i].profit;
-      if(AC_L1_POSITIONS[i].stop_loss <= 0.0) no_sl++;
+      if(AC_L1_POSITIONS[i].stop_loss <= 0.0) open_no_sl++;
+      if(AC_L1_POSITIONS[i].take_profit <= 0.0) open_no_tp++;
+   }
+
+   for(int p = 0; p < pending_total; p++)
+   {
+      pending_volume += AC_L1_PENDING[p].volume;
+      if(AC_L1_PENDING[p].stop_loss <= 0.0) pending_no_sl++;
+      if(AC_L1_PENDING[p].take_profit <= 0.0) pending_no_tp++;
    }
 
    string text = "\r\nLAYER 1 - LIVE OPEN/PENDING SUMMARY\r\n";
    text += "----------------------------------------\r\n";
    text += "Open / Pending:       " + IntegerToString(open_total) + " / " + IntegerToString(pending_total) + "\r\n";
    text += "Open Volume:          " + AC_L1VolumeText(open_volume) + "\r\n";
+   text += "Pending Volume:       " + AC_L1VolumeText(pending_volume) + "\r\n";
    text += "Floating P/L:         " + AC_L1MoneyText(open_pl) + "\r\n";
-   text += "Open Without SL:      " + IntegerToString(no_sl) + "\r\n";
+   text += "Open Without SL/TP:   " + IntegerToString(open_no_sl) + " / " + IntegerToString(open_no_tp) + "\r\n";
+   text += "Pending No SL/TP:     " + IntegerToString(pending_no_sl) + " / " + IntegerToString(pending_no_tp) + "\r\n";
    text += "Refresh Source:       near_live_snapshot_scan\r\n";
+   text += "Trade Permission:     FALSE\r\n";
    return text;
 }
 
