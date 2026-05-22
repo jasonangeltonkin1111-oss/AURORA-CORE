@@ -11,6 +11,7 @@
 #include "AC_ExternalWorkerSnapshot.mqh"
 #include "AC_ExternalWorkerResult.mqh"
 #include "AC_ExternalWorkerRender.mqh"
+#include "AC_ExternalWorkerSharedRender.mqh"
 #include "AC_ExternalWorkerControl.mqh"
 
 #endif
