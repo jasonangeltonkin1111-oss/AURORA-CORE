@@ -22,8 +22,9 @@ from aurora_worker_io import (
     utc_stamp,
 )
 from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
+from aurora_worker_l7_session import publish_l7_session_relevance_rankings
 
-WORKER_VERSION = "0.6.5_gateway_folder_alignment"
+WORKER_VERSION = "0.6.6_l7_session_relevance_sidecar"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -191,7 +192,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
         f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=r3_snapshot_validation_plus_l6_cost_friction_ranking_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
+        "notes=r3_snapshot_validation_plus_l6_cost_friction_ranking_plus_l7_session_relevance_ranking_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
@@ -205,7 +206,7 @@ def build_result_manifest(result: ValidationResult, result_text: str) -> str:
         f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
-        "result_scope=r3_snapshot_validation_plus_l6_cost_friction_ranking_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+        "result_scope=r3_snapshot_validation_plus_l6_cost_friction_ranking_plus_l7_session_relevance_ranking_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
 
 
@@ -241,6 +242,9 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         l6_summary = publish_l6_cost_friction_rankings(p.outbox)
         l6_duration_ms = max(0, (time.perf_counter_ns() - l6_start_ns) // 1_000_000)
         l6_reused_existing_outputs = l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
+        l7_start_ns = time.perf_counter_ns()
+        l7_summary = publish_l7_session_relevance_rankings(p.outbox)
+        l7_duration_ms = max(0, (time.perf_counter_ns() - l7_start_ns) // 1_000_000)
         result_text = build_result(result, rows, worker_mode)
         result_text += "l6_rank_status=" + l6_summary.status + "\n"
         result_text += "l6_rank_reason=" + l6_summary.reason + "\n"
@@ -250,6 +254,13 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         result_text += "l6_rank_reused_existing_outputs=" + ("true" if l6_reused_existing_outputs else "false") + "\n"
         result_text += "l6_rank_instrumentation_schema=1\n"
         result_text += "l6_ranked_csv_path=" + l6_summary.ranked_csv_path + "\n"
+        result_text += "l7_rank_status=" + l7_summary.status + "\n"
+        result_text += "l7_rank_reason=" + l7_summary.reason + "\n"
+        result_text += "l7_rank_input_count=" + str(l7_summary.input_count) + "\n"
+        result_text += "l7_rank_row_count=" + str(l7_summary.row_count) + "\n"
+        result_text += "l7_rank_duration_ms=" + str(l7_duration_ms) + "\n"
+        result_text += "l7_rank_instrumentation_schema=1\n"
+        result_text += "l7_ranked_csv_path=" + l7_summary.ranked_csv_path + "\n"
         manifest_text = build_result_manifest(result, result_text)
         write_targets: List[Tuple[Path, str]] = [
             (p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode)),
