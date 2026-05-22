@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 import argparse
+import ctypes
 import os
 import subprocess
 import time
@@ -20,11 +21,14 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.4.0"
+WORKER_VERSION = "0.5.0"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
 PROCESS_ID = os.getpid()
+DAEMON_TASK_NAME = "AuroraWorker_Global"
+WATCHDOG_TASK_NAME = "AuroraWorker_Global_Watchdog"
+STATUS_MAX_AGE_SECONDS = 75
 
 
 @dataclass
@@ -38,7 +42,15 @@ class ValidationResult:
     server: str = "not_available"
     account: str = "not_available"
 
-# ... keep prior logic unchanged below
+
+@dataclass
+class WatchdogProof:
+    last_check_utc: str = "not_available"
+    last_action: str = "not_checked"
+    last_reason: str = "not_available"
+    restart_attempted: str = "false"
+    restart_result: str = "not_available"
+
 
 def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, str], List[str]]:
     required_path = paths.control / "worker_required.txt"
@@ -77,9 +89,19 @@ def validate_snapshot(paths: WorkerPaths) -> Tuple[ValidationResult, Dict[str, s
         return ValidationResult(False, "rejected", f"payload checksum mismatch expected={expected_checksum} calculated={calculated_checksum}", snapshot_id, data_rows, calculated_checksum, server, account), snapshot_header, snapshot_rows
     return ValidationResult(True, "accepted", "snapshot accepted", snapshot_id, data_rows, calculated_checksum, server, account), snapshot_header, snapshot_rows
 
+
 def build_heartbeat(result: ValidationResult, worker_mode: str) -> str:
     now_unix = unix_time()
-    return "\n".join(["schema_name=aurora_worker_heartbeat","schema_version=1",f"worker_version={WORKER_VERSION}",f"worker_mode={worker_mode}",f"worker_status={'alive' if result.ok else 'alive_degraded'}",f"last_validation_status={result.status}",f"last_validation_reason={result.reason}",f"last_snapshot_id={result.snapshot_id}",f"server={result.server}",f"account={result.account}",f"row_count={result.row_count}",f"payload_checksum={result.payload_checksum}",f"generated_utc={utc_stamp()}",f"generated_unix={now_unix}","authority=calculation_support_only","trade_permission=false",""])
+    return "\n".join([
+        "schema_name=aurora_worker_heartbeat", "schema_version=1", f"worker_version={WORKER_VERSION}",
+        f"worker_mode={worker_mode}", f"worker_status={'alive' if result.ok else 'alive_degraded'}",
+        f"last_validation_status={result.status}", f"last_validation_reason={result.reason}",
+        f"last_snapshot_id={result.snapshot_id}", f"server={result.server}", f"account={result.account}",
+        f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
+        f"generated_utc={utc_stamp()}", f"generated_unix={now_unix}",
+        "authority=calculation_support_only", "trade_permission=false", ""
+    ])
+
 
 def build_result(result: ValidationResult, rows: List[str], worker_mode: str) -> str:
     open_count = closed_count = l4_ready_count = stale_or_missing = 0
@@ -91,21 +113,53 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         closed_count += 1 if parts[1] == "closed" else 0
         l4_ready_count += 1 if parts[3] == "true" else 0
         stale_or_missing += 1 if parts[4] in {"Missing Tick", "Stale", "not_available"} else 0
-    return "\n".join(["schema_name=aurora_worker_result","schema_version=1",f"worker_version={WORKER_VERSION}",f"worker_mode={worker_mode}","authority=calculation_support_only","trade_permission=false",f"source_snapshot_id={result.snapshot_id}",f"result_status={'complete' if result.ok else 'rejected'}",f"result_reason={result.reason}",f"row_count={result.row_count}",f"open_count={open_count}",f"closed_count={closed_count}",f"l4_ready_count={l4_ready_count}",f"stale_or_missing_quote_rows={stale_or_missing}",f"payload_checksum={result.payload_checksum}",f"generated_utc={utc_stamp()}",f"generated_unix={unix_time()}","notes=validator_skeleton_only_no_ranking_no_selection_no_permission_no_broker_polling",""])
+    return "\n".join([
+        "schema_name=aurora_worker_result", "schema_version=1", f"worker_version={WORKER_VERSION}",
+        f"worker_mode={worker_mode}", "authority=calculation_support_only", "trade_permission=false",
+        f"source_snapshot_id={result.snapshot_id}", f"result_status={'complete' if result.ok else 'rejected'}",
+        f"result_reason={result.reason}", f"row_count={result.row_count}", f"open_count={open_count}",
+        f"closed_count={closed_count}", f"l4_ready_count={l4_ready_count}",
+        f"stale_or_missing_quote_rows={stale_or_missing}", f"payload_checksum={result.payload_checksum}",
+        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
+        "notes=validator_skeleton_only_no_ranking_no_selection_no_permission_no_broker_polling", ""
+    ])
+
 
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
-    return "\n".join(["schema_name=aurora_worker_result_manifest","schema_version=1",f"worker_version={WORKER_VERSION}",f"source_snapshot_id={result.snapshot_id}",f"result_status={'complete' if result.ok else 'rejected'}",f"result_reason={result.reason}",f"row_count={result.row_count}",f"payload_checksum={result.payload_checksum}",f"result_size={len(result_text.encode('utf-8'))}","authority=calculation_support_only","trade_permission=false",f"generated_utc={utc_stamp()}",f"generated_unix={unix_time()}",""])
+    return "\n".join([
+        "schema_name=aurora_worker_result_manifest", "schema_version=1", f"worker_version={WORKER_VERSION}",
+        f"source_snapshot_id={result.snapshot_id}", f"result_status={'complete' if result.ok else 'rejected'}",
+        f"result_reason={result.reason}", f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
+        f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
+        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+    ])
+
 
 def build_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None, root_count: int = 1, active_root_index: int = 0) -> str:
     r = result or ValidationResult(False, "not_available", "no validation result yet")
     now = unix_time()
-    return "\n".join(["schema_name=aurora_worker_process_status","schema_version=2",f"worker_version={WORKER_VERSION}",f"process_id={PROCESS_ID}",f"mode={mode}",f"root={root}",f"root_count={root_count}",f"active_root_index={active_root_index}",f"process_start_utc={PROCESS_START_UTC}",f"process_start_unix={PROCESS_START_UNIX}",f"last_loop_utc={utc_stamp()}",f"last_loop_unix={now}",f"loop_count={loop_count}",f"last_run_exit_code={last_run_exit_code}",f"last_validation_status={r.status}",f"last_validation_reason={r.reason}",f"last_snapshot_id={r.snapshot_id}",f"row_count={r.row_count}",f"payload_checksum={r.payload_checksum}","last_exception_type=none","last_exception=none","authority=calculation_support_only","trade_permission=false",f"generated_utc={utc_stamp()}",f"generated_unix={now}",""])
+    return "\n".join([
+        "schema_name=aurora_worker_process_status", "schema_version=2", f"worker_version={WORKER_VERSION}",
+        f"process_id={PROCESS_ID}", f"mode={mode}", f"root={root}", f"root_count={root_count}",
+        f"active_root_index={active_root_index}", f"process_start_utc={PROCESS_START_UTC}",
+        f"process_start_unix={PROCESS_START_UNIX}", f"last_loop_utc={utc_stamp()}", f"last_loop_unix={now}",
+        f"loop_count={loop_count}", f"last_run_exit_code={last_run_exit_code}",
+        f"last_validation_status={r.status}", f"last_validation_reason={r.reason}",
+        f"last_snapshot_id={r.snapshot_id}", f"row_count={r.row_count}", f"payload_checksum={r.payload_checksum}",
+        "last_exception_type=none", "last_exception=none", "authority=calculation_support_only", "trade_permission=false",
+        f"generated_utc={utc_stamp()}", f"generated_unix={now}", ""
+    ])
+
 
 def write_process_status(root: Path, mode: str, loop_count: int, last_run_exit_code: int, result: ValidationResult | None, root_count: int = 1, active_root_index: int = 0) -> None:
-    p = WorkerPaths.from_root(root); p.ensure(); atomic_write_text(p.status / "worker_process_status.txt", build_process_status(root, mode, loop_count, last_run_exit_code, result, root_count, active_root_index))
+    p = WorkerPaths.from_root(root)
+    p.ensure()
+    atomic_write_text(p.status / "worker_process_status.txt", build_process_status(root, mode, loop_count, last_run_exit_code, result, root_count, active_root_index))
+
 
 def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple[int, ValidationResult]:
-    p = WorkerPaths.from_root(root); p.ensure()
+    p = WorkerPaths.from_root(root)
+    p.ensure()
     try:
         result, _h, rows = validate_snapshot(p)
         atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode))
@@ -114,98 +168,267 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         atomic_write_text(p.outbox / "result_latest.manifest", build_result_manifest(result, result_text))
         return (0 if result.ok else 2), result
     except Exception as exc:
-        error_text = "\n".join(["schema_name=aurora_worker_error","schema_version=1",f"worker_version={WORKER_VERSION}",f"error={type(exc).__name__}: {exc}","traceback=",traceback.format_exc(),f"generated_utc={utc_stamp()}",f"generated_unix={unix_time()}","authority=calculation_support_only","trade_permission=false",""])
-        atomic_write_text(p.logs / "worker_errors.txt", error_text); atomic_write_text(p.status / "worker_heartbeat.txt", error_text)
+        error_text = "\n".join([
+            "schema_name=aurora_worker_error", "schema_version=1", f"worker_version={WORKER_VERSION}",
+            f"error={type(exc).__name__}: {exc}", "traceback=", traceback.format_exc(),
+            f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
+            "authority=calculation_support_only", "trade_permission=false", ""
+        ])
+        atomic_write_text(p.logs / "worker_errors.txt", error_text)
+        atomic_write_text(p.status / "worker_heartbeat.txt", error_text)
         return 1, ValidationResult(False, "exception", f"{type(exc).__name__}: {exc}")
 
+
 def discover_roots(shared_root: Path) -> List[Path]:
-    roots=[]
+    roots: List[Path] = []
     if shared_root.exists():
-        for s in sorted(shared_root.iterdir()):
-            if s.is_dir() and s.name != "External Worker":
-                for a in sorted(s.iterdir()):
-                    if a.is_dir() and (a / "Workbench/External Worker/Control/worker_required.txt").exists():
-                        roots.append(a)
+        for server in sorted(shared_root.iterdir()):
+            if server.is_dir() and server.name != "External Worker":
+                for account in sorted(server.iterdir()):
+                    if account.is_dir() and (account / "Workbench" / "External Worker" / "Control" / "worker_required.txt").exists():
+                        roots.append(account)
     return roots
 
-def _get_task_state(task_name: str) -> Tuple[str, str]:
+
+def _powershell(command: str, timeout: int = 8) -> Tuple[bool, str]:
     try:
-        o = subprocess.check_output(["powershell","-NoProfile","-Command",f"(Get-ScheduledTask -TaskName '{task_name}' -ErrorAction Stop).State.ToString()"], text=True, timeout=5).strip()
-        return "true", (o or "unknown")
-    except Exception:
-        return "false", "not_registered"
+        out = subprocess.check_output(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command], text=True, stderr=subprocess.STDOUT, timeout=timeout).strip()
+        return True, out
+    except Exception as exc:
+        return False, str(exc).replace("\r", " ").replace("\n", " ")
+
+
+def _get_task_state(task_name: str) -> Tuple[str, str]:
+    ok, out = _powershell(f"(Get-ScheduledTask -TaskName '{task_name}' -ErrorAction Stop).State.ToString()")
+    return ("true", out or "unknown") if ok else ("false", "not_registered")
+
+
+def _start_task(task_name: str) -> Tuple[bool, str]:
+    ok, out = _powershell(f"Start-ScheduledTask -TaskName '{task_name}' -ErrorAction Stop; Start-Sleep -Seconds 2; (Get-ScheduledTask -TaskName '{task_name}' -ErrorAction Stop).State.ToString()", timeout=15)
+    return ok, out or ("started" if ok else "start_failed")
+
 
 def _proc_count(name: str) -> str:
-    try:
-        return subprocess.check_output(["powershell","-NoProfile","-Command",f"@(Get-Process -Name '{name}' -ErrorAction SilentlyContinue).Count"], text=True, timeout=5).strip() or "0"
-    except Exception:
-        return "not_available"
+    ok, out = _powershell(f"@(Get-Process -Name '{name}' -ErrorAction SilentlyContinue).Count")
+    return out or "0" if ok else "not_available"
 
-def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]]) -> str:
-    accepted = sum(1 for _r, c, rr in results if c == 0 and rr.ok)
+
+def _windows_memory() -> Tuple[str, str, str]:
+    class MEMORYSTATUSEX(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong), ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong), ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong), ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+    try:
+        stat = MEMORYSTATUSEX()
+        stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+            return str(int(stat.ullTotalPhys / (1024 * 1024))), str(int(stat.ullAvailPhys / (1024 * 1024))), str(int(stat.dwMemoryLoad))
+    except Exception:
+        pass
+    return "not_available", "not_available", "not_available"
+
+
+def _read_existing_watchdog(shared_root: Path) -> WatchdogProof:
+    status_path = shared_root / "External Worker" / "Status" / "shared_worker_status.txt"
+    try:
+        kv = read_kv(status_path)
+        return WatchdogProof(
+            kv.get("watchdog_last_check_utc", "not_available"),
+            kv.get("watchdog_last_action", "not_checked"),
+            kv.get("watchdog_last_reason", "not_available"),
+            kv.get("watchdog_restart_attempted", "false"),
+            kv.get("watchdog_restart_result", "not_available"),
+        )
+    except Exception:
+        return WatchdogProof()
+
+
+def _status_age(shared_root: Path) -> Tuple[bool, int]:
+    status_path = shared_root / "External Worker" / "Status" / "shared_worker_status.txt"
+    if not status_path.exists():
+        return False, -1
+    try:
+        kv = read_kv(status_path)
+        last_loop = int(kv.get("last_loop_unix", "0"))
+        if last_loop <= 0:
+            return False, -1
+        return True, max(0, unix_time() - last_loop)
+    except Exception:
+        return False, -1
+
+
+def _operator_cmd_required(daemon_registered: str, watchdog_registered: str, exe_present: bool, status_fresh: bool, repair_success: bool) -> str:
+    ok = daemon_registered == "true" and watchdog_registered == "true" and exe_present and (status_fresh or repair_success)
+    return "false" if ok else "true"
+
+
+def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> str:
+    accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
     degraded = len(results) - accepted
     cpu = os.cpu_count() or 1
-    mem_total = mem_avail = mem_used = 0
-    if hasattr(os, "sysconf"):
-        try:
-            page = os.sysconf("SC_PAGE_SIZE")
-            mem_total = max(1, int((page * os.sysconf("SC_PHYS_PAGES")) / (1024 * 1024)))
-            mem_avail = max(0, int((page * os.sysconf("SC_AVPHYS_PAGES")) / (1024 * 1024)))
-            mem_used = int(((mem_total - mem_avail) / mem_total) * 100)
-        except Exception:
-            pass
-    dr, ds = _get_task_state("AuroraWorker_Global"); wr, ws = _get_task_state("AuroraWorker_Global_Watchdog")
-    throttle = "true" if mem_used >= 80 else "false"
-    lines=["schema_name=aurora_shared_worker_status","schema_version=2",f"worker_version={WORKER_VERSION}",f"process_id={PROCESS_ID}","mode=shared-daemon",f"shared_root={shared_root}",f"process_start_utc={PROCESS_START_UTC}",f"process_start_unix={PROCESS_START_UNIX}",f"last_loop_utc={utc_stamp()}",f"last_loop_unix={unix_time()}",f"loop_count={loop_count}",f"discovered_root_count={len(roots)}",f"processed_root_count={len(results)}",f"accepted_root_count={accepted}",f"degraded_root_count={degraded}",f"daemon_task_registered={dr}",f"daemon_task_state={ds}",f"watchdog_task_registered={wr}",f"watchdog_task_state={ws}",f"watchdog_last_check_utc={utc_stamp()}","watchdog_last_action=status_update_only","operator_cmd_required=true",f"cpu_logical_count={cpu}",f"memory_total_mb={mem_total}",f"memory_available_mb={mem_avail}",f"memory_used_percent={mem_used}","memory_limit_percent=80","cpu_limit_percent=80",f"terminal_process_count={_proc_count('terminal64')}",f"aurora_worker_process_count={_proc_count('AuroraWorker')}",f"registered_root_count={len(roots)}",f"resource_throttle_active={throttle}",f"resource_throttle_reason={'memory_above_limit' if throttle=='true' else 'none'}","recommended_parallel_jobs=1","authority=calculation_support_only","trade_permission=false","","root|exit_code|status|reason|snapshot_id|payload_checksum"]
-    lines += [f"{r}|{c}|{res.status}|{res.reason}|{res.snapshot_id}|{res.payload_checksum}" for r,c,res in results]
+    mem_total, mem_avail, mem_used = _windows_memory()
+    daemon_registered, daemon_state = _get_task_state(DAEMON_TASK_NAME)
+    watchdog_registered, watchdog_state = _get_task_state(WATCHDOG_TASK_NAME)
+    worker_process_count = _proc_count("AuroraWorker")
+    terminal_process_count = _proc_count("terminal64")
+    exe_present = (shared_root / "External Worker" / "AuroraWorker" / "AuroraWorker.exe").exists()
+    status_present, age = _status_age(shared_root)
+    status_fresh = status_present and (age >= 0 and age <= STATUS_MAX_AGE_SECONDS)
+    proof = watchdog or _read_existing_watchdog(shared_root)
+    operator_required = _operator_cmd_required(daemon_registered, watchdog_registered, exe_present, status_fresh, repair_success)
+    throttle = "false"
+    throttle_reason = "none"
+    if mem_used.isdigit() and int(mem_used) >= 80:
+        throttle = "true"
+        throttle_reason = "memory_above_limit"
+    lines = [
+        "schema_name=aurora_shared_worker_status", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        f"process_id={PROCESS_ID}", "mode=shared-daemon", f"shared_root={shared_root}",
+        f"process_start_utc={PROCESS_START_UTC}", f"process_start_unix={PROCESS_START_UNIX}",
+        f"last_loop_utc={utc_stamp()}", f"last_loop_unix={unix_time()}", f"loop_count={loop_count}",
+        f"discovered_root_count={len(roots)}", f"processed_root_count={len(results)}", f"accepted_root_count={accepted}",
+        f"degraded_root_count={degraded}", f"daemon_task_registered={daemon_registered}", f"daemon_task_state={daemon_state}",
+        f"watchdog_task_registered={watchdog_registered}", f"watchdog_task_state={watchdog_state}",
+        f"watchdog_last_check_utc={proof.last_check_utc}", f"watchdog_last_action={proof.last_action}",
+        f"watchdog_last_reason={proof.last_reason}", f"watchdog_restart_attempted={proof.restart_attempted}",
+        f"watchdog_restart_result={proof.restart_result}", f"operator_cmd_required={operator_required}",
+        f"cpu_logical_count={cpu}", f"cpu_used_percent=not_available", f"memory_total_mb={mem_total}",
+        f"memory_available_mb={mem_avail}", f"memory_used_percent={mem_used}", "memory_limit_percent=80", "cpu_limit_percent=80",
+        f"terminal_process_count={terminal_process_count}", f"aurora_worker_process_count={worker_process_count}",
+        f"registered_root_count={len(roots)}", f"resource_throttle_active={throttle}", f"resource_throttle_reason={throttle_reason}",
+        "recommended_parallel_jobs=1", "authority=calculation_support_only", "trade_permission=false", "",
+        "root|exit_code|status|reason|snapshot_id|payload_checksum",
+    ]
+    lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.payload_checksum}" for root, code, res in results]
     lines.append("")
     return "\n".join(lines)
 
-def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]]) -> None:
-    atomic_write_text(shared_root / "External Worker/Status/shared_worker_status.txt", build_shared_status(shared_root, loop_count, roots, results))
+
+def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> None:
+    atomic_write_text(shared_root / "External Worker" / "Status" / "shared_worker_status.txt", build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
+
 
 def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
-    poll_seconds = max(0.25, poll_seconds); loop=0
+    poll_seconds = max(0.25, poll_seconds)
+    loop = 0
     while True:
         loop += 1
-        roots = discover_roots(shared_root); results=[]
+        roots = discover_roots(shared_root)
+        results: List[Tuple[Path, int, ValidationResult]] = []
         for idx, root in enumerate(roots):
             code, res = run_once(root, "shared_validator_daemon")
             write_process_status(root, "shared-daemon", loop, code, res, len(roots), idx)
             results.append((root, code, res))
-        write_shared_status(shared_root, loop, roots, results); time.sleep(poll_seconds)
+        write_shared_status(shared_root, loop, roots, results)
+        time.sleep(poll_seconds)
+
+
+def run_status_probe(shared_root: Path) -> int:
+    roots = discover_roots(shared_root)
+    results: List[Tuple[Path, int, ValidationResult]] = []
+    for root in roots:
+        code, res = run_once(root, "shared_status_probe")
+        results.append((root, code, res))
+    write_shared_status(shared_root, 1, roots, results)
+    return 0
+
+
+def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
+    roots = discover_roots(shared_root)
+    results: List[Tuple[Path, int, ValidationResult]] = []
+    for root in roots:
+        code, res = run_once(root, "watchdog_probe" if watchdog_mode else "repair_probe")
+        results.append((root, code, res))
+
+    daemon_registered, daemon_state = _get_task_state(DAEMON_TASK_NAME)
+    status_present, age = _status_age(shared_root)
+    worker_processes = _proc_count("AuroraWorker")
+    stale = (not status_present) or age < 0 or age > STATUS_MAX_AGE_SECONDS
+    process_missing = worker_processes == "0"
+    should_start = daemon_registered == "true" and (stale or process_missing or daemon_state.lower() != "running")
+    reason_bits: List[str] = []
+    if daemon_registered != "true":
+        reason_bits.append("daemon_task_missing")
+    if stale:
+        reason_bits.append("shared_status_missing_or_stale")
+    if process_missing:
+        reason_bits.append("aurora_worker_process_missing")
+    if daemon_state.lower() != "running":
+        reason_bits.append("daemon_task_state_not_running")
+    if not reason_bits:
+        reason_bits.append("daemon_status_fresh")
+
+    attempted = "false"
+    restart_result = "not_needed"
+    action = "checked_no_restart_needed"
+    repair_success = False
+    if should_start:
+        attempted = "true"
+        ok, out = _start_task(DAEMON_TASK_NAME)
+        action = "start_daemon_task"
+        restart_result = ("started_" + out) if ok else ("failed_" + out)
+        time.sleep(3)
+        status_present_after, age_after = _status_age(shared_root)
+        process_count_after = _proc_count("AuroraWorker")
+        repair_success = ok and (status_present_after and age_after >= 0 and age_after <= STATUS_MAX_AGE_SECONDS or process_count_after != "0")
+    elif daemon_registered != "true":
+        action = "cannot_repair_missing_daemon_task"
+        restart_result = "failed_daemon_task_missing"
+
+    proof = WatchdogProof(
+        last_check_utc=utc_stamp(),
+        last_action=action,
+        last_reason=";".join(reason_bits),
+        restart_attempted=attempted,
+        restart_result=restart_result,
+    )
+    write_shared_status(shared_root, 1, roots, results, proof, repair_success)
+    return 0 if restart_result.startswith("not_needed") or repair_success else 2
+
 
 def main(argv: List[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Aurora external worker validator")
-    p.add_argument("--root"); p.add_argument("--shared-root")
-    p.add_argument("--mode", choices=("once","daemon","shared-daemon"), default="once")
-    p.add_argument("--poll-seconds", type=float, default=1.0)
-    p.add_argument("--status", action="store_true"); p.add_argument("--repair", action="store_true"); p.add_argument("--watchdog", action="store_true"); p.add_argument("--install-global", action="store_true")
-    a = p.parse_args(argv)
-    if a.install_global:
-        print("install-global is PowerShell-owned. Run install_worker_global.ps1."); return 0
-    if a.watchdog or a.repair:
-        if not a.shared_root: raise SystemExit("--shared-root is required for watchdog/repair mode")
-        roots=discover_roots(Path(a.shared_root)); results=[]
-        for r in roots: results.append((r,*run_once(r,"watchdog_probe")))
-        write_shared_status(Path(a.shared_root),1,roots,[(r,c,res) for r,c,res in results]); return 0
-    if a.status:
-        if not a.shared_root: raise SystemExit("--shared-root is required for --status")
-        roots=discover_roots(Path(a.shared_root)); results=[]
-        for r in roots:
-            c,res = run_once(r,"shared_status_probe"); results.append((r,c,res))
-        write_shared_status(Path(a.shared_root),1,roots,results); return 0
-    if a.mode == "shared-daemon":
-        if not a.shared_root: raise SystemExit("--shared-root is required for shared-daemon mode")
-        return run_shared_daemon(Path(a.shared_root), a.poll_seconds)
-    if not a.root: raise SystemExit("--root is required for once/daemon mode")
-    root=Path(a.root)
-    if a.mode == "daemon":
-        loop=0
+    parser = argparse.ArgumentParser(description="Aurora external worker validator")
+    parser.add_argument("--root")
+    parser.add_argument("--shared-root")
+    parser.add_argument("--mode", choices=("once", "daemon", "shared-daemon"), default="once")
+    parser.add_argument("--poll-seconds", type=float, default=1.0)
+    parser.add_argument("--status", action="store_true")
+    parser.add_argument("--repair", action="store_true")
+    parser.add_argument("--watchdog", action="store_true")
+    parser.add_argument("--install-global", action="store_true")
+    args = parser.parse_args(argv)
+
+    if args.install_global:
+        print("install-global is PowerShell-owned. Run install_worker_global.ps1. No install success is claimed here.")
+        return 0
+    if args.watchdog or args.repair:
+        if not args.shared_root:
+            raise SystemExit("--shared-root is required for watchdog/repair mode")
+        return run_repair(Path(args.shared_root), args.watchdog)
+    if args.status:
+        if not args.shared_root:
+            raise SystemExit("--shared-root is required for --status")
+        return run_status_probe(Path(args.shared_root))
+    if args.mode == "shared-daemon":
+        if not args.shared_root:
+            raise SystemExit("--shared-root is required for shared-daemon mode")
+        return run_shared_daemon(Path(args.shared_root), args.poll_seconds)
+    if not args.root:
+        raise SystemExit("--root is required for once/daemon mode")
+    root = Path(args.root)
+    if args.mode == "daemon":
+        loop = 0
         while True:
             loop += 1
-            code,res = run_once(root,"validator_daemon_capable"); write_process_status(root,"daemon",loop,code,res); time.sleep(max(0.25,a.poll_seconds))
-    code,res=run_once(root); write_process_status(root,"once",1,code,res); return code
+            code, res = run_once(root, "validator_daemon_capable")
+            write_process_status(root, "daemon", loop, code, res)
+            time.sleep(max(0.25, args.poll_seconds))
+    code, res = run_once(root)
+    write_process_status(root, "once", 1, code, res)
+    return code
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
