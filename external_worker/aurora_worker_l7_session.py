@@ -49,6 +49,9 @@ class L7RankSummary:
     source_input_manifest_row_count: int = 0
     source_l5_gate_pass: int = 0
     source_input_payload_checksum: str = "not_available"
+    input_payload_checksum: str = "not_available"
+    input_payload_checksum_after_rank: str = "not_available"
+    input_generation_stable: bool = False
     row_count: int = 0
     ranked_count: int = 0
     ranked_degraded_count: int = 0
@@ -60,6 +63,7 @@ class L7RankSummary:
     poor_count: int = 0
     symbol_rank_files_written: int = 0
     symbol_rank_files_actual: int = 0
+    symbol_rank_filename_mode: str = L7_SYMBOL_RANK_FILENAME_MODE
     stale_tmp_files_removed: int = 0
     stale_tmp_files_failed: int = 0
     payload_checksum: str = "not_available"
@@ -122,11 +126,7 @@ def _sanitize_path_part(value: str) -> str:
 
 
 def _symbol_checksum(symbol: str) -> str:
-    payload = f"{symbol}\r\n"
-    checksum = 0
-    for index, ch in enumerate(payload):
-        checksum = (checksum + (ord(ch) * (index + 1))) % 2147483647
-    return str(checksum)
+    return payload_checksum([str(symbol).strip() or "unknown"])
 
 
 def _symbol_rank_filename(symbol: str) -> str:
@@ -143,17 +143,62 @@ def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
         return 0, 1
 
 
+def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    if not folder.exists():
+        return removed, failed
+    for path in folder.glob(pattern):
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    return removed, failed
+
+
 def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
     removed = 0
     failed = 0
     if not symbol_rank_dir.exists():
         return removed, failed
-    for pattern in ("*.txt", "*.tmp"):
-        for path in symbol_rank_dir.glob(pattern):
-            r, f = _remove_file_if_exists(path)
-            removed += r
-            failed += f
+    for pattern in ("*.txt", "*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(symbol_rank_dir, pattern)
+        removed += r
+        failed += f
     return removed, failed
+
+
+def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    for pattern in ("*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(layer_dir, pattern)
+        removed += r
+        failed += f
+    return removed, failed
+
+
+def _clear_final_rank_outputs(ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    for path in (ranked_path, top20_path):
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    r, f = _clear_symbol_rank_files(symbol_rank_dir)
+    removed += r
+    failed += f
+    return removed, failed
+
+
+def _final_symbol_rank_txt_count(symbol_rank_dir: Path) -> int:
+    if not symbol_rank_dir.exists():
+        return 0
+    return sum(1 for p in symbol_rank_dir.glob("*.txt") if p.is_file())
+
+
+def _csv_payload_checksum(text: str) -> str:
+    rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
+    return payload_checksum(rows)
 
 
 def _session_from_seconds(seconds: int) -> str:
@@ -412,9 +457,12 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
 
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
+    symbol = str(row["symbol"])
     lines = [
-        "schema_name=l7_symbol_rank", "schema_version=1", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
-        f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={row['symbol']}",
+        "schema_name=l7_symbol_rank", "schema_version=2", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
+        f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={symbol}",
+        f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}",
+        f"symbol_rank_checksum={_symbol_checksum(symbol)}",
         f"session_score={float(row['session_score']):.6f}", f"session_bucket={row['session_bucket']}",
         f"rank_state={row['rank_state']}", f"score_quality={row['score_quality']}", f"current_session={row['current_session']}",
         f"session_definition_source={row['session_definition_source']}", f"session_time_basis={row['session_time_basis']}",
@@ -434,17 +482,21 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
 def _manifest(summary: L7RankSummary, input_path: Path) -> str:
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
+    input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=1", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=2", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
         f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
         f"input_csv_path={input_path}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
         f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
-        f"source_input_payload_checksum={summary.source_input_payload_checksum}",
+        f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}",
+        f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}",
+        f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
+        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}",
         f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
         f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}",
-        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}",
+        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}",
         f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
         f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"input_count={summary.input_count}", f"row_count={summary.row_count}",
@@ -457,6 +509,85 @@ def _manifest(summary: L7RankSummary, input_path: Path) -> str:
         "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window",
         f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
+
+
+def _summary_from_ranked_manifest(manifest_text: str, fallback: L7RankSummary) -> L7RankSummary:
+    data = _parse_kv_text(manifest_text)
+    return L7RankSummary(
+        status=data.get("status", fallback.status),
+        reason=data.get("reason", fallback.reason),
+        input_count=_safe_int(data.get("input_count"), fallback.input_count),
+        source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
+        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count),
+        source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass),
+        source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
+        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum),
+        input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank),
+        input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
+        row_count=_safe_int(data.get("row_count"), fallback.row_count),
+        ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count),
+        ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count),
+        not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
+        elite_count=_safe_int(data.get("elite_session_relevance_count"), fallback.elite_count),
+        strong_count=_safe_int(data.get("strong_session_relevance_count"), fallback.strong_count),
+        acceptable_count=_safe_int(data.get("acceptable_session_relevance_count"), fallback.acceptable_count),
+        weak_count=_safe_int(data.get("weak_session_relevance_count"), fallback.weak_count),
+        poor_count=_safe_int(data.get("poor_session_relevance_count"), fallback.poor_count),
+        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written),
+        symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual),
+        symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
+        stale_tmp_files_removed=fallback.stale_tmp_files_removed,
+        stale_tmp_files_failed=fallback.stale_tmp_files_failed,
+        payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
+        ranked_csv_path=fallback.ranked_csv_path,
+        manifest_path=fallback.manifest_path,
+        top20_path=fallback.top20_path,
+        symbol_rank_folder_path=fallback.symbol_rank_folder_path,
+    )
+
+
+def _try_reuse_unchanged_rank_outputs(
+    summary: L7RankSummary,
+    manifest_path: Path,
+    ranked_path: Path,
+    top20_path: Path,
+    symbol_rank_dir: Path,
+) -> L7RankSummary | None:
+    if not summary.source_input_manifest_present:
+        return None
+    if summary.source_input_payload_checksum in {"", "not_available"}:
+        return None
+    if summary.input_payload_checksum != summary.source_input_payload_checksum:
+        return None
+    if not manifest_path.exists() or not ranked_path.exists() or not top20_path.exists():
+        return None
+
+    existing = _summary_from_ranked_manifest(read_text(manifest_path), summary)
+    actual_symbol_rank_files = _final_symbol_rank_txt_count(symbol_rank_dir)
+    if existing.status not in {"complete", "input_degraded"}:
+        return None
+    if existing.symbol_rank_filename_mode != L7_SYMBOL_RANK_FILENAME_MODE:
+        return None
+    if not existing.input_generation_stable:
+        return None
+    if existing.input_payload_checksum != summary.input_payload_checksum:
+        return None
+    if existing.input_payload_checksum_after_rank != summary.input_payload_checksum:
+        return None
+    if existing.source_input_payload_checksum != summary.source_input_payload_checksum:
+        return None
+    if existing.input_count <= 0 or existing.row_count != existing.input_count:
+        return None
+    if existing.symbol_rank_files_written != existing.row_count:
+        return None
+    if actual_symbol_rank_files != existing.row_count:
+        return None
+
+    existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
+    existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
+    existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
+    existing.symbol_rank_files_actual = actual_symbol_rank_files
+    return existing
 
 
 def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
@@ -477,11 +608,26 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
         summary.source_input_manifest_row_count = _safe_int(input_manifest.get("row_count"), 0)
         summary.source_l5_gate_pass = _safe_int(input_manifest.get("l5_gate_pass"), 0)
         summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
+
+    removed, failed = _clear_layer_transient_files(layer_dir)
+    sr_removed, sr_failed = _cleanup_glob(symbol_rank_dir, "*.tmp")
+    summary.stale_tmp_files_removed += removed + sr_removed
+    summary.stale_tmp_files_failed += failed + sr_failed
+
     if not input_path.exists():
+        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+        summary.stale_tmp_files_removed += removed
+        summary.stale_tmp_files_failed += failed
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
 
     text = read_text(input_path)
+    summary.input_payload_checksum = _csv_payload_checksum(text)
+
+    reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir)
+    if reused is not None:
+        return reused
+
     reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
     rows = [row for row in reader]
     summary.input_count = len(rows)
@@ -494,14 +640,34 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
         str(row["symbol"]),
     ), reverse=True)
 
-    removed, failed = _clear_symbol_rank_files(symbol_rank_dir)
-    summary.stale_tmp_files_removed = removed
-    summary.stale_tmp_files_failed = failed
+    text_after_rank = read_text(input_path)
+    summary.input_payload_checksum_after_rank = _csv_payload_checksum(text_after_rank)
+    after_rows = [row for row in csv.DictReader(io.StringIO(text_after_rank.replace("\r\n", "\n")))]
+    summary.input_generation_stable = (
+        summary.input_payload_checksum == summary.input_payload_checksum_after_rank
+        and summary.input_count == len(after_rows)
+    )
+    if not summary.input_generation_stable:
+        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+        summary.stale_tmp_files_removed += removed
+        summary.stale_tmp_files_failed += failed
+        summary.status = "input_changed_during_rank"
+        summary.reason = (
+            f"l7 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
+            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; final ranked outputs cleared"
+        )
+        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        return summary
+
+    removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+    summary.stale_tmp_files_removed += removed
+    summary.stale_tmp_files_failed += failed
+
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "ranked all rows present in L7 input primitives"
+    summary.reason = "ranked all rows present in stable L7 input generation"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] in {"ranked", "ranked_partial"})
     summary.ranked_degraded_count = sum(1 for row in scored if row["rank_state"] == "ranked_degraded")
@@ -526,7 +692,7 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
         if atomic_write_text(symbol_rank_dir / _symbol_rank_filename(str(row["symbol"])), _symbol_rank_text(index, row)):
             files_written += 1
     summary.symbol_rank_files_written = files_written
-    summary.symbol_rank_files_actual = len(list(symbol_rank_dir.glob("*.txt")))
+    summary.symbol_rank_files_actual = _final_symbol_rank_txt_count(symbol_rank_dir)
 
     if not ranked_ok or not top20_ok or files_written != len(scored) or summary.symbol_rank_files_actual != len(scored):
         summary.status = "write_degraded"
