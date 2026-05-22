@@ -1,68 +1,49 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
 $watchdogTask = "AuroraWorker_Global_Watchdog"
 $daemonTask = "AuroraWorker_Global"
 $statusFolder = Join-Path $sharedRoot "External Worker\Status"
 $installStatus = Join-Path $statusFolder "shared_worker_install_status.txt"
-$watchdogExe = Join-Path $sharedRoot "External Worker\AuroraWorker.exe"
+
+# PyInstaller one-folder build: runtime EXE must stay beside _internal.
+$watchdogWorkdir = Join-Path $sharedRoot "External Worker\AuroraWorker"
+$watchdogExe = Join-Path $watchdogWorkdir "AuroraWorker.exe"
 
 New-Item -ItemType Directory -Force -Path $statusFolder | Out-Null
 
 Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction SilentlyContinue
 
 if (!(Test-Path $watchdogExe)) {
-    throw "Missing shared watchdog executable: $watchdogExe"
+    throw "Missing packaged watchdog executable: $watchdogExe"
+}
+if (!(Test-Path (Join-Path $watchdogWorkdir "_internal\python312.dll"))) {
+    throw "Missing packaged Python DLL: $watchdogWorkdir\_internal\python312.dll"
 }
 
-$escapedExe = [System.Security.SecurityElement]::Escape($watchdogExe)
-$escapedArgs = [System.Security.SecurityElement]::Escape("--shared-root `"$sharedRoot`" --watchdog")
-$start = (Get-Date).AddMinutes(1).ToString("yyyy-MM-ddTHH:mm:ss")
+$action = New-ScheduledTaskAction `
+  -Execute $watchdogExe `
+  -Argument "--shared-root `"$sharedRoot`" --watchdog" `
+  -WorkingDirectory $watchdogWorkdir
 
-$xml = @"
-<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo>
-    <Description>Aurora global worker watchdog repair task</Description>
-  </RegistrationInfo>
-  <Triggers>
-    <TimeTrigger>
-      <Repetition>
-        <Interval>PT1M</Interval>
-        <StopAtDurationEnd>false</StopAtDurationEnd>
-      </Repetition>
-      <StartBoundary>$start</StartBoundary>
-      <Enabled>true</Enabled>
-    </TimeTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id="Author">
-      <LogonType>InteractiveToken</LogonType>
-      <RunLevel>LeastPrivilege</RunLevel>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>true</AllowHardTerminate>
-    <StartWhenAvailable>true</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <Enabled>true</Enabled>
-    <Hidden>true</Hidden>
-    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
-    <Priority>7</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>$escapedExe</Command>
-      <Arguments>$escapedArgs</Arguments>
-    </Exec>
-  </Actions>
-</Task>
-"@
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+$trigger.Repetition.Interval = "PT1M"
+$trigger.Repetition.StopAtDurationEnd = $false
 
-Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
+$settings = New-ScheduledTaskSettingsSet `
+  -MultipleInstances IgnoreNew `
+  -ExecutionTimeLimit (New-TimeSpan -Minutes 5) `
+  -AllowStartIfOnBatteries `
+  -DontStopIfGoingOnBatteries `
+  -StartWhenAvailable
+
+Register-ScheduledTask `
+  -TaskName $watchdogTask `
+  -Action $action `
+  -Trigger $trigger `
+  -Settings $settings `
+  -Description "Aurora global worker watchdog repair task" `
+  -Force | Out-Null
 
 $daemon = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
 $watchdog = Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue
@@ -82,6 +63,8 @@ if (Test-Path $installStatus) {
         "watchdog_task_state" = $watchdogState
         "watchdog_task_error" = "none"
         "operator_cmd_required" = $operatorRequired
+        "flat_exe_runtime_authority" = "false"
+        "packaged_exe_runtime_authority" = "true"
     }
     foreach ($key in $pairs.Keys) {
         if ($text -match "(?m)^$key=") {
