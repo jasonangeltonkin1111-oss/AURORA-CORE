@@ -14,6 +14,21 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# PyInstaller/generated worker artifacts
+# Source truth lives in external_worker/aurora_worker.py, aurora_worker_io.py,
+# AuroraWorker.spec, install_worker_global.ps1, and register_watchdog_safe.ps1.
+# Generated EXE/build/dist outputs must be rebuilt and runtime-proven before use.
+external_worker/build/
+external_worker/dist/
+*.spec.bak
+*.pkg
+*.pyz
+*.toc
+*.manifest
+*.zip
+*.dll
+*.pyd
+
 # MT5/editor local outputs
 *.ex5
 *.log
