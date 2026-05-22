@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime_3d_external_worker_closeout_regression_gate";
-static const string AC_BUILD_VERSION      = "1.042";
-static const string AC_UPGRADE_ID         = "RUNTIME_3D_EXTERNAL_WORKER_CLOSEOUT_REGRESSION_GATE";
-static const string AC_UPGRADE_SUMMARY    = "Moves Runtime 3 from source-side 3C repair into 3D closeout regression proof: packaged global daemon, packaged watchdog, job-bus result acceptance, stale/mismatch rejection, and Runtime 5 advisory-shell handoff readiness without adding trading, ranking, selection, execution, or duplicate owner authority.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and worker result acceptance. Runtime 3D is a proof gate, not new calculation logic. Runtime 5 owns advisory interpretation and presentation only. L1-L4, FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated by later layers.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; rebuild and install global worker; confirm packaged daemon and watchdog tasks use External Worker/AuroraWorker/AuroraWorker.exe with that folder as WorkingDirectory; confirm shared status worker_version=0.6.0_3c_job_bus_no_powershell_daemon; confirm per-account heartbeat/result schema_version=2; confirm Workbench shows accepted_result=true, job_bus_status=Accepted, job_bus_validation_status=Accepted, authority=calculation_support_only, trade_permission=false; run 3D falsifiers for stale heartbeat, stale result, job_id mismatch, job_type mismatch, schema mismatch, checksum mismatch, snapshot mismatch, authority mismatch, and trade_permission mismatch; confirm L5 remains advisory-only and no previous-layer raw data is duplicated.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime3d_regression_gate_external_worker_job_bus_watchdog_proof_resource_telemetry_layer5_no_duplicate_owner_no_popup_no_timer_blocking";
+static const string AC_BUILD_PHASE        = "runtime_3d_l5_readiness_packet_gate";
+static const string AC_BUILD_VERSION      = "1.043";
+static const string AC_UPGRADE_ID         = "RUNTIME_3D_L5_ADVISORY_READINESS_PACKET_GATE";
+static const string AC_UPGRADE_SUMMARY    = "Adds Runtime 5 advisory readiness packet gating on L1-L4 owner gates plus Runtime 3 accepted worker result, while preserving Runtime 3D closeout proof, no raw previous-layer data repetition, no heavy MT5 calculation, no ranking, no selection, and no execution authority.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and worker result acceptance. Runtime 5 owns advisory readiness interpretation and presentation only. L1-L4, FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated by later layers.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.043; confirm L5 Board shows owner gates, readiness state, pending/blocked counts, and Runtime 3 accepted state without repeating raw L2/L3/L4 data; confirm L5 Dossier shows gate references and readiness reason; confirm Workbench shows L5_DEEP_INSPECTION_ADVISORY with readiness_state, readiness_reason, owner_gate_summary, blocked counters, no_repeat_data_contract, and Runtime 3 job-bus binding; confirm Runtime 3D acceptance still shows accepted_result=true, job_bus_status=Accepted, job_bus_validation_status=Accepted, authority=calculation_support_only, trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime3d_l5_readiness_gate_external_worker_job_bus_watchdog_proof_resource_telemetry_no_duplicate_owner_no_popup_no_timer_blocking";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - External Calculation Worker Owner";
@@ -25,7 +25,7 @@ static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Tr
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
 static const string AC_LAYER_5_NAME       = "Layer 5 - Deep Inspection Advisory Truth";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "External Calculation Worker Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.042_runtime3d_closeout_l5_advisory_contract";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.043_runtime3d_l5_readiness_packet_gate";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "Runtime3_External_Worker_Job_Bus";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "Runtime5_Deep_Inspection_Advisory";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_must_consume_l1_l2_l3_l4_owner_gates_and_runtime3_accepted_worker_result_only";
