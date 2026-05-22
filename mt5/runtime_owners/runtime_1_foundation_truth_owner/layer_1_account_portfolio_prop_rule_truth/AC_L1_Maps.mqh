@@ -78,8 +78,6 @@ string AC_L1RiskBudgetMap()
    double daily_budget = AC_L1_EQUITY * 0.01;
    double guard_budget = AC_L1_EQUITY * 0.03;
    double current_drawdown = (AC_L1_BALANCE > AC_L1_EQUITY ? AC_L1_BALANCE - AC_L1_EQUITY : 0.0);
-   double historical_dd = MathAbs(AC_L1_GROSS_LOSS + AC_L1_GROSS_PROFIT - AC_L1_NET_PROFIT);
-   historical_dd = 0.0; // placeholder avoided; use balance-drawdown from report section instead of recomputing differently
    double largest_loss_usage = (hard_risk > 0.0 && AC_L1_LARGEST_LOSS < 0.0 ? (MathAbs(AC_L1_LARGEST_LOSS) / hard_risk) * 100.0 : 0.0);
    double worst_day_usage = (daily_budget > 0.0 && AC_L1_WORST_DAY_NET < 0.0 ? (MathAbs(AC_L1_WORST_DAY_NET) / daily_budget) * 100.0 : 0.0);
 
@@ -205,7 +203,7 @@ string AC_L1HoldingTimeMap()
 
 string AC_L1ClusterKey(const AC_L1ClosedTradeRow &row)
 {
-   return row.symbol + "|" + row.side + "|" + IntegerToString((int)row.entry_time) + "|" + IntegerToString((int)row.close_time);
+   return row.symbol + "|" + row.side + "|" + TimeToString(row.entry_time, TIME_DATE | TIME_SECONDS) + "|" + TimeToString(row.close_time, TIME_DATE | TIME_SECONDS);
 }
 
 string AC_L1ClusterMap()
