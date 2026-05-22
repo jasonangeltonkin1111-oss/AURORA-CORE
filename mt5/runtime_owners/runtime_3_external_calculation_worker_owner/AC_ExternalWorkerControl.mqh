@@ -2,6 +2,7 @@
 #define AC_EXTERNAL_WORKER_CONTROL_MQH
 
 void AC_BuildExternalWorkerTexts();
+void AC_AppendExternalWorkerSharedSupervisorTexts();
 
 string AC_ExternalWorkerRequiredText()
 {
@@ -47,8 +48,11 @@ void AC_RefreshExternalWorkerStatus()
    AC_EXTERNAL_WORKER_STATUS.folder_exe_error = GetLastError();
    AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
    AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
+
    AC_ValidateExternalWorkerInstallStatus();
+   AC_ReadExternalWorkerSharedStatus();
    AC_ValidateExternalWorkerLifecycle();
+
    AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
    AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
@@ -136,6 +140,7 @@ void AC_RefreshExternalWorkerStatus()
    }
 
    AC_BuildExternalWorkerTexts();
+   AC_AppendExternalWorkerSharedSupervisorTexts();
 }
 
 bool AC_ExternalWorkerShouldCheck()
