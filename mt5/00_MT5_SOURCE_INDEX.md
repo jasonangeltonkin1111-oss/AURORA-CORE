@@ -27,6 +27,7 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerOwner.mqh`
 - `mt5/runtime_owners/runtime_4_surface_scoring_owner/layer_7_session_relevance_ranking/AC_SessionRelevanceOwner.mqh`
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh`
+- `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer7SessionRelevanceRenderer.mqh`
 - `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`
 - `mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md`
 - `mt5/01_LAYER1_ACCOUNT_PORTFOLIO_PROP_RULE_TRUTH_SOURCE_PLAN_AND_TESTS.md`
