@@ -65,7 +65,7 @@ void AC_RefreshExternalWorkerStatus()
       if(AC_EXTERNAL_WORKER_STATUS.install_task_registered == "true")
       {
          AC_EXTERNAL_WORKER_STATUS.launch_status = "Windows task registered";
-         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "EA launch bridge not wired yet; use start_worker_for_18503.ps1 or scheduled task";
+         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "none_registered_task_controls_worker";
       }
       else if(AC_EXTERNAL_WORKER_STATUS.launch_implementation == "not_implemented_yet")
       {
@@ -75,6 +75,7 @@ void AC_RefreshExternalWorkerStatus()
       else
       {
          AC_EXTERNAL_WORKER_STATUS.launch_status = "Desired - implementation configured";
+         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Waiting for registered task proof";
       }
    }
    else
