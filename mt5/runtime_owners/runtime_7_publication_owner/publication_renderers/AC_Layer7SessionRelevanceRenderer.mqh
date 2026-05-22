@@ -3,10 +3,7 @@
 
 string AC_Layer7BoardSection()
 {
-   string current_l5_pass = "not_available";
-#ifdef AC_L5_GATE_PASS
-   current_l5_pass = IntegerToString(AC_L5_GATE_PASS);
-#endif
+   string current_l5_pass = IntegerToString(AC_L5_GATE_PASS);
 
    string text = "";
    text += "\r\nLAYER 7 - SESSION RELEVANCE RANKING\r\n";
@@ -43,7 +40,7 @@ string AC_Layer7DossierSection(const string symbol)
    int l5_index = AC_L5FindIndex(symbol);
    if(l5_index >= 0)
    {
-      l5_gate_status = AC_L5_SYMBOLS[l5_index].gate_pass ? "pass" : "not_pass";
+      l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
    }
 
    string text = "";
@@ -74,10 +71,7 @@ string AC_Layer7DossierSection(const string symbol)
 
 string AC_Layer7WorkbenchSection()
 {
-   string current_l5_pass = "not_available";
-#ifdef AC_L5_GATE_PASS
-   current_l5_pass = IntegerToString(AC_L5_GATE_PASS);
-#endif
+   string current_l5_pass = IntegerToString(AC_L5_GATE_PASS);
 
    string text = "";
    text += "\r\nL7_SESSION_RELEVANCE_RANKING\r\n";
