@@ -3,6 +3,8 @@
 
 // Forward declaration: render implementation is included after scan in the Runtime 1 dispatcher.
 void AC_BuildLayer1Texts();
+string AC_L1PortfolioMapSummary();
+string AC_L1AccountPortfolioMapsFull();
 
 static int AC_L1_HISTORY_LOOKBACK_DAYS = 90;
 static int AC_L1_CLOSED_SCAN_LIMIT = 100;
@@ -439,6 +441,13 @@ void AC_L1ScanHistory()
       AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available; position-cost allocation source";
 }
 
+void AC_L1AppendPortfolioMaps()
+{
+   AC_L1_BOARD_SECTION += AC_L1PortfolioMapSummary();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1AccountPortfolioMapsFull();
+   AC_L1_WORKBENCH_SECTION += "portfolio_maps=enabled_summary_board_full_account_status\r\n";
+}
+
 void AC_RefreshLayer1AccountTruth()
 {
    AC_L1Reset();
@@ -451,6 +460,7 @@ void AC_RefreshLayer1AccountTruth()
    AC_L1_SCAN_DURATION_MS = GetTickCount() - AC_L1_SCAN_STARTED_MS;
    AC_L1_READY = true;
    AC_BuildLayer1Texts();
+   AC_L1AppendPortfolioMaps();
 }
 
 void AC_RefreshLayer1SnapshotOnly()
