@@ -6,7 +6,6 @@ from typing import Dict, List, Tuple
 import csv
 import io
 import math
-import time
 
 from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
@@ -15,6 +14,7 @@ L6_INPUT_NAME = "l6_input_primitives.csv"
 L6_RANKED_NAME = "ranked_symbols.csv"
 L6_MANIFEST_NAME = "ranked_symbols.manifest"
 L6_TOP20_NAME = "ranked_symbols_top20.txt"
+L6_SYMBOL_RANK_FOLDER = "SymbolRanks"
 L6_JOB_TYPE = "L6_COST_FRICTION_RANKING_V1"
 L6_LAYER_NAME = "Layer 6 - Cost / Friction Ranking"
 L6_OWNER = "Runtime 4 - Surface Scoring Owner"
@@ -81,10 +81,12 @@ class L6RankSummary:
     hostile_count: int = 0
     zero_cost_suspicious_count: int = 0
     mismatch_count: int = 0
+    symbol_rank_files_written: int = 0
     payload_checksum: str = "not_available"
     ranked_csv_path: str = "not_available"
     manifest_path: str = "not_available"
     top20_path: str = "not_available"
+    symbol_rank_folder_path: str = "not_available"
 
 
 def _safe_float(value: str | None, default: float = 0.0) -> float:
@@ -111,6 +113,13 @@ def _safe_text(row: Dict[str, str], key: str, default: str = "not_available") ->
 
 def _safe_bool_text(value: str | None) -> bool:
     return str(value or "").strip().lower() == "true"
+
+
+def _sanitize_path_part(value: str) -> str:
+    safe = str(value).strip() or "unknown"
+    for ch in ['\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ']:
+        safe = safe.replace(ch, '_')
+    return safe
 
 
 def _bucket_from_score(score: float) -> str:
@@ -167,7 +176,6 @@ def _effective_cost_minlot(row: Dict[str, str]) -> Tuple[float, str]:
     usable = [(name, value) for name, value in candidates if value > 0.0]
     if not usable:
         return 0.0, "no_positive_cost_model"
-    # For cost safety, use the highest available min-lot estimate. Low estimates can be broker rounding.
     name, value = max(usable, key=lambda item: item[1])
     return value, name
 
@@ -210,30 +218,10 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         reasons.append("tick_age_gt_5s")
     score -= tick_age_penalty
 
-    quote_quality_penalty, quote_reason = _quality_penalty(
-        _safe_text(row, "quote_quality"),
-        ("fresh", "ok", "usable"),
-        ("aging", "warning", "partial"),
-        ("missing", "stale", "invalid"),
-    )
-    surface_quality_penalty, surface_reason = _quality_penalty(
-        _safe_text(row, "surface_quality"),
-        ("usable", "fresh", "ok"),
-        ("warning", "partial"),
-        ("missing", "stale", "invalid"),
-    )
-    value_quality_penalty, value_reason = _quality_penalty(
-        _safe_text(row, "value_quality"),
-        ("ready", "ok", "complete"),
-        ("partial", "fallback", "warning"),
-        ("missing", "failed", "invalid"),
-    )
-    margin_quality_penalty, margin_reason = _quality_penalty(
-        _safe_text(row, "margin_quality"),
-        ("ready", "ok", "complete"),
-        ("partial", "fallback", "warning"),
-        ("missing", "failed", "invalid"),
-    )
+    quote_quality_penalty, quote_reason = _quality_penalty(_safe_text(row, "quote_quality"), ("fresh", "ok", "usable"), ("aging", "warning", "partial"), ("missing", "stale", "invalid"))
+    surface_quality_penalty, surface_reason = _quality_penalty(_safe_text(row, "surface_quality"), ("usable", "fresh", "ok"), ("warning", "partial"), ("missing", "stale", "invalid"))
+    value_quality_penalty, value_reason = _quality_penalty(_safe_text(row, "value_quality"), ("ready", "ok", "complete"), ("partial", "fallback", "warning"), ("missing", "failed", "invalid"))
+    margin_quality_penalty, margin_reason = _quality_penalty(_safe_text(row, "margin_quality"), ("ready", "ok", "complete"), ("partial", "fallback", "warning"), ("missing", "failed", "invalid"))
     score -= quote_quality_penalty + surface_quality_penalty + value_quality_penalty + margin_quality_penalty
     reasons += [quote_reason, surface_reason, value_reason, margin_reason]
 
@@ -357,18 +345,48 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
         "rank|symbol|score|bucket|state|spread_bps|effective_minlot_cost|reason",
     ]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(
-            f"{index}|{row['symbol']}|{float(row['friction_score']):.2f}|{row['friction_bucket']}|{row['rank_state']}|"
-            f"{float(row['spread_bps']):.6f}|{float(row['effective_cost_minlot_account']):.6f}|{row['reason']}"
-        )
+        lines.append(f"{index}|{row['symbol']}|{float(row['friction_score']):.2f}|{row['friction_bucket']}|{row['rank_state']}|{float(row['spread_bps']):.6f}|{float(row['effective_cost_minlot_account']):.6f}|{row['reason']}")
     lines.append("")
+    return "\n".join(lines)
+
+
+def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
+    lines = [
+        "schema_name=l6_symbol_rank",
+        "schema_version=1",
+        "layer_id=6",
+        f"layer_name={L6_LAYER_NAME}",
+        f"owner_name={L6_OWNER}",
+        f"job_type={L6_JOB_TYPE}",
+        f"rank_index={rank_index}",
+        f"symbol={row['symbol']}",
+        f"friction_score={float(row['friction_score']):.6f}",
+        f"friction_bucket={row['friction_bucket']}",
+        f"rank_state={row['rank_state']}",
+        f"score_quality={row['score_quality']}",
+        f"calculation_quality={row['calculation_quality']}",
+        f"spread_bps={float(row['spread_bps']):.6f}",
+        f"spread_points={float(row['spread_points']):.6f}",
+        f"effective_cost_minlot_account={float(row['effective_cost_minlot_account']):.6f}",
+        f"cost_model_compare_status={row['cost_model_compare_status']}",
+        f"account_cost_zero_nonzero_spread_suspicious={row['account_cost_zero_nonzero_spread_suspicious']}",
+        f"volume_model_quality={row['volume_model_quality']}",
+        f"commission_model_status={row['commission_model_status']}",
+        f"reason={_format_value(row['reason'])}",
+        "authority=calculation_support_only",
+        "trade_permission=false",
+        "selection_runtime=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "",
+    ]
     return "\n".join(lines)
 
 
 def _manifest(summary: L6RankSummary, input_path: Path) -> str:
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=1",
+        "schema_version=2",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -379,6 +397,8 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         f"ranked_csv_path={summary.ranked_csv_path}",
         f"ranked_manifest_path={summary.manifest_path}",
         f"top20_path={summary.top20_path}",
+        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}",
+        f"symbol_rank_files_written={summary.symbol_rank_files_written}",
         f"input_count={summary.input_count}",
         f"row_count={summary.row_count}",
         f"ranked_count={summary.ranked_count}",
@@ -408,7 +428,9 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     ranked_path = layer_dir / L6_RANKED_NAME
     manifest_path = layer_dir / L6_MANIFEST_NAME
     top20_path = layer_dir / L6_TOP20_NAME
+    symbol_rank_dir = layer_dir / L6_SYMBOL_RANK_FOLDER
     layer_dir.mkdir(parents=True, exist_ok=True)
+    symbol_rank_dir.mkdir(parents=True, exist_ok=True)
 
     summary = L6RankSummary(
         status="missing_input",
@@ -416,6 +438,7 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         ranked_csv_path=str(ranked_path),
         manifest_path=str(manifest_path),
         top20_path=str(top20_path),
+        symbol_rank_folder_path=str(symbol_rank_dir),
     )
     if not input_path.exists():
         atomic_write_text(manifest_path, _manifest(summary, input_path))
@@ -453,8 +476,15 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
-    if not ranked_ok or not top20_ok:
+    files_written = 0
+    for index, row in enumerate(scored, start=1):
+        symbol_path = symbol_rank_dir / f"{_sanitize_path_part(str(row['symbol']))}.txt"
+        if atomic_write_text(symbol_path, _symbol_rank_text(index, row)):
+            files_written += 1
+    summary.symbol_rank_files_written = files_written
+
+    if not ranked_ok or not top20_ok or files_written != len(scored):
         summary.status = "write_degraded"
-        summary.reason = "ranked CSV or top20 write failed; sidecar proof should exist"
+        summary.reason = "ranked CSV, top20, or per-symbol rank write failed; sidecar proof may be partial"
     atomic_write_text(manifest_path, _manifest(summary, input_path))
     return summary
