@@ -1,0 +1,33 @@
+#ifndef AC_L3_REFRESH_MQH
+#define AC_L3_REFRESH_MQH
+void AC_RefreshLayer3BrokerSpecsTruth()
+{
+   AC_L3Reset();
+   int total = SymbolsTotal(false);
+   AC_L3_LAST_SYMBOLS_TOTAL = total;
+   AC_L3_LAST_L2_ROUTE_KEY = AC_L2_ROUTE_GENERATION_KEY;
+   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | symbols " + IntegerToString(total);
+
+   for(int idx = 0; idx < total; idx++)
+   {
+      string symbol = SymbolName(idx, false);
+      if(symbol == "") continue;
+      AC_L3ScanOneSymbol(symbol);
+   }
+
+   AC_L3_SCAN_STATUS = "Complete";
+   if(AC_L3_SPEC_PARTIAL_COUNT > 0 || AC_L3_SPEC_UNAVAILABLE_COUNT > 0 || AC_L3_VALUE_UNAVAILABLE_COUNT > 0) AC_L3_SCAN_STATUS = "Complete with warnings";
+   AC_L3_SCAN_DURATION_MS = GetTickCount() - AC_L3_SCAN_STARTED_MS;
+   AC_L3_READY = true;
+   AC_BuildLayer3Texts();
+}
+
+bool AC_L3ShouldRunFullScan()
+{
+   if(!AC_L3_READY) return true;
+   if(AC_L3_LAST_SYMBOLS_TOTAL != SymbolsTotal(false)) return true;
+   if(AC_L3_LAST_L2_ROUTE_KEY != AC_L2_ROUTE_GENERATION_KEY) return true;
+   return false;
+}
+
+#endif
