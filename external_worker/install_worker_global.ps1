@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BuiltWorker = Join-Path $ScriptDir "dist\AuroraWorker"
 $SharedRoot = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
-$SharedExternalWorker = Join-Path $SharedRoot "External Worker"
+$SharedExternalWorker = Join-Path $SharedRoot "Gateway"
 $SharedWorkerRoot = Join-Path $SharedExternalWorker "AuroraWorker"
 $SharedExeFlat = Join-Path $SharedExternalWorker "AuroraWorker.exe"
 $SharedStatus = Join-Path $SharedExternalWorker "Status"
@@ -12,7 +12,7 @@ $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
 $WorkerVersion = "0.6.4_l6_friction_ranked_csv"
 
-if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
+if (!(Test-Path $BuiltWorker)) { throw "Built Gateway folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
 Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force
 $BuiltExe = Join-Path $SharedWorkerRoot "AuroraWorker.exe"
@@ -20,7 +20,7 @@ $BuiltInternalDll = Join-Path $SharedWorkerRoot "_internal\python312.dll"
 if (!(Test-Path $BuiltExe)) { throw "Install failed: AuroraWorker.exe missing after copy." }
 if (!(Test-Path $BuiltInternalDll)) { throw "Install failed: packaged Python DLL missing after copy: $BuiltInternalDll" }
 
-# Flat EXE copy is retained only for legacy diagnostic visibility.
+# Flat EXE copy is retained only for diagnostic visibility.
 # Runtime task authority must use the packaged one-folder EXE beside _internal.
 Copy-Item -Path $BuiltExe -Destination $SharedExeFlat -Force
 
@@ -29,7 +29,7 @@ try {
   $daemonAction = New-ScheduledTaskAction -Execute $BuiltExe -Argument "--shared-root `"$SharedRoot`" --mode shared-daemon --poll-seconds 1" -WorkingDirectory $SharedWorkerRoot
   $daemonTrigger = New-ScheduledTaskTrigger -AtLogOn
   $daemonSettings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Days 3650) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-  Register-ScheduledTask -TaskName $DaemonTaskName -Action $daemonAction -Trigger $daemonTrigger -Settings $daemonSettings -Description "Aurora shared external worker daemon." -Force | Out-Null
+  Register-ScheduledTask -TaskName $DaemonTaskName -Action $daemonAction -Trigger $daemonTrigger -Settings $daemonSettings -Description "Aurora shared Gateway daemon." -Force | Out-Null
   $daemonTask = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction Stop
   $daemonRegistered = $true; $daemonState = $daemonTask.State.ToString()
 } catch {
@@ -65,15 +65,16 @@ $operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $FlatPres
 $autoStartConfigured = if($daemonRegistered -and $watchRegistered -and $PackagedPresent -and $PackagedInternalPresent){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
-schema_name=aurora_worker_install_status
-schema_version=5
+schema_name=aurora_gateway_install_status
+schema_version=6
 installed=$((($FlatPresent -and $PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
-install_method=shared_global_worker_plus_daemon_and_watchdog_tasks
+install_method=shared_global_gateway_plus_daemon_and_watchdog_tasks
 worker_version=$WorkerVersion
 package_source=external_worker/dist/AuroraWorker
 package_staleness_policy=rebuild_required_after_worker_source_change_no_source_only_runtime_claim
 shared_daemon=true
 shared_root=$SharedRoot
+gateway_root=$SharedExternalWorker
 flat_exe_present=$($FlatPresent.ToString().ToLowerInvariant())
 packaged_exe_present=$($PackagedPresent.ToString().ToLowerInvariant())
 packaged_internal_python_dll_present=$($PackagedInternalPresent.ToString().ToLowerInvariant())
@@ -101,6 +102,6 @@ authority=calculation_support_only
 trade_permission=false
 "@
 Set-Content -Path $SharedInstallStatusPath -Value $InstallText -Encoding ASCII
-Write-Host "Installed global worker and task proofs at $SharedInstallStatusPath"
+Write-Host "Installed Gateway and task proofs at $SharedInstallStatusPath"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
 Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
