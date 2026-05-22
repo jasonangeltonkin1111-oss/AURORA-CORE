@@ -626,6 +626,7 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
 
     reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir)
     if reused is not None:
+        atomic_write_text(manifest_path, _manifest(reused, input_path))
         return reused
 
     reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
