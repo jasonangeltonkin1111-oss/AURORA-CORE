@@ -1,16 +1,28 @@
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BuiltWorker = Join-Path $ScriptDir "dist\AuroraWorker"
+$WorkerSource = Join-Path $ScriptDir "aurora_worker.py"
 $SharedRoot = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
 $SharedExternalWorker = Join-Path $SharedRoot "Gateway"
 $SharedWorkerRoot = Join-Path $SharedExternalWorker "AuroraWorker"
 $SharedExeFlat = Join-Path $SharedExternalWorker "AuroraWorker.exe"
+$SharedBinRoot = Join-Path $SharedExternalWorker "Bin"
 $SharedStatus = Join-Path $SharedExternalWorker "Status"
 $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status.txt"
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$WorkerVersion = "0.6.5_gateway_folder_alignment"
+$ExpectedWorkerVersion = "0.6.6_l7_session_relevance_sidecar"
+$WorkerVersion = $ExpectedWorkerVersion
+
+if (Test-Path $WorkerSource) {
+  $versionLine = Select-String -LiteralPath $WorkerSource -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -ne $versionLine) { $WorkerVersion = $versionLine.Matches[0].Groups[1].Value }
+}
+
+if ($WorkerVersion -ne $ExpectedWorkerVersion) {
+  Write-Host "WARNING: source worker version differs from expected current version. source=$WorkerVersion expected=$ExpectedWorkerVersion" -ForegroundColor Yellow
+}
 
 if (!(Test-Path $BuiltWorker)) { throw "Built Gateway folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
@@ -60,26 +72,36 @@ if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefre
 $FlatPresent = Test-Path $SharedExeFlat
 $PackagedPresent = Test-Path $BuiltExe
 $PackagedInternalPresent = Test-Path $BuiltInternalDll
+$BinPresent = Test-Path $SharedBinRoot
 $authority = "calculation_support_only"; $tradePermission="false"
-$operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $FlatPresent -and $PackagedPresent -and $PackagedInternalPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
+$operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $PackagedPresent -and $PackagedInternalPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
 $autoStartConfigured = if($daemonRegistered -and $watchRegistered -and $PackagedPresent -and $PackagedInternalPresent){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
 schema_name=aurora_gateway_install_status
-schema_version=6
-installed=$((($FlatPresent -and $PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
+schema_version=7
+installed=$((($PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_gateway_plus_daemon_and_watchdog_tasks
 worker_version=$WorkerVersion
+expected_worker_version=$ExpectedWorkerVersion
+worker_version_source=external_worker/aurora_worker.py
 package_source=external_worker/dist/AuroraWorker
 package_staleness_policy=rebuild_required_after_worker_source_change_no_source_only_runtime_claim
 shared_daemon=true
 shared_root=$SharedRoot
 gateway_root=$SharedExternalWorker
+runtime_folder=$SharedWorkerRoot
+runtime_folder_authority=true
+runtime_exe_path=$BuiltExe
+runtime_internal_python_dll_path=$BuiltInternalDll
 flat_exe_present=$($FlatPresent.ToString().ToLowerInvariant())
-packaged_exe_present=$($PackagedPresent.ToString().ToLowerInvariant())
-packaged_internal_python_dll_present=$($PackagedInternalPresent.ToString().ToLowerInvariant())
 flat_exe_path=$SharedExeFlat
 flat_exe_runtime_authority=false
+bin_folder_present=$($BinPresent.ToString().ToLowerInvariant())
+bin_folder_path=$SharedBinRoot
+bin_folder_runtime_authority=false
+packaged_exe_present=$($PackagedPresent.ToString().ToLowerInvariant())
+packaged_internal_python_dll_present=$($PackagedInternalPresent.ToString().ToLowerInvariant())
 packaged_exe_path=$BuiltExe
 packaged_exe_runtime_authority=true
 daemon_install_method=windows_scheduled_task_shared_daemon
@@ -98,6 +120,7 @@ watchdog_task_state=$watchState
 watchdog_task_error=$watchError
 watchdog_default_enabled=false
 watchdog_disabled_to_prevent_popup_loop=true
+watchdog_proof_scope=registration_only_not_recovery_proof
 auto_start_configured=$autoStartConfigured
 operator_cmd_required=$operatorCmdRequired
 generated_unix=$($Now.ToUnixTimeSeconds())
@@ -107,5 +130,7 @@ trade_permission=false
 "@
 Set-Content -Path $SharedInstallStatusPath -Value $InstallText -Encoding ASCII
 Write-Host "Installed Gateway and task proofs at $SharedInstallStatusPath"
+Write-Host "Worker version source=$WorkerVersion expected=$ExpectedWorkerVersion"
+Write-Host "Runtime folder authority=$SharedWorkerRoot"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
 Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
