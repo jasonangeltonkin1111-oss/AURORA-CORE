@@ -20,6 +20,7 @@ L7_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L7_JOB_TYPE = "L7_SESSION_RELEVANCE_RANKING_V1"
 L7_LAYER_NAME = "Layer 7 - Session Relevance Ranking"
 L7_OWNER = "Runtime 4 - Surface Scoring Owner"
+OFF_SESSION_DEAD_TIME = "Off_Session_Dead_Time"
 
 SESSION_BUCKET_ORDER = {
     "poor_session_relevance": 0,
@@ -30,34 +31,12 @@ SESSION_BUCKET_ORDER = {
 }
 
 OUTPUT_FIELDS = [
-    "rank_index",
-    "symbol",
-    "layer_id",
-    "layer_name",
-    "session_score",
-    "session_bucket",
-    "rank_state",
-    "score_quality",
-    "current_session",
-    "session_definition_source",
-    "session_time_basis",
-    "time_basis_confidence",
-    "symbol_session_fit_score",
-    "live_activity_quality_score",
-    "quote_freshness_quality_score",
-    "spread_session_safety_score",
-    "asset_class",
-    "ranking_group",
-    "market_state",
-    "quote_quality",
-    "surface_quality",
-    "tick_age_seconds",
-    "spread_bps",
-    "daily_change_pct",
-    "zero_spread_state",
-    "reason",
-    "trade_permission",
-    "selection_runtime",
+    "rank_index", "symbol", "layer_id", "layer_name", "session_score", "session_bucket",
+    "rank_state", "score_quality", "current_session", "session_definition_source", "session_time_basis",
+    "time_basis_confidence", "symbol_session_fit_score", "live_activity_quality_score",
+    "quote_freshness_quality_score", "spread_session_safety_score", "asset_class", "ranking_group",
+    "market_state", "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps",
+    "daily_change_pct", "zero_spread_state", "reason", "trade_permission", "selection_runtime",
 ]
 
 
@@ -178,8 +157,8 @@ def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
 
 
 def _session_from_seconds(seconds: int) -> str:
-    # Static Gateway profile v1. This is descriptive session context, not broker-open truth or edge proof.
-    # The source time is broker server time-of-day from MT5 TimeCurrent, so confidence is kept visible.
+    # Static Gateway profile v1. Descriptive context only: not broker-open truth and not edge proof.
+    # The source time is MT5 TimeCurrent broker-server time-of-day, so confidence remains deliberately capped.
     if 0 <= seconds < 7 * 3600:
         return "Asia"
     if 7 * 3600 <= seconds < 12 * 3600:
@@ -189,7 +168,7 @@ def _session_from_seconds(seconds: int) -> str:
     if 16 * 3600 <= seconds < 21 * 3600:
         return "NewYork"
     if 21 * 3600 <= seconds < 24 * 3600:
-        return "Dead_Time"
+        return OFF_SESSION_DEAD_TIME
     return "Unknown"
 
 
@@ -222,17 +201,17 @@ def _symbol_family(symbol: str, asset_class: str, ranking_group: str) -> str:
 
 
 SESSION_FIT = {
-    "fx_major": {"Asia": 55, "London": 85, "NewYork": 80, "London_NewYork_Overlap": 95, "Dead_Time": 20, "Unknown": 35},
-    "eur_gbp_fx": {"Asia": 40, "London": 90, "NewYork": 75, "London_NewYork_Overlap": 95, "Dead_Time": 15, "Unknown": 35},
-    "jpy_fx": {"Asia": 80, "London": 65, "NewYork": 60, "London_NewYork_Overlap": 70, "Dead_Time": 20, "Unknown": 35},
-    "aud_nzd_fx": {"Asia": 85, "London": 55, "NewYork": 45, "London_NewYork_Overlap": 60, "Dead_Time": 20, "Unknown": 35},
-    "gold": {"Asia": 45, "London": 80, "NewYork": 85, "London_NewYork_Overlap": 95, "Dead_Time": 25, "Unknown": 40},
-    "us_indices": {"Asia": 20, "London": 50, "NewYork": 90, "London_NewYork_Overlap": 85, "Dead_Time": 15, "Unknown": 35},
-    "eu_uk_indices": {"Asia": 20, "London": 90, "NewYork": 55, "London_NewYork_Overlap": 80, "Dead_Time": 15, "Unknown": 35},
-    "indices": {"Asia": 30, "London": 70, "NewYork": 75, "London_NewYork_Overlap": 80, "Dead_Time": 15, "Unknown": 35},
-    "oil": {"Asia": 35, "London": 70, "NewYork": 85, "London_NewYork_Overlap": 85, "Dead_Time": 20, "Unknown": 35},
-    "crypto": {"Asia": 60, "London": 60, "NewYork": 60, "London_NewYork_Overlap": 60, "Dead_Time": 45, "Unknown": 45},
-    "unknown": {"Asia": 40, "London": 40, "NewYork": 40, "London_NewYork_Overlap": 40, "Dead_Time": 20, "Unknown": 25},
+    "fx_major": {"Asia": 55, "London": 85, "NewYork": 80, "London_NewYork_Overlap": 95, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "eur_gbp_fx": {"Asia": 40, "London": 90, "NewYork": 75, "London_NewYork_Overlap": 95, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "jpy_fx": {"Asia": 80, "London": 65, "NewYork": 60, "London_NewYork_Overlap": 70, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "aud_nzd_fx": {"Asia": 85, "London": 55, "NewYork": 45, "London_NewYork_Overlap": 60, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "gold": {"Asia": 45, "London": 80, "NewYork": 85, "London_NewYork_Overlap": 95, OFF_SESSION_DEAD_TIME: 5, "Unknown": 30},
+    "us_indices": {"Asia": 20, "London": 50, "NewYork": 90, "London_NewYork_Overlap": 85, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "eu_uk_indices": {"Asia": 20, "London": 90, "NewYork": 55, "London_NewYork_Overlap": 80, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "indices": {"Asia": 30, "London": 70, "NewYork": 75, "London_NewYork_Overlap": 80, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "oil": {"Asia": 35, "London": 70, "NewYork": 85, "London_NewYork_Overlap": 85, OFF_SESSION_DEAD_TIME: 5, "Unknown": 25},
+    "crypto": {"Asia": 55, "London": 55, "NewYork": 55, "London_NewYork_Overlap": 55, OFF_SESSION_DEAD_TIME: 20, "Unknown": 35},
+    "unknown": {"Asia": 35, "London": 35, "NewYork": 35, "London_NewYork_Overlap": 35, OFF_SESSION_DEAD_TIME: 5, "Unknown": 20},
 }
 
 
@@ -288,6 +267,11 @@ def _activity_score(tick_age: float, surface_quality: str, daily_change_pct: flo
     return max(0.0, min(100.0, score)), ";".join(reasons)
 
 
+def _dead_time_cap(family: str) -> float:
+    # Dead time means weak/off-session context. Crypto may still quote 24/7, but L7 must not promote it as strong.
+    return 54.0 if family == "crypto" else 34.0
+
+
 def _bucket_from_score(score: float) -> str:
     if score >= 85.0:
         return "elite_session_relevance"
@@ -308,7 +292,6 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     quote_quality = _safe_text(row, "quote_quality")
     surface_quality = _safe_text(row, "surface_quality")
     spread_bps = _safe_float(row.get("spread_bps"))
-    spread_points = _safe_float(row.get("spread_points"))
     tick_age = _safe_float(row.get("tick_age_seconds"))
     daily_change = _safe_float(row.get("daily_change_pct"))
     zero_spread_state = _safe_text(row, "zero_spread_state")
@@ -318,7 +301,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     current_session = _session_from_seconds(seconds)
     family = _symbol_family(symbol, asset_class, ranking_group)
-    fit_score = float(SESSION_FIT.get(family, SESSION_FIT["unknown"]).get(current_session, 25))
+    fit_score = float(SESSION_FIT.get(family, SESSION_FIT["unknown"]).get(current_session, 20))
     quote_score, quote_reason = _quality_score(quote_quality, ("fresh", "ok", "usable"), ("aging", "warning", "partial"), ("missing", "stale", "invalid"))
     activity_score, activity_reason = _activity_score(tick_age, surface_quality, daily_change)
     spread_score, spread_reason = _spread_safety_score(spread_bps)
@@ -328,21 +311,23 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     score = (fit_score * 0.35) + (activity_score * 0.25) + (quote_score * 0.20) + (spread_score * 0.10) + (time_basis_confidence * 0.10)
     score = max(0.0, min(100.0, score))
-    bucket = _bucket_from_score(score)
 
     rank_state = "ranked"
     score_quality = "usable_with_session_uncertainty"
     reasons: List[str] = [
-        "ok_L5Pass",
-        f"session={current_session}",
-        f"session_family={family}",
-        quote_reason,
-        activity_reason,
-        spread_reason,
-        "time_basis_marketwatch_caveat",
-        "static_gateway_profile_v1_not_edge_proof",
+        "ok_L5Pass", f"session={current_session}", f"session_family={family}", quote_reason,
+        activity_reason, spread_reason, "time_basis_marketwatch_caveat", "static_gateway_profile_v1_not_edge_proof",
     ]
-    if current_session == "Unknown" or family == "unknown":
+
+    if current_session == OFF_SESSION_DEAD_TIME:
+        cap = _dead_time_cap(family)
+        if score > cap:
+            score = cap
+        rank_state = "ranked_degraded"
+        score_quality = "off_session_dead_time_caution"
+        reasons.append(f"off_session_dead_time_score_capped_at_{cap:.0f}")
+        reasons.append("do_not_treat_as_trade_time")
+    elif current_session == "Unknown" or family == "unknown":
         rank_state = "ranked_degraded"
         score_quality = "degraded_session_basis"
         reasons.append("unknown_session_or_family")
@@ -357,6 +342,8 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_market_not_open"
         reasons.append(f"market_state={market_state}")
+
+    bucket = _bucket_from_score(score)
 
     return {
         "symbol": symbol,
@@ -379,7 +366,6 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         "surface_quality": surface_quality,
         "tick_age_seconds": tick_age,
         "spread_bps": spread_bps,
-        "spread_points": spread_points,
         "daily_change_pct": daily_change,
         "zero_spread_state": zero_spread_state,
         "reason": ";".join(reasons),
@@ -391,8 +377,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 def _format_value(value: str | float) -> str:
     if isinstance(value, float):
         return f"{value:.6f}"
-    text = str(value)
-    return text.replace("\r", " ").replace("\n", " ").replace(",", "_")
+    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
 
 
 def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
@@ -416,6 +401,7 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
         f"Generated UTC: {utc_stamp()}",
         "Trade Permission: FALSE",
         "Selection Runtime: FALSE",
+        "Policy: Off_Session_Dead_Time is cautionary and score-capped; it is not a trade window.",
         "",
         "rank|symbol|score|bucket|state|session|reason",
     ]
@@ -427,38 +413,20 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
     lines = [
-        "schema_name=l7_symbol_rank",
-        "schema_version=1",
-        "layer_id=7",
-        f"layer_name={L7_LAYER_NAME}",
-        f"owner_name={L7_OWNER}",
-        f"job_type={L7_JOB_TYPE}",
-        f"rank_index={rank_index}",
-        f"symbol={row['symbol']}",
-        f"session_score={float(row['session_score']):.6f}",
-        f"session_bucket={row['session_bucket']}",
-        f"rank_state={row['rank_state']}",
-        f"score_quality={row['score_quality']}",
-        f"current_session={row['current_session']}",
-        f"session_definition_source={row['session_definition_source']}",
-        f"session_time_basis={row['session_time_basis']}",
+        "schema_name=l7_symbol_rank", "schema_version=1", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
+        f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={row['symbol']}",
+        f"session_score={float(row['session_score']):.6f}", f"session_bucket={row['session_bucket']}",
+        f"rank_state={row['rank_state']}", f"score_quality={row['score_quality']}", f"current_session={row['current_session']}",
+        f"session_definition_source={row['session_definition_source']}", f"session_time_basis={row['session_time_basis']}",
         f"time_basis_confidence={float(row['time_basis_confidence']):.6f}",
         f"symbol_session_fit_score={float(row['symbol_session_fit_score']):.6f}",
         f"live_activity_quality_score={float(row['live_activity_quality_score']):.6f}",
         f"quote_freshness_quality_score={float(row['quote_freshness_quality_score']):.6f}",
         f"spread_session_safety_score={float(row['spread_session_safety_score']):.6f}",
-        f"market_state={row['market_state']}",
-        f"quote_quality={row['quote_quality']}",
-        f"surface_quality={row['surface_quality']}",
-        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}",
-        f"spread_bps={float(row['spread_bps']):.6f}",
-        f"reason={_format_value(row['reason'])}",
-        "authority=calculation_support_only",
-        "trade_permission=false",
-        "selection_runtime=false",
-        f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
-        "",
+        f"market_state={row['market_state']}", f"quote_quality={row['quote_quality']}", f"surface_quality={row['surface_quality']}",
+        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}",
+        f"reason={_format_value(row['reason'])}", "authority=calculation_support_only", "trade_permission=false",
+        "selection_runtime=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ]
     return "\n".join(lines)
 
@@ -468,50 +436,26 @@ def _manifest(summary: L7RankSummary, input_path: Path) -> str:
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=1",
-        "layer_id=7",
-        f"layer_name={L7_LAYER_NAME}",
-        f"owner_name={L7_OWNER}",
-        f"job_type={L7_JOB_TYPE}",
-        f"status={summary.status}",
-        f"reason={summary.reason}",
-        f"input_csv_path={input_path}",
-        f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
-        f"source_input_manifest_row_count={summary.source_input_manifest_row_count}",
-        f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=1", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
+        f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
+        f"input_csv_path={input_path}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
+        f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}",
         f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
         f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
-        f"ranked_csv_path={summary.ranked_csv_path}",
-        f"ranked_manifest_path={summary.manifest_path}",
-        f"top20_path={summary.top20_path}",
-        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}",
-        f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}",
-        f"symbol_rank_files_written={summary.symbol_rank_files_written}",
-        f"symbol_rank_files_actual={summary.symbol_rank_files_actual}",
-        f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}",
-        f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
-        f"stale_tmp_files_failed={summary.stale_tmp_files_failed}",
-        f"input_count={summary.input_count}",
-        f"row_count={summary.row_count}",
-        f"ranked_count={summary.ranked_count}",
-        f"ranked_degraded_count={summary.ranked_degraded_count}",
-        f"not_rankable_quality_count={summary.not_rankable_quality_count}",
-        f"elite_session_relevance_count={summary.elite_count}",
-        f"strong_session_relevance_count={summary.strong_count}",
-        f"acceptable_session_relevance_count={summary.acceptable_count}",
-        f"weak_session_relevance_count={summary.weak_count}",
-        f"poor_session_relevance_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}",
-        "authority=calculation_support_only",
-        "trade_permission=false",
-        "ranking_runtime=true",
-        "selection_runtime=false",
-        "session_profile_policy=static_gateway_profile_v1_descriptive_not_edge_proof",
-        f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
-        "",
+        f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}",
+        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}",
+        f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}",
+        f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
+        f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"input_count={summary.input_count}", f"row_count={summary.row_count}",
+        f"ranked_count={summary.ranked_count}", f"ranked_degraded_count={summary.ranked_degraded_count}",
+        f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_session_relevance_count={summary.elite_count}",
+        f"strong_session_relevance_count={summary.strong_count}", f"acceptable_session_relevance_count={summary.acceptable_count}",
+        f"weak_session_relevance_count={summary.weak_count}", f"poor_session_relevance_count={summary.poor_count}",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false",
+        "ranking_runtime=true", "selection_runtime=false",
+        "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window",
+        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
@@ -526,14 +470,7 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
     layer_dir.mkdir(parents=True, exist_ok=True)
     symbol_rank_dir.mkdir(parents=True, exist_ok=True)
 
-    summary = L7RankSummary(
-        status="missing_input",
-        reason="l7_input_primitives.csv missing",
-        ranked_csv_path=str(ranked_path),
-        manifest_path=str(manifest_path),
-        top20_path=str(top20_path),
-        symbol_rank_folder_path=str(symbol_rank_dir),
-    )
+    summary = L7RankSummary("missing_input", "l7_input_primitives.csv missing", ranked_csv_path=str(ranked_path), manifest_path=str(manifest_path), top20_path=str(top20_path), symbol_rank_folder_path=str(symbol_rank_dir))
     if input_manifest_path.exists():
         input_manifest = _parse_kv_text(read_text(input_manifest_path))
         summary.source_input_manifest_present = True
@@ -586,8 +523,7 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
     files_written = 0
     for index, row in enumerate(scored, start=1):
-        symbol_path = symbol_rank_dir / _symbol_rank_filename(str(row["symbol"]))
-        if atomic_write_text(symbol_path, _symbol_rank_text(index, row)):
+        if atomic_write_text(symbol_rank_dir / _symbol_rank_filename(str(row["symbol"])), _symbol_rank_text(index, row)):
             files_written += 1
     summary.symbol_rank_files_written = files_written
     summary.symbol_rank_files_actual = len(list(symbol_rank_dir.glob("*.txt")))
