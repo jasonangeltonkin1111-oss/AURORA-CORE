@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime1_layer5_basic_system_gate";
-static const string AC_BUILD_VERSION      = "1.045";
-static const string AC_UPGRADE_ID         = "RUNTIME1_LAYER5_BASIC_SYSTEM_GATE";
-static const string AC_UPGRADE_SUMMARY    = "Corrects Layer 5 to the original Basic System Gate: the first all-symbol hard eligibility gate under Runtime 1/Foundation Truth. Layer 5 blocks garbage symbols before scoring/ranking layers and does not own friction, volatility, structure, session scoring, advisory packets, Gateway transport, ranking, selection, permission, or execution.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Layer 6+ owns future friction/scoring work. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.045; confirm L5 Board shows BASIC SYSTEM GATE, scanned_symbols, gate_pass, gate_blocked, closed/not-open, stale quote, missing tick, invalid bid/ask, missing specs, trade-mode blocked, absurd spread, classification-review counts; confirm Dossier shows per-symbol gate_status and gate_reason; confirm Workbench shows L5_BASIC_SYSTEM_GATE and gateway_required=false; confirm no Layer 5 friction/volatility/structure/session advisory ownership remains except compatibility lines marked not_layer5; confirm Runtime 3 Gateway still remains calculation_support_only and trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime1_l5_basic_system_gate_no_duplicate_owner_no_gateway_no_ranking_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "runtime1_layer5_basic_system_gate_gateway_surface";
+static const string AC_BUILD_VERSION      = "1.046";
+static const string AC_UPGRADE_ID         = "RUNTIME1_L5_GATEWAY_SURFACE_ALIGNMENT";
+static const string AC_UPGRADE_SUMMARY    = "Aligns operator-facing Runtime 3 wording to Gateway and keeps Layer 5 as Basic System Gate. This is a surface-safe rename pass only: existing External Worker physical folders, scheduled task bindings, file names, and AC_ExternalWorker* internal symbols remain legacy compatibility until a separate migration is runtime-proven.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Layer 6+ owns future friction/scoring work. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated. Gateway naming is display truth; physical path migration is deliberately deferred.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.046; confirm L5 Board shows BASIC SYSTEM GATE, scanned_symbols, gate_pass, gate_blocked, closed/not-open, stale quote, missing tick, invalid bid/ask, missing specs, trade-mode blocked, absurd spread, classification-review counts; confirm Dossier shows per-symbol gate_status and gate_reason; confirm Workbench shows L5_BASIC_SYSTEM_GATE and gateway_required=false; confirm Runtime 3 surfaces say GATEWAY / gateway_status while legacy paths still point to External Worker until migration; confirm Runtime 3 Gateway still remains calculation_support_only and trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime1_l5_basic_system_gate_gateway_surface_no_path_migration_no_duplicate_owner_no_ranking_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -25,7 +25,11 @@ static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Tr
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
 static const string AC_LAYER_5_NAME       = "Layer 5 - Basic System Gate";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "Calculation Gateway Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.045_runtime1_l5_basic_system_gate";
+static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
+static const string AC_GATEWAY_LEGACY_PATH_POLICY = "display_renamed_to_gateway_physical_external_worker_paths_preserved_until_migration_proof";
+static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
+static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.046_runtime1_l5_basic_system_gate_gateway_surface";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
