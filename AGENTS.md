@@ -130,3 +130,38 @@ Every serious repo run must report:
 - regression risk
 - rollback path
 - final decision: `PROCEED`, `HOLD`, `KILL`, or `TEST FIRST`
+
+## Runtime 3B Windows autonomy evidence law
+
+Runtime 3B Windows-side autonomy must separate evidence classes:
+
+- source wired
+- Python syntax passed
+- PowerShell parse passed
+- MetaEditor compile passed
+- scheduled task registered
+- daemon running
+- watchdog recovered stale/missing daemon
+- MT5 Workbench readback observed
+
+Do not collapse these into one generic `done` claim.
+
+A scheduled task existing is not proof that stale/missing daemon recovery works. `operator_cmd_required=false` may be claimed only after source and runtime output prove the daemon/watchdog path works.
+
+## Codex/local branch intake law
+
+When Codex reports work on a local branch or a branch name that is not the requested target branch, first prove where the work lives before continuing.
+
+Required checks:
+
+1. `git status -sb`
+2. `git branch --show-current`
+3. `git log --oneline --decorate --graph --all -20`
+4. `git show --stat --oneline <reported_commit>` if a commit was reported
+5. `git branch --contains <reported_commit>` if a commit was reported
+6. `git diff --stat origin/main...HEAD`
+7. `git diff --stat main...HEAD` when local main exists
+
+If reported work exists only locally, either push the branch or clearly report it as local-only. Do not redo the same patch on another branch until the existing work is located and audited.
+
+If a PR branch is behind `main`, rebase or merge `main` only after inspecting conflicts. Do not overwrite `main` or force-push unless explicitly instructed.
