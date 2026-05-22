@@ -122,6 +122,7 @@ void AC_RefreshExternalWorkerStatus()
    {
       AC_EXTERNAL_WORKER_STATUS.result_status = "Result files present - validating";
       AC_ValidateExternalWorkerResult();
+      AC_ValidateExternalWorkerResultEnvelopeNoHeartbeatGate();
       if(AC_EXTERNAL_WORKER_STATUS.accepted_result)
          AC_EXTERNAL_WORKER_STATUS.result_status = "Accepted";
       else
