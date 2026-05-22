@@ -55,8 +55,12 @@ struct AC_ExternalWorkerStatus
    string shared_watchdog_task_state;
    string shared_watchdog_last_check_utc;
    string shared_watchdog_last_action;
+   string shared_watchdog_last_reason;
+   string shared_watchdog_restart_attempted;
+   string shared_watchdog_restart_result;
    string shared_operator_cmd_required;
    string shared_cpu_logical_count;
+   string shared_cpu_used_percent;
    string shared_memory_total_mb;
    string shared_memory_available_mb;
    string shared_memory_used_percent;
