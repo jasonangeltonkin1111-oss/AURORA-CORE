@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 import csv
 import io
 import math
@@ -66,6 +66,8 @@ class L7RankSummary:
     symbol_rank_filename_mode: str = L7_SYMBOL_RANK_FILENAME_MODE
     stale_tmp_files_removed: int = 0
     stale_tmp_files_failed: int = 0
+    stale_final_files_removed: int = 0
+    stale_final_files_failed: int = 0
     payload_checksum: str = "not_available"
     ranked_csv_path: str = "not_available"
     manifest_path: str = "not_available"
@@ -74,27 +76,25 @@ class L7RankSummary:
 
 
 def _safe_float(value: str | None, default: float = 0.0) -> float:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
-        return default
     try:
-        number = float(text)
-        if math.isnan(number) or math.isinf(number):
+        if value is None:
             return default
-        return number
+        text = str(value).strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
+            return default
+        number = float(text)
+        return default if math.isnan(number) or math.isinf(number) else number
     except ValueError:
         return default
 
 
 def _safe_int(value: str | None, default: int = 0) -> int:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
-        return default
     try:
+        if value is None:
+            return default
+        text = str(value).strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
+            return default
         return int(float(text))
     except ValueError:
         return default
@@ -102,9 +102,7 @@ def _safe_int(value: str | None, default: int = 0) -> int:
 
 def _safe_text(row: Dict[str, str], key: str, default: str = "not_available") -> str:
     value = row.get(key, default)
-    if value is None or str(value).strip() == "":
-        return default
-    return str(value).strip()
+    return default if value is None or str(value).strip() == "" else str(value).strip()
 
 
 def _parse_kv_text(text: str) -> Dict[str, str]:
@@ -144,8 +142,7 @@ def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
 
 
 def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
+    removed = failed = 0
     if not folder.exists():
         return removed, failed
     for path in folder.glob(pattern):
@@ -155,21 +152,8 @@ def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
     return removed, failed
 
 
-def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    if not symbol_rank_dir.exists():
-        return removed, failed
-    for pattern in ("*.txt", "*.tmp", "*.write_failed.txt"):
-        r, f = _cleanup_glob(symbol_rank_dir, pattern)
-        removed += r
-        failed += f
-    return removed, failed
-
-
 def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
+    removed = failed = 0
     for pattern in ("*.tmp", "*.write_failed.txt"):
         r, f = _cleanup_glob(layer_dir, pattern)
         removed += r
@@ -177,16 +161,12 @@ def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
     return removed, failed
 
 
-def _clear_final_rank_outputs(ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    for path in (ranked_path, top20_path):
-        r, f = _remove_file_if_exists(path)
+def _cleanup_symbol_rank_tmp(symbol_rank_dir: Path) -> Tuple[int, int]:
+    removed = failed = 0
+    for pattern in ("*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(symbol_rank_dir, pattern)
         removed += r
         failed += f
-    r, f = _clear_symbol_rank_files(symbol_rank_dir)
-    removed += r
-    failed += f
     return removed, failed
 
 
@@ -196,6 +176,20 @@ def _final_symbol_rank_txt_count(symbol_rank_dir: Path) -> int:
     return sum(1 for p in symbol_rank_dir.glob("*.txt") if p.is_file())
 
 
+def _delete_stale_symbol_rank_files(symbol_rank_dir: Path, expected_names: Iterable[str]) -> Tuple[int, int]:
+    expected = set(expected_names)
+    removed = failed = 0
+    if not symbol_rank_dir.exists():
+        return removed, failed
+    for path in symbol_rank_dir.glob("*.txt"):
+        if path.name in expected:
+            continue
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    return removed, failed
+
+
 def _csv_payload_checksum(text: str) -> str:
     rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
     return payload_checksum(rows)
@@ -203,7 +197,6 @@ def _csv_payload_checksum(text: str) -> str:
 
 def _session_from_seconds(seconds: int) -> str:
     # Static Gateway profile v1. Descriptive context only: not broker-open truth and not edge proof.
-    # The source time is MT5 TimeCurrent broker-server time-of-day, so confidence remains deliberately capped.
     if 0 <= seconds < 7 * 3600:
         return "Asia"
     if 7 * 3600 <= seconds < 12 * 3600:
@@ -313,7 +306,6 @@ def _activity_score(tick_age: float, surface_quality: str, daily_change_pct: flo
 
 
 def _dead_time_cap(family: str) -> float:
-    # Dead time means weak/off-session context. Crypto may still quote 24/7, but L7 must not promote it as strong.
     return 54.0 if family == "crypto" else 34.0
 
 
@@ -356,13 +348,9 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     score = (fit_score * 0.35) + (activity_score * 0.25) + (quote_score * 0.20) + (spread_score * 0.10) + (time_basis_confidence * 0.10)
     score = max(0.0, min(100.0, score))
-
     rank_state = "ranked"
     score_quality = "usable_with_session_uncertainty"
-    reasons: List[str] = [
-        "ok_L5Pass", f"session={current_session}", f"session_family={family}", quote_reason,
-        activity_reason, spread_reason, "time_basis_marketwatch_caveat", "static_gateway_profile_v1_not_edge_proof",
-    ]
+    reasons: List[str] = ["ok_L5Pass", f"session={current_session}", f"session_family={family}", quote_reason, activity_reason, spread_reason, "time_basis_marketwatch_caveat", "static_gateway_profile_v1_not_edge_proof"]
 
     if current_session == OFF_SESSION_DEAD_TIME:
         cap = _dead_time_cap(family)
@@ -381,41 +369,22 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         score_quality = "degraded_live_activity_or_quote"
     elif session_definition_source == "pending_gateway_static_profile":
         rank_state = "ranked_partial"
-        score_quality = "usable_with_session_uncertainty"
-
     if market_state != "open":
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_market_not_open"
         reasons.append(f"market_state={market_state}")
 
-    bucket = _bucket_from_score(score)
-
     return {
-        "symbol": symbol,
-        "session_score": score,
-        "session_bucket": bucket,
-        "rank_state": rank_state,
-        "score_quality": score_quality,
-        "current_session": current_session,
-        "session_definition_source": session_definition_source,
-        "session_time_basis": session_time_basis,
-        "time_basis_confidence": time_basis_confidence,
-        "symbol_session_fit_score": fit_score,
-        "live_activity_quality_score": activity_score,
-        "quote_freshness_quality_score": quote_score,
-        "spread_session_safety_score": spread_score,
-        "asset_class": asset_class,
-        "ranking_group": ranking_group,
-        "market_state": market_state,
-        "quote_quality": quote_quality,
-        "surface_quality": surface_quality,
-        "tick_age_seconds": tick_age,
-        "spread_bps": spread_bps,
-        "daily_change_pct": daily_change,
-        "zero_spread_state": zero_spread_state,
-        "reason": ";".join(reasons),
-        "trade_permission": "false",
-        "selection_runtime": "false",
+        "symbol": symbol, "session_score": score, "session_bucket": _bucket_from_score(score),
+        "rank_state": rank_state, "score_quality": score_quality, "current_session": current_session,
+        "session_definition_source": session_definition_source, "session_time_basis": session_time_basis,
+        "time_basis_confidence": time_basis_confidence, "symbol_session_fit_score": fit_score,
+        "live_activity_quality_score": activity_score, "quote_freshness_quality_score": quote_score,
+        "spread_session_safety_score": spread_score, "asset_class": asset_class, "ranking_group": ranking_group,
+        "market_state": market_state, "quote_quality": quote_quality, "surface_quality": surface_quality,
+        "tick_age_seconds": tick_age, "spread_bps": spread_bps, "daily_change_pct": daily_change,
+        "zero_spread_state": zero_spread_state, "reason": ";".join(reasons),
+        "trade_permission": "false", "selection_runtime": "false",
     }
 
 
@@ -440,16 +409,7 @@ def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
 
 
 def _top20_text(scored: List[Dict[str, str | float]]) -> str:
-    lines = [
-        "LAYER 7 - SESSION RELEVANCE RANKING - TOP 20",
-        "----------------------------------------",
-        f"Generated UTC: {utc_stamp()}",
-        "Trade Permission: FALSE",
-        "Selection Runtime: FALSE",
-        "Policy: Off_Session_Dead_Time is cautionary and score-capped; it is not a trade window.",
-        "",
-        "rank|symbol|score|bucket|state|session|reason",
-    ]
+    lines = ["LAYER 7 - SESSION RELEVANCE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", "Policy: Off_Session_Dead_Time is cautionary and score-capped; it is not a trade window.", "", "rank|symbol|score|bucket|state|session|reason"]
     for index, row in enumerate(scored[:20], start=1):
         lines.append(f"{index}|{row['symbol']}|{float(row['session_score']):.2f}|{row['session_bucket']}|{row['rank_state']}|{row['current_session']}|{row['reason']}")
     lines.append("")
@@ -459,22 +419,15 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
     symbol = str(row["symbol"])
     lines = [
-        "schema_name=l7_symbol_rank", "schema_version=2", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
+        "schema_name=l7_symbol_rank", "schema_version=3", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
         f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={symbol}",
-        f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}",
-        f"symbol_rank_checksum={_symbol_checksum(symbol)}",
-        f"session_score={float(row['session_score']):.6f}", f"session_bucket={row['session_bucket']}",
-        f"rank_state={row['rank_state']}", f"score_quality={row['score_quality']}", f"current_session={row['current_session']}",
-        f"session_definition_source={row['session_definition_source']}", f"session_time_basis={row['session_time_basis']}",
-        f"time_basis_confidence={float(row['time_basis_confidence']):.6f}",
-        f"symbol_session_fit_score={float(row['symbol_session_fit_score']):.6f}",
-        f"live_activity_quality_score={float(row['live_activity_quality_score']):.6f}",
-        f"quote_freshness_quality_score={float(row['quote_freshness_quality_score']):.6f}",
-        f"spread_session_safety_score={float(row['spread_session_safety_score']):.6f}",
-        f"market_state={row['market_state']}", f"quote_quality={row['quote_quality']}", f"surface_quality={row['surface_quality']}",
-        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}",
-        f"reason={_format_value(row['reason'])}", "authority=calculation_support_only", "trade_permission=false",
-        "selection_runtime=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"symbol_rank_filename_mode={L7_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}",
+        f"session_score={float(row['session_score']):.6f}", f"session_bucket={row['session_bucket']}", f"rank_state={row['rank_state']}", f"score_quality={row['score_quality']}", f"current_session={row['current_session']}",
+        f"session_definition_source={row['session_definition_source']}", f"session_time_basis={row['session_time_basis']}", f"time_basis_confidence={float(row['time_basis_confidence']):.6f}",
+        f"symbol_session_fit_score={float(row['symbol_session_fit_score']):.6f}", f"live_activity_quality_score={float(row['live_activity_quality_score']):.6f}", f"quote_freshness_quality_score={float(row['quote_freshness_quality_score']):.6f}",
+        f"spread_session_safety_score={float(row['spread_session_safety_score']):.6f}", f"market_state={row['market_state']}", f"quote_quality={row['quote_quality']}", f"surface_quality={row['surface_quality']}",
+        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}", f"reason={_format_value(row['reason'])}",
+        "authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ]
     return "\n".join(lines)
 
@@ -485,104 +438,50 @@ def _manifest(summary: L7RankSummary, input_path: Path) -> str:
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=2", "layer_id=7", f"layer_name={L7_LAYER_NAME}",
-        f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
-        f"input_csv_path={input_path}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
-        f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
-        f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}",
-        f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}",
-        f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
-        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}",
-        f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
-        f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
-        f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}",
-        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
-        f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}",
-        f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
-        f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"input_count={summary.input_count}", f"row_count={summary.row_count}",
-        f"ranked_count={summary.ranked_count}", f"ranked_degraded_count={summary.ranked_degraded_count}",
-        f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_session_relevance_count={summary.elite_count}",
-        f"strong_session_relevance_count={summary.strong_count}", f"acceptable_session_relevance_count={summary.acceptable_count}",
-        f"weak_session_relevance_count={summary.weak_count}", f"poor_session_relevance_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false",
-        "ranking_runtime=true", "selection_runtime=false",
-        "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window",
-        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=3", "layer_id=7", f"layer_name={L7_LAYER_NAME}", f"owner_name={L7_OWNER}", f"job_type={L7_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
+        f"input_csv_path={input_path}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
+        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
+        f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
+        f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}",
+        f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
+        f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}",
+        f"elite_session_relevance_count={summary.elite_count}", f"strong_session_relevance_count={summary.strong_count}", f"acceptable_session_relevance_count={summary.acceptable_count}", f"weak_session_relevance_count={summary.weak_count}", f"poor_session_relevance_count={summary.poor_count}",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=write_expected_outputs_then_delete_stale_then_manifest_last", "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
 def _summary_from_ranked_manifest(manifest_text: str, fallback: L7RankSummary) -> L7RankSummary:
     data = _parse_kv_text(manifest_text)
     return L7RankSummary(
-        status=data.get("status", fallback.status),
-        reason=data.get("reason", fallback.reason),
-        input_count=_safe_int(data.get("input_count"), fallback.input_count),
-        source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
-        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count),
-        source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass),
-        source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
-        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum),
-        input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank),
-        input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
-        row_count=_safe_int(data.get("row_count"), fallback.row_count),
-        ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count),
-        ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count),
-        not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
-        elite_count=_safe_int(data.get("elite_session_relevance_count"), fallback.elite_count),
-        strong_count=_safe_int(data.get("strong_session_relevance_count"), fallback.strong_count),
-        acceptable_count=_safe_int(data.get("acceptable_session_relevance_count"), fallback.acceptable_count),
-        weak_count=_safe_int(data.get("weak_session_relevance_count"), fallback.weak_count),
-        poor_count=_safe_int(data.get("poor_session_relevance_count"), fallback.poor_count),
-        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written),
-        symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual),
-        symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
-        stale_tmp_files_removed=fallback.stale_tmp_files_removed,
-        stale_tmp_files_failed=fallback.stale_tmp_files_failed,
-        payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
-        ranked_csv_path=fallback.ranked_csv_path,
-        manifest_path=fallback.manifest_path,
-        top20_path=fallback.top20_path,
-        symbol_rank_folder_path=fallback.symbol_rank_folder_path,
+        status=data.get("status", fallback.status), reason=data.get("reason", fallback.reason), input_count=_safe_int(data.get("input_count"), fallback.input_count), source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
+        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count), source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass), source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
+        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum), input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank), input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
+        row_count=_safe_int(data.get("row_count"), fallback.row_count), ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count), ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count), not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
+        elite_count=_safe_int(data.get("elite_session_relevance_count"), fallback.elite_count), strong_count=_safe_int(data.get("strong_session_relevance_count"), fallback.strong_count), acceptable_count=_safe_int(data.get("acceptable_session_relevance_count"), fallback.acceptable_count), weak_count=_safe_int(data.get("weak_session_relevance_count"), fallback.weak_count), poor_count=_safe_int(data.get("poor_session_relevance_count"), fallback.poor_count),
+        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written), symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual), symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
+        stale_tmp_files_removed=fallback.stale_tmp_files_removed, stale_tmp_files_failed=fallback.stale_tmp_files_failed, stale_final_files_removed=fallback.stale_final_files_removed, stale_final_files_failed=fallback.stale_final_files_failed, payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
+        ranked_csv_path=fallback.ranked_csv_path, manifest_path=fallback.manifest_path, top20_path=fallback.top20_path, symbol_rank_folder_path=fallback.symbol_rank_folder_path,
     )
 
 
-def _try_reuse_unchanged_rank_outputs(
-    summary: L7RankSummary,
-    manifest_path: Path,
-    ranked_path: Path,
-    top20_path: Path,
-    symbol_rank_dir: Path,
-) -> L7RankSummary | None:
-    if not summary.source_input_manifest_present:
-        return None
-    if summary.source_input_payload_checksum in {"", "not_available"}:
+def _try_reuse_unchanged_rank_outputs(summary: L7RankSummary, manifest_path: Path, ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> L7RankSummary | None:
+    if not summary.source_input_manifest_present or summary.source_input_payload_checksum in {"", "not_available"}:
         return None
     if summary.input_payload_checksum != summary.source_input_payload_checksum:
         return None
     if not manifest_path.exists() or not ranked_path.exists() or not top20_path.exists():
         return None
-
     existing = _summary_from_ranked_manifest(read_text(manifest_path), summary)
     actual_symbol_rank_files = _final_symbol_rank_txt_count(symbol_rank_dir)
     if existing.status not in {"complete", "input_degraded"}:
         return None
-    if existing.symbol_rank_filename_mode != L7_SYMBOL_RANK_FILENAME_MODE:
+    if existing.symbol_rank_filename_mode != L7_SYMBOL_RANK_FILENAME_MODE or not existing.input_generation_stable:
         return None
-    if not existing.input_generation_stable:
+    if existing.input_payload_checksum != summary.input_payload_checksum or existing.input_payload_checksum_after_rank != summary.input_payload_checksum or existing.source_input_payload_checksum != summary.source_input_payload_checksum:
         return None
-    if existing.input_payload_checksum != summary.input_payload_checksum:
+    if existing.input_count <= 0 or existing.row_count != existing.input_count or existing.symbol_rank_files_written != existing.row_count or actual_symbol_rank_files != existing.row_count:
         return None
-    if existing.input_payload_checksum_after_rank != summary.input_payload_checksum:
-        return None
-    if existing.source_input_payload_checksum != summary.source_input_payload_checksum:
-        return None
-    if existing.input_count <= 0 or existing.row_count != existing.input_count:
-        return None
-    if existing.symbol_rank_files_written != existing.row_count:
-        return None
-    if actual_symbol_rank_files != existing.row_count:
-        return None
-
     existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
     existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
     existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
@@ -610,59 +509,35 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
         summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
 
     removed, failed = _clear_layer_transient_files(layer_dir)
-    sr_removed, sr_failed = _cleanup_glob(symbol_rank_dir, "*.tmp")
+    sr_removed, sr_failed = _cleanup_symbol_rank_tmp(symbol_rank_dir)
     summary.stale_tmp_files_removed += removed + sr_removed
     summary.stale_tmp_files_failed += failed + sr_failed
 
     if not input_path.exists():
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
 
     text = read_text(input_path)
     summary.input_payload_checksum = _csv_payload_checksum(text)
-
     reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir)
     if reused is not None:
         atomic_write_text(manifest_path, _manifest(reused, input_path))
         return reused
 
-    reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
-    rows = [row for row in reader]
+    rows = [row for row in csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))]
     summary.input_count = len(rows)
     scored = [_score_row(row) for row in rows]
-    scored.sort(key=lambda row: (
-        SESSION_BUCKET_ORDER.get(str(row["session_bucket"]), 0),
-        float(row["session_score"]),
-        float(row["symbol_session_fit_score"]),
-        float(row["live_activity_quality_score"]),
-        str(row["symbol"]),
-    ), reverse=True)
+    scored.sort(key=lambda row: (SESSION_BUCKET_ORDER.get(str(row["session_bucket"]), 0), float(row["session_score"]), float(row["symbol_session_fit_score"]), float(row["live_activity_quality_score"]), str(row["symbol"])), reverse=True)
 
     text_after_rank = read_text(input_path)
     summary.input_payload_checksum_after_rank = _csv_payload_checksum(text_after_rank)
     after_rows = [row for row in csv.DictReader(io.StringIO(text_after_rank.replace("\r\n", "\n")))]
-    summary.input_generation_stable = (
-        summary.input_payload_checksum == summary.input_payload_checksum_after_rank
-        and summary.input_count == len(after_rows)
-    )
+    summary.input_generation_stable = summary.input_payload_checksum == summary.input_payload_checksum_after_rank and summary.input_count == len(after_rows)
     if not summary.input_generation_stable:
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
         summary.status = "input_changed_during_rank"
-        summary.reason = (
-            f"l7 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
-            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; final ranked outputs cleared"
-        )
+        summary.reason = f"l7 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; existing ranked outputs intentionally left untouched"
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
-
-    removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-    summary.stale_tmp_files_removed += removed
-    summary.stale_tmp_files_failed += failed
 
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
@@ -688,10 +563,14 @@ def publish_l7_session_relevance_rankings(outbox: Path) -> L7RankSummary:
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
+    expected_names = [_symbol_rank_filename(str(row["symbol"])) for row in scored]
     files_written = 0
     for index, row in enumerate(scored, start=1):
         if atomic_write_text(symbol_rank_dir / _symbol_rank_filename(str(row["symbol"])), _symbol_rank_text(index, row)):
             files_written += 1
+    stale_removed, stale_failed = _delete_stale_symbol_rank_files(symbol_rank_dir, expected_names)
+    summary.stale_final_files_removed += stale_removed
+    summary.stale_final_files_failed += stale_failed
     summary.symbol_rank_files_written = files_written
     summary.symbol_rank_files_actual = _final_symbol_rank_txt_count(symbol_rank_dir)
 
