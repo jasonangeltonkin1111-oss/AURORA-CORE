@@ -11,6 +11,7 @@ import time
 import traceback
 
 from aurora_worker_io import (
+    GATEWAY_FOLDER_NAME,
     WorkerPaths,
     atomic_write_text,
     payload_checksum,
@@ -22,7 +23,7 @@ from aurora_worker_io import (
 )
 from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 
-WORKER_VERSION = "0.6.4_l6_friction_ranked_csv"
+WORKER_VERSION = "0.6.5_gateway_folder_alignment"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -56,6 +57,10 @@ class WatchdogProof:
     last_reason: str = "not_available"
     restart_attempted: str = "false"
     restart_result: str = "not_available"
+
+
+def shared_gateway_status_path(shared_root: Path) -> Path:
+    return shared_root / GATEWAY_FOLDER_NAME / "Status" / "shared_worker_status.txt"
 
 
 def _result_from_header(ok: bool, status: str, reason: str, header: Dict[str, str], row_count: int = 0, checksum: str = "not_available") -> ValidationResult:
@@ -270,9 +275,9 @@ def discover_roots(shared_root: Path) -> List[Path]:
     roots: List[Path] = []
     if shared_root.exists():
         for server in sorted(shared_root.iterdir()):
-            if server.is_dir() and server.name != "External Worker":
+            if server.is_dir() and server.name not in {GATEWAY_FOLDER_NAME, "External Worker"}:
                 for account in sorted(server.iterdir()):
-                    if account.is_dir() and (account / "Workbench" / "External Worker" / "Control" / "worker_required.txt").exists():
+                    if account.is_dir() and (account / "Workbench" / GATEWAY_FOLDER_NAME / "Control" / "worker_required.txt").exists():
                         roots.append(account)
     return roots
 
@@ -348,7 +353,7 @@ def _windows_memory() -> Tuple[str, str, str]:
 
 
 def _read_existing_watchdog(shared_root: Path) -> WatchdogProof:
-    status_path = shared_root / "External Worker" / "Status" / "shared_worker_status.txt"
+    status_path = shared_gateway_status_path(shared_root)
     try:
         kv = read_kv(status_path)
         return WatchdogProof(
@@ -363,7 +368,7 @@ def _read_existing_watchdog(shared_root: Path) -> WatchdogProof:
 
 
 def _status_age(shared_root: Path) -> Tuple[bool, int]:
-    status_path = shared_root / "External Worker" / "Status" / "shared_worker_status.txt"
+    status_path = shared_gateway_status_path(shared_root)
     if not status_path.exists():
         return False, -1
     try:
@@ -408,12 +413,13 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         throttle_reason = "memory_above_limit"
 
     lines = [
-        "schema_name=aurora_shared_worker_status",
-        "schema_version=5",
+        "schema_name=aurora_shared_gateway_status",
+        "schema_version=6",
         f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}",
         "mode=shared-daemon",
         f"shared_root={shared_root}",
+        f"gateway_status_path={shared_gateway_status_path(shared_root)}",
         f"process_start_utc={PROCESS_START_UTC}",
         f"process_start_unix={PROCESS_START_UNIX}",
         f"last_loop_utc={utc_stamp()}",
@@ -458,7 +464,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
 
 
 def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> bool:
-    return atomic_write_text(shared_root / "External Worker" / "Status" / "shared_worker_status.txt", build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
+    return atomic_write_text(shared_gateway_status_path(shared_root), build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
 
 
 def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
@@ -506,7 +512,7 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
     if daemon_registered != "true":
         reason_bits.append("daemon_task_missing")
     if stale:
-        reason_bits.append("shared_status_missing_or_stale")
+        reason_bits.append("shared_gateway_status_missing_or_stale")
     if process_missing:
         reason_bits.append("aurora_worker_process_missing")
     if daemon_state.lower() != "running":
@@ -543,7 +549,7 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
 
 
 def main(argv: List[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Aurora external worker validator")
+    parser = argparse.ArgumentParser(description="Aurora Gateway validator")
     parser.add_argument("--root")
     parser.add_argument("--shared-root")
     parser.add_argument("--mode", choices=("once", "daemon", "shared-daemon"), default="once")
