@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "gateway_internal_pressure_and_stale_status_cleanup";
-static const string AC_BUILD_VERSION      = "1.051";
-static const string AC_UPGRADE_ID         = "GATEWAY_INTERNAL_PRESSURE_AND_STALE_STATUS_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Reduces Runtime 3 Gateway status check pressure on the MT5 timer and adds an explicit stale window for shared daemon status. This follows runtime evidence where Gateway status/read/write consumed roughly the timer budget and source audit found shared_worker_status age was computed but not used to reject stale supervisor proof. No compile/runtime proof is claimed by source changes alone.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 remains Gateway calculation support only. Gateway status polling is slowed to reduce OnTimer pressure while freshness windows still fail stale worker/result proof closed. Shared daemon status now has an explicit max age separate from result freshness. This patch does not create trade permission, selection runtime, basket logic, Layer 7 logic, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.051 and EA property version=1.051; confirm Gateway health checks no longer run every 5 seconds; confirm shared_worker_status older than AC_EXTERNAL_WORKER_SHARED_STATUS_MAX_AGE_SECONDS is marked Stale; confirm accepted_result still requires authority=calculation_support_only, trade_permission=false, latest snapshot/job binding, and fresh result window; confirm no trade permission and no selection runtime.";
-static const string AC_LOGGING_POLICY     = "event_boundary_gateway_internal_pressure_and_stale_status_cleanup_no_duplicate_owner_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "gateway_result_validation_ordering_fix";
+static const string AC_BUILD_VERSION      = "1.052";
+static const string AC_UPGRADE_ID         = "GATEWAY_RESULT_VALIDATION_ORDERING_FIX";
+static const string AC_UPGRADE_SUMMARY    = "Fixes Runtime 3 Gateway result-validation ordering so MT5 validates the current worker result against the currently remembered MT5 snapshot/job envelope before exporting the next snapshot. Runtime proof showed result_latest was rejected because MT5 exported a newer snapshot first, then compared the prior worker result against that newer job id. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 remains Gateway calculation support only. Result validation is ordered before next snapshot export to prevent valid previous-cycle worker output from being rejected as a stale snapshot/job mismatch. Gateway status polling remains slowed to reduce OnTimer pressure, and shared daemon status has an explicit max age contract. This patch does not create trade permission, selection runtime, basket logic, Layer 7 logic, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.052 and EA property version=1.052; confirm result_latest source_snapshot_id/job_id can be accepted before MT5 exports the next snapshot; confirm accepted_result=true only when authority=calculation_support_only, trade_permission=false, fresh heartbeat/result, and latest remembered snapshot/job binding are valid; confirm worker_process_status exists after rebuilding/reinstalling the current packaged worker; confirm no trade permission and no selection runtime.";
+static const string AC_LOGGING_POLICY     = "event_boundary_gateway_result_validation_ordering_fix_no_duplicate_owner_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.051_gateway_internal_pressure_and_stale_status_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.052_gateway_result_validation_ordering_fix";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
