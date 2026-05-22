@@ -10,6 +10,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
+$WorkerVersion = "0.6.0_3c_job_bus_no_powershell_daemon"
 
 if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Run build_worker.ps1 first." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
@@ -66,7 +67,7 @@ schema_name=aurora_worker_install_status
 schema_version=4
 installed=$((($FlatPresent -and $PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_worker_plus_daemon_and_watchdog_tasks
-worker_version=0.5.1_hotfix_no_powershell_daemon
+worker_version=$WorkerVersion
 shared_daemon=true
 shared_root=$SharedRoot
 flat_exe_present=$($FlatPresent.ToString().ToLowerInvariant())
