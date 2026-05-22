@@ -28,7 +28,8 @@ If a connector only supports unsafe full-file replacement for a large owner file
 
 - Runtime 2 taxonomy authority lives in `mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse*.mqh`.
 - Runtime 1 Layer 3 broker symbol/spec metadata lives in `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_*.mqh`.
-- Runtime 3 external calculation worker authority lives in `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/` plus `external_worker/` scripts and worker source.
+- Runtime 1 Layer 5 Basic System Gate authority lives in `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh`.
+- Runtime 3 external calculation worker authority lives in `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/` plus the active files indexed in `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`.
 - Runtime 7 publication wrappers live in `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/`.
 - FileIO/path owners must stay single-owner systems.
 - Dossiers display upstream truth; they must not become hidden truth owners.
@@ -46,6 +47,22 @@ Runtime 3 must keep:
 Runtime 3 must not own broker truth, FileIO internals, Board/Dossier rendering authority, ranking, selection, strategy, execution, WebRequest, ML, or L5 heavy calculations unless explicitly scoped later.
 
 When working on Runtime 3B autonomy, do not fake watchdog proof. A scheduled task existing is not proof that stale/missing daemon recovery works. `operator_cmd_required=false` may be claimed only after source and runtime output prove the daemon/watchdog path works.
+
+## External worker source hygiene law
+
+Active external-worker source authority is listed in `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`.
+
+Do not recreate or patch from one-shot emergency repair scripts that can rewrite active source, restore stale backups, stop/unregister scheduled tasks, or create `_aurora_*_backup_*` folders inside the repo. Such scripts are shadow authority unless explicitly scoped and quarantined.
+
+Backup folders and packaged artifacts are not source truth. Before touching worker logic, inspect the active source files first:
+
+1. `external_worker/aurora_worker.py`
+2. `external_worker/aurora_worker_io.py`
+3. `external_worker/install_worker_global.ps1`
+4. `external_worker/register_watchdog_safe.ps1`
+5. `external_worker/AuroraWorker.spec`
+
+Patch source before rebuild artifacts. Do not claim packaged executable readiness unless the package was actually rebuilt and runtime-tested.
 
 ## File removal law
 
