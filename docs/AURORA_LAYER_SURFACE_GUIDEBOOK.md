@@ -2,6 +2,8 @@
 
 This guidebook is the repo standard for future layer work. It exists to stop drift between Board, Dossier, Workbench, Runtime owners, and external-worker calculation ownership.
 
+Start here before any Board, Dossier, Workbench, Runtime owner, or later-layer design work.
+
 ## Source-truth order
 
 1. Current repo/source/config.
@@ -26,6 +28,20 @@ Every fact has one source owner.
 - Board/Dossier Renderer Service renders prepared owner packets; it must not compute owner truth.
 
 Later layers must consume earlier owner packets. They must not recalculate, mirror, backfill, correct, or override previous-layer truth.
+
+## No-repeat data law
+
+Do not repeat raw layer-owned data in later layers.
+
+Examples:
+
+- Layer 5 must not restate the Layer 2 market state as if it owns market open/closed truth.
+- Layer 5 may say `L2 Market Gate: pass/fail/blocked` or `blocked_by_layer2_closed`, but the detailed market-state truth remains in Layer 2.
+- Layer 5 must not repeat Layer 4 bid/ask/spread/tick details. It may say `L4 Quote Gate: pass/fail/blocked`.
+- Layer 5 must not repeat Layer 3 contract/value/margin primitives. It may say `L3 Specs Gate: pass/fail/blocked`.
+- Workbench may include references, IDs, gates, and owner links, but not duplicate full raw owner packets.
+
+If a later layer needs an earlier-layer fact, use a compact reference/gate status and point the reader back to the owning layer section.
 
 ## Surface split
 
@@ -67,7 +83,7 @@ Subsection
 Field: value
 ```
 
-Dossier may show per-symbol broker specs, market state, quote packet, advisory packet, readiness, blocker, source quality, and degraded truth. It must not become Workbench machine metadata.
+Dossier may show per-symbol owner truth, source quality, advisory packet, readiness, blocker, and degraded truth. It must not become Workbench machine metadata, and it must not duplicate previous-layer raw data. Use gate references for earlier layers.
 
 ### Workbench
 
@@ -85,7 +101,7 @@ calculation_lane=...
 source_truth_owner=...
 ```
 
-Workbench may contain job IDs, snapshot IDs, checksums, owner contracts, counters, timings, rejection reasons, accepted/rejected status, source-quality ledgers, and no-duplicate-owner proof.
+Workbench may contain job IDs, snapshot IDs, checksums, owner contracts, counters, timings, rejection reasons, accepted/rejected status, source-quality ledgers, and no-duplicate-owner proof. Even here, avoid copying whole earlier-layer raw packets; reference their owner/gate/status.
 
 ## Runtime 5 design law
 
@@ -111,6 +127,7 @@ Runtime 5 must not:
 - Own FileIO or routes.
 - Own ranking, selection, trade permission, execution, or strategy.
 - Run heavy/deep calculation directly inside MT5 when the design requires external-worker calculation.
+- Repeat earlier-layer raw data in its Board, Dossier, or Workbench surfaces.
 
 ## Runtime 5 internals
 
@@ -134,9 +151,9 @@ Recommended future per-symbol packet shape:
 
 ```text
 symbol
-market_state_from_l2
-l3_specs_ready
-l4_quote_ready
+l2_gate_status
+l3_gate_status
+l4_gate_status
 runtime3_result_accepted
 runtime3_job_id
 runtime3_job_type
@@ -151,7 +168,7 @@ kill_reason
 quality_state
 ```
 
-This packet must not duplicate raw L1-L4 data. It references owner state and explains advisory readiness.
+This packet must not duplicate raw L1-L4 data. It references owner gate state and explains advisory readiness.
 
 ## Runtime 5 Board standard
 
@@ -167,6 +184,7 @@ Runtime 3 Result Accepted:  FALSE
 Eligible Open Symbols:      172
 Ready Advisory Packets:     0
 Pending Advisory Packets:   172
+L2/L3/L4 Gates:             See owning layer sections
 Readiness:                  Waiting for Runtime 3 worker
 Scan Duration:              0 ms
 Worst Blocker:              Waiting for Runtime 3 accepted external-worker job result before deep advisory calculations
@@ -175,7 +193,7 @@ Ranking Runtime:            FALSE
 Selection Runtime:          FALSE
 ```
 
-No job IDs, checksums, snapshot hashes, long source-owner prose, or symbol lists on the Board.
+No job IDs, checksums, snapshot hashes, long source-owner prose, symbol lists, or repeated L2/L3/L4 raw data on the Board.
 
 ## Runtime 5 Dossier standard
 
@@ -186,10 +204,11 @@ LAYER 5 - DEEP INSPECTION ADVISORY
 ----------------------------------------
 Status: Shell only
 Trust: Advisory Not Ready
-Market State Source: Layer 2
-Market State: open
 Calculation Lane: Runtime 3 external worker
 Runtime 3 Result Accepted: FALSE
+L2 Market Gate: See Layer 2 market section
+L3 Specs Gate: See Layer 3 broker specs/value section
+L4 Quote Gate: See Layer 4 live quote/spread section
 Readiness: Waiting for Runtime 3 worker
 Blocker: Waiting for Runtime 3 accepted external-worker job result before deep advisory calculations
 
@@ -210,7 +229,7 @@ Degraded Publication: TRUE
 Trade Permission: FALSE
 Ranking Runtime: FALSE
 Selection Runtime: FALSE
-Owner Boundary: Consumes L1-L4 owner packets and Runtime 3 accepted worker result only; does not recalculate earlier-layer truth.
+Owner Boundary: Consumes L1-L4 owner gates and Runtime 3 accepted worker result only; does not recalculate or repeat earlier-layer truth.
 ```
 
 Dossier may include symbol-level advisory facts once Runtime 3 returns accepted deep results. It must not include full Runtime 3 machine proof unless needed as a short readiness line.
@@ -228,7 +247,7 @@ status=Shell only
 trust_state=Advisory Not Ready
 calculation_lane=Runtime3_external_worker_job_bus_required_for_deep_calculation
 execution_owner=Runtime_3_external_worker_job_bus_and_result_acceptance
-source_truth_owner=L1_L2_L3_L4_existing_owner_packets_only
+source_truth_owner=L1_L2_L3_L4_existing_owner_gates_only
 surface_owner=Runtime_5_advisory_interpretation_shell_only
 duplicate_owner_contract=no_duplicate_L1_L2_L3_L4_Runtime3_FileIO_route_board_dossier_ranking_selection_permission_execution_owner
 board_layout_contract=compact_operator_summary_same_style_as_L1_L2_L3_L4
@@ -245,9 +264,12 @@ runtime3_result_job_status=...
 eligible_open=...
 ready_symbols=...
 pending_symbols=...
+l2_gate_status=owner_reference_only
+l3_gate_status=owner_reference_only
+l4_gate_status=owner_reference_only
 readiness=...
 main_blocker=...
-inputs_consumed=L1_L2_L3_L4_owner_packets_plus_Runtime3_accepted_worker_result_only
+inputs_consumed=L1_L2_L3_L4_owner_gates_plus_Runtime3_accepted_worker_result_only
 outputs_published=board_summary_dossier_advisory_section_workbench_machine_meta_status_row
 permission=false
 ranking_runtime=false
@@ -269,6 +291,7 @@ A layer can move forward only after:
 6. Workbench contains the meta/debug/proof details.
 7. Trade permission, ranking, selection, and execution remain false unless a later explicit owner is created and proven.
 8. Rollback path is known.
+9. Later-layer surfaces do not repeat raw earlier-layer data.
 
 ## Runtime 3 before Runtime 5
 
