@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 import csv
 import io
 import math
@@ -75,6 +75,11 @@ class L6RankSummary:
     source_input_manifest_row_count: int = 0
     source_l5_gate_pass: int = 0
     source_input_payload_checksum: str = "not_available"
+    input_payload_checksum: str = "not_available"
+    input_payload_checksum_after_rank: str = "not_available"
+    input_generation_stable: bool = False
+    stale_tmp_files_removed: int = 0
+    stale_tmp_files_failed: int = 0
     row_count: int = 0
     ranked_count: int = 0
     ranked_degraded_count: int = 0
@@ -160,16 +165,58 @@ def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
         return 0, 1
 
 
+def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    if not folder.exists():
+        return removed, failed
+    for path in folder.glob(pattern):
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    return removed, failed
+
+
 def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
     removed = 0
     failed = 0
     if not symbol_rank_dir.exists():
         return removed, failed
-    for path in symbol_rank_dir.glob("*.txt"):
-        r, f = _remove_file_if_exists(path)
+    # Remove final sidecars and abandoned atomic tmp/write-failure proofs. Mixed-generation
+    # SymbolRanks are worse than missing ranks because MT5 may count stale files as truth.
+    for pattern in ("*.txt", "*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(symbol_rank_dir, pattern)
         removed += r
         failed += f
     return removed, failed
+
+
+def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    for pattern in ("*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(layer_dir, pattern)
+        removed += r
+        failed += f
+    return removed, failed
+
+
+def _clear_final_rank_outputs(ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> Tuple[int, int]:
+    removed = 0
+    failed = 0
+    for path in (ranked_path, top20_path):
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    r, f = _clear_symbol_rank_files(symbol_rank_dir)
+    removed += r
+    failed += f
+    return removed, failed
+
+
+def _csv_payload_checksum(text: str) -> str:
+    rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
+    return payload_checksum(rows)
 
 
 def _bucket_from_score(score: float) -> str:
@@ -275,8 +322,6 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     score -= quote_quality_penalty + surface_quality_penalty + value_quality_penalty + margin_quality_penalty
     reasons += [quote_reason, surface_reason, value_reason, margin_reason]
 
-    # Unknown commission/slippage are real uncertainty, but not a rank-usability failure.
-    # They stay visible as penalties/reasons and bucket caps without poisoning nearly every symbol as ranked_degraded.
     commission_unknown_penalty = 0.0
     commission_uncertain = commission_status != "known_machine_verified"
     if commission_uncertain:
@@ -461,9 +506,10 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
 def _manifest(summary: L6RankSummary, input_path: Path) -> str:
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
+    input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=3",
+        "schema_version=4",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -475,6 +521,12 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         f"source_input_manifest_row_count={summary.source_input_manifest_row_count}",
         f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}",
+        f"input_payload_checksum={summary.input_payload_checksum}",
+        f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}",
+        f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
+        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}",
+        f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
+        f"stale_tmp_files_failed={summary.stale_tmp_files_failed}",
         f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
         f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
         f"ranked_csv_path={summary.ranked_csv_path}",
@@ -530,14 +582,25 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         summary.source_input_manifest_row_count = _safe_int(input_manifest.get("row_count"), 0)
         summary.source_l5_gate_pass = _safe_int(input_manifest.get("l5_gate_pass"), 0)
         summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
+
+    removed, failed = _clear_layer_transient_files(layer_dir)
+    sr_removed, sr_failed = _cleanup_glob(symbol_rank_dir, "*.tmp")
+    summary.stale_tmp_files_removed += removed + sr_removed
+    summary.stale_tmp_files_failed += failed + sr_failed
+
     if not input_path.exists():
+        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+        summary.stale_tmp_files_removed += removed
+        summary.stale_tmp_files_failed += failed
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
 
     text = read_text(input_path)
+    summary.input_payload_checksum = _csv_payload_checksum(text)
     reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
     rows = [row for row in reader]
     summary.input_count = len(rows)
+
     scored = [_score_row(row) for row in rows]
     scored.sort(key=lambda row: (
         BUCKET_ORDER.get(str(row["friction_bucket"]), 0),
@@ -547,12 +610,36 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         str(row["symbol"]),
     ), reverse=True)
 
-    _clear_symbol_rank_files(symbol_rank_dir)
+    # Re-read input before publishing final sidecars. If MT5 rewrote L6 input during scoring,
+    # do not publish mixed-generation ranked outputs. Clear stale finals and print a blocking manifest.
+    text_after_rank = read_text(input_path)
+    summary.input_payload_checksum_after_rank = _csv_payload_checksum(text_after_rank)
+    after_rows = [row for row in csv.DictReader(io.StringIO(text_after_rank.replace("\r\n", "\n")))]
+    summary.input_generation_stable = (
+        summary.input_payload_checksum == summary.input_payload_checksum_after_rank
+        and summary.input_count == len(after_rows)
+    )
+    if not summary.input_generation_stable:
+        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+        summary.stale_tmp_files_removed += removed
+        summary.stale_tmp_files_failed += failed
+        summary.status = "input_changed_during_rank"
+        summary.reason = (
+            f"l6 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
+            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; final ranked outputs cleared"
+        )
+        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        return summary
+
+    removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
+    summary.stale_tmp_files_removed += removed
+    summary.stale_tmp_files_failed += failed
+
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "ranked all rows present in L6 input primitives"
+    summary.reason = "ranked all rows present in stable L6 input generation"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_degraded_count = sum(1 for row in scored if row["rank_state"] == "ranked_degraded")
@@ -571,6 +658,9 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     elif summary.source_l5_gate_pass > 0 and summary.source_l5_gate_pass != summary.input_count:
         summary.status = "input_degraded"
         summary.reason = f"input CSV row count {summary.input_count} differs from source l5_gate_pass {summary.source_l5_gate_pass}"
+    elif summary.source_input_payload_checksum not in {"not_available", ""} and summary.source_input_payload_checksum != summary.input_payload_checksum:
+        summary.status = "input_degraded"
+        summary.reason = f"input CSV checksum {summary.input_payload_checksum} differs from source input manifest payload_checksum {summary.source_input_payload_checksum}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
