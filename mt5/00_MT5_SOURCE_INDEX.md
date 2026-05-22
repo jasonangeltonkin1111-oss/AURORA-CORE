@@ -4,11 +4,12 @@
 MT5 source index for active source-tree ownership and implementation-scope guardrails.
 
 ## Current status
-- MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 1 Layer 2 market open/closed truth, Runtime 1 Layer 3 broker specs/value truth, Runtime 1 Layer 4 live quote/spread truth, Runtime 1 Layer 5 Basic System Gate, Runtime 2 generated-row lookup-only source, Runtime 3 Calculation Gateway support surfaces, Runtime 4 Layer 7 Session Relevance contract stub, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
+- MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 1 Layer 2 market open/closed truth, Runtime 1 Layer 3 broker specs/value truth, Runtime 1 Layer 4 live quote/spread truth, Runtime 1 Layer 5 Basic System Gate, Runtime 2 generated-row lookup-only source, Runtime 3 Calculation Gateway support surfaces including L6/L7 input primitive exports, Runtime 4 Layer 7 Session Relevance contract stub, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
 - Layer 1 source is active as account/portfolio/prop-rule truth. It must stay bounded: account status/history surfaces should use a bounded recent window, currently target last 100 closed trades or last 3 months, and must label bounded history honestly. Full all-time `HistorySelect(0, now)` scans are runtime-risky and must not be reintroduced without explicit proof/budget.
 - Layer 3 source is active as broker/spec/value foundation. It scans Layer 2 known open and closed symbols, skips unknown symbols, and must render failed value or margin calculations as `Not available`, never fake `0.00`.
 - Layer 5 source is active only as Basic System Gate. It consumes L2/L3/L4 owner packets and outputs pass/blocked eligibility. It must not become friction scoring, ranking, selection, permission, execution, or Gateway calculation authority.
 - Runtime 4 Layer 7 source is contract-only. It defines Session Relevance Ranking ownership and explicitly forbids duplicate market-open truth, hard gating, OHLC/session-range ownership, VWAP ownership, selection, permission, and execution.
+- Runtime 3 L7 source is input-primitives-only. It exports Layer 5 pass symbols with L2 market state, L3 taxonomy, L4 quote/surface fields, and honest server-time basis labels for future Gateway scoring; it does not rank, select, permit, execute, or calculate session edge.
 - Runtime 3 Gateway support is source-present, but Windows autonomy proof remains evidence-class separated: source wired, Python syntax, PowerShell parse, package rebuild, scheduled task registration, daemon running, watchdog recovery, and MT5 Workbench readback are not the same proof.
 - Publication/status/manifest truth repair is source-present, including late-write surfacing intent in final status publication.
 - Placeholder Selection Desk parent-route files are structure-only route shells; they are physical publication surfaces, not ranking/selection/trading truth.
@@ -25,6 +26,7 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_RenderTruth.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh`
 - `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerOwner.mqh`
+- `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerL7InputPrimitives.mqh`
 - `mt5/runtime_owners/runtime_4_surface_scoring_owner/layer_7_session_relevance_ranking/AC_SessionRelevanceOwner.mqh`
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh`
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer7SessionRelevanceRenderer.mqh`
@@ -49,7 +51,7 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - Layer 7 may rank session-context relevance for Layer 5 pass symbols only.
 - Layer 7 must consume Layer 2 market/session truth rather than deciding open/closed state.
 - Layer 7 must not become a hard gate, strategy, selection, permission, execution, OHLC/session-range, VWAP, or liquidity-map owner.
-- Future L7 input export, Gateway sidecar scoring, and Runtime 7 rendering require separate patches and runtime proof.
+- L7 input primitive export is now source-present in Runtime 3, but L7 Gateway sidecar scoring remains pending and requires separate proof.
 
 ## Folder Governance
 - **Purpose:** index MT5 implementation ownership and source placement.
