@@ -380,7 +380,7 @@ void AC_BuildLayer1Texts()
    AC_L1_WORKBENCH_SECTION += "history_status=" + AC_L1_HISTORY_STATUS + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_quality=" + AC_L1_HISTORY_QUALITY + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_note=" + AC_L1_HISTORY_NOTE + "\r\n";
-   AC_L1_WORKBENCH_SECTION += "history_from=0\r\n";
+   AC_L1_WORKBENCH_SECTION += "history_from=TimeCurrent_or_TimeGMT_minus_90_days\r\n";
    AC_L1_WORKBENCH_SECTION += "history_to=TimeCurrent_or_TimeGMT_fallback\r\n";
    AC_L1_WORKBENCH_SECTION += "account_status_history_days=" + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "account_status_row_limit=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
@@ -398,8 +398,8 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Build: " + AC_BUILD_VERSION + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Upgrade: " + AC_UPGRADE_ID + "\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "History Window: 1970.01.01 to broker TimeCurrent. Strict MT5 report comparison needs the same cutoff.\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Detail Window: last " + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS) + " days, max " + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + " rows per detailed history section. Summary metrics still use selected account history.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "History Window: Selected bounded history (last 90 days to broker TimeCurrent/TimeGMT fallback). Strict MT5 report comparison needs the same cutoff.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Detail Window: selected bounded history; recent closed trades and recent cancel-like orders; max " + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + " rows per detailed history section. Totals refer to selected bounded history window.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Cutoff: " + account_status_cutoff_text + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nACCOUNT SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";

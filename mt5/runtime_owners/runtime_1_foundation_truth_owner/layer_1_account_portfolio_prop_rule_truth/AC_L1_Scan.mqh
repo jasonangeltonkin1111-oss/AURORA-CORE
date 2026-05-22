@@ -4,6 +4,10 @@
 // Forward declaration: render implementation is included after scan in the Runtime 1 dispatcher.
 void AC_BuildLayer1Texts();
 
+static int AC_L1_HISTORY_LOOKBACK_DAYS = 90;
+static int AC_L1_CLOSED_SCAN_LIMIT = 100;
+static int AC_L1_CANCEL_SCAN_LIMIT = 20;
+
 double AC_L1SafeDealFee(const ulong deal_ticket)
 {
    double value = 0.0;
@@ -208,8 +212,11 @@ void AC_L1ScanHistory()
 {
    datetime to_time = TimeCurrent();
    if(to_time <= 0) to_time = TimeGMT();
+   datetime from_time = 0;
+   if(to_time > 0)
+      from_time = (datetime)(to_time - (AC_L1_HISTORY_LOOKBACK_DAYS * 86400));
    ResetLastError();
-   if(!HistorySelect(0, to_time))
+   if(!HistorySelect(from_time, to_time))
    {
       AC_L1_HISTORY_STATUS = "unavailable";
       AC_L1_HISTORY_QUALITY = "unavailable";
@@ -218,14 +225,15 @@ void AC_L1ScanHistory()
       return;
    }
 
-   AC_L1_HISTORY_STATUS = "available";
-   AC_L1_HISTORY_QUALITY = "complete";
-   AC_L1_HISTORY_NOTE = "history selected from broker account history; closed rows are reconstructed from exit deals plus same-position entry/order/cost records; SL/TP order context is labeled separately and does not alone downgrade core trade reconstruction";
+   AC_L1_HISTORY_STATUS = "available_bounded";
+   AC_L1_HISTORY_QUALITY = "bounded_window";
+   AC_L1_HISTORY_NOTE = "selected last 90 days; closed rows cap=100; cancel-like rows cap=20; totals refer to selected bounded history, not all-time";
    AC_L1_HISTORY_DEALS_TOTAL = HistoryDealsTotal();
    AC_L1_HISTORY_ORDERS_TOTAL = HistoryOrdersTotal();
 
    for(int i = AC_L1_HISTORY_DEALS_TOTAL - 1; i >= 0; i--)
    {
+      if(ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT) break;
       ulong deal_ticket = HistoryDealGetTicket(i);
       if(deal_ticket == 0) continue;
       long entry = HistoryDealGetInteger(deal_ticket, DEAL_ENTRY);
@@ -313,12 +321,12 @@ void AC_L1ScanHistory()
       {
          AC_L1_CLOSED[next].source_quality = "partial_core";
          AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
-         AC_L1_HISTORY_QUALITY = "partial_core";
+         AC_L1_HISTORY_QUALITY = "bounded_window_partial_core";
       }
       else if(AC_L1_CLOSED[next].order_context_status != "protective_context_complete")
       {
          AC_L1_ORDER_CONTEXT_PARTIAL_COUNT++;
-         if(AC_L1_HISTORY_QUALITY == "complete") AC_L1_HISTORY_QUALITY = "core_complete_order_context_partial";
+         if(AC_L1_HISTORY_QUALITY == "bounded_window") AC_L1_HISTORY_QUALITY = "bounded_window_order_context_partial";
       }
 
       AC_L1AddClosedStats(AC_L1_CLOSED[next]);
@@ -331,6 +339,11 @@ void AC_L1ScanHistory()
       long state = HistoryOrderGetInteger(order_ticket, ORDER_STATE);
       if(state == ORDER_STATE_FILLED || state == ORDER_STATE_PARTIAL) AC_L1_FILLED_ORDERS++;
       if(!AC_L1OrderStateIsCancelLike(state)) continue;
+      if(ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
+      {
+         AC_L1_CANCEL_LIKE_ORDERS++;
+         continue;
+      }
 
       int next = ArraySize(AC_L1_CANCELS);
       ArrayResize(AC_L1_CANCELS, next + 1);
@@ -355,8 +368,11 @@ void AC_L1ScanHistory()
       }
    }
 
+   if(ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT || ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
+      AC_L1_HISTORY_QUALITY = "bounded_window_row_capped";
+
    if(ArraySize(AC_L1_CLOSED) <= 0)
-      AC_L1_HISTORY_NOTE = "history selected; no closed exit deals detected";
+      AC_L1_HISTORY_NOTE = "selected bounded history; no closed exit deals detected; window=90d, closed cap=100, cancel cap=20";
 }
 
 void AC_RefreshLayer1AccountTruth()
