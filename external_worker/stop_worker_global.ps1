@@ -18,7 +18,7 @@ if($StopWatchdog){
 }
 $d = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
 $w = Get-ScheduledTask -TaskName $watchTask -ErrorAction SilentlyContinue
-Write-Host "Daemon task state: $($d.State)"
-Write-Host "Watchdog task state: $($w.State)"
-Write-Host "AuroraWorker process count: $(@(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count)"
-if(-not $StopWatchdog){ Write-Host "Note: watchdog may restart daemon unless -StopWatchdog is supplied." }
+Write-Host "Gateway daemon task state: $($d.State)"
+Write-Host "Gateway watchdog task state: $($w.State)"
+Write-Host "Gateway process count: $(@(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count)"
+if(-not $StopWatchdog){ Write-Host "Note: watchdog may restart Gateway unless -StopWatchdog is supplied." }
