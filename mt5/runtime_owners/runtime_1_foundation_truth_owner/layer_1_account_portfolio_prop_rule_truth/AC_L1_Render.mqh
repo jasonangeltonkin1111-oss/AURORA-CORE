@@ -1,6 +1,9 @@
 #ifndef AC_L1_RENDER_MQH
 #define AC_L1_RENDER_MQH
 
+#define AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT 100
+#define AC_L1_ACCOUNT_STATUS_HISTORY_DAYS 90
+
 string AC_L1TitleText(string value)
 {
    StringReplace(value, "_", " ");
@@ -121,6 +124,34 @@ string AC_L1DaySummaryTable()
          + "\r\n";
    }
    return text;
+}
+
+datetime AC_L1AccountStatusHistoryCutoff()
+{
+   datetime now_time = TimeCurrent();
+   if(now_time <= 0) now_time = TimeGMT();
+   if(now_time <= 0) return 0;
+   return (datetime)(now_time - (AC_L1_ACCOUNT_STATUS_HISTORY_DAYS * 86400));
+}
+
+bool AC_L1ClosedRowInsideAccountStatusWindow(const AC_L1ClosedTradeRow &row,
+                                             const datetime cutoff_time,
+                                             const int shown_count)
+{
+   if(shown_count >= AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) return false;
+   if(cutoff_time > 0 && row.close_time > 0 && row.close_time < cutoff_time) return false;
+   return true;
+}
+
+bool AC_L1CancelRowInsideAccountStatusWindow(const AC_L1OrderEventRow &row,
+                                             const datetime cutoff_time,
+                                             const int shown_count)
+{
+   if(shown_count >= AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) return false;
+   datetime event_time = row.done_time;
+   if(event_time <= 0) event_time = row.setup_time;
+   if(cutoff_time > 0 && event_time > 0 && event_time < cutoff_time) return false;
+   return true;
 }
 
 void AC_L1ComputeReportStats(int &win_count,
@@ -265,8 +296,9 @@ void AC_BuildLayer1Texts()
    double avg_duration_seconds = (AC_L1_DURATION_COUNT > 0 ? ((double)AC_L1_DURATION_SUM_SECONDS / AC_L1_DURATION_COUNT) : 0.0);
    double start_balance_estimate = AC_L1_BALANCE - AC_L1_NET_PROFIT;
    double realized_return_pct = (start_balance_estimate > 0.0 ? (AC_L1_NET_PROFIT / start_balance_estimate) * 100.0 : 0.0);
-   double current_dd_money = AC_L1_BALANCE - AC_L1_EQUITY;
+   double current_dd_money = MathMax(0.0, AC_L1_BALANCE - AC_L1_EQUITY);
    double current_dd_pct = (AC_L1_BALANCE > 0.0 ? (current_dd_money / AC_L1_BALANCE) * 100.0 : 0.0);
+   double equity_cushion_money = MathMax(0.0, AC_L1_EQUITY - AC_L1_BALANCE);
    double daily_dd_limit_money = AC_L1_EQUITY * 0.01;
    double max_dd_limit_money = AC_L1_EQUITY * 0.03;
    double default_risk_money = AC_L1_EQUITY * 0.001;
@@ -274,6 +306,8 @@ void AC_BuildLayer1Texts()
    double max_open_risk_money = AC_L1_EQUITY * 0.01;
    double open_profit_pct = (AC_L1_EQUITY > 0.0 ? (AC_L1_FLOATING_PL / AC_L1_EQUITY) * 100.0 : 0.0);
    double largest_loss_vs_hard_risk = (hard_risk_money > 0.0 && AC_L1_LARGEST_LOSS < 0.0 ? MathAbs(AC_L1_LARGEST_LOSS) / hard_risk_money : 0.0);
+   datetime account_status_cutoff = AC_L1AccountStatusHistoryCutoff();
+   string account_status_cutoff_text = (account_status_cutoff > 0 ? AC_L1TimeText(account_status_cutoff) : "unavailable");
    string account_health = "Needs validation";
    if(closed_count > 0 && profit_factor < 1.0) account_health = "Negative expectancy until proven otherwise";
    if(closed_count > 0 && profit_factor >= 1.0 && win_rate >= 50.0) account_health = "Positive history, not edge proof";
@@ -293,6 +327,7 @@ void AC_BuildLayer1Texts()
    AC_L1_BOARD_SECTION += "Balance / Equity:    " + AC_L1MoneyText(AC_L1_BALANCE) + " / " + AC_L1MoneyText(AC_L1_EQUITY) + "\r\n";
    AC_L1_BOARD_SECTION += "Floating P/L:        " + AC_L1MoneyText(AC_L1_FLOATING_PL) + " (" + AC_L1PercentText(open_profit_pct) + ")\r\n";
    AC_L1_BOARD_SECTION += "Current Drawdown:    " + AC_L1MoneyText(current_dd_money) + " (" + AC_L1PercentText(current_dd_pct) + ")\r\n";
+   if(equity_cushion_money > 0.0) AC_L1_BOARD_SECTION += "Equity Cushion:      " + AC_L1MoneyText(equity_cushion_money) + "\r\n";
    AC_L1_BOARD_SECTION += "Free Margin:         " + AC_L1MoneyText(AC_L1_FREE_MARGIN) + "\r\n";
    AC_L1_BOARD_SECTION += "Open / Pending:      " + IntegerToString(ArraySize(AC_L1_POSITIONS)) + " / " + IntegerToString(ArraySize(AC_L1_PENDING)) + "\r\n";
    AC_L1_BOARD_SECTION += "\r\nMT5-Style Results\r\n";
@@ -315,7 +350,8 @@ void AC_BuildLayer1Texts()
    AC_L1_BOARD_SECTION += "Best Day:            " + AC_L1_BEST_DAY + " " + AC_L1MoneyText(AC_L1_BEST_DAY_NET) + "\r\n";
    AC_L1_BOARD_SECTION += "Worst Day:           " + AC_L1_WORST_DAY + " " + AC_L1MoneyText(AC_L1_WORST_DAY_NET) + "\r\n";
    AC_L1_BOARD_SECTION += "Health:              " + account_health + "\r\n";
-   AC_L1_BOARD_SECTION += "\r\nRisk Envelope - Planning Only\r\n";
+   AC_L1_BOARD_SECTION += "\r\nRisk Envelope - Jason Policy Only\r\n";
+   AC_L1_BOARD_SECTION += "Policy Truth:        Local stricter-than-firm planning guard; not broker or prop-firm permission proof\r\n";
    AC_L1_BOARD_SECTION += "0.1% Risk:           " + AC_L1MoneyText(default_risk_money) + "\r\n";
    AC_L1_BOARD_SECTION += "0.2% Hard Max:       " + AC_L1MoneyText(hard_risk_money) + "\r\n";
    AC_L1_BOARD_SECTION += "1% Open / Daily:     " + AC_L1MoneyText(max_open_risk_money) + " / " + AC_L1MoneyText(daily_dd_limit_money) + "\r\n";
@@ -335,7 +371,7 @@ void AC_BuildLayer1Texts()
       board_closed++;
    }
    if(board_closed <= 0) AC_L1_BOARD_SECTION += "none\r\n";
-   AC_L1_BOARD_SECTION += "\r\nCanceled / Rejected / Expired: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " total. Full list in Account Status.\r\n";
+   AC_L1_BOARD_SECTION += "\r\nCanceled / Rejected / Expired: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " total. Bounded list in Account Status.\r\n";
 
    AC_L1_WORKBENCH_SECTION = "L1_ACCOUNT_PORTFOLIO_SCAN\r\n";
    AC_L1_WORKBENCH_SECTION += "----------------------------------------\r\n";
@@ -346,6 +382,9 @@ void AC_BuildLayer1Texts()
    AC_L1_WORKBENCH_SECTION += "history_note=" + AC_L1_HISTORY_NOTE + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_from=0\r\n";
    AC_L1_WORKBENCH_SECTION += "history_to=TimeCurrent_or_TimeGMT_fallback\r\n";
+   AC_L1_WORKBENCH_SECTION += "account_status_history_days=" + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "account_status_row_limit=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "account_status_cutoff=" + account_status_cutoff_text + "\r\n";
    AC_L1_WORKBENCH_SECTION += "report_compare_mode=not_strict_time_window_mismatch_unless_same_cutoff\r\n";
    AC_L1_WORKBENCH_SECTION += "history_deals_total=" + IntegerToString(AC_L1_HISTORY_DEALS_TOTAL) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_orders_total=" + IntegerToString(AC_L1_HISTORY_ORDERS_TOTAL) + "\r\n";
@@ -360,10 +399,13 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Build: " + AC_BUILD_VERSION + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Upgrade: " + AC_UPGRADE_ID + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "History Window: 1970.01.01 to broker TimeCurrent. Strict MT5 report comparison needs the same cutoff.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Detail Window: last " + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS) + " days, max " + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + " rows per detailed history section. Summary metrics still use selected account history.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Cutoff: " + account_status_cutoff_text + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nACCOUNT SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Account: " + IntegerToString((int)AC_L1_LOGIN) + " | Server: " + AC_L1_SERVER + " | Mode: " + AC_L1_TRADE_MODE + " | Currency: " + AC_L1_CURRENCY + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Balance: " + AC_L1MoneyText(AC_L1_BALANCE) + " | Equity: " + AC_L1MoneyText(AC_L1_EQUITY) + " | Floating P/L: " + AC_L1MoneyText(AC_L1_FLOATING_PL) + " | Free Margin: " + AC_L1MoneyText(AC_L1_FREE_MARGIN) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Current Drawdown: " + AC_L1MoneyText(current_dd_money) + " (" + AC_L1PercentText(current_dd_pct) + ") | Equity Cushion: " + AC_L1MoneyText(equity_cushion_money) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nRESULTS\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Total Net Profit: " + AC_L1MoneyText(AC_L1_NET_PROFIT) + " | Gross Profit: " + AC_L1MoneyText(AC_L1_GROSS_PROFIT) + " | Gross Loss: " + AC_L1MoneyText(AC_L1_GROSS_LOSS) + "\r\n";
@@ -385,14 +427,30 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type             Vol       Price          SL          TP\r\n";
    for(int fo = 0; fo < ArraySize(AC_L1_PENDING); fo++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PendingLine(AC_L1_PENDING[fo]) + "\r\n";
    if(ArraySize(AC_L1_PENDING) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Full\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Bounded Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; close_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol      Side      Vol      Entry      Close       Net Duration  Result | Costs and Protection\r\n";
-   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
-   if(ArraySize(AC_L1_CLOSED) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Full\r\n";
+   int closed_shown = 0;
+   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++)
+   {
+      if(!AC_L1ClosedRowInsideAccountStatusWindow(AC_L1_CLOSED[fc], account_status_cutoff, closed_shown)) continue;
+      AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
+      closed_shown++;
+   }
+   if(closed_shown <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Closed Detail Rows Shown: " + IntegerToString(closed_shown) + " / " + IntegerToString(ArraySize(AC_L1_CLOSED)) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Bounded Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; event_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type           State        Vol       Price\r\n";
-   for(int x = 0; x < ArraySize(AC_L1_CANCELS); x++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CancelLine(AC_L1_CANCELS[x]) + "\r\n";
-   if(ArraySize(AC_L1_CANCELS) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
+   int cancels_shown = 0;
+   for(int x = 0; x < ArraySize(AC_L1_CANCELS); x++)
+   {
+      if(!AC_L1CancelRowInsideAccountStatusWindow(AC_L1_CANCELS[x], account_status_cutoff, cancels_shown)) continue;
+      AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CancelLine(AC_L1_CANCELS[x]) + "\r\n";
+      cancels_shown++;
+   }
+   if(cancels_shown <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Canceled Detail Rows Shown: " + IntegerToString(cancels_shown) + " / " + IntegerToString(ArraySize(AC_L1_CANCELS)) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\n" + AC_L1SymbolSummaryTable() + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DaySummaryTable() + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Direction Summary\r\n----------------------------------------\r\n";
@@ -484,6 +542,8 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|history_deals_total=" + IntegerToString(AC_L1_HISTORY_DEALS_TOTAL)
       + "|history_orders_total=" + IntegerToString(AC_L1_HISTORY_ORDERS_TOTAL)
       + "|history_quality=" + AC_L1_HISTORY_QUALITY
+      + "|account_status_history_days=" + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS)
+      + "|account_status_row_limit=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT)
       + "|duration_count=" + IntegerToString(AC_L1_DURATION_COUNT)
       + "|scan_status=" + AC_L1_SCAN_STATUS
       + "|trade_permission=false";
