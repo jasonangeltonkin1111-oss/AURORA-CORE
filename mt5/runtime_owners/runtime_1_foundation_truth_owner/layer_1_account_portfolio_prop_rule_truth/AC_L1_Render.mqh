@@ -296,9 +296,9 @@ void AC_BuildLayer1Texts()
    double avg_duration_seconds = (AC_L1_DURATION_COUNT > 0 ? ((double)AC_L1_DURATION_SUM_SECONDS / AC_L1_DURATION_COUNT) : 0.0);
    double start_balance_estimate = AC_L1_BALANCE - AC_L1_NET_PROFIT;
    double realized_return_pct = (start_balance_estimate > 0.0 ? (AC_L1_NET_PROFIT / start_balance_estimate) * 100.0 : 0.0);
-   double current_dd_money = MathMax(0.0, AC_L1_BALANCE - AC_L1_EQUITY);
+   double current_dd_money = (AC_L1_BALANCE > AC_L1_EQUITY ? AC_L1_BALANCE - AC_L1_EQUITY : 0.0);
    double current_dd_pct = (AC_L1_BALANCE > 0.0 ? (current_dd_money / AC_L1_BALANCE) * 100.0 : 0.0);
-   double equity_cushion_money = MathMax(0.0, AC_L1_EQUITY - AC_L1_BALANCE);
+   double equity_cushion_money = (AC_L1_EQUITY > AC_L1_BALANCE ? AC_L1_EQUITY - AC_L1_BALANCE : 0.0);
    double daily_dd_limit_money = AC_L1_EQUITY * 0.01;
    double max_dd_limit_money = AC_L1_EQUITY * 0.03;
    double default_risk_money = AC_L1_EQUITY * 0.001;
@@ -431,7 +431,7 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; close_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol      Side      Vol      Entry      Close       Net Duration  Result | Costs and Protection\r\n";
    int closed_shown = 0;
-   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++)
+   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED) && closed_shown < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT; fc++)
    {
       if(!AC_L1ClosedRowInsideAccountStatusWindow(AC_L1_CLOSED[fc], account_status_cutoff, closed_shown)) continue;
       AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
@@ -443,7 +443,7 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; event_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type           State        Vol       Price\r\n";
    int cancels_shown = 0;
-   for(int x = 0; x < ArraySize(AC_L1_CANCELS); x++)
+   for(int x = 0; x < ArraySize(AC_L1_CANCELS) && cancels_shown < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT; x++)
    {
       if(!AC_L1CancelRowInsideAccountStatusWindow(AC_L1_CANCELS[x], account_status_cutoff, cancels_shown)) continue;
       AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CancelLine(AC_L1_CANCELS[x]) + "\r\n";
