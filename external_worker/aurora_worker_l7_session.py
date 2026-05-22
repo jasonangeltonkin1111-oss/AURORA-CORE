@@ -373,7 +373,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     score = max(0.0, min(100.0, score))
     rank_state = "ranked"
     score_quality = "usable_with_session_uncertainty"
-    reasons: List[str] = ["ok_L5Pass", f"session={current_session}", f"session_family={family}", quote_reason, activity_reason, spread_reason, "time_basis_marketwatch_caveat", "static_gateway_profile_v1_not_edge_proof"]
+    reasons: List[str] = ["ok_L5Pass", f"session={current_session}", f"session_family={family}", quote_reason, activity_reason, spread_reason, "time_basis_marketwatch_caveat", "static_gateway_profile_v2_dead_time_caution_not_edge_proof"]
 
     if current_session == OFF_SESSION_DEAD_TIME:
         cap = _dead_time_cap(family)
