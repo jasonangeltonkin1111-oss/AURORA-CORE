@@ -28,12 +28,68 @@ int AC_L2MinutesUntil(const int now_seconds, const int target_seconds)
    return delta / 60;
 }
 
+int AC_L2MinutesUntilFutureSession(const int day_offset, const int now_seconds, const int target_seconds)
+{
+   if(day_offset < 0 || now_seconds < 0 || target_seconds < 0) return -1;
+   if(day_offset == 0)
+   {
+      if(target_seconds < now_seconds) return -1;
+      return (target_seconds - now_seconds) / 60;
+   }
+   int delta = (86400 - now_seconds) + ((day_offset - 1) * 86400) + target_seconds;
+   return delta / 60;
+}
+
 int AC_L2MinutesSince(const int now_seconds, const int start_seconds)
 {
    if(now_seconds < 0 || start_seconds < 0) return -1;
    int delta = now_seconds - start_seconds;
    if(delta < 0) delta += 86400;
    return delta / 60;
+}
+
+bool AC_L2FindNextTradeSession(const string symbol,
+                               const int day_of_week,
+                               const int seconds_of_day,
+                               int &next_from,
+                               int &next_to,
+                               int &minutes_until_next_open)
+{
+   next_from = -1;
+   next_to = -1;
+   minutes_until_next_open = -1;
+
+   for(int day_offset = 0; day_offset < 7; day_offset++)
+   {
+      int check_day = (day_of_week + day_offset) % 7;
+      for(uint session_index = 0; session_index < 24; session_index++)
+      {
+         datetime from_time = 0;
+         datetime to_time = 0;
+         ResetLastError();
+         if(!SymbolInfoSessionTrade(symbol, (ENUM_DAY_OF_WEEK)check_day, session_index, from_time, to_time))
+            break;
+
+         int from_seconds = AC_L2NormalizeSessionSecond(from_time);
+         int to_seconds = AC_L2NormalizeSessionSecond(to_time);
+         if(from_seconds < 0 || to_seconds < 0) continue;
+
+         if(day_offset == 0 && AC_L2TimeInsideSession(seconds_of_day, from_seconds, to_seconds))
+            continue;
+
+         int mins = AC_L2MinutesUntilFutureSession(day_offset, seconds_of_day, from_seconds);
+         if(mins < 0) continue;
+
+         if(minutes_until_next_open < 0 || mins < minutes_until_next_open)
+         {
+            minutes_until_next_open = mins;
+            next_from = from_seconds;
+            next_to = to_seconds;
+         }
+      }
+   }
+
+   return (minutes_until_next_open >= 0);
 }
 
 void AC_L2InitSymbolState(AC_L2SymbolState &state, const string symbol)
@@ -108,6 +164,7 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
    int active_to = -1;
    int next_from = -1;
    int next_to = -1;
+   int minutes_until_next_open = -1;
    int session_count = 0;
 
    for(uint session_index = 0; session_index < 24; session_index++)
@@ -116,10 +173,8 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
       datetime to_time = 0;
       ResetLastError();
       if(!SymbolInfoSessionTrade(symbol, (ENUM_DAY_OF_WEEK)day_of_week, session_index, from_time, to_time))
-      {
-         if(session_index == 0) AC_L2_TRADE_SESSION_FAILURE_COUNT++;
          break;
-      }
+
       session_count++;
       int from_seconds = AC_L2NormalizeSessionSecond(from_time);
       int to_seconds = AC_L2NormalizeSessionSecond(to_time);
@@ -129,16 +184,9 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
          active_from = from_seconds;
          active_to = to_seconds;
       }
-      if(!active_trade_session && from_seconds >= 0)
-      {
-         int mins = AC_L2MinutesUntil(seconds_of_day, from_seconds);
-         if(next_from < 0 || mins < AC_L2MinutesUntil(seconds_of_day, next_from))
-         {
-            next_from = from_seconds;
-            next_to = to_seconds;
-         }
-      }
    }
+
+   AC_L2FindNextTradeSession(symbol, day_of_week, seconds_of_day, next_from, next_to, minutes_until_next_open);
 
    AC_L2_SYMBOLS[next].trade_session_count_today = session_count;
    AC_L2_SYMBOLS[next].trade_session_available = (session_count > 0);
@@ -151,10 +199,8 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
       datetime q_to = 0;
       ResetLastError();
       if(!SymbolInfoSessionQuote(symbol, (ENUM_DAY_OF_WEEK)day_of_week, quote_index, q_from, q_to))
-      {
-         if(quote_index == 0) AC_L2_QUOTE_SESSION_FAILURE_COUNT++;
          break;
-      }
+
       quote_count++;
    }
    AC_L2_SYMBOLS[next].quote_session_count_today = quote_count;
@@ -172,7 +218,7 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
    {
       AC_L2_SYMBOLS[next].next_trade_session_from = AC_L2SecondsOfDayText(next_from);
       AC_L2_SYMBOLS[next].next_trade_session_to = AC_L2SecondsOfDayText(next_to);
-      AC_L2_SYMBOLS[next].minutes_until_next_open = AC_L2MinutesUntil(seconds_of_day, next_from);
+      AC_L2_SYMBOLS[next].minutes_until_next_open = minutes_until_next_open;
    }
 
    if(!AC_L2_SYMBOLS[next].symbol_info_ok)
@@ -189,20 +235,23 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
    {
       AC_L2_SYMBOLS[next].market_state = "closed";
       AC_L2_SYMBOLS[next].market_state_reason = "trade_mode_" + AC_L2_SYMBOLS[next].trade_mode_text;
-      AC_L2_SYMBOLS[next].source_quality = AC_L2_SYMBOLS[next].trade_session_available ? "complete" : "partial";
+      AC_L2_SYMBOLS[next].source_quality = AC_L2_SYMBOLS[next].trade_session_available ? "complete" : "complete_no_session_today";
       AC_L2_CLOSED_COUNT++;
       int recheck_minutes = (AC_L2_SYMBOLS[next].minutes_until_next_open >= 0 ? AC_L2_SYMBOLS[next].minutes_until_next_open : 60);
+      if(recheck_minutes < 1) recheck_minutes = 1;
       AC_L2_SYMBOLS[next].next_recheck_due = server_time + (recheck_minutes * 60);
       return;
    }
 
    if(!AC_L2_SYMBOLS[next].trade_session_available)
    {
-      AC_L2_SYMBOLS[next].market_state = "unknown";
-      AC_L2_SYMBOLS[next].market_state_reason = "trade_session_unavailable";
-      AC_L2_SYMBOLS[next].source_quality = "unknown";
-      AC_L2_UNKNOWN_COUNT++;
-      AC_L2_SYMBOLS[next].next_recheck_due = server_time + 60;
+      AC_L2_SYMBOLS[next].market_state = "closed";
+      AC_L2_SYMBOLS[next].market_state_reason = "no_trade_session_for_server_day";
+      AC_L2_SYMBOLS[next].source_quality = (AC_L2_SYMBOLS[next].minutes_until_next_open >= 0 ? "complete_no_session_today_next_open_known" : "complete_no_session_today_next_open_unknown");
+      AC_L2_CLOSED_COUNT++;
+      int recheck_minutes = (AC_L2_SYMBOLS[next].minutes_until_next_open >= 0 ? AC_L2_SYMBOLS[next].minutes_until_next_open : 60);
+      if(recheck_minutes < 1) recheck_minutes = 1;
+      AC_L2_SYMBOLS[next].next_recheck_due = server_time + (recheck_minutes * 60);
       return;
    }
 
