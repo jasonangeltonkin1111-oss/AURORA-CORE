@@ -322,11 +322,11 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l6_cost_friction_input_primitives_manifest\r\n";
-   manifest += "schema_version=2\r\n";
+   manifest += "schema_version=3\r\n";
    manifest += "layer_id=6\r\n";
-   manifest += "layer_name=Layer 6 - Cost / Friction Ranking\r\n";
-   manifest += "owner_name=Runtime 4 - Surface Scoring Owner\r\n";
-   manifest += "job_type=L6_COST_FRICTION_RANKING_V1\r\n";
+   manifest += "layer_name=Layer 6 - Cost / Friction Input Primitives\r\n";
+   manifest += "owner_name=Runtime 4 - Surface Scoring Owner reserved; input primitives only in current source\r\n";
+   manifest += "job_type=L6_COST_FRICTION_INPUT_PRIMITIVES_V1\r\n";
    manifest += "write_status=" + csv_write.status + "\r\n";
    manifest += "write_ok=" + (csv_write.ok ? "true" : "false") + "\r\n";
    manifest += "folder_detail=" + folder_detail + "\r\n";
@@ -346,7 +346,9 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_future_L6D\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
    manifest += "trade_permission=false\r\n";
-   manifest += "ranking_runtime=true\r\n";
+   manifest += "input_primitives_only=true\r\n";
+   manifest += "ranking_runtime=false\r\n";
+   manifest += "ranked_output_runtime=false\r\n";
    manifest += "selection_runtime=false\r\n";
    manifest += "generated_unix=" + IntegerToString((int)TimeGMT()) + "\r\n";
 
@@ -362,25 +364,26 @@ string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const string jo
 {
    string text = "";
    text += "schema_name=aurora_external_worker_snapshot\r\n";
-   text += "schema_version=2\r\n";
+   text += "schema_version=3\r\n";
    text += "snapshot_id=" + snapshot_id + "\r\n";
    text += "job_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\n";
    text += "job_id=" + job_id + "\r\n";
    text += "job_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\n";
    text += "job_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\n";
    text += "job_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\n";
-   text += "job_requested_layer=L5\r\n";
-   text += "job_expected_output=deep_readiness_shell_only\r\n";
+   text += "job_requested_layer=R3_GATEWAY\r\n";
+   text += "job_expected_output=snapshot_validation_shell_only\r\n";
+   text += "gateway_job_scope=snapshot_validation_only_no_layer5_advisory_no_l6_ranking\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
-   text += "source_owner=MT5_Runtime_1_and_Runtime_3\r\n";
+   text += "source_owner=MT5_Runtime_3_Gateway_from_Runtime_1_L1_L5_packets\r\n";
    text += "worker_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    text += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
    text += "server=" + AC_ServerNameForRoute() + "\r\n";
    text += "account=" + AC_AccountForRoute() + "\r\n";
-   text += "source_layers=L1,L2,L3,L4\r\n";
-   text += "future_layer_5_status=job_bus_shell_only\r\n";
+   text += "source_layers=L1,L2,L3,L4,L5_GATE_SUMMARY\r\n";
+   text += "layer5_status=basic_system_gate_source_only\r\n";
    text += "row_count=" + IntegerToString(rows) + "\r\n";
    text += "payload_checksum=" + payload_checksum + "\r\n";
    text += "snapshot_complete=true\r\n";
@@ -446,7 +449,7 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
    string job_id = AC_ExternalWorkerJobId(snapshot_id);
    string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, job_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=2\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=3\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_requested_layer=R3_GATEWAY\r\njob_expected_output=snapshot_validation_shell_only\r\ngateway_job_scope=snapshot_validation_only_no_layer5_advisory_no_l6_ranking\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nranking_runtime=false\r\nselection_runtime=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_JOB_ID = job_id;
