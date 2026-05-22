@@ -16,6 +16,13 @@ static string AC_L6_LAST_INPUT_MANIFEST_STATUS = "not_exported";
 static string AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = "not_available";
 static int    AC_L6_LAST_INPUT_ROWS = 0;
 static ulong  AC_L6_LAST_INPUT_SIZE = 0;
+static int    AC_L6_LAST_BUY_1LOT_OK = 0;
+static int    AC_L6_LAST_SELL_1LOT_OK = 0;
+static int    AC_L6_LAST_BUY_MINLOT_OK = 0;
+static int    AC_L6_LAST_SELL_MINLOT_OK = 0;
+static int    AC_L6_LAST_ONELOT_INVALID = 0;
+static int    AC_L6_LAST_MINLOT_INVALID = 0;
+static int    AC_L6_LAST_COST_ASYMMETRY_COUNT = 0;
 
 string AC_ExternalWorkerSnapshotId()
 {
@@ -51,6 +58,21 @@ string AC_L6CsvSafe(string value)
 string AC_L6BoolCsv(const bool value)
 {
    return value ? "true" : "false";
+}
+
+string AC_L6MoneyCsv(const double value)
+{
+   return DoubleToString(value, 8);
+}
+
+string AC_L6VolumeCsv(const double value)
+{
+   return DoubleToString(value, 8);
+}
+
+string AC_L6PriceCsv(const double value)
+{
+   return DoubleToString(value, 10);
 }
 
 string AC_L6FrictionLayerOutboxFolder()
@@ -119,8 +141,21 @@ string AC_L6InputCsvHeader()
    return "symbol,l5_gate_status,l5_gate_reason,asset_class,ranking_group,digits,point,contract_size,volume_min,volume_step,volume_max,value_quality,margin_quality,quote_quality,surface_quality,bid,ask,mid,spread_points,spread_bps,tick_age_seconds,zero_spread_state,spread_cost_buy_1lot_account,spread_cost_sell_1lot_account,spread_cost_worst_1lot_account,spread_cost_buy_minlot_account,spread_cost_sell_minlot_account,spread_cost_worst_minlot_account,ordercalcprofit_buy_1lot_status,ordercalcprofit_sell_1lot_status,ordercalcprofit_buy_minlot_status,ordercalcprofit_sell_minlot_status,ordercalcprofit_buy_1lot_error,ordercalcprofit_sell_1lot_error,ordercalcprofit_buy_minlot_error,ordercalcprofit_sell_minlot_error,cost_asymmetry_detected,commission_status,slippage_status,trade_permission\r\n";
 }
 
+void AC_L6ResetInputPrimitiveCounters()
+{
+   AC_L6_LAST_INPUT_ROWS = 0;
+   AC_L6_LAST_BUY_1LOT_OK = 0;
+   AC_L6_LAST_SELL_1LOT_OK = 0;
+   AC_L6_LAST_BUY_MINLOT_OK = 0;
+   AC_L6_LAST_SELL_MINLOT_OK = 0;
+   AC_L6_LAST_ONELOT_INVALID = 0;
+   AC_L6_LAST_MINLOT_INVALID = 0;
+   AC_L6_LAST_COST_ASYMMETRY_COUNT = 0;
+}
+
 string AC_L6BuildInputPrimitiveRows()
 {
+   AC_L6ResetInputPrimitiveCounters();
    string text = AC_L6InputCsvHeader();
    int rows = 0;
 
@@ -205,15 +240,29 @@ string AC_L6BuildInputPrimitiveRows()
          AC_L6CalcSpreadCost(symbol, ORDER_TYPE_BUY, 1.0, ask, bid, buy_1lot, buy_1lot_status, buy_1lot_error);
          AC_L6CalcSpreadCost(symbol, ORDER_TYPE_SELL, 1.0, bid, ask, sell_1lot, sell_1lot_status, sell_1lot_error);
       }
+      else
+      {
+         AC_L6_LAST_ONELOT_INVALID++;
+      }
       if(min_lot_in_range)
       {
          AC_L6CalcSpreadCost(symbol, ORDER_TYPE_BUY, volume_min, ask, bid, buy_minlot, buy_minlot_status, buy_minlot_error);
          AC_L6CalcSpreadCost(symbol, ORDER_TYPE_SELL, volume_min, bid, ask, sell_minlot, sell_minlot_status, sell_minlot_error);
       }
+      else
+      {
+         AC_L6_LAST_MINLOT_INVALID++;
+      }
+
+      if(buy_1lot_status == "ok") AC_L6_LAST_BUY_1LOT_OK++;
+      if(sell_1lot_status == "ok") AC_L6_LAST_SELL_1LOT_OK++;
+      if(buy_minlot_status == "ok") AC_L6_LAST_BUY_MINLOT_OK++;
+      if(sell_minlot_status == "ok") AC_L6_LAST_SELL_MINLOT_OK++;
 
       double worst_1lot = MathMax(buy_1lot, sell_1lot);
       double worst_minlot = MathMax(buy_minlot, sell_minlot);
-      bool asymmetry = (MathAbs(buy_1lot - sell_1lot) > 0.0000001 || MathAbs(buy_minlot - sell_minlot) > 0.0000001);
+      bool asymmetry = (MathAbs(buy_1lot - sell_1lot) > 0.00000001 || MathAbs(buy_minlot - sell_minlot) > 0.00000001);
+      if(asymmetry) AC_L6_LAST_COST_ASYMMETRY_COUNT++;
 
       text += AC_L6CsvSafe(symbol)
          + "," + AC_L6CsvSafe(AC_L5_SYMBOLS[i].gate_status)
@@ -222,27 +271,27 @@ string AC_L6BuildInputPrimitiveRows()
          + "," + AC_L6CsvSafe(ranking_group)
          + "," + IntegerToString((int)digits)
          + "," + DoubleToString(point, 10)
-         + "," + DoubleToString(contract_size, 2)
-         + "," + DoubleToString(volume_min, 4)
-         + "," + DoubleToString(volume_step, 4)
-         + "," + DoubleToString(volume_max, 4)
+         + "," + DoubleToString(contract_size, 8)
+         + "," + AC_L6VolumeCsv(volume_min)
+         + "," + AC_L6VolumeCsv(volume_step)
+         + "," + AC_L6VolumeCsv(volume_max)
          + "," + AC_L6CsvSafe(value_quality)
          + "," + AC_L6CsvSafe(margin_quality)
          + "," + AC_L6CsvSafe(quote_quality)
          + "," + AC_L6CsvSafe(surface_quality)
-         + "," + DoubleToString(bid, 8)
-         + "," + DoubleToString(ask, 8)
-         + "," + DoubleToString(mid, 8)
-         + "," + DoubleToString(spread_points, 2)
-         + "," + DoubleToString(spread_bps, 4)
-         + "," + DoubleToString(tick_age_seconds, 1)
+         + "," + AC_L6PriceCsv(bid)
+         + "," + AC_L6PriceCsv(ask)
+         + "," + AC_L6PriceCsv(mid)
+         + "," + DoubleToString(spread_points, 4)
+         + "," + DoubleToString(spread_bps, 6)
+         + "," + DoubleToString(tick_age_seconds, 3)
          + "," + AC_L6CsvSafe(zero_spread_state)
-         + "," + DoubleToString(buy_1lot, 2)
-         + "," + DoubleToString(sell_1lot, 2)
-         + "," + DoubleToString(worst_1lot, 2)
-         + "," + DoubleToString(buy_minlot, 2)
-         + "," + DoubleToString(sell_minlot, 2)
-         + "," + DoubleToString(worst_minlot, 2)
+         + "," + AC_L6MoneyCsv(buy_1lot)
+         + "," + AC_L6MoneyCsv(sell_1lot)
+         + "," + AC_L6MoneyCsv(worst_1lot)
+         + "," + AC_L6MoneyCsv(buy_minlot)
+         + "," + AC_L6MoneyCsv(sell_minlot)
+         + "," + AC_L6MoneyCsv(worst_minlot)
          + "," + AC_L6CsvSafe(buy_1lot_status)
          + "," + AC_L6CsvSafe(sell_1lot_status)
          + "," + AC_L6CsvSafe(buy_minlot_status)
@@ -273,7 +322,7 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l6_cost_friction_input_primitives_manifest\r\n";
-   manifest += "schema_version=1\r\n";
+   manifest += "schema_version=2\r\n";
    manifest += "layer_id=6\r\n";
    manifest += "layer_name=Layer 6 - Cost / Friction Ranking\r\n";
    manifest += "owner_name=Runtime 4 - Surface Scoring Owner\r\n";
@@ -285,6 +334,14 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    manifest += "l5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    manifest += "payload_checksum=" + payload_checksum + "\r\n";
    manifest += "csv_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
+   manifest += "csv_precision_policy=money_8_decimals_volume_8_decimals_price_10_decimals_spread_bps_6_decimals\r\n";
+   manifest += "ordercalcprofit_buy_1lot_ok_count=" + IntegerToString(AC_L6_LAST_BUY_1LOT_OK) + "\r\n";
+   manifest += "ordercalcprofit_sell_1lot_ok_count=" + IntegerToString(AC_L6_LAST_SELL_1LOT_OK) + "\r\n";
+   manifest += "ordercalcprofit_buy_minlot_ok_count=" + IntegerToString(AC_L6_LAST_BUY_MINLOT_OK) + "\r\n";
+   manifest += "ordercalcprofit_sell_minlot_ok_count=" + IntegerToString(AC_L6_LAST_SELL_MINLOT_OK) + "\r\n";
+   manifest += "volume_1lot_invalid_count=" + IntegerToString(AC_L6_LAST_ONELOT_INVALID) + "\r\n";
+   manifest += "volume_minlot_invalid_count=" + IntegerToString(AC_L6_LAST_MINLOT_INVALID) + "\r\n";
+   manifest += "cost_asymmetry_detected_count=" + IntegerToString(AC_L6_LAST_COST_ASYMMETRY_COUNT) + "\r\n";
    manifest += "source_truth_owner=L5_pass_set_plus_L3_L4_packets_plus_MT5_OrderCalcProfit_primitives\r\n";
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_future_L6D\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
