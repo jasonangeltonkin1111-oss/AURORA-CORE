@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "external_worker_global_autonomy";
-static const string AC_BUILD_VERSION      = "1.038";
-static const string AC_UPGRADE_ID         = "RUNTIME_3B_EXTERNAL_WORKER_GLOBAL_AUTONOMY";
-static const string AC_UPGRADE_SUMMARY    = "Adds Runtime 3B Windows-side External Worker autonomy contract: one global daemon task, one watchdog/repair task, shared status resource telemetry, operator_cmd_required truth, and Workbench diagnostics before any L5 heavy calculation work.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship only: install/status detection, worker_required control output, heartbeat/result path contracts, global daemon/watchdog status truth, and Workbench diagnostics. It does not own broker truth, L1-L4 truth, FileIO internals, Board/Dossier rendering authority, ranking, selection, permission, strategy, execution, WebRequest, ML, Python direct broker authority, or popup alerts.";
-static const string AC_UPGRADE_TEST_PLAN  = "Build worker; run install_worker_global.ps1 once; confirm AuroraWorker_Global and AuroraWorker_Global_Watchdog scheduled tasks register; start worker; stop daemon; confirm watchdog repair restarts daemon, shared_worker_status.txt loop_count increases, Workbench shows fresh lifecycle/heartbeat/result, operator_cmd_required=false, authority=calculation_support_only, trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_external_worker_global_status_watchdog_proof_resource_telemetry_no_popup_alerts_no_timer_blocking";
+static const string AC_BUILD_PHASE        = "external_worker_job_bus_contract";
+static const string AC_BUILD_VERSION      = "1.039";
+static const string AC_UPGRADE_ID         = "RUNTIME_3C_EXTERNAL_WORKER_JOB_BUS_CONTRACT";
+static const string AC_UPGRADE_SUMMARY    = "Adds Runtime 3C External Worker job-bus contract: MT5 publishes a bounded calculation request envelope, worker results are bound to snapshot/job identity, and Workbench reports job-bus readiness before any L5 heavy calculation work.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and Workbench diagnostics. It does not own broker truth, L1-L4 truth, FileIO internals, Board/Dossier rendering authority, ranking, selection, permission, strategy, execution, WebRequest, ML, Python direct broker authority, or popup alerts.";
+static const string AC_UPGRADE_TEST_PLAN  = "Build worker; install global worker; confirm AuroraWorker_Global and AuroraWorker_Global_Watchdog are registered; confirm worker runs as background/windowless process after rebuild; confirm Workbench shows fresh lifecycle/heartbeat/result, operator_cmd_required=false, job_bus_status=active_snapshot_envelope, authority=calculation_support_only, trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_external_worker_job_bus_status_watchdog_proof_resource_telemetry_no_popup_alerts_no_timer_blocking";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - External Calculation Worker Owner";
@@ -25,7 +25,7 @@ static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Tr
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
 static const string AC_LAYER_5_NAME       = "Layer 5 - Deep Inspection Advisory Truth";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "External Calculation Worker Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.038_external_worker_global_autonomy";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.039_external_worker_job_bus_contract";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_EXTERNAL_WORKER_FOLDER = "External Worker";
@@ -38,6 +38,10 @@ static const string AC_EXTERNAL_WORKER_QUARANTINE_FOLDER = "Quarantine";
 static const string AC_EXTERNAL_WORKER_EXE_FILE = "AuroraWorker.exe";
 static const string AC_EXTERNAL_WORKER_LAUNCH_MODE = "WINDOWS_SCHEDULED_TASK_GLOBAL_DAEMON_WATCHDOG";
 static const string AC_EXTERNAL_WORKER_LAUNCH_IMPLEMENTATION = "windows_scheduled_task_global_daemon_watchdog";
+static const string AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION = "job_bus_v1";
+static const string AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE = "L5_DEEP_READINESS_SHELL";
+static const string AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS = "light_serial";
+static const int    AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS = 3000;
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
 static const string AC_SELECTION_FOLDER   = "Selection Desk";
 static const string AC_SELECTION_GROUPS_FOLDER = "Groups";
