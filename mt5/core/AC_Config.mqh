@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime1_layer5_basic_system_gate_gateway_surface";
-static const string AC_BUILD_VERSION      = "1.046";
-static const string AC_UPGRADE_ID         = "RUNTIME1_L5_GATEWAY_SURFACE_ALIGNMENT";
-static const string AC_UPGRADE_SUMMARY    = "Aligns operator-facing Runtime 3 wording to Gateway and keeps Layer 5 as Basic System Gate. This is a surface-safe rename pass only: existing External Worker physical folders, scheduled task bindings, file names, and AC_ExternalWorker* internal symbols remain legacy compatibility until a separate migration is runtime-proven.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Layer 6+ owns future friction/scoring work. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated. Gateway naming is display truth; physical path migration is deliberately deferred.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; confirm build_version=1.046; confirm L5 Board shows BASIC SYSTEM GATE, scanned_symbols, gate_pass, gate_blocked, closed/not-open, stale quote, missing tick, invalid bid/ask, missing specs, trade-mode blocked, absurd spread, classification-review counts; confirm Dossier shows per-symbol gate_status and gate_reason; confirm Workbench shows L5_BASIC_SYSTEM_GATE and gateway_required=false; confirm Runtime 3 surfaces say GATEWAY / gateway_status while legacy paths still point to External Worker until migration; confirm Runtime 3 Gateway still remains calculation_support_only and trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime1_l5_basic_system_gate_gateway_surface_no_path_migration_no_duplicate_owner_no_ranking_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "runtime3_gateway_snapshot_contract_cleanup";
+static const string AC_BUILD_VERSION      = "1.047";
+static const string AC_UPGRADE_ID         = "RUNTIME3_GATEWAY_SNAPSHOT_CONTRACT_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Cleans stale Runtime 5 / L5 deep-readiness worker job wording. Layer 5 remains Basic System Gate. Runtime 3 Gateway snapshot job is now labelled as snapshot validation only; Layer 6+ remains future cost/friction/scoring/ranking work until a real handler and ranked outputs are implemented.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Runtime 3 snapshot validation does not rank symbols, select candidates, grant permission, or execute trades. Layer 6+ owns future friction/scoring work after explicit implementation. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.047; confirm L5 Board still shows BASIC SYSTEM GATE; confirm Gateway snapshot/job surfaces use R3_SNAPSHOT_VALIDATION_V1 and no longer claim L5_DEEP_READINESS_SHELL; confirm L6 input primitives still publish separately as L6 cost/friction input evidence; confirm Runtime 3 Gateway remains calculation_support_only and trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime3_gateway_snapshot_contract_cleanup_no_duplicate_owner_no_ranking_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "display_renamed_to_gateway_physical_external_worker_paths_preserved_until_migration_proof";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.046_runtime1_l5_basic_system_gate_gateway_surface";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.047_runtime3_gateway_snapshot_contract_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
@@ -46,7 +46,7 @@ static const string AC_EXTERNAL_WORKER_EXE_FILE = "AuroraWorker.exe";
 static const string AC_EXTERNAL_WORKER_LAUNCH_MODE = "WINDOWS_SCHEDULED_TASK_GLOBAL_DAEMON_WATCHDOG";
 static const string AC_EXTERNAL_WORKER_LAUNCH_IMPLEMENTATION = "windows_scheduled_task_global_daemon_watchdog";
 static const string AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION = "job_bus_v1";
-static const string AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE = "L5_DEEP_READINESS_SHELL";
+static const string AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE = "R3_SNAPSHOT_VALIDATION_V1";
 static const string AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS = "light_serial";
 static const int    AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS = 3000;
 static const string AC_DOSSIERS_FOLDER    = "Dossiers";
