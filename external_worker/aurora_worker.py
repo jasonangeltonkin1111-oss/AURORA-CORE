@@ -23,6 +23,7 @@ from aurora_worker_io import (
 )
 from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 from aurora_worker_l7_session import publish_l7_session_relevance_rankings
+from aurora_worker_recorder import gateway_record_event, gateway_record_exception
 
 WORKER_VERSION = "0.6.6_l7_session_relevance_sidecar"
 EXPECTED_AUTHORITY = "calculation_support_only"
@@ -156,6 +157,41 @@ def mark_write_failure(result: ValidationResult, failed_paths: List[Path]) -> Va
     )
 
 
+def _record_gateway_result(root: Path, result: ValidationResult, worker_mode: str, exit_code: int, l6_summary, l6_duration_ms: int, l6_reused_existing_outputs: bool, l7_summary, l7_duration_ms: int, event_status: str) -> None:
+    gateway_record_event(
+        root,
+        "gateway_result_boundary",
+        {
+            "event_status": event_status,
+            "worker_version": WORKER_VERSION,
+            "worker_mode": worker_mode,
+            "exit_code": exit_code,
+            "result_status": "complete" if result.ok else "rejected",
+            "validation_status": result.status,
+            "validation_reason": result.reason,
+            "snapshot_id": result.snapshot_id,
+            "job_id": result.job_id,
+            "job_type": result.job_type,
+            "row_count": result.row_count,
+            "payload_checksum": result.payload_checksum,
+            "server": result.server,
+            "account": result.account,
+            "l6_rank_status": l6_summary.status,
+            "l6_rank_reason": l6_summary.reason,
+            "l6_rank_input_count": l6_summary.input_count,
+            "l6_rank_row_count": l6_summary.row_count,
+            "l6_rank_duration_ms": l6_duration_ms,
+            "l6_rank_reused_existing_outputs": "true" if l6_reused_existing_outputs else "false",
+            "l7_rank_status": l7_summary.status,
+            "l7_rank_reason": l7_summary.reason,
+            "l7_rank_input_count": l7_summary.input_count,
+            "l7_rank_row_count": l7_summary.row_count,
+            "l7_rank_duration_ms": l7_duration_ms,
+        },
+        signature_fields=("event_status", "snapshot_id", "job_id", "result_status", "l6_rank_status", "l6_rank_reused_existing_outputs", "l7_rank_status"),
+    )
+
+
 def build_heartbeat(result: ValidationResult, worker_mode: str) -> str:
     now_unix = unix_time()
     return "\n".join([
@@ -274,8 +310,11 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         if failed_paths:
             degraded = mark_write_failure(result, failed_paths)
             atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(degraded, worker_mode))
+            _record_gateway_result(root, degraded, worker_mode, 3, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, "write_degraded")
             return 3, degraded
-        return (0 if result.ok else 2), result
+        exit_code = 0 if result.ok else 2
+        _record_gateway_result(root, result, worker_mode, exit_code, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, "published")
+        return exit_code, result
     except Exception as exc:
         error_text = "\n".join([
             "schema_name=aurora_worker_error", "schema_version=2", f"worker_version={WORKER_VERSION}",
@@ -285,6 +324,7 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         ])
         atomic_write_text(p.logs / "worker_errors.txt", error_text)
         atomic_write_text(p.status / "worker_heartbeat.txt", error_text)
+        gateway_record_exception(root, "gateway_run_once_exception", exc, {"worker_mode": worker_mode, "worker_version": WORKER_VERSION})
         return 1, ValidationResult(False, "exception", f"{type(exc).__name__}: {exc}")
 
 
