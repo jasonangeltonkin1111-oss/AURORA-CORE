@@ -20,9 +20,11 @@ static string AC_L6_RANKED_CSV_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ran
 static string AC_L6_RANKED_MANIFEST_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols.manifest";
 static string AC_L6_TOP20_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols_top20.txt";
 static string AC_L6_SYMBOL_RANK_FOLDER = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\SymbolRanks";
+static string AC_L6_SYMBOL_RANK_FILENAME_MODE_EXPECTED = "sanitized_symbol__payload_checksum";
 static string AC_L6_MANIFEST_PAYLOAD_CHECKSUM = "not_available";
 static string AC_L6_MANIFEST_STATUS = "not_loaded";
 static string AC_L6_MANIFEST_REASON = "not_loaded";
+static string AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE = "not_available";
 static string AC_L6_TOP20_FIRST_LINE = "not_available";
 static int AC_L6_INPUT_L5_PASS_SYMBOLS = 0;
 static int AC_L6_MANIFEST_INPUT_COUNT = 0;
@@ -37,11 +39,13 @@ static int AC_L6_HOSTILE_FRICTION_COUNT = 0;
 static int AC_L6_ZERO_COST_SUSPICIOUS_COUNT = 0;
 static int AC_L6_COST_MODEL_MISMATCH_COUNT = 0;
 static int AC_L6_SYMBOL_RANK_FILES_WRITTEN = 0;
+static int AC_L6_SYMBOL_RANK_FILES_ACTUAL = 0;
 static int AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = 0;
 static int AC_L6_SOURCE_L5_GATE_PASS = 0;
 static string AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = "not_available";
 static bool AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST = false;
 static bool AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS = false;
+static bool AC_L6_SYMBOL_RANK_FILE_COUNT_OK = false;
 static bool AC_L6_GENERATION_COUNTS_OK = false;
 static bool AC_L6_LIVE_L5_DRIFT = false;
 static int AC_L6_LIVE_L5_DRIFT_DELTA = 0;
@@ -73,9 +77,26 @@ string AC_L6SymbolRankFolderPath()
    return AC_L6RankedLayerFolder() + "\\SymbolRanks";
 }
 
+string AC_L6SymbolRankChecksum(const string symbol)
+{
+   string payload = symbol + "\r\n";
+   long checksum = 0;
+   for(int i = 0; i < StringLen(payload); i++)
+   {
+      int ch = StringGetCharacter(payload, i);
+      checksum = (checksum + ((long)ch * (long)(i + 1))) % 2147483647;
+   }
+   return IntegerToString((int)checksum);
+}
+
+string AC_L6SymbolRankFilename(const string symbol)
+{
+   return AC_SanitizePathPart(symbol) + "__" + AC_L6SymbolRankChecksum(symbol) + ".txt";
+}
+
 string AC_L6SymbolRankPath(const string symbol)
 {
-   return AC_L6SymbolRankFolderPath() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+   return AC_L6SymbolRankFolderPath() + "\\" + AC_L6SymbolRankFilename(symbol);
 }
 
 string AC_ReadSmallTextFile(const string path, const int max_chars = 120000)
@@ -167,6 +188,7 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
    AC_L6_MANIFEST_STATUS = "not_loaded";
    AC_L6_MANIFEST_REASON = "not_loaded";
+   AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE = "not_available";
    AC_L6_MANIFEST_INPUT_COUNT = 0;
    AC_L6_RANKED_SYMBOLS = 0;
    AC_L6_RANKED_DEGRADED_SYMBOLS = 0;
@@ -179,11 +201,13 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_ZERO_COST_SUSPICIOUS_COUNT = 0;
    AC_L6_COST_MODEL_MISMATCH_COUNT = 0;
    AC_L6_SYMBOL_RANK_FILES_WRITTEN = 0;
+   AC_L6_SYMBOL_RANK_FILES_ACTUAL = 0;
    AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = 0;
    AC_L6_SOURCE_L5_GATE_PASS = 0;
    AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = "not_available";
    AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST = false;
    AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS = false;
+   AC_L6_SYMBOL_RANK_FILE_COUNT_OK = false;
    AC_L6_GENERATION_COUNTS_OK = false;
    AC_L6_LIVE_L5_DRIFT = false;
    AC_L6_LIVE_L5_DRIFT_DELTA = 0;
@@ -214,6 +238,9 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_ZERO_COST_SUSPICIOUS_COUNT = AC_KvInt(manifest, "zero_cost_nonzero_spread_suspicious_count", 0);
    AC_L6_COST_MODEL_MISMATCH_COUNT = AC_KvInt(manifest, "cost_model_mismatch_count", 0);
    AC_L6_SYMBOL_RANK_FILES_WRITTEN = AC_KvInt(manifest, "symbol_rank_files_written", 0);
+   AC_L6_SYMBOL_RANK_FILES_ACTUAL = AC_KvInt(manifest, "symbol_rank_files_actual", 0);
+   AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE = AC_KvValue(manifest, "symbol_rank_filename_mode", "not_available");
+   AC_L6_SYMBOL_RANK_FILE_COUNT_OK = (AC_KvValue(manifest, "symbol_rank_file_count_ok", "false") == "true");
    AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = AC_KvInt(manifest, "source_input_manifest_row_count", 0);
    AC_L6_SOURCE_L5_GATE_PASS = AC_KvInt(manifest, "source_l5_gate_pass", 0);
    AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = AC_KvValue(manifest, "source_input_payload_checksum", "not_available");
@@ -238,7 +265,11 @@ void AC_RefreshLayer6RankedSidecar()
    bool authority_ok = (authority == "calculation_support_only");
    bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true");
    bool files_ok = FileIsExist(AC_L6RankedCsvPath(), AC_CommonFlag()) && FileIsExist(AC_L6RankedTop20Path(), AC_CommonFlag());
-   bool symbol_files_ok = (AC_L6_SYMBOL_RANK_FILES_WRITTEN == AC_L6_RANKED_SYMBOLS);
+   bool symbol_file_count_ok = (AC_L6_SYMBOL_RANK_FILES_WRITTEN == AC_L6_RANKED_SYMBOLS
+      && AC_L6_SYMBOL_RANK_FILES_ACTUAL == AC_L6_RANKED_SYMBOLS
+      && AC_L6_SYMBOL_RANK_FILE_COUNT_OK
+      && AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE == AC_L6_SYMBOL_RANK_FILENAME_MODE_EXPECTED);
+   bool symbol_files_ok = symbol_file_count_ok;
 
    if(manifest_ok && counts_ok && authority_ok && permission_ok && files_ok && symbol_files_ok)
    {
@@ -273,6 +304,10 @@ void AC_RefreshLayer6RankedSidecar()
       + ";source_l5_export_count_ok=" + (source_l5_export_count_ok ? "true" : "false")
       + ";source_manifest_flags_ok=" + (source_manifest_flags_ok ? "true" : "false")
       + ";live_l5_drift=" + (AC_L6_LIVE_L5_DRIFT ? "true" : "false")
+      + ";symbol_rank_filename_mode=" + AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE
+      + ";symbol_rank_files_written=" + IntegerToString(AC_L6_SYMBOL_RANK_FILES_WRITTEN)
+      + ";symbol_rank_files_actual=" + IntegerToString(AC_L6_SYMBOL_RANK_FILES_ACTUAL)
+      + ";symbol_rank_file_count_ok=" + (AC_L6_SYMBOL_RANK_FILE_COUNT_OK ? "true" : "false")
       + ";authority_ok=" + (authority_ok ? "true" : "false")
       + ";permission_ok=" + (permission_ok ? "true" : "false")
       + ";files_ok=" + (files_ok ? "true" : "false")
@@ -308,6 +343,10 @@ string AC_Layer6BoardSection()
    text += "Hostile Friction:           " + IntegerToString(AC_L6_HOSTILE_FRICTION_COUNT) + "\r\n";
    text += "Zero Cost Suspicious:       " + IntegerToString(AC_L6_ZERO_COST_SUSPICIOUS_COUNT) + "\r\n";
    text += "Cost Model Mismatches:      " + IntegerToString(AC_L6_COST_MODEL_MISMATCH_COUNT) + "\r\n";
+   text += "SymbolRank Filename Mode:   " + AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE + "\r\n";
+   text += "SymbolRank Files Written:   " + IntegerToString(AC_L6_SYMBOL_RANK_FILES_WRITTEN) + "\r\n";
+   text += "SymbolRank Files Actual:    " + IntegerToString(AC_L6_SYMBOL_RANK_FILES_ACTUAL) + "\r\n";
+   text += "SymbolRank File Count OK:   " + (AC_L6_SYMBOL_RANK_FILE_COUNT_OK ? "TRUE" : "FALSE") + "\r\n";
    text += "Top Ranked:                 " + AC_L6_TOP20_FIRST_LINE + "\r\n";
    text += "Ranked CSV:                 " + AC_L6_RANKED_CSV_PATH + "\r\n";
    text += "Manifest:                   " + AC_L6_RANKED_MANIFEST_PATH + "\r\n";
@@ -341,6 +380,8 @@ string AC_Layer6DossierSection(const string symbol)
    text += "L6 Snapshot Drift: " + (AC_L6_LIVE_L5_DRIFT ? "TRUE" : "FALSE") + "\r\n";
    text += "Current L5 Pass Symbols: " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
    text += "L6 Export L5 Pass Symbols: " + IntegerToString(AC_L6_SOURCE_L5_GATE_PASS) + "\r\n";
+   text += "SymbolRank Filename Mode: " + AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE + "\r\n";
+   text += "Expected SymbolRank File: " + AC_L6SymbolRankFilename(symbol) + "\r\n";
    text += "L5 Gate Status: " + l5_status + "\r\n";
    text += "L5 Gate Reason: " + l5_reason + "\r\n";
 
@@ -382,6 +423,7 @@ string AC_Layer6DossierSection(const string symbol)
          text += "Zero Cost Suspicious: " + AC_KvValue(rank_text, "account_cost_zero_nonzero_spread_suspicious", "not_available") + "\r\n";
          text += "Volume Model Quality: " + AC_KvValue(rank_text, "volume_model_quality", "not_available") + "\r\n";
          text += "Commission Model: " + AC_KvValue(rank_text, "commission_model_status", "not_available") + "\r\n";
+         text += "Sidecar Filename: " + AC_KvValue(rank_text, "symbol_rank_filename", "not_available") + "\r\n";
          text += "Reason: " + AC_KvValue(rank_text, "reason", "not_available") + "\r\n";
       }
       text += "Rank Source: " + AC_L6SymbolRankPath(symbol) + "\r\n";
@@ -432,7 +474,10 @@ string AC_Layer6WorkbenchSection()
    text += "hostile_friction_count=" + IntegerToString(AC_L6_HOSTILE_FRICTION_COUNT) + "\r\n";
    text += "zero_cost_nonzero_spread_suspicious_count=" + IntegerToString(AC_L6_ZERO_COST_SUSPICIOUS_COUNT) + "\r\n";
    text += "cost_model_mismatch_count=" + IntegerToString(AC_L6_COST_MODEL_MISMATCH_COUNT) + "\r\n";
+   text += "symbol_rank_filename_mode=" + AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE + "\r\n";
    text += "symbol_rank_files_written=" + IntegerToString(AC_L6_SYMBOL_RANK_FILES_WRITTEN) + "\r\n";
+   text += "symbol_rank_files_actual=" + IntegerToString(AC_L6_SYMBOL_RANK_FILES_ACTUAL) + "\r\n";
+   text += "symbol_rank_file_count_ok=" + (AC_L6_SYMBOL_RANK_FILE_COUNT_OK ? "true" : "false") + "\r\n";
    text += "payload_checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM + "\r\n";
    text += "ranked_csv_path=" + AC_L6_RANKED_CSV_PATH + "\r\n";
    text += "ranked_manifest_path=" + AC_L6_RANKED_MANIFEST_PATH + "\r\n";
