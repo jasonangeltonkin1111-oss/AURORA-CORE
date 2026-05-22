@@ -191,7 +191,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
         f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=r3_snapshot_validation_only_no_layer5_advisory_no_l6_ranking_no_selection_no_permission_no_broker_polling", ""
+        "notes=r3_snapshot_validation_plus_l6_cost_friction_ranking_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
@@ -205,7 +205,7 @@ def build_result_manifest(result: ValidationResult, result_text: str) -> str:
         f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
-        "result_scope=r3_snapshot_validation_only_no_layer5_advisory_no_l6_ranking", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+        "result_scope=r3_snapshot_validation_plus_l6_cost_friction_ranking_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
 
 
