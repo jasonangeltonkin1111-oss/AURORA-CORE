@@ -23,6 +23,11 @@ static int    AC_L6_LAST_SELL_MINLOT_OK = 0;
 static int    AC_L6_LAST_ONELOT_INVALID = 0;
 static int    AC_L6_LAST_MINLOT_INVALID = 0;
 static int    AC_L6_LAST_COST_ASYMMETRY_COUNT = 0;
+static int    AC_L6_LAST_TICKVALUE_FALLBACK_OK = 0;
+static int    AC_L6_LAST_VALUE_FORMULA_FALLBACK_OK = 0;
+static int    AC_L6_LAST_CONTRACT_FALLBACK_OK = 0;
+static int    AC_L6_LAST_COST_MODEL_MISMATCH_COUNT = 0;
+static int    AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT = 0;
 
 string AC_ExternalWorkerSnapshotId()
 {
@@ -73,6 +78,11 @@ string AC_L6VolumeCsv(const double value)
 string AC_L6PriceCsv(const double value)
 {
    return DoubleToString(value, 10);
+}
+
+string AC_L6RatioCsv(const double value)
+{
+   return DoubleToString(value, 6);
 }
 
 string AC_L6FrictionLayerOutboxFolder()
@@ -136,9 +146,49 @@ void AC_L6CalcSpreadCost(const string symbol,
    status = "ok";
 }
 
+string AC_L6CostModelCompareStatus(const double primary_cost,
+                                   const double fallback_cost,
+                                   const string fallback_status,
+                                   double &ratio)
+{
+   ratio = 0.0;
+   if(primary_cost <= 0.0)
+      return "primary_unavailable_or_zero";
+   if(fallback_status != "ok" || fallback_cost <= 0.0)
+      return "fallback_unavailable";
+
+   double high = MathMax(primary_cost, fallback_cost);
+   double low = MathMin(primary_cost, fallback_cost);
+   if(low <= 0.0)
+      return "fallback_unavailable";
+
+   ratio = high / low;
+   if(ratio > 1.25)
+      return "mismatch_gt_25pct";
+   if(ratio > 1.10)
+      return "warning_gt_10pct";
+   return "aligned";
+}
+
+string AC_L6VolumeModelQuality(const double volume_min,
+                               const double volume_step,
+                               const double volume_max,
+                               const double contract_size)
+{
+   if(volume_min <= 0.0 || volume_step <= 0.0 || volume_max <= 0.0)
+      return "invalid_volume_grid";
+   if(volume_min < 0.000001 || volume_step < 0.000001)
+      return "micro_volume_grid_review";
+   if(volume_max > 100000000.0)
+      return "extreme_max_volume_review";
+   if(contract_size >= 100000.0 && volume_min < 0.0001)
+      return "micro_volume_large_contract_review";
+   return "normal";
+}
+
 string AC_L6InputCsvHeader()
 {
-   return "symbol,l5_gate_status,l5_gate_reason,asset_class,ranking_group,digits,point,contract_size,volume_min,volume_step,volume_max,value_quality,margin_quality,quote_quality,surface_quality,bid,ask,mid,spread_points,spread_bps,tick_age_seconds,zero_spread_state,spread_cost_buy_1lot_account,spread_cost_sell_1lot_account,spread_cost_worst_1lot_account,spread_cost_buy_minlot_account,spread_cost_sell_minlot_account,spread_cost_worst_minlot_account,ordercalcprofit_buy_1lot_status,ordercalcprofit_sell_1lot_status,ordercalcprofit_buy_minlot_status,ordercalcprofit_sell_minlot_status,ordercalcprofit_buy_1lot_error,ordercalcprofit_sell_1lot_error,ordercalcprofit_buy_minlot_error,ordercalcprofit_sell_minlot_error,cost_asymmetry_detected,commission_status,slippage_status,trade_permission\r\n";
+   return "symbol,l5_gate_status,l5_gate_reason,asset_class,ranking_group,digits,point,calculation_mode,currency_profit,currency_margin,account_currency,contract_size,volume_min,volume_step,volume_max,volume_model_quality,value_quality,margin_quality,quote_quality,surface_quality,bid,ask,mid,spread_price,spread_points,spread_bps,tick_age_seconds,zero_spread_state,tick_size,tick_value,tick_value_profit,tick_value_loss,money_per_price_unit_buy_1lot,money_per_price_unit_sell_1lot,value_source,tick_value_fallback_status_l3,tick_value_crosscheck_status_l3,spread_cost_buy_1lot_account,spread_cost_sell_1lot_account,spread_cost_worst_1lot_account,spread_cost_buy_minlot_account,spread_cost_sell_minlot_account,spread_cost_worst_minlot_account,ordercalcprofit_buy_1lot_status,ordercalcprofit_sell_1lot_status,ordercalcprofit_buy_minlot_status,ordercalcprofit_sell_minlot_status,ordercalcprofit_buy_1lot_error,ordercalcprofit_sell_1lot_error,ordercalcprofit_buy_minlot_error,ordercalcprofit_sell_minlot_error,cost_asymmetry_detected,tickvalue_spread_cost_1lot_account,tickvalue_spread_cost_minlot_account,tickvalue_cost_status,value_formula_spread_cost_1lot_account,value_formula_spread_cost_minlot_account,value_formula_cost_status,contract_spread_cost_1lot_raw,contract_spread_cost_minlot_raw,contract_cost_status,cost_model_primary,cost_model_compare_status,cost_model_mismatch_ratio,account_cost_zero_nonzero_spread_suspicious,commission_model_status,commission_score_policy,slippage_status,trade_permission\r\n";
 }
 
 void AC_L6ResetInputPrimitiveCounters()
@@ -151,6 +201,11 @@ void AC_L6ResetInputPrimitiveCounters()
    AC_L6_LAST_ONELOT_INVALID = 0;
    AC_L6_LAST_MINLOT_INVALID = 0;
    AC_L6_LAST_COST_ASYMMETRY_COUNT = 0;
+   AC_L6_LAST_TICKVALUE_FALLBACK_OK = 0;
+   AC_L6_LAST_VALUE_FORMULA_FALLBACK_OK = 0;
+   AC_L6_LAST_CONTRACT_FALLBACK_OK = 0;
+   AC_L6_LAST_COST_MODEL_MISMATCH_COUNT = 0;
+   AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT = 0;
 }
 
 string AC_L6BuildInputPrimitiveRows()
@@ -172,12 +227,25 @@ string AC_L6BuildInputPrimitiveRows()
       string ranking_group = "not_available";
       long digits = 0;
       double point = 0.0;
+      long calculation_mode = -1;
+      string currency_profit = "not_available";
+      string currency_margin = "not_available";
+      string account_currency = "not_available";
       double contract_size = 0.0;
       double volume_min = 0.0;
       double volume_step = 0.0;
       double volume_max = 0.0;
       string value_quality = "not_available";
       string margin_quality = "not_available";
+      double tick_size = 0.0;
+      double tick_value = 0.0;
+      double tick_value_profit = 0.0;
+      double tick_value_loss = 0.0;
+      double money_per_price_unit_buy_1lot = 0.0;
+      double money_per_price_unit_sell_1lot = 0.0;
+      string value_source = "not_available";
+      string tick_value_fallback_status_l3 = "not_available";
+      string tick_value_crosscheck_status_l3 = "not_available";
       bool one_lot_in_range = false;
       bool min_lot_in_range = false;
 
@@ -188,12 +256,25 @@ string AC_L6BuildInputPrimitiveRows()
          ranking_group = l3.ranking_group;
          digits = l3.digits;
          point = l3.point;
+         calculation_mode = l3.calculation_mode;
+         currency_profit = l3.currency_profit;
+         currency_margin = l3.currency_margin;
+         account_currency = l3.account_currency;
          contract_size = l3.contract_size;
          volume_min = l3.volume_min;
          volume_step = l3.volume_step;
          volume_max = l3.volume_max;
          value_quality = l3.value_quality;
          margin_quality = l3.margin_quality;
+         tick_size = l3.tick_size;
+         tick_value = l3.tick_value;
+         tick_value_profit = l3.tick_value_profit;
+         tick_value_loss = l3.tick_value_loss;
+         money_per_price_unit_buy_1lot = l3.money_per_price_unit_buy_1lot;
+         money_per_price_unit_sell_1lot = l3.money_per_price_unit_sell_1lot;
+         value_source = l3.value_source;
+         tick_value_fallback_status_l3 = l3.tick_value_fallback_status;
+         tick_value_crosscheck_status_l3 = l3.tick_value_crosscheck_status;
          one_lot_in_range = AC_L6VolumeInRange(1.0, l3);
          min_lot_in_range = AC_L6VolumeInRange(l3.volume_min, l3);
       }
@@ -203,6 +284,7 @@ string AC_L6BuildInputPrimitiveRows()
       double bid = 0.0;
       double ask = 0.0;
       double mid = 0.0;
+      double spread_price = 0.0;
       double spread_points = 0.0;
       double spread_bps = 0.0;
       double tick_age_seconds = 0.0;
@@ -215,7 +297,11 @@ string AC_L6BuildInputPrimitiveRows()
          surface_quality = l4.surface_quality;
          bid = l4.bid;
          ask = l4.ask;
-         if(bid > 0.0 && ask > 0.0) mid = (bid + ask) / 2.0;
+         if(bid > 0.0 && ask > 0.0)
+         {
+            mid = (bid + ask) / 2.0;
+            spread_price = MathAbs(ask - bid);
+         }
          spread_points = l4.spread_points_live;
          spread_bps = l4.spread_bps_live;
          tick_age_seconds = l4.tick_age_seconds;
@@ -264,6 +350,65 @@ string AC_L6BuildInputPrimitiveRows()
       bool asymmetry = (MathAbs(buy_1lot - sell_1lot) > 0.00000001 || MathAbs(buy_minlot - sell_minlot) > 0.00000001);
       if(asymmetry) AC_L6_LAST_COST_ASYMMETRY_COUNT++;
 
+      double tick_ref_value = MathMax(tick_value_loss, MathMax(tick_value_profit, tick_value));
+      double tickvalue_cost_1lot = 0.0;
+      double tickvalue_cost_minlot = 0.0;
+      string tickvalue_cost_status = "unavailable";
+      if(spread_price >= 0.0 && tick_size > 0.0 && tick_ref_value > 0.0)
+      {
+         double ticks_in_spread = spread_price / tick_size;
+         tickvalue_cost_1lot = ticks_in_spread * tick_ref_value;
+         tickvalue_cost_minlot = tickvalue_cost_1lot * volume_min;
+         tickvalue_cost_status = "ok";
+         AC_L6_LAST_TICKVALUE_FALLBACK_OK++;
+      }
+      else if(tick_size <= 0.0 || tick_ref_value <= 0.0)
+      {
+         tickvalue_cost_status = "tickvalue_unavailable_or_zero";
+      }
+
+      double value_formula_ppu = MathMax(money_per_price_unit_buy_1lot, money_per_price_unit_sell_1lot);
+      double value_formula_cost_1lot = 0.0;
+      double value_formula_cost_minlot = 0.0;
+      string value_formula_cost_status = "unavailable";
+      if(spread_price >= 0.0 && value_formula_ppu > 0.0)
+      {
+         value_formula_cost_1lot = spread_price * value_formula_ppu;
+         value_formula_cost_minlot = value_formula_cost_1lot * volume_min;
+         value_formula_cost_status = "ok";
+         AC_L6_LAST_VALUE_FORMULA_FALLBACK_OK++;
+      }
+
+      double contract_cost_1lot = 0.0;
+      double contract_cost_minlot = 0.0;
+      string contract_cost_status = "unavailable";
+      if(spread_price >= 0.0 && contract_size > 0.0)
+      {
+         contract_cost_1lot = spread_price * contract_size;
+         contract_cost_minlot = contract_cost_1lot * volume_min;
+         if(currency_profit == account_currency)
+            contract_cost_status = "raw_account_currency_ok";
+         else
+            contract_cost_status = "raw_profit_currency_not_account";
+         AC_L6_LAST_CONTRACT_FALLBACK_OK++;
+      }
+
+      double compare_ratio = 0.0;
+      string compare_status = AC_L6CostModelCompareStatus(worst_minlot, value_formula_cost_minlot, value_formula_cost_status, compare_ratio);
+      if(compare_status == "fallback_unavailable")
+         compare_status = AC_L6CostModelCompareStatus(worst_minlot, tickvalue_cost_minlot, tickvalue_cost_status, compare_ratio);
+      if(compare_status == "fallback_unavailable" && contract_cost_status == "raw_account_currency_ok")
+         compare_status = AC_L6CostModelCompareStatus(worst_minlot, contract_cost_minlot, "ok", compare_ratio);
+      if(compare_status == "mismatch_gt_25pct" || compare_status == "warning_gt_10pct")
+         AC_L6_LAST_COST_MODEL_MISMATCH_COUNT++;
+
+      bool zero_cost_nonzero_spread = (worst_minlot <= 0.0 && spread_price > 0.0 && spread_bps > 0.0);
+      if(zero_cost_nonzero_spread) AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT++;
+
+      string volume_model_quality = AC_L6VolumeModelQuality(volume_min, volume_step, volume_max, contract_size);
+      string commission_model_status = "not_available_from_api";
+      string commission_score_policy = "penalize_unknown_commission_and_cap_elite";
+
       text += AC_L6CsvSafe(symbol)
          + "," + AC_L6CsvSafe(AC_L5_SYMBOLS[i].gate_status)
          + "," + AC_L6CsvSafe(AC_L5_SYMBOLS[i].gate_reason)
@@ -271,10 +416,15 @@ string AC_L6BuildInputPrimitiveRows()
          + "," + AC_L6CsvSafe(ranking_group)
          + "," + IntegerToString((int)digits)
          + "," + DoubleToString(point, 10)
+         + "," + IntegerToString((int)calculation_mode)
+         + "," + AC_L6CsvSafe(currency_profit)
+         + "," + AC_L6CsvSafe(currency_margin)
+         + "," + AC_L6CsvSafe(account_currency)
          + "," + DoubleToString(contract_size, 8)
          + "," + AC_L6VolumeCsv(volume_min)
          + "," + AC_L6VolumeCsv(volume_step)
          + "," + AC_L6VolumeCsv(volume_max)
+         + "," + AC_L6CsvSafe(volume_model_quality)
          + "," + AC_L6CsvSafe(value_quality)
          + "," + AC_L6CsvSafe(margin_quality)
          + "," + AC_L6CsvSafe(quote_quality)
@@ -282,10 +432,20 @@ string AC_L6BuildInputPrimitiveRows()
          + "," + AC_L6PriceCsv(bid)
          + "," + AC_L6PriceCsv(ask)
          + "," + AC_L6PriceCsv(mid)
+         + "," + AC_L6PriceCsv(spread_price)
          + "," + DoubleToString(spread_points, 4)
          + "," + DoubleToString(spread_bps, 6)
          + "," + DoubleToString(tick_age_seconds, 3)
          + "," + AC_L6CsvSafe(zero_spread_state)
+         + "," + DoubleToString(tick_size, 10)
+         + "," + AC_L6MoneyCsv(tick_value)
+         + "," + AC_L6MoneyCsv(tick_value_profit)
+         + "," + AC_L6MoneyCsv(tick_value_loss)
+         + "," + AC_L6MoneyCsv(money_per_price_unit_buy_1lot)
+         + "," + AC_L6MoneyCsv(money_per_price_unit_sell_1lot)
+         + "," + AC_L6CsvSafe(value_source)
+         + "," + AC_L6CsvSafe(tick_value_fallback_status_l3)
+         + "," + AC_L6CsvSafe(tick_value_crosscheck_status_l3)
          + "," + AC_L6MoneyCsv(buy_1lot)
          + "," + AC_L6MoneyCsv(sell_1lot)
          + "," + AC_L6MoneyCsv(worst_1lot)
@@ -301,7 +461,21 @@ string AC_L6BuildInputPrimitiveRows()
          + "," + IntegerToString(buy_minlot_error)
          + "," + IntegerToString(sell_minlot_error)
          + "," + AC_L6BoolCsv(asymmetry)
-         + ",commission_not_available_from_api"
+         + "," + AC_L6MoneyCsv(tickvalue_cost_1lot)
+         + "," + AC_L6MoneyCsv(tickvalue_cost_minlot)
+         + "," + AC_L6CsvSafe(tickvalue_cost_status)
+         + "," + AC_L6MoneyCsv(value_formula_cost_1lot)
+         + "," + AC_L6MoneyCsv(value_formula_cost_minlot)
+         + "," + AC_L6CsvSafe(value_formula_cost_status)
+         + "," + AC_L6MoneyCsv(contract_cost_1lot)
+         + "," + AC_L6MoneyCsv(contract_cost_minlot)
+         + "," + AC_L6CsvSafe(contract_cost_status)
+         + ",ordercalcprofit"
+         + "," + AC_L6CsvSafe(compare_status)
+         + "," + AC_L6RatioCsv(compare_ratio)
+         + "," + AC_L6BoolCsv(zero_cost_nonzero_spread)
+         + "," + AC_L6CsvSafe(commission_model_status)
+         + "," + AC_L6CsvSafe(commission_score_policy)
          + ",slippage_not_modelled_v1"
          + ",false\r\n";
       rows++;
@@ -342,7 +516,12 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    manifest += "volume_1lot_invalid_count=" + IntegerToString(AC_L6_LAST_ONELOT_INVALID) + "\r\n";
    manifest += "volume_minlot_invalid_count=" + IntegerToString(AC_L6_LAST_MINLOT_INVALID) + "\r\n";
    manifest += "cost_asymmetry_detected_count=" + IntegerToString(AC_L6_LAST_COST_ASYMMETRY_COUNT) + "\r\n";
-   manifest += "source_truth_owner=L5_pass_set_plus_L3_L4_packets_plus_MT5_OrderCalcProfit_primitives\r\n";
+   manifest += "tickvalue_fallback_ok_count=" + IntegerToString(AC_L6_LAST_TICKVALUE_FALLBACK_OK) + "\r\n";
+   manifest += "value_formula_fallback_ok_count=" + IntegerToString(AC_L6_LAST_VALUE_FORMULA_FALLBACK_OK) + "\r\n";
+   manifest += "contract_fallback_ok_count=" + IntegerToString(AC_L6_LAST_CONTRACT_FALLBACK_OK) + "\r\n";
+   manifest += "cost_model_mismatch_count=" + IntegerToString(AC_L6_LAST_COST_MODEL_MISMATCH_COUNT) + "\r\n";
+   manifest += "zero_cost_nonzero_spread_suspicious_count=" + IntegerToString(AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT) + "\r\n";
+   manifest += "source_truth_owner=L5_pass_set_plus_L3_L4_packets_plus_MT5_OrderCalcProfit_primitives_plus_value_formula_tickvalue_contract_fallbacks\r\n";
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_future_L6D\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
    manifest += "trade_permission=false\r\n";
