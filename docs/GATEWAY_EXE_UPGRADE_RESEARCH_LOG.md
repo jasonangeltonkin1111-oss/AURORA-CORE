@@ -2,7 +2,7 @@
 
 Status: living research and upgrade ledger. Runtime code changes must remain small, measured, and reversible.
 
-Last updated from runtime evidence bundle: 18503(26).7z plus EXE-003 instrumentation/proof-script runs.
+Last updated from runtime evidence bundle: 18503(26).7z plus EXE-003 instrumentation/proof-script runs and REC-001 Gateway addendum recorder.
 
 ## Purpose
 
@@ -170,6 +170,21 @@ System implication:
 - Account isolation must remain server/account scoped.
 - No absolute external file path authority should bypass the route owner.
 
+### Python logging handler constraints
+
+Official source: https://docs.python.org/3/library/logging.handlers.html
+
+Relevant truth:
+
+- `RotatingFileHandler` supports size-bound log rollover through `maxBytes` and `backupCount`.
+- A plain file handler can grow without a size cap if not explicitly rotated.
+
+System implication:
+
+- Gateway addendum logs must be bounded rotating logs.
+- Logging must be event-boundary, duplicate-throttled, and best-effort only.
+- Logs are addendum evidence, not source truth and not permission authority.
+
 ### PowerShell read-only proof commands
 
 Official sources:
@@ -304,15 +319,17 @@ Priority order:
 1. Skip unchanged work by manifest checksum.
 2. Keep health/status proof fresh even when calculations are skipped.
 3. Add per-layer duration and skip counters.
-4. Introduce cooperative budget scheduling.
-5. Add chunked medium-layer jobs.
-6. Only then consider process pools or shared memory.
+4. Add bounded event-boundary addendum recording.
+5. Introduce cooperative budget scheduling.
+6. Add chunked medium-layer jobs.
+7. Only then consider process pools or shared memory.
 
 Reason:
 
 - The fastest calculation is the one that is correctly skipped.
 - The lowest-risk CPU upgrade is manifest-delta scheduling.
 - Process pools/shared memory add packaging, lifecycle, and debugging risk.
+- Logs must explain behavior without becoming the next runtime problem.
 
 ## Completed upgrade log
 
@@ -407,6 +424,97 @@ Acceptance proof required:
 Rollback:
 
 - Delete `external_worker/proof_gateway_l6_instrumentation.ps1`.
+
+### 2026-05-22: REC-001 bounded EXE-side Gateway addendum recorder
+
+Runtime files patched:
+
+```text
+external_worker/aurora_worker_recorder.py
+external_worker/aurora_worker.py
+```
+
+Reason:
+
+- Gateway needed an EXE-owned addendum logger that records important worker/result boundaries without pushing logging load into MT5.
+- The recorder must explain behavior and failures, but it must not become a source of truth, permission owner, or per-heartbeat spammer.
+
+Design:
+
+```text
+log_path=Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Logs/gateway_addendum.log
+rotation=maxBytes 262144, backupCount 4
+mode=best_effort
+open_policy=delay_open
+spam_policy=duplicate_signature_throttle
+ownership=Gateway EXE addendum evidence only
+```
+
+Events:
+
+```text
+gateway_result_boundary
+gateway_run_once_exception
+```
+
+Recorded fields include:
+
+```text
+schema_name=aurora_gateway_addendum_log
+schema_version=1
+event
+worker_version
+worker_mode
+exit_code
+result_status
+validation_status
+validation_reason
+snapshot_id
+job_id
+job_type
+row_count
+payload_checksum
+server
+account
+l6_rank_status
+l6_rank_reason
+l6_rank_duration_ms
+l6_rank_reused_existing_outputs
+l7_rank_status
+l7_rank_reason
+l7_rank_duration_ms
+authority=calculation_support_only
+trade_permission=false
+```
+
+Safety rules:
+
+- Best-effort only: recorder failure must not break Gateway calculation.
+- Duplicate event signatures are skipped unless forced by exception logging.
+- No EA/MT5 logging is added.
+- No GUI, popup, task, process, scheduler, scoring, selection, or permission behavior is changed.
+
+Acceptance proof required in next runtime bundle:
+
+```text
+Workbench/Gateway/Logs/gateway_addendum.log exists after result boundary or exception
+gateway_addendum.log contains schema_name=aurora_gateway_addendum_log
+gateway_addendum.log contains event=gateway_result_boundary after accepted/degraded result
+gateway_addendum.log contains authority=calculation_support_only
+gateway_addendum.log contains trade_permission=false
+log size remains bounded and rotation files only appear after size threshold
+no one-line-per-heartbeat spam when signature is unchanged
+Gateway result remains accepted
+shared daemon loop continues rising
+no popup/window
+```
+
+Rollback:
+
+- Remove `from aurora_worker_recorder import gateway_record_event, gateway_record_exception` from `aurora_worker.py`.
+- Remove `_record_gateway_result(...)` helper from `aurora_worker.py`.
+- Remove `_record_gateway_result(...)` calls and `gateway_record_exception(...)` call from `run_once`.
+- Delete `external_worker/aurora_worker_recorder.py`.
 
 ## Upgrade backlog
 
@@ -627,11 +735,21 @@ Acceptance proof:
 
 Cause:
 
-Adding a scheduler, process pool, or shared memory cache can accidentally make Gateway own truth instead of support calculations.
+Adding a scheduler, process pool, shared memory cache, or logger can accidentally make Gateway own truth instead of support calculations.
 
 Mitigation:
 
-Every job output must include authority=calculation_support_only and source_snapshot_id/source_payload_checksum.
+Every job output and addendum event must include authority=calculation_support_only and source/job identity where applicable. Logs are clues, not truth authority.
+
+### Risk: logging becomes the runtime problem
+
+Cause:
+
+Per-heartbeat or per-symbol logs can become a disk IO and file growth problem.
+
+Mitigation:
+
+Use bounded rotating logs, delayed open, event-boundary logging, and duplicate signature throttling.
 
 ### Risk: CPU optimization breaks correctness
 
@@ -681,13 +799,14 @@ Next audit/research step:
 2. Run at least 2-3 daemon cycles.
 3. Run `external_worker/proof_gateway_l6_instrumentation.ps1`.
 4. Confirm EXE-003A instrumentation fields appear in `result_latest.txt`.
-5. Compare skip duration vs rerank duration across a changed-input and unchanged-input run.
-6. Only then consider account/shared aggregate counters.
+5. Confirm `Workbench/Gateway/Logs/gateway_addendum.log` exists and is bounded/addendum only.
+6. Compare skip duration vs rerank duration across a changed-input and unchanged-input run.
+7. Only then consider account/shared aggregate counters.
 
 Next EXE implementation step when ready:
 
-1. Add low-cost L6 aggregate counters to account process status or shared status.
-2. Do not change L6 math.
+1. Add read-only proof script coverage for REC-001 logs.
+2. Do not change L6/L7 math.
 3. Do not change daemon launch behavior.
 4. Do not add threads/processes.
 
@@ -697,6 +816,6 @@ Current decision: TEST FIRST.
 
 Reason:
 
-EXE-003A is intentionally tiny, but it still changes runtime output fields. EXE-003B only adds a read-only proof script. Runtime proof must come before any broader scheduler or counter work.
+REC-001 adds a new bounded log artifact and minimal runtime event calls. It must be packaged and runtime-tested before broader scheduler, counter, or logging work.
 
-Next likely implementation decision: after proof, add aggregate counters only if `result_latest.txt` fields are stable, the proof script passes, and no MT5 consumer breaks.
+Next likely implementation decision: after proof, add read-only recorder proof checks only if `gateway_addendum.log` is stable, bounded, duplicate-throttled, and no MT5/Gateway consumer breaks.
