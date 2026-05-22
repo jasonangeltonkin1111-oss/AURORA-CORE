@@ -2,6 +2,14 @@
 
 This repo is an MQL5 / MT5 trading-system codebase. Current source files outrank memory, screenshots, reports, prompts, and AI reasoning.
 
+This is the single canonical agent instruction file for Aurora Core. Do not create duplicate AGENTS files, duplicate repo-law files, or competing instruction systems unless the user explicitly asks.
+
+## Agent use policy
+
+ChatGPT should attempt repo/audit/patch work first when connected tools allow it. Use Codex only when ChatGPT is blocked, lacks the required execution environment, struggles with the task, or the user explicitly asks for Codex. Codex must still obey this file.
+
+If a connector blocks writes or cannot safely patch a file, report `BLOCKED` or `HOLD` honestly. Do not pretend files were updated.
+
 ## Required repo flow
 
 1. Fetch current branch, current commit, and target file SHA before editing.
@@ -20,10 +28,39 @@ If a connector only supports unsafe full-file replacement for a large owner file
 
 - Runtime 2 taxonomy authority lives in `mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse*.mqh`.
 - Runtime 1 Layer 3 broker symbol/spec metadata lives in `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_*.mqh`.
+- Runtime 3 external calculation worker authority lives in `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/` plus `external_worker/` scripts and worker source.
 - Runtime 7 publication wrappers live in `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/`.
 - FileIO/path owners must stay single-owner systems.
 - Dossiers display upstream truth; they must not become hidden truth owners.
 - Broker metadata is advisory evidence only. Broker Country, Exchange, Sector, or Industry must not overwrite final bucket/ranking truth.
+
+## Runtime 3 external worker law
+
+Runtime 3 owns worker relationship, install/status detection, snapshot export, heartbeat/result validation, shared daemon/watchdog status truth, and Workbench diagnostics.
+
+Runtime 3 must keep:
+
+- `authority=calculation_support_only`
+- `trade_permission=false`
+
+Runtime 3 must not own broker truth, FileIO internals, Board/Dossier rendering authority, ranking, selection, strategy, execution, WebRequest, ML, or L5 heavy calculations unless explicitly scoped later.
+
+When working on Runtime 3B autonomy, do not fake watchdog proof. A scheduled task existing is not proof that stale/missing daemon recovery works. `operator_cmd_required=false` may be claimed only after source and runtime output prove the daemon/watchdog path works.
+
+## File removal law
+
+Do not remove files casually. Before removing any file, prove from source inspection that it is obsolete, duplicate, generated, harmful, or replaced by a verified path.
+
+Before removal, report:
+
+- file path
+- references/imports/includes/tasks/scripts using it
+- whether it is active, compatibility wrapper, stale, duplicate, generated artifact, or archive
+- why removal is safer than keeping or demoting
+- regression risk
+- rollback path
+
+Preserve compatibility wrappers unless replacement paths are proven and documented. If evidence is incomplete, keep the file and mark it for later cleanup.
 
 ## Bucket research law
 
