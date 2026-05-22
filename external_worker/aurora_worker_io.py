@@ -7,6 +7,10 @@ import os
 import time
 
 
+READ_RETRY_ATTEMPTS = 4
+READ_RETRY_BACKOFF_SECONDS = 0.05
+
+
 @dataclass(frozen=True)
 class WorkerPaths:
     root: Path
@@ -47,7 +51,19 @@ def parse_kv_text(text: str) -> Dict[str, str]:
 
 
 def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
+    last_error: PermissionError | OSError | None = None
+    for attempt in range(READ_RETRY_ATTEMPTS):
+        try:
+            return path.read_text(encoding="utf-8", errors="replace")
+        except (PermissionError, OSError) as exc:
+            # MT5 may briefly hold files while publishing. Retry boundedly, then let
+            # the caller record the final failure instead of poisoning daemon state.
+            last_error = exc
+            if attempt + 1 >= READ_RETRY_ATTEMPTS:
+                break
+            time.sleep(READ_RETRY_BACKOFF_SECONDS * (attempt + 1))
+    assert last_error is not None
+    raise last_error
 
 
 def read_kv(path: Path) -> Dict[str, str]:
