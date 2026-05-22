@@ -10,6 +10,7 @@
 #include "AC_L1_Format.mqh"
 #include "AC_L1_State.mqh"
 #include "AC_L1_Scan.mqh"
+string AC_L1ClusterKey(const AC_L1ClosedTradeRow &row);
 #include "AC_L1_Maps.mqh"
 #define AC_Layer1BoardSection AC_Layer1BoardSection_Base
 #define AC_AccountTruthStatusRow AC_AccountTruthStatusRow_Base
