@@ -33,11 +33,17 @@ blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 docs/22_AURORA_QUALITY_7S_LAW.md
 docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
 docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
+docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md
+docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md
 ```
 
 `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is the active blueprint layer map for runtime/layer architecture. Any `docs/01_LOGICAL_LAYER_BLUEPRINT.md` references are secondary guidebook context, not canonical architecture authority.
 
 The control laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
+
+`docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md` is the active Board/Dossier/Workbench surface standard. It defines the no-repeat data law: later layers consume earlier owner gates and do not duplicate raw previous-layer truth.
+
+`docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md` is the active Runtime 3 external-worker closeout standard. Runtime 3 is not fully closed until shared install, daemon, watchdog, per-account result acceptance, and rejection-path proofs are captured.
 
 ---
 
@@ -54,7 +60,10 @@ Runtime 1 - Foundation Truth Owner
 Layer 1 - Account / Portfolio / Prop Rule Truth
 Layer 2 - Market Open / Closed Truth
 Layer 3 - Broker Specs and Value Truth
+Layer 4 - Live Quote and Spread Truth
 Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source present in current source
+Runtime 3 - External Calculation Worker Owner
+Runtime 5 - Deep Inspection Advisory Owner
 Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
 
@@ -63,6 +72,8 @@ Do not confuse active source owners with complete logical layers.
 Publication/FileIO/Route support may exist early only as infrastructure service support. It does not make publication a trading truth owner.
 
 Layer 3 is the current broker/spec/value foundation layer. It scans Layer 2 known open and closed symbols, skips unknown symbols, prints literal fundamental lookup links where available, and must never show failed value or margin calculations as fake `0.00`. Layer 4 is the first open-symbol-only cutoff layer and owns live quote, tick, and spread truth.
+
+Runtime 3 owns the external-worker relationship, job-bus contract, daemon/watchdog status, and worker-result acceptance/rejection. Runtime 5 owns advisory interpretation/surfaces only and must consume L1-L4 owner gates plus Runtime 3 accepted results without repeating raw earlier-layer data.
 
 Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow the logical placement in `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
 
