@@ -161,6 +161,25 @@ void AC_ReadExternalWorkerSharedStatus()
    AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count = AC_EWValue(shared_text, "processed_root_count");
    AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count = AC_EWValue(shared_text, "accepted_root_count");
    AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count = AC_EWValue(shared_text, "degraded_root_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_registered = AC_EWValue(shared_text, "daemon_task_registered");
+   AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state = AC_EWValue(shared_text, "daemon_task_state");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_registered = AC_EWValue(shared_text, "watchdog_task_registered");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state = AC_EWValue(shared_text, "watchdog_task_state");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_check_utc = AC_EWValue(shared_text, "watchdog_last_check_utc");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action = AC_EWValue(shared_text, "watchdog_last_action");
+   AC_EXTERNAL_WORKER_STATUS.shared_operator_cmd_required = AC_EWValue(shared_text, "operator_cmd_required");
+   AC_EXTERNAL_WORKER_STATUS.shared_cpu_logical_count = AC_EWValue(shared_text, "cpu_logical_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_memory_total_mb = AC_EWValue(shared_text, "memory_total_mb");
+   AC_EXTERNAL_WORKER_STATUS.shared_memory_available_mb = AC_EWValue(shared_text, "memory_available_mb");
+   AC_EXTERNAL_WORKER_STATUS.shared_memory_used_percent = AC_EWValue(shared_text, "memory_used_percent");
+   AC_EXTERNAL_WORKER_STATUS.shared_memory_limit_percent = AC_EWValue(shared_text, "memory_limit_percent");
+   AC_EXTERNAL_WORKER_STATUS.shared_cpu_limit_percent = AC_EWValue(shared_text, "cpu_limit_percent");
+   AC_EXTERNAL_WORKER_STATUS.shared_terminal_process_count = AC_EWValue(shared_text, "terminal_process_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_aurora_worker_process_count = AC_EWValue(shared_text, "aurora_worker_process_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_registered_root_count = AC_EWValue(shared_text, "registered_root_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_resource_throttle_active = AC_EWValue(shared_text, "resource_throttle_active");
+   AC_EXTERNAL_WORKER_STATUS.shared_resource_throttle_reason = AC_EWValue(shared_text, "resource_throttle_reason");
+   AC_EXTERNAL_WORKER_STATUS.shared_recommended_parallel_jobs = AC_EWValue(shared_text, "recommended_parallel_jobs");
 
    if(authority != AC_EXTERNAL_WORKER_AUTHORITY)
    {
