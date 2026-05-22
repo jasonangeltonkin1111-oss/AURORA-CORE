@@ -17,18 +17,50 @@ double AC_L1SafeDealFee(const ulong deal_ticket)
    return 0.0;
 }
 
-void AC_L1DealCostValues(const ulong deal_ticket,
-                         double &commission_value,
-                         double &swap_value,
-                         double &fee_value)
+void AC_L1AllocatedPositionCostValues(const long position_id,
+                                      const double close_volume,
+                                      double &commission_value,
+                                      double &swap_value,
+                                      double &fee_value)
 {
    commission_value = 0.0;
    swap_value = 0.0;
    fee_value = 0.0;
-   if(deal_ticket == 0) return;
-   commission_value = HistoryDealGetDouble(deal_ticket, DEAL_COMMISSION);
-   swap_value = HistoryDealGetDouble(deal_ticket, DEAL_SWAP);
-   fee_value = AC_L1SafeDealFee(deal_ticket);
+   if(position_id <= 0) return;
+
+   double commission_sum = 0.0;
+   double swap_sum = 0.0;
+   double fee_sum = 0.0;
+   double closed_volume_sum = 0.0;
+
+   int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++)
+   {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_POSITION_ID) != position_id) continue;
+
+      commission_sum += HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      swap_sum += HistoryDealGetDouble(ticket, DEAL_SWAP);
+      fee_sum += AC_L1SafeDealFee(ticket);
+
+      long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
+      long type = HistoryDealGetInteger(ticket, DEAL_TYPE);
+      if(AC_L1DealEntryIsClosed(entry) && (type == DEAL_TYPE_BUY || type == DEAL_TYPE_SELL))
+         closed_volume_sum += HistoryDealGetDouble(ticket, DEAL_VOLUME);
+   }
+
+   double factor = 1.0;
+   if(closed_volume_sum > 0.0 && close_volume > 0.0)
+   {
+      factor = close_volume / closed_volume_sum;
+      if(factor < 0.0) factor = 0.0;
+      if(factor > 1.0) factor = 1.0;
+   }
+
+   commission_value = commission_sum * factor;
+   swap_value = swap_sum * factor;
+   fee_value = fee_sum * factor;
 }
 
 bool AC_L1SelectedDealIsClosedTrade(const ulong deal_ticket)
@@ -259,8 +291,8 @@ void AC_L1ScanHistory()
    AC_L1_HISTORY_STATUS = (extend_to_minimum ? "available_extended_to_minimum" : "available_bounded_lookback");
    AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill" : "bounded_lookback_all_rows");
    AC_L1_HISTORY_NOTE = (extend_to_minimum
-      ? "last 90 days had fewer than 100 closed trades; selected older history to fill up to 100 rows when available; totals refer to selected filled window; deal-level cost source"
-      : "selected last 90 days; all closed rows inside lookback are retained even when more than 100; totals refer to selected lookback; deal-level cost source");
+      ? "last 90 days had fewer than 100 closed trades; selected older history to fill up to 100 rows when available; totals refer to selected filled window; position-cost allocation source"
+      : "selected last 90 days; all closed rows inside lookback are retained even when more than 100; totals refer to selected lookback; position-cost allocation source");
    AC_L1_HISTORY_DEALS_TOTAL = HistoryDealsTotal();
    AC_L1_HISTORY_ORDERS_TOTAL = HistoryOrdersTotal();
 
@@ -293,12 +325,12 @@ void AC_L1ScanHistory()
       AC_L1_CLOSED[next].stop_loss = 0.0;
       AC_L1_CLOSED[next].take_profit = 0.0;
       AC_L1_CLOSED[next].profit = HistoryDealGetDouble(deal_ticket, DEAL_PROFIT);
-      AC_L1DealCostValues(deal_ticket, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, AC_L1_CLOSED[next].fee);
+      AC_L1AllocatedPositionCostValues(AC_L1_CLOSED[next].position_id, AC_L1_CLOSED[next].volume, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, AC_L1_CLOSED[next].fee);
       AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap + AC_L1_CLOSED[next].fee;
       AC_L1_CLOSED[next].magic = HistoryDealGetInteger(deal_ticket, DEAL_MAGIC);
       AC_L1_CLOSED[next].comment = HistoryDealGetString(deal_ticket, DEAL_COMMENT);
       AC_L1_CLOSED[next].close_reason = HistoryDealGetInteger(deal_ticket, DEAL_REASON);
-      AC_L1_CLOSED[next].source_quality = "partial_core_deal_cost";
+      AC_L1_CLOSED[next].source_quality = "partial_core_position_cost_allocated";
       AC_L1_CLOSED[next].entry_reconstruction_status = "unavailable";
       AC_L1_CLOSED[next].paired_entry_status = "paired_entry_unavailable";
       AC_L1_CLOSED[next].order_context_status = "order_context_unavailable";
@@ -315,7 +347,7 @@ void AC_L1ScanHistory()
          AC_L1_CLOSED[next].side = entry_side;
          AC_L1_CLOSED[next].entry_reconstruction_status = "complete";
          AC_L1_CLOSED[next].paired_entry_status = "paired_entry_found";
-         AC_L1_CLOSED[next].source_quality = "core_complete_deal_cost";
+         AC_L1_CLOSED[next].source_quality = "core_complete_position_cost_allocated";
          AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT++;
       }
 
@@ -350,15 +382,15 @@ void AC_L1ScanHistory()
 
       if(AC_L1_CLOSED[next].entry_reconstruction_status != "complete")
       {
-         AC_L1_CLOSED[next].source_quality = "partial_core_deal_cost";
+         AC_L1_CLOSED[next].source_quality = "partial_core_position_cost_allocated";
          AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
-         AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill_partial_core_deal_cost" : "bounded_lookback_partial_core_deal_cost");
+         AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill_partial_core_position_cost_allocated" : "bounded_lookback_partial_core_position_cost_allocated");
       }
       else if(AC_L1_CLOSED[next].order_context_status != "protective_context_complete")
       {
          AC_L1_ORDER_CONTEXT_PARTIAL_COUNT++;
-         if(AC_L1_HISTORY_QUALITY == "bounded_lookback_all_rows") AC_L1_HISTORY_QUALITY = "bounded_lookback_order_context_partial_deal_cost";
-         if(AC_L1_HISTORY_QUALITY == "lookback_plus_minimum_fill") AC_L1_HISTORY_QUALITY = "lookback_plus_minimum_fill_order_context_partial_deal_cost";
+         if(AC_L1_HISTORY_QUALITY == "bounded_lookback_all_rows") AC_L1_HISTORY_QUALITY = "bounded_lookback_order_context_partial_position_cost_allocated";
+         if(AC_L1_HISTORY_QUALITY == "lookback_plus_minimum_fill") AC_L1_HISTORY_QUALITY = "lookback_plus_minimum_fill_order_context_partial_position_cost_allocated";
       }
 
       AC_L1AddClosedStats(AC_L1_CLOSED[next]);
@@ -404,7 +436,7 @@ void AC_L1ScanHistory()
       AC_L1_HISTORY_QUALITY += "_cancel_rows_capped";
 
    if(ArraySize(AC_L1_CLOSED) <= 0)
-      AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available; deal-level cost source";
+      AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available; position-cost allocation source";
 }
 
 void AC_RefreshLayer1AccountTruth()
