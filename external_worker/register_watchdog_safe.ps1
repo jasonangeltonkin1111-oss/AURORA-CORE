@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Continue"
 
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
 $watchdogTask = "AuroraWorker_Global_Watchdog"
@@ -30,7 +30,6 @@ Set-Content -Path $runner -Value $runnerText -Encoding UTF8
 
 Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction SilentlyContinue
 
-$xmlSharedRoot = [System.Security.SecurityElement]::Escape($sharedRoot)
 $xmlRunner = [System.Security.SecurityElement]::Escape($runner)
 $start = (Get-Date).AddMinutes(1).ToString("yyyy-MM-ddTHH:mm:ss")
 
@@ -77,7 +76,14 @@ $xml = @"
 </Task>
 "@
 
-Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
+$registrationOk = $false
+$registrationError = "none"
+try {
+    Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
+    $registrationOk = $true
+} catch {
+    $registrationError = ($_.Exception.Message -replace "\r?\n", " ")
+}
 
 $daemon = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
 $watchdog = Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue
@@ -86,6 +92,7 @@ $daemonRegistered = if ($daemon) { "true" } else { "false" }
 $daemonState = if ($daemon) { $daemon.State.ToString() } else { "not_registered" }
 $watchdogRegistered = if ($watchdog) { "true" } else { "false" }
 $watchdogState = if ($watchdog) { $watchdog.State.ToString() } else { "not_registered" }
+$watchdogError = if ($watchdogRegistered -eq "true") { "none" } else { $registrationError }
 $operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true") { "false" } else { "true" }
 
 if (Test-Path $installStatus) {
@@ -96,6 +103,7 @@ if (Test-Path $installStatus) {
         "scheduled_task_state" = $daemonState
         "watchdog_task_registered" = $watchdogRegistered
         "watchdog_task_state" = $watchdogState
+        "watchdog_task_error" = $watchdogError
         "operator_cmd_required" = $operatorRequired
     }
 
