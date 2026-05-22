@@ -13,13 +13,26 @@ static string AC_L7_VALIDATION_STATUS = "Pending";
 static string AC_L7_VALIDATION_REASON = "ranked sidecar not checked yet";
 static string AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
 static bool   AC_L7_RANKED_ACCEPTED = false;
+static bool   AC_L7_INPUT_COUNTS_OK_RENDERED = false;
+static bool   AC_L7_GENERATION_COUNTS_OK_RENDERED = false;
+static bool   AC_L7_GENERATION_IDENTITY_OK_RENDERED = false;
+static bool   AC_L7_SNAPSHOT_DRIFT_RENDERED = false;
+static int    AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED = 0;
 static int    AC_L7_INPUT_ROWS_RENDERED = 0;
+static int    AC_L7_EXPORT_L5_PASS_RENDERED = 0;
 static int    AC_L7_RANKED_ROWS_RENDERED = 0;
 static int    AC_L7_RANKED_COUNT_RENDERED = 0;
 static int    AC_L7_RANKED_DEGRADED_COUNT_RENDERED = 0;
 static int    AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED = 0;
+static int    AC_L7_ELITE_COUNT_RENDERED = 0;
+static int    AC_L7_STRONG_COUNT_RENDERED = 0;
+static int    AC_L7_ACCEPTABLE_COUNT_RENDERED = 0;
 static int    AC_L7_WEAK_COUNT_RENDERED = 0;
 static int    AC_L7_POOR_COUNT_RENDERED = 0;
+static int    AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED = 0;
+static int    AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED = 0;
+static string AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED = "false";
+static string AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED = "not_available";
 static string AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED = "not_available";
 static string AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED = "not_available";
 static string AC_L7_TOP20_FIRST_LINE = "not_available";
@@ -176,7 +189,7 @@ string AC_L7SymbolRankPathByFind(const string symbol)
    return AC_L7SymbolRankFolderPath() + "\\" + found;
 }
 
-void AC_L7RefreshRankedSidecar()
+void AC_L7ResetRenderState()
 {
    AC_L7_STATUS = "Pending ranked sidecar";
    AC_L7_TRUST_STATE = "Ranking Pending";
@@ -184,13 +197,26 @@ void AC_L7RefreshRankedSidecar()
    AC_L7_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
    AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
    AC_L7_RANKED_ACCEPTED = false;
+   AC_L7_INPUT_COUNTS_OK_RENDERED = false;
+   AC_L7_GENERATION_COUNTS_OK_RENDERED = false;
+   AC_L7_GENERATION_IDENTITY_OK_RENDERED = false;
+   AC_L7_SNAPSHOT_DRIFT_RENDERED = false;
+   AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED = 0;
    AC_L7_INPUT_ROWS_RENDERED = 0;
+   AC_L7_EXPORT_L5_PASS_RENDERED = 0;
    AC_L7_RANKED_ROWS_RENDERED = 0;
    AC_L7_RANKED_COUNT_RENDERED = 0;
    AC_L7_RANKED_DEGRADED_COUNT_RENDERED = 0;
    AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED = 0;
+   AC_L7_ELITE_COUNT_RENDERED = 0;
+   AC_L7_STRONG_COUNT_RENDERED = 0;
+   AC_L7_ACCEPTABLE_COUNT_RENDERED = 0;
    AC_L7_WEAK_COUNT_RENDERED = 0;
    AC_L7_POOR_COUNT_RENDERED = 0;
+   AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED = 0;
+   AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED = 0;
+   AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED = "false";
+   AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED = "not_available";
    AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED = "not_available";
    AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED = "not_available";
    AC_L7_TOP20_FIRST_LINE = "not_available";
@@ -198,6 +224,11 @@ void AC_L7RefreshRankedSidecar()
    AC_L7_SESSION_TIME_BASIS_RENDERED = "pending";
    AC_L7_SESSION_DEFINITION_SOURCE_RENDERED = "pending";
    AC_L7_SESSION_PROFILE_POLICY_RENDERED = "not_available";
+}
+
+void AC_L7RefreshRankedSidecar()
+{
+   AC_L7ResetRenderState();
 
    string input_manifest = AC_L7ReadSmallTextFile(AC_L7InputManifestPath(), 30000);
    if(input_manifest == "")
@@ -208,6 +239,22 @@ void AC_L7RefreshRankedSidecar()
       return;
    }
 
+   int input_rows = AC_L7KvInt(input_manifest, "row_count", 0);
+   int input_l5_pass = AC_L7KvInt(input_manifest, "l5_gate_pass", 0);
+   string input_write_ok = AC_L7KvValue(input_manifest, "write_ok", "false");
+   string input_payload_checksum = AC_L7KvValue(input_manifest, "payload_checksum", "not_available");
+   string input_session_time_basis = AC_L7KvValue(input_manifest, "session_time_basis", "pending");
+   string input_session_definition_source = AC_L7KvValue(input_manifest, "session_definition_source", "pending");
+
+   AC_L7_INPUT_ROWS_RENDERED = input_rows;
+   AC_L7_EXPORT_L5_PASS_RENDERED = input_l5_pass;
+   AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED = input_payload_checksum;
+   AC_L7_SESSION_TIME_BASIS_RENDERED = input_session_time_basis;
+   AC_L7_SESSION_DEFINITION_SOURCE_RENDERED = input_session_definition_source;
+   AC_L7_INPUT_COUNTS_OK_RENDERED = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass);
+   AC_L7_SNAPSHOT_DRIFT_RENDERED = (input_rows != AC_L5_GATE_PASS);
+   AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED = input_rows - AC_L5_GATE_PASS;
+
    string ranked_manifest = AC_L7ReadSmallTextFile(AC_L7RankedManifestPath(), 30000);
    if(ranked_manifest == "")
    {
@@ -216,51 +263,55 @@ void AC_L7RefreshRankedSidecar()
       AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been built or accepted yet";
       AC_L7_STATUS = "Input export ready - ranked sidecar pending";
       AC_L7_TRUST_STATE = "Ranking Pending";
-      AC_L7_INPUT_ROWS_RENDERED = AC_L7KvInt(input_manifest, "row_count", 0);
-      AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED = AC_L7KvValue(input_manifest, "payload_checksum", "not_available");
-      AC_L7_SESSION_TIME_BASIS_RENDERED = AC_L7KvValue(input_manifest, "session_time_basis", "pending");
-      AC_L7_SESSION_DEFINITION_SOURCE_RENDERED = AC_L7KvValue(input_manifest, "session_definition_source", "pending");
       return;
    }
-
-   int input_rows = AC_L7KvInt(input_manifest, "row_count", 0);
-   int input_l5_pass = AC_L7KvInt(input_manifest, "l5_gate_pass", 0);
-   string input_write_ok = AC_L7KvValue(input_manifest, "write_ok", "false");
-   string input_payload_checksum = AC_L7KvValue(input_manifest, "payload_checksum", "not_available");
-   string input_session_time_basis = AC_L7KvValue(input_manifest, "session_time_basis", "pending");
-   string input_session_definition_source = AC_L7KvValue(input_manifest, "session_definition_source", "pending");
 
    string ranked_status = AC_L7KvValue(ranked_manifest, "status", "not_available");
    int ranked_input_count = AC_L7KvInt(ranked_manifest, "input_count", 0);
    int ranked_rows = AC_L7KvInt(ranked_manifest, "row_count", 0);
    int source_input_rows = AC_L7KvInt(ranked_manifest, "source_input_manifest_row_count", 0);
+   int source_l5_gate_pass = AC_L7KvInt(ranked_manifest, "source_l5_gate_pass", 0);
    string source_input_checksum = AC_L7KvValue(ranked_manifest, "source_input_payload_checksum", "not_available");
+   string ranked_input_checksum = AC_L7KvValue(ranked_manifest, "input_payload_checksum", "not_available");
+   string ranked_input_checksum_after = AC_L7KvValue(ranked_manifest, "input_payload_checksum_after_rank", "not_available");
+   string checksum_match_text = AC_L7KvValue(ranked_manifest, "input_payload_checksum_matches_source_manifest", "false");
    string ranked_payload_checksum = AC_L7KvValue(ranked_manifest, "payload_checksum", "not_available");
    string authority = AC_L7KvValue(ranked_manifest, "authority", "not_available");
    string trade_permission = AC_L7KvValue(ranked_manifest, "trade_permission", "not_available");
    string ranking_runtime = AC_L7KvValue(ranked_manifest, "ranking_runtime", "not_available");
    string selection_runtime = AC_L7KvValue(ranked_manifest, "selection_runtime", "not_available");
 
-   AC_L7_INPUT_ROWS_RENDERED = input_rows;
    AC_L7_RANKED_ROWS_RENDERED = ranked_rows;
    AC_L7_RANKED_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "ranked_count", 0);
    AC_L7_RANKED_DEGRADED_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "ranked_degraded_count", 0);
    AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "not_rankable_quality_count", 0);
+   AC_L7_ELITE_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "elite_session_relevance_count", 0);
+   AC_L7_STRONG_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "strong_session_relevance_count", 0);
+   AC_L7_ACCEPTABLE_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "acceptable_session_relevance_count", 0);
    AC_L7_WEAK_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "weak_session_relevance_count", 0);
    AC_L7_POOR_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "poor_session_relevance_count", 0);
-   AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED = input_payload_checksum;
+   AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED = AC_L7KvInt(ranked_manifest, "symbol_rank_files_written", 0);
+   AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED = AC_L7KvInt(ranked_manifest, "symbol_rank_files_actual", 0);
+   AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED = AC_L7KvValue(ranked_manifest, "symbol_rank_file_count_ok", "false");
+   AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED = AC_L7KvValue(ranked_manifest, "symbol_rank_filename_mode", "not_available");
    AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED = ranked_payload_checksum;
-   AC_L7_SESSION_TIME_BASIS_RENDERED = input_session_time_basis;
-   AC_L7_SESSION_DEFINITION_SOURCE_RENDERED = input_session_definition_source;
    AC_L7_SESSION_PROFILE_POLICY_RENDERED = AC_L7KvValue(ranked_manifest, "session_profile_policy", "not_available");
 
    bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass && input_rows == AC_L5_GATE_PASS);
    bool manifest_ok = (ranked_status == "complete");
-   bool counts_ok = (ranked_input_count == ranked_rows && ranked_rows == input_rows && source_input_rows == input_rows);
-   bool identity_ok = (source_input_checksum == input_payload_checksum && input_payload_checksum != "not_available");
+   bool counts_ok = (ranked_input_count == ranked_rows && ranked_rows == input_rows && source_input_rows == input_rows && source_l5_gate_pass == input_l5_pass);
+   bool identity_ok = (source_input_checksum == input_payload_checksum && input_payload_checksum != "not_available")
+      || (checksum_match_text == "true" && ranked_input_checksum == input_payload_checksum && ranked_input_checksum_after == input_payload_checksum);
    bool authority_ok = (authority == AC_EXTERNAL_WORKER_AUTHORITY);
    bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true");
-   bool files_ok = FileIsExist(AC_L7RankedCsvPath(), AC_CommonFlag()) && FileIsExist(AC_L7RankedTop20Path(), AC_CommonFlag());
+   bool files_ok = FileIsExist(AC_L7RankedCsvPath(), AC_CommonFlag())
+      && FileIsExist(AC_L7RankedTop20Path(), AC_CommonFlag())
+      && AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true"
+      && AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED == ranked_rows
+      && AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED == ranked_rows;
+
+   AC_L7_GENERATION_COUNTS_OK_RENDERED = counts_ok && files_ok;
+   AC_L7_GENERATION_IDENTITY_OK_RENDERED = identity_ok;
 
    if(input_ok && manifest_ok && counts_ok && identity_ok && authority_ok && permission_ok && files_ok)
    {
@@ -268,7 +319,7 @@ void AC_L7RefreshRankedSidecar()
       AC_L7_STATUS = "Ranked sidecar accepted";
       AC_L7_TRUST_STATE = "Ranking Ready";
       AC_L7_VALIDATION_STATUS = "Accepted";
-      AC_L7_VALIDATION_REASON = "ranked manifest/top20/csv sidecars match L7 input proof and permission boundaries";
+      AC_L7_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L7 input proof and permission boundaries";
       AC_L7_MAIN_BLOCKER = "none";
       AC_L7_TOP20_FIRST_LINE = AC_L7FirstTop20Symbol(AC_L7ReadSmallTextFile(AC_L7RankedTop20Path(), 16000));
       AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = AC_L7PipeField(AC_L7_TOP20_FIRST_LINE, 5, "not_available");
@@ -294,33 +345,48 @@ string AC_Layer7BoardSection()
    string text = "";
    text += "\r\nLAYER 7 - SESSION RELEVANCE RANKING\r\n";
    text += "----------------------------------------\r\n";
-   text += "Status: " + AC_L7_STATUS + "\r\n";
-   text += "Trust: " + AC_L7_TRUST_STATE + "\r\n";
-   text += "Validation: " + AC_L7_VALIDATION_STATUS + "\r\n";
-   text += "Owner: Runtime 4 - Surface Scoring Owner\r\n";
-   text += "Gateway Required: TRUE\r\n";
-   text += "Gateway Result Accepted: " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
-   text += "Input Source: Layer 5 pass set only\r\n";
-   text += "Current L5 Pass Symbols: " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
-   text += "Manifest Input Count: " + IntegerToString(AC_L7_INPUT_ROWS_RENDERED) + "\r\n";
-   text += "Ranked Symbols: " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
-   text += "Ranked Partial/Clean: " + IntegerToString(AC_L7_RANKED_COUNT_RENDERED) + "\r\n";
-   text += "Ranked Degraded: " + IntegerToString(AC_L7_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
-   text += "Not Rankable Quality: " + IntegerToString(AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
-   text += "Weak Session Relevance: " + IntegerToString(AC_L7_WEAK_COUNT_RENDERED) + "\r\n";
-   text += "Poor Session Relevance: " + IntegerToString(AC_L7_POOR_COUNT_RENDERED) + "\r\n";
-   text += "Top Ranked: " + AC_L7_TOP20_FIRST_LINE + "\r\n";
-   text += "Current Global Session: " + AC_L7_CURRENT_GLOBAL_SESSION_RENDERED + "\r\n";
-   text += "Session Basis: " + AC_L7_SESSION_TIME_BASIS_RENDERED + "\r\n";
-   text += "Session Definition Source: " + AC_L7_SESSION_DEFINITION_SOURCE_RENDERED + "\r\n";
-   text += "Session Policy: " + AC_L7_SESSION_PROFILE_POLICY_RENDERED + "\r\n";
-   text += "Dead Time Meaning: off-session caution; not a trade-time recommendation\r\n";
-   text += "UTC Basis: gateway_sidecar_utc_generated\r\n";
-   text += "Main Blocker: " + AC_L7_MAIN_BLOCKER + "\r\n";
-   text += "Gateway Job: L7_SESSION_RELEVANCE_RANKING_V1\r\n";
-   text += "Ranking Runtime: " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
-   text += "Selection Runtime: FALSE\r\n";
-   text += "Trade Permission: FALSE\r\n";
+   text += "Status:                     " + AC_L7_STATUS + "\r\n";
+   text += "Trust:                      " + AC_L7_TRUST_STATE + "\r\n";
+   text += "Validation:                 " + AC_L7_VALIDATION_STATUS + "\r\n";
+   text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
+   text += "Gateway Required:           TRUE\r\n";
+   text += "Gateway Result Accepted:    " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
+   text += "Input Source:               Layer 5 pass set only\r\n";
+   text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   text += "L7 Export L5 Pass Symbols:  " + IntegerToString(AC_L7_EXPORT_L5_PASS_RENDERED) + "\r\n";
+   text += "Manifest Input Count:       " + IntegerToString(AC_L7_INPUT_ROWS_RENDERED) + "\r\n";
+   text += "Ranked Symbols:             " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
+   text += "Input Counts OK:            " + AC_L7BoolText(AC_L7_INPUT_COUNTS_OK_RENDERED) + "\r\n";
+   text += "Generation Counts OK:       " + AC_L7BoolText(AC_L7_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
+   text += "Generation Identity OK:     " + AC_L7BoolText(AC_L7_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "L7 Snapshot Drift:          " + AC_L7BoolText(AC_L7_SNAPSHOT_DRIFT_RENDERED) + "\r\n";
+   text += "L7 Drift Delta:             " + IntegerToString(AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED) + "\r\n";
+   text += "Ranked Partial/Clean:       " + IntegerToString(AC_L7_RANKED_COUNT_RENDERED) + "\r\n";
+   text += "Ranked Degraded:            " + IntegerToString(AC_L7_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
+   text += "Not Rankable Quality:       " + IntegerToString(AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
+   text += "Elite Session Relevance:    " + IntegerToString(AC_L7_ELITE_COUNT_RENDERED) + "\r\n";
+   text += "Strong Session Relevance:   " + IntegerToString(AC_L7_STRONG_COUNT_RENDERED) + "\r\n";
+   text += "Acceptable Session:         " + IntegerToString(AC_L7_ACCEPTABLE_COUNT_RENDERED) + "\r\n";
+   text += "Weak Session Relevance:     " + IntegerToString(AC_L7_WEAK_COUNT_RENDERED) + "\r\n";
+   text += "Poor Session Relevance:     " + IntegerToString(AC_L7_POOR_COUNT_RENDERED) + "\r\n";
+   text += "SymbolRank Filename Mode:   " + AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED + "\r\n";
+   text += "SymbolRank Files Written:   " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED) + "\r\n";
+   text += "SymbolRank Files Actual:    " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED) + "\r\n";
+   text += "SymbolRank File Count OK:   " + AC_L7BoolText(AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true") + "\r\n";
+   text += "Top Ranked:                 " + AC_L7_TOP20_FIRST_LINE + "\r\n";
+   text += "Current Global Session:     " + AC_L7_CURRENT_GLOBAL_SESSION_RENDERED + "\r\n";
+   text += "Session Basis:              " + AC_L7_SESSION_TIME_BASIS_RENDERED + "\r\n";
+   text += "Session Definition Source:  " + AC_L7_SESSION_DEFINITION_SOURCE_RENDERED + "\r\n";
+   text += "Session Policy:             " + AC_L7_SESSION_PROFILE_POLICY_RENDERED + "\r\n";
+   text += "Dead Time Meaning:          off-session caution; not a trade-time recommendation\r\n";
+   text += "Ranked CSV:                 Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols.csv\r\n";
+   text += "Manifest:                   Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols.manifest\r\n";
+   text += "Top20:                      Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols_top20.txt\r\n";
+   text += "Main Blocker:               " + AC_L7_MAIN_BLOCKER + "\r\n";
+   text += "Gateway Job:                L7_SESSION_RELEVANCE_RANKING_V1\r\n";
+   text += "Ranking Runtime:            " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
+   text += "Selection Runtime:          FALSE\r\n";
+   text += "Trade Permission:           FALSE\r\n";
    return text;
 }
 
@@ -340,6 +406,8 @@ string AC_Layer7DossierSection(const string symbol)
    text += "Gateway Result Accepted: " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "Validation: " + AC_L7_VALIDATION_STATUS + "\r\n";
    text += "L5 Gate Status: " + l5_gate_status + "\r\n";
+   text += "Generation Counts OK: " + AC_L7BoolText(AC_L7_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
+   text += "Generation Identity OK: " + AC_L7BoolText(AC_L7_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
 
    if(l5_gate_status != "pass")
    {
@@ -412,13 +480,26 @@ string AC_Layer7WorkbenchSection()
    text += "gateway_result_accepted=" + AC_L7BoolKv(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "job_type=L7_SESSION_RELEVANCE_RANKING_V1\r\n";
    text += "current_l5_pass_symbols=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   text += "l7_export_l5_pass_symbols=" + IntegerToString(AC_L7_EXPORT_L5_PASS_RENDERED) + "\r\n";
    text += "manifest_input_count=" + IntegerToString(AC_L7_INPUT_ROWS_RENDERED) + "\r\n";
+   text += "input_counts_ok=" + AC_L7BoolKv(AC_L7_INPUT_COUNTS_OK_RENDERED) + "\r\n";
    text += "ranked_symbols=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
    text += "ranked_count=" + IntegerToString(AC_L7_RANKED_COUNT_RENDERED) + "\r\n";
    text += "ranked_degraded_count=" + IntegerToString(AC_L7_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
    text += "not_rankable_quality_count=" + IntegerToString(AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
+   text += "elite_session_relevance_count=" + IntegerToString(AC_L7_ELITE_COUNT_RENDERED) + "\r\n";
+   text += "strong_session_relevance_count=" + IntegerToString(AC_L7_STRONG_COUNT_RENDERED) + "\r\n";
+   text += "acceptable_session_relevance_count=" + IntegerToString(AC_L7_ACCEPTABLE_COUNT_RENDERED) + "\r\n";
    text += "weak_session_relevance_count=" + IntegerToString(AC_L7_WEAK_COUNT_RENDERED) + "\r\n";
    text += "poor_session_relevance_count=" + IntegerToString(AC_L7_POOR_COUNT_RENDERED) + "\r\n";
+   text += "generation_counts_ok=" + AC_L7BoolKv(AC_L7_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
+   text += "generation_identity_ok=" + AC_L7BoolKv(AC_L7_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "symbol_rank_filename_mode=" + AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED + "\r\n";
+   text += "symbol_rank_files_written=" + IntegerToString(AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED) + "\r\n";
+   text += "symbol_rank_files_actual=" + IntegerToString(AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED) + "\r\n";
+   text += "symbol_rank_file_count_ok=" + AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED + "\r\n";
+   text += "live_l5_drift=" + AC_L7BoolKv(AC_L7_SNAPSHOT_DRIFT_RENDERED) + "\r\n";
+   text += "live_l5_drift_delta=" + IntegerToString(AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED) + "\r\n";
    text += "current_global_session=" + AC_L7_CURRENT_GLOBAL_SESSION_RENDERED + "\r\n";
    text += "source_input_payload_checksum=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
    text += "ranked_payload_checksum=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
