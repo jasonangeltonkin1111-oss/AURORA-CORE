@@ -1,9 +1,17 @@
 $ErrorActionPreference = "Continue"
 
-# Read-only Gateway status/proof panel.
-# This script does not start, stop, repair, rebuild, install, or launch Gateway.
-# It reports scheduled task paths, live process paths, install proof, shared daemon proof,
-# account result proof, and REC-001 recorder evidence.
+# Read-only Gateway sync/status proof panel.
+# This script does not start, stop, repair, rebuild, install, copy, or launch Gateway.
+# It reports source -> build -> runtime -> task -> process -> account output -> recorder sync.
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent $scriptDir
+$workerSource = Join-Path $scriptDir "aurora_worker.py"
+$l7Source = Join-Path $scriptDir "aurora_worker_l7_session.py"
+$recorderSource = Join-Path $scriptDir "aurora_worker_recorder.py"
+$buildDir = Join-Path $scriptDir "dist\AuroraWorker"
+$buildExe = Join-Path $buildDir "AuroraWorker.exe"
+$buildDll = Join-Path $buildDir "_internal\python312.dll"
 
 $root = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
 $gatewayRoot = Join-Path $root "Gateway"
@@ -22,8 +30,13 @@ $binDll = Join-Path $binDir "_internal\python312.dll"
 $daemonTask = "AuroraWorker_Global"
 $watchTask = "AuroraWorker_Global_Watchdog"
 $expectedWorkerVersion = "0.6.6_l7_session_relevance_sidecar"
+$expectedL7ReasonMaxParts = "12"
+$expectedL7ReasonMaxChars = "512"
 $recorderMaxBytes = 262144
 $nearBoundBytes = 300000
+
+$global:FailCount = 0
+$global:WarnCount = 0
 
 function Read-KvFile($Path) {
   $map = @{}
@@ -41,11 +54,22 @@ function Field($Map, $Key, $Default = "missing") {
 
 function PassFail($Name, $Ok, $Detail) {
   if ($Ok) { Write-Host "PASS|$Name|$Detail" -ForegroundColor Green }
-  else { Write-Host "FAIL|$Name|$Detail" -ForegroundColor Red }
+  else { $global:FailCount += 1; Write-Host "FAIL|$Name|$Detail" -ForegroundColor Red }
+}
+
+function WarnInfo($Name, $Detail) {
+  $global:WarnCount += 1
+  Write-Host "WARN|$Name|$Detail" -ForegroundColor Yellow
 }
 
 function Info($Name, $Detail) { Write-Host "INFO|$Name|$Detail" -ForegroundColor Cyan }
-function WarnInfo($Name, $Detail) { Write-Host "INFO|$Name|$Detail" -ForegroundColor Yellow }
+
+function Get-SourceWorkerVersion($Path) {
+  if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return "missing_source" }
+  $m = Select-String -LiteralPath $Path -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -eq $m) { return "version_not_found" }
+  return $m.Matches[0].Groups[1].Value
+}
 
 function Show-FileProof($Label, $Path) {
   if (Test-Path -LiteralPath $Path -PathType Leaf) {
@@ -68,14 +92,6 @@ function Show-Fields($Path, $Fields, $Prefix) {
   }
   foreach ($f in $Fields) { Write-Host "$Prefix$f=$(Field $kv $f)" }
   return $kv
-}
-
-function Get-TaskActionPath($TaskName) {
-  $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-  if ($null -eq $task) { return "not_registered" }
-  $action = $task.Actions | Select-Object -First 1
-  if ($null -eq $action -or !$action.Execute) { return "missing_action" }
-  return $action.Execute.Trim('"')
 }
 
 function Show-TaskProof($TaskName, $ExpectedExe, $ExpectedWorkdir) {
@@ -123,11 +139,60 @@ function Find-AccountRoots($RootPath) {
   return $roots
 }
 
-Write-Host "=== Aurora Gateway Status Proof ==="
+function Count-Token($Text, $Token) {
+  if ([string]::IsNullOrEmpty($Text)) { return 0 }
+  return ([regex]::Matches($Text, [regex]::Escape($Token))).Count
+}
+
+function Test-ExclusiveReadLock($Path) {
+  if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return @{ ok=$false; detail="missing" } }
+  try {
+    $fs = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
+    $fs.Close()
+    return @{ ok=$true; detail="exclusive_read_open_ok" }
+  } catch {
+    return @{ ok=$false; detail=$_.Exception.Message }
+  }
+}
+
+Write-Host "=== Aurora Gateway Sync Status Report ==="
 Write-Host "mode=read_only_no_start_no_stop_no_repair_no_install_no_rebuild_no_launch"
+Write-Host "repo_root=$repoRoot"
+Write-Host "external_worker=$scriptDir"
 Write-Host "root=$root"
 Write-Host "gateway_root=$gatewayRoot"
 Write-Host "expected_worker_version=$expectedWorkerVersion"
+Write-Host "expected_l7_reason_max_parts=$expectedL7ReasonMaxParts"
+Write-Host "expected_l7_reason_max_chars=$expectedL7ReasonMaxChars"
+
+Write-Host "=== Source Sync Proof ==="
+PassFail "worker_source_present" (Test-Path -LiteralPath $workerSource -PathType Leaf) $workerSource
+PassFail "l7_source_present" (Test-Path -LiteralPath $l7Source -PathType Leaf) $l7Source
+PassFail "recorder_source_present" (Test-Path -LiteralPath $recorderSource -PathType Leaf) $recorderSource
+$sourceWorkerVersion = Get-SourceWorkerVersion $workerSource
+Write-Host "source_worker_version=$sourceWorkerVersion"
+PassFail "source_worker_version_expected" ($sourceWorkerVersion -eq $expectedWorkerVersion) "source=$sourceWorkerVersion expected=$expectedWorkerVersion"
+
+$l7Text = ""
+if (Test-Path -LiteralPath $l7Source -PathType Leaf) { $l7Text = Get-Content -LiteralPath $l7Source -Raw -ErrorAction SilentlyContinue }
+PassFail "source_l7_reason_max_parts_present" ($l7Text -match 'L7_REASON_MAX_PARTS\s*=\s*12') "L7_REASON_MAX_PARTS=12"
+PassFail "source_l7_reason_max_chars_present" ($l7Text -match 'L7_REASON_MAX_CHARS\s*=\s*512') "L7_REASON_MAX_CHARS=512"
+PassFail "source_l7_bounded_reason_present" ($l7Text -match 'def\s+_bounded_reason') "_bounded_reason"
+PassFail "source_l7_prepend_reason_token_present" ($l7Text -match 'def\s+_prepend_reason_token') "_prepend_reason_token"
+PassFail "source_l7_unsafe_reuse_concat_absent" -not($l7Text -match 'existing\.reason\s*=\s*"skipped_unchanged_input_reused_existing_ranked_outputs;"\s*\+\s*existing\.reason') "unsafe repeated prepend must be absent"
+PassFail "source_l7_bounded_reuse_present" ($l7Text -match '_prepend_reason_token\(' -or $l7Text -match '_bounded_reason\(\s*"skipped_unchanged_input_reused_existing_ranked_outputs;"') "reuse path bounded"
+
+$recText = ""
+if (Test-Path -LiteralPath $recorderSource -PathType Leaf) { $recText = Get-Content -LiteralPath $recorderSource -Raw -ErrorAction SilentlyContinue }
+PassFail "source_recorder_open_emit_close_present" ($recText -match 'log_handle_policy' -and $recText -match 'open_emit_close') "log_handle_policy=open_emit_close"
+PassFail "source_recorder_old_logger_cache_absent" -not($recText -match '_LOGGERS') "_LOGGERS absent"
+
+Write-Host "=== Build Package Proof ==="
+PassFail "build_folder_present" (Test-Path -LiteralPath $buildDir -PathType Container) $buildDir
+PassFail "build_exe_present" (Test-Path -LiteralPath $buildExe -PathType Leaf) $buildExe
+PassFail "build_internal_python_dll_present" (Test-Path -LiteralPath $buildDll -PathType Leaf) $buildDll
+Show-FileProof "build_exe" $buildExe
+Show-FileProof "build_python312_dll" $buildDll
 
 Write-Host "=== Runtime Package Proof ==="
 PassFail "runtime_folder_present" (Test-Path -LiteralPath $runtimeDir -PathType Container) $runtimeDir
@@ -135,9 +200,16 @@ PassFail "runtime_exe_present" (Test-Path -LiteralPath $runtimeExe -PathType Lea
 PassFail "runtime_internal_python_dll_present" (Test-Path -LiteralPath $runtimeDll -PathType Leaf) $runtimeDll
 Show-FileProof "runtime_exe" $runtimeExe
 Show-FileProof "runtime_python312_dll" $runtimeDll
+if ((Test-Path -LiteralPath $buildExe -PathType Leaf) -and (Test-Path -LiteralPath $runtimeExe -PathType Leaf)) {
+  $buildItem = Get-Item -LiteralPath $buildExe
+  $runItem = Get-Item -LiteralPath $runtimeExe
+  PassFail "runtime_exe_size_matches_build" ($runItem.Length -eq $buildItem.Length) "runtime=$($runItem.Length) build=$($buildItem.Length)"
+  if ($runItem.LastWriteTime -lt $buildItem.LastWriteTime) { WarnInfo "runtime_exe_older_than_build" "runtime=$($runItem.LastWriteTime) build=$($buildItem.LastWriteTime)" }
+  else { Info "runtime_exe_not_older_than_build" "runtime=$($runItem.LastWriteTime) build=$($buildItem.LastWriteTime)" }
+}
 
 Write-Host "=== Non-authoritative Bin Proof ==="
-PassFail "bin_folder_non_authoritative_present_or_absent" $true "bin_folder_runtime_authority=false path=$binDir"
+PassFail "bin_folder_runtime_authority_false" $true "bin_folder_runtime_authority=false path=$binDir"
 Show-FileProof "bin_exe_non_authoritative" $binExe
 Show-FileProof "bin_python312_dll_non_authoritative" $binDll
 
@@ -145,6 +217,7 @@ Write-Host "=== Gateway Scheduled Tasks ==="
 Show-TaskProof $daemonTask $runtimeExe $runtimeDir
 Show-TaskProof $watchTask $runtimeExe $runtimeDir
 
+Write-Host "=== Live Process Proof ==="
 $procCount = @(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count
 Write-Host "aurora_worker_process_count=$procCount"
 $procs = @(Get-Process AuroraWorker -ErrorAction SilentlyContinue)
@@ -187,6 +260,7 @@ foreach ($acct in $accounts) {
   $processPath = Join-Path $gateway "Status\worker_process_status.txt"
   $heartbeatPath = Join-Path $gateway "Status\worker_heartbeat.txt"
   $recorderLog = Join-Path $gateway "Logs\gateway_addendum.log"
+  $l7ManifestPath = Join-Path $gateway "Outbox\Layers\Layer_7_Session_Relevance_Ranking\ranked_symbols.manifest"
 
   PassFail "result_latest_present" (Test-Path -LiteralPath $resultPath -PathType Leaf) $resultPath
   PassFail "result_manifest_present" (Test-Path -LiteralPath $manifestPath -PathType Leaf) $manifestPath
@@ -206,6 +280,26 @@ foreach ($acct in $accounts) {
     PassFail "result_trade_permission_false" ((Field $resultKv 'trade_permission') -eq 'false') ("trade_permission=" + (Field $resultKv 'trade_permission'))
   }
 
+  Write-Host "=== L7 Reason Bound Proof for account ==="
+  PassFail "l7_manifest_present" (Test-Path -LiteralPath $l7ManifestPath -PathType Leaf) $l7ManifestPath
+  $l7Manifest = Read-KvFile $l7ManifestPath
+  if ($l7Manifest.Count -gt 0) {
+    $l7Reason = Field $l7Manifest 'reason'
+    $l7ReasonLen = $l7Reason.Length
+    $reuseCount = Count-Token $l7Reason 'skipped_unchanged_input_reused_existing_ranked_outputs'
+    Write-Host "l7_manifest_reason=$l7Reason"
+    Write-Host "l7_manifest_reason_length=$l7ReasonLen"
+    Write-Host "l7_manifest_reuse_token_count=$reuseCount"
+    Write-Host "l7_manifest_reason_max_parts=$(Field $l7Manifest 'reason_max_parts')"
+    Write-Host "l7_manifest_reason_max_chars=$(Field $l7Manifest 'reason_max_chars')"
+    PassFail "l7_reason_not_bloated" ($l7ReasonLen -le 512) "length=$l7ReasonLen max=512"
+    PassFail "l7_reuse_reason_not_repeated" ($reuseCount -le 1) "reuse_token_count=$reuseCount"
+    if ((Field $l7Manifest 'reason_max_parts') -ne 'missing') { PassFail "l7_reason_max_parts_runtime" ((Field $l7Manifest 'reason_max_parts') -eq $expectedL7ReasonMaxParts) ("reason_max_parts=" + (Field $l7Manifest 'reason_max_parts')) }
+    else { WarnInfo "l7_reason_max_parts_runtime_missing" "runtime may not be rebuilt/refreshed after source patch" }
+    if ((Field $l7Manifest 'reason_max_chars') -ne 'missing') { PassFail "l7_reason_max_chars_runtime" ((Field $l7Manifest 'reason_max_chars') -eq $expectedL7ReasonMaxChars) ("reason_max_chars=" + (Field $l7Manifest 'reason_max_chars')) }
+    else { WarnInfo "l7_reason_max_chars_runtime_missing" "runtime may not be rebuilt/refreshed after source patch" }
+  }
+
   Write-Host "=== REC-001 Recorder Proof for account ==="
   PassFail "recorder_log_present" (Test-Path -LiteralPath $recorderLog -PathType Leaf) $recorderLog
   if (Test-Path -LiteralPath $recorderLog -PathType Leaf) {
@@ -221,6 +315,9 @@ foreach ($acct in $accounts) {
     PassFail "recorder_current_worker_seen" (($logTail | Select-String -Pattern 'worker_version=0\.6\.6_l7_session_relevance_sidecar' -Quiet)) 'worker_version=0.6.6_l7_session_relevance_sidecar'
     PassFail "recorder_authority_safe" (($logTail | Select-String -Pattern 'authority=calculation_support_only' -Quiet)) 'authority=calculation_support_only'
     PassFail "recorder_trade_permission_false" (($logTail | Select-String -Pattern 'trade_permission=false' -Quiet)) 'trade_permission=false'
+    PassFail "recorder_open_emit_close_seen" (($logTail | Select-String -Pattern 'log_handle_policy=open_emit_close' -Quiet)) 'log_handle_policy=open_emit_close'
+    $lock = Test-ExclusiveReadLock $recorderLog
+    PassFail "recorder_log_not_exclusively_locked" $lock.ok $lock.detail
     $sizeOk = ($logItem.Length -le $nearBoundBytes) -or ($rotationFiles.Count -gt 0)
     PassFail "recorder_size_near_bound_or_rotated" $sizeOk "size=$($logItem.Length) maxBytes=$recorderMaxBytes nearBound=$nearBoundBytes rotation_count=$($rotationFiles.Count)"
     $boundaryLines = @($logTail | Where-Object { $_ -match 'event=gateway_result_boundary' })
@@ -229,7 +326,21 @@ foreach ($acct in $accounts) {
     if ($loopText -match '^[0-9]+$') { $loopCount = [int]$loopText }
     $spamOk = !($loopCount -gt 20 -and $boundaryLines.Count -gt ($loopCount / 2))
     PassFail "recorder_no_obvious_boundary_spam" $spamOk "recent_boundary_lines=$($boundaryLines.Count) shared_loop_count=$loopCount"
+    $tailText = ($logTail -join "`n")
+    $tailReuseCount = Count-Token $tailText 'skipped_unchanged_input_reused_existing_ranked_outputs'
+    Write-Host "recorder_tail_l7_reuse_token_count=$tailReuseCount"
+    if ($tailReuseCount -gt 40) { WarnInfo "recorder_tail_contains_old_l7_bloat" "tail_reuse_token_count=$tailReuseCount; old log history may remain until rotation" }
   }
 }
 
-Write-Host "=== End Gateway Status Proof ==="
+Write-Host "=== Sync Decision Summary ==="
+Write-Host "fail_count=$global:FailCount"
+Write-Host "warn_count=$global:WarnCount"
+if ($global:FailCount -eq 0) {
+  Write-Host "DECISION=TEST_FIRST" -ForegroundColor Yellow
+  Write-Host "REASON=All required sync/status checks passed. If warnings remain, review whether they are stale history or require rebuild/rotation."
+} else {
+  Write-Host "DECISION=HOLD" -ForegroundColor Red
+  Write-Host "REASON=One or more sync/status checks failed. Do not promote until failures are explained or fixed."
+}
+Write-Host "=== End Gateway Sync Status Report ==="
