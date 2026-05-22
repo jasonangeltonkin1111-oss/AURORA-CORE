@@ -17,6 +17,29 @@ double AC_L1SafeDealFee(const ulong deal_ticket)
    return 0.0;
 }
 
+bool AC_L1SelectedDealIsClosedTrade(const ulong deal_ticket)
+{
+   if(deal_ticket == 0) return false;
+   long entry = HistoryDealGetInteger(deal_ticket, DEAL_ENTRY);
+   if(!AC_L1DealEntryIsClosed(entry)) return false;
+   string symbol = HistoryDealGetString(deal_ticket, DEAL_SYMBOL);
+   if(symbol == "") return false;
+   long type = HistoryDealGetInteger(deal_ticket, DEAL_TYPE);
+   return (type == DEAL_TYPE_BUY || type == DEAL_TYPE_SELL);
+}
+
+int AC_L1CountSelectedClosedTradeDeals()
+{
+   int count = 0;
+   int total = HistoryDealsTotal();
+   for(int i = total - 1; i >= 0; i--)
+   {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(AC_L1SelectedDealIsClosedTrade(ticket)) count++;
+   }
+   return count;
+}
+
 bool AC_L1FindEntryDealForPosition(const long position_id,
                                    const int close_deal_index,
                                    datetime &entry_time,
@@ -215,6 +238,7 @@ void AC_L1ScanHistory()
    datetime from_time = 0;
    if(to_time > 0)
       from_time = (datetime)(to_time - (AC_L1_HISTORY_LOOKBACK_DAYS * 86400));
+
    ResetLastError();
    if(!HistorySelect(from_time, to_time))
    {
@@ -225,15 +249,32 @@ void AC_L1ScanHistory()
       return;
    }
 
-   AC_L1_HISTORY_STATUS = "available_bounded";
-   AC_L1_HISTORY_QUALITY = "bounded_window";
-   AC_L1_HISTORY_NOTE = "selected last 90 days; closed rows cap=100; cancel-like rows cap=20; totals refer to selected bounded history, not all-time";
+   int closed_in_lookback = AC_L1CountSelectedClosedTradeDeals();
+   bool extend_to_minimum = (closed_in_lookback < AC_L1_CLOSED_SCAN_LIMIT);
+   if(extend_to_minimum)
+   {
+      ResetLastError();
+      if(!HistorySelect(0, to_time))
+      {
+         AC_L1_HISTORY_STATUS = "unavailable";
+         AC_L1_HISTORY_QUALITY = "unavailable";
+         AC_L1_HISTORY_NOTE = "HistorySelect extension failed; history must not be interpreted as zero";
+         AC_L1_SCAN_FAILURE = "HistorySelect_extend_failed_error=" + IntegerToString(GetLastError());
+         return;
+      }
+   }
+
+   AC_L1_HISTORY_STATUS = (extend_to_minimum ? "available_extended_to_minimum" : "available_bounded_lookback");
+   AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill" : "bounded_lookback_all_rows");
+   AC_L1_HISTORY_NOTE = (extend_to_minimum
+      ? "last 90 days had fewer than 100 closed trades; selected older history to fill up to 100 rows when available; totals refer to selected filled window"
+      : "selected last 90 days; all closed rows inside lookback are retained even when more than 100; totals refer to selected lookback");
    AC_L1_HISTORY_DEALS_TOTAL = HistoryDealsTotal();
    AC_L1_HISTORY_ORDERS_TOTAL = HistoryOrdersTotal();
 
    for(int i = AC_L1_HISTORY_DEALS_TOTAL - 1; i >= 0; i--)
    {
-      if(ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT) break;
+      if(extend_to_minimum && ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT) break;
       ulong deal_ticket = HistoryDealGetTicket(i);
       if(deal_ticket == 0) continue;
       long entry = HistoryDealGetInteger(deal_ticket, DEAL_ENTRY);
@@ -321,12 +362,13 @@ void AC_L1ScanHistory()
       {
          AC_L1_CLOSED[next].source_quality = "partial_core";
          AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
-         AC_L1_HISTORY_QUALITY = "bounded_window_partial_core";
+         AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill_partial_core" : "bounded_lookback_partial_core");
       }
       else if(AC_L1_CLOSED[next].order_context_status != "protective_context_complete")
       {
          AC_L1_ORDER_CONTEXT_PARTIAL_COUNT++;
-         if(AC_L1_HISTORY_QUALITY == "bounded_window") AC_L1_HISTORY_QUALITY = "bounded_window_order_context_partial";
+         if(AC_L1_HISTORY_QUALITY == "bounded_lookback_all_rows") AC_L1_HISTORY_QUALITY = "bounded_lookback_order_context_partial";
+         if(AC_L1_HISTORY_QUALITY == "lookback_plus_minimum_fill") AC_L1_HISTORY_QUALITY = "lookback_plus_minimum_fill_order_context_partial";
       }
 
       AC_L1AddClosedStats(AC_L1_CLOSED[next]);
@@ -368,11 +410,11 @@ void AC_L1ScanHistory()
       }
    }
 
-   if(ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT || ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
-      AC_L1_HISTORY_QUALITY = "bounded_window_row_capped";
+   if(ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
+      AC_L1_HISTORY_QUALITY += "_cancel_rows_capped";
 
    if(ArraySize(AC_L1_CLOSED) <= 0)
-      AC_L1_HISTORY_NOTE = "selected bounded history; no closed exit deals detected; window=90d, closed cap=100, cancel cap=20";
+      AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available";
 }
 
 void AC_RefreshLayer1AccountTruth()
