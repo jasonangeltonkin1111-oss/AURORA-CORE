@@ -147,6 +147,188 @@ string AC_L1CurrencyName(const int index)
    return "UNK";
 }
 
+void AC_L1AssetTotals(int &worst_index,
+                      double &worst_net)
+{
+   double net[6];
+   int trades[6];
+   for(int r = 0; r < 6; r++) { net[r] = 0.0; trades[r] = 0; }
+   for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
+   {
+      int idx = AC_L1AssetClassIndex(AC_L1_CLOSED[i].symbol);
+      if(idx < 0 || idx > 5) idx = 5;
+      trades[idx]++;
+      net[idx] += AC_L1_CLOSED[i].net_result;
+   }
+   worst_index = -1;
+   worst_net = 0.0;
+   for(int c = 0; c < 6; c++)
+   {
+      if(trades[c] <= 0) continue;
+      if(worst_index < 0 || net[c] < worst_net)
+      {
+         worst_index = c;
+         worst_net = net[c];
+      }
+   }
+}
+
+void AC_L1TimeWindowWorst(int &worst_index,
+                          double &worst_net)
+{
+   double net[5];
+   int trades[5];
+   for(int r = 0; r < 5; r++) { net[r] = 0.0; trades[r] = 0; }
+   for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
+   {
+      int idx = AC_L1TimeWindowIndex(AC_L1_CLOSED[i].close_time);
+      if(idx < 0 || idx > 4) continue;
+      trades[idx]++;
+      net[idx] += AC_L1_CLOSED[i].net_result;
+   }
+   worst_index = -1;
+   worst_net = 0.0;
+   for(int c = 0; c < 5; c++)
+   {
+      if(trades[c] <= 0) continue;
+      if(worst_index < 0 || net[c] < worst_net)
+      {
+         worst_index = c;
+         worst_net = net[c];
+      }
+   }
+}
+
+void AC_L1HoldBucketWorst(int &worst_index,
+                          double &worst_net)
+{
+   double net[5];
+   int trades[5];
+   for(int r = 0; r < 5; r++) { net[r] = 0.0; trades[r] = 0; }
+   for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
+   {
+      int idx = AC_L1HoldBucketIndex(AC_L1_CLOSED[i]);
+      if(idx < 0 || idx > 4) continue;
+      trades[idx]++;
+      net[idx] += AC_L1_CLOSED[i].net_result;
+   }
+   worst_index = -1;
+   worst_net = 0.0;
+   for(int c = 0; c < 5; c++)
+   {
+      if(trades[c] <= 0) continue;
+      if(worst_index < 0 || net[c] < worst_net)
+      {
+         worst_index = c;
+         worst_net = net[c];
+      }
+   }
+}
+
+void AC_L1ClusterStats(int &cluster_groups,
+                       int &cluster_rows,
+                       double &cluster_net)
+{
+   int raw_rows = ArraySize(AC_L1_CLOSED);
+   cluster_groups = 0;
+   cluster_rows = 0;
+   cluster_net = 0.0;
+   string seen = "|";
+   for(int i = 0; i < raw_rows; i++)
+   {
+      string key = AC_L1ClusterKey(AC_L1_CLOSED[i]);
+      string mark = "|" + key + "|";
+      if(StringFind(seen, mark) >= 0) continue;
+      seen += key + "|";
+      int group_rows = 0;
+      double group_net = 0.0;
+      for(int j = 0; j < raw_rows; j++)
+      {
+         if(AC_L1ClusterKey(AC_L1_CLOSED[j]) != key) continue;
+         group_rows++;
+         group_net += AC_L1_CLOSED[j].net_result;
+      }
+      if(group_rows > 1)
+      {
+         cluster_groups++;
+         cluster_rows += group_rows;
+         cluster_net += group_net;
+      }
+   }
+}
+
+string AC_L1SelectedHistoryNotice()
+{
+   string text = AC_L1MapHeader("SELECTED HISTORY NOTICE");
+   text += "Results Scope:          SELECTED HISTORY ONLY\r\n";
+   text += "Selected Closed Rows:   " + IntegerToString(ArraySize(AC_L1_CLOSED)) + "\r\n";
+   text += "History Rule:           all closed rows inside last 90 days; fill older rows to 100 when available\r\n";
+   text += "All-Time Account:       not represented unless separately generated\r\n";
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
+string AC_L1DiagnosisPanel()
+{
+   int closed_count = ArraySize(AC_L1_CLOSED);
+   double profit_factor = (AC_L1_GROSS_LOSS < 0.0 ? AC_L1_GROSS_PROFIT / MathAbs(AC_L1_GROSS_LOSS) : 0.0);
+   double expected_payoff = (closed_count > 0 ? AC_L1_NET_PROFIT / closed_count : 0.0);
+   int worst_asset = -1;
+   double worst_asset_net = 0.0;
+   int worst_time = -1;
+   double worst_time_net = 0.0;
+   int worst_hold = -1;
+   double worst_hold_net = 0.0;
+   AC_L1AssetTotals(worst_asset, worst_asset_net);
+   AC_L1TimeWindowWorst(worst_time, worst_time_net);
+   AC_L1HoldBucketWorst(worst_hold, worst_hold_net);
+
+   string mode = "neutral_numeric_review";
+   if(closed_count <= 0) mode = "insufficient_sample";
+   else if(profit_factor < 1.0 || expected_payoff < 0.0) mode = "defensive_numeric_review";
+   else mode = "positive_history_not_edge_proof";
+
+   string text = AC_L1MapHeader("LAYER 1 DIAGNOSIS PANEL");
+   text += "Mode:                   " + mode + "\r\n";
+   text += "Profit Factor:          " + DoubleToString(profit_factor, 2) + "\r\n";
+   text += "Expected Payoff:        " + AC_L1MoneyText(expected_payoff) + "\r\n";
+   text += "Primary Leak Symbol:    " + AC_L1_WORST_SYMBOL + " " + AC_L1MoneyText(AC_L1_WORST_SYMBOL_NET) + "\r\n";
+   text += "Primary Leak Asset:     " + (worst_asset >= 0 ? AC_L1AssetClassName(worst_asset) : "none") + " " + AC_L1MoneyText(worst_asset_net) + "\r\n";
+   text += "Primary Leak Window:    " + (worst_time >= 0 ? AC_L1TimeWindowName(worst_time) : "none") + " " + AC_L1MoneyText(worst_time_net) + "\r\n";
+   text += "Primary Leak Hold:      " + (worst_hold >= 0 ? AC_L1HoldBucketName(worst_hold) : "none") + " " + AC_L1MoneyText(worst_hold_net) + "\r\n";
+   text += "Sample:                 " + IntegerToString(closed_count) + " selected closed rows; not edge proof\r\n";
+   text += "Operator Focus:         review leak maps; Layer 1 does not pause, rank, select, or permit trades\r\n";
+   return text;
+}
+
+string AC_L1FlagLedger()
+{
+   int closed_count = ArraySize(AC_L1_CLOSED);
+   double profit_factor = (AC_L1_GROSS_LOSS < 0.0 ? AC_L1_GROSS_PROFIT / MathAbs(AC_L1_GROSS_LOSS) : 0.0);
+   double expected_payoff = (closed_count > 0 ? AC_L1_NET_PROFIT / closed_count : 0.0);
+   double hard_risk = AC_L1_EQUITY * 0.002;
+   double largest_loss_usage = (hard_risk > 0.0 && AC_L1_LARGEST_LOSS < 0.0 ? (MathAbs(AC_L1_LARGEST_LOSS) / hard_risk) * 100.0 : 0.0);
+   int cluster_groups = 0;
+   int cluster_rows = 0;
+   double cluster_net = 0.0;
+   AC_L1ClusterStats(cluster_groups, cluster_rows, cluster_net);
+
+   string text = AC_L1MapHeader("LAYER 1 FLAG LEDGER");
+   if(closed_count <= 0)
+      text += "INFO     | no_closed_rows | selected history has no closed rows\r\n";
+   if(profit_factor < 1.0 && closed_count > 0)
+      text += "CRITICAL | profit_factor_below_1 | " + DoubleToString(profit_factor, 2) + "\r\n";
+   if(expected_payoff < 0.0 && closed_count > 0)
+      text += "CRITICAL | expected_payoff_negative | " + AC_L1MoneyText(expected_payoff) + "\r\n";
+   if(largest_loss_usage > 100.0)
+      text += "CRITICAL | largest_loss_over_0.2pct_hard_risk | " + AC_L1PercentText(largest_loss_usage) + "\r\n";
+   if(cluster_rows > 0)
+      text += "WARNING  | cluster_rows | " + IntegerToString(cluster_rows) + " / " + IntegerToString(closed_count) + " rows, net " + AC_L1MoneyText(cluster_net) + "\r\n";
+   text += "INFO     | selected_history_not_all_time | " + IntegerToString(closed_count) + " selected rows\r\n";
+   text += "INFO     | flag_scope | numeric diagnostics only; no trade permission\r\n";
+   return text;
+}
+
 string AC_L1RiskBudgetMap()
 {
    double unit_risk = AC_L1_EQUITY * 0.001;
@@ -190,7 +372,7 @@ string AC_L1AssetClassMap()
    text += AC_L1PadRight("Class", 12) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
    for(int c = 0; c < 6; c++)
       text += AC_L1MapStatsLine(AC_L1AssetClassName(c), trades[c], wins[c], net[c]);
-   text += "Classification Basis: symbol-name heuristic only; taxonomy-owner link pending\r\n";
+   text += "Classification Basis: Layer 1 heuristic fallback; Layer 3 taxonomy link pending\r\n";
    return text;
 }
 
@@ -407,6 +589,9 @@ string AC_L1PortfolioMapSummary()
 string AC_L1AccountPortfolioMapsFull()
 {
    string text = "";
+   text += AC_L1SelectedHistoryNotice();
+   text += AC_L1DiagnosisPanel();
+   text += AC_L1FlagLedger();
    text += AC_L1RiskBudgetMap();
    text += AC_L1AssetClassMap();
    text += AC_L1CurrencyExposureMap();
