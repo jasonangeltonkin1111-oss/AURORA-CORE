@@ -37,6 +37,14 @@ static int AC_L6_HOSTILE_FRICTION_COUNT = 0;
 static int AC_L6_ZERO_COST_SUSPICIOUS_COUNT = 0;
 static int AC_L6_COST_MODEL_MISMATCH_COUNT = 0;
 static int AC_L6_SYMBOL_RANK_FILES_WRITTEN = 0;
+static int AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = 0;
+static int AC_L6_SOURCE_L5_GATE_PASS = 0;
+static string AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = "not_available";
+static bool AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST = false;
+static bool AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS = false;
+static bool AC_L6_GENERATION_COUNTS_OK = false;
+static bool AC_L6_LIVE_L5_DRIFT = false;
+static int AC_L6_LIVE_L5_DRIFT_DELTA = 0;
 static bool AC_L6_RANKED_ACCEPTED = false;
 static uint AC_L6_CALCULATION_DURATION_MS = 0;
 
@@ -171,6 +179,14 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_ZERO_COST_SUSPICIOUS_COUNT = 0;
    AC_L6_COST_MODEL_MISMATCH_COUNT = 0;
    AC_L6_SYMBOL_RANK_FILES_WRITTEN = 0;
+   AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = 0;
+   AC_L6_SOURCE_L5_GATE_PASS = 0;
+   AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = "not_available";
+   AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST = false;
+   AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS = false;
+   AC_L6_GENERATION_COUNTS_OK = false;
+   AC_L6_LIVE_L5_DRIFT = false;
+   AC_L6_LIVE_L5_DRIFT_DELTA = 0;
    AC_L6_MANIFEST_PAYLOAD_CHECKSUM = "not_available";
    AC_L6_TOP20_FIRST_LINE = "not_available";
    AC_L6_CALCULATION_DURATION_MS = 0;
@@ -198,6 +214,11 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_ZERO_COST_SUSPICIOUS_COUNT = AC_KvInt(manifest, "zero_cost_nonzero_spread_suspicious_count", 0);
    AC_L6_COST_MODEL_MISMATCH_COUNT = AC_KvInt(manifest, "cost_model_mismatch_count", 0);
    AC_L6_SYMBOL_RANK_FILES_WRITTEN = AC_KvInt(manifest, "symbol_rank_files_written", 0);
+   AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT = AC_KvInt(manifest, "source_input_manifest_row_count", 0);
+   AC_L6_SOURCE_L5_GATE_PASS = AC_KvInt(manifest, "source_l5_gate_pass", 0);
+   AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM = AC_KvValue(manifest, "source_input_payload_checksum", "not_available");
+   AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST = (AC_KvValue(manifest, "input_csv_count_matches_input_manifest", "false") == "true");
+   AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS = (AC_KvValue(manifest, "input_csv_count_matches_source_l5_gate_pass", "false") == "true");
    AC_L6_MANIFEST_PAYLOAD_CHECKSUM = AC_KvValue(manifest, "payload_checksum", "not_available");
 
    string authority = AC_KvValue(manifest, "authority", "not_available");
@@ -206,7 +227,14 @@ void AC_RefreshLayer6RankedSidecar()
    string selection_runtime = AC_KvValue(manifest, "selection_runtime", "not_available");
 
    bool manifest_ok = (AC_L6_MANIFEST_STATUS == "complete");
-   bool counts_ok = (AC_L6_MANIFEST_INPUT_COUNT == AC_L6_RANKED_SYMBOLS && AC_L6_RANKED_SYMBOLS == AC_L5_GATE_PASS);
+   bool basic_rank_counts_ok = (AC_L6_MANIFEST_INPUT_COUNT == AC_L6_RANKED_SYMBOLS);
+   bool source_manifest_count_ok = (AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT > 0 && AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT == AC_L6_MANIFEST_INPUT_COUNT);
+   bool source_l5_export_count_ok = (AC_L6_SOURCE_L5_GATE_PASS > 0 && AC_L6_SOURCE_L5_GATE_PASS == AC_L6_MANIFEST_INPUT_COUNT);
+   bool source_manifest_flags_ok = (AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST && AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS);
+   AC_L6_GENERATION_COUNTS_OK = (basic_rank_counts_ok && source_manifest_count_ok && source_l5_export_count_ok && source_manifest_flags_ok);
+   AC_L6_LIVE_L5_DRIFT = (AC_L6_RANKED_SYMBOLS != AC_L5_GATE_PASS);
+   AC_L6_LIVE_L5_DRIFT_DELTA = AC_L6_RANKED_SYMBOLS - AC_L5_GATE_PASS;
+   bool counts_ok = AC_L6_GENERATION_COUNTS_OK;
    bool authority_ok = (authority == "calculation_support_only");
    bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true");
    bool files_ok = FileIsExist(AC_L6RankedCsvPath(), AC_CommonFlag()) && FileIsExist(AC_L6RankedTop20Path(), AC_CommonFlag());
@@ -215,11 +243,22 @@ void AC_RefreshLayer6RankedSidecar()
    if(manifest_ok && counts_ok && authority_ok && permission_ok && files_ok && symbol_files_ok)
    {
       AC_L6_RANKED_ACCEPTED = true;
-      AC_L6_STATUS = "Ranked sidecar accepted";
-      AC_L6_TRUST_STATE = "Ranking Ready";
-      AC_L6_VALIDATION_STATUS = "Accepted";
-      AC_L6_VALIDATION_REASON = "ranked manifest/top20/csv/per-symbol sidecars match L5 pass set and permission boundaries";
-      AC_L6_MAIN_BLOCKER = "none";
+      if(AC_L6_LIVE_L5_DRIFT)
+      {
+         AC_L6_STATUS = "Ranked sidecar accepted - L5 drift";
+         AC_L6_TRUST_STATE = "Ranking Ready With Drift";
+         AC_L6_VALIDATION_STATUS = "AcceptedWithDrift";
+         AC_L6_VALIDATION_REASON = "ranked sidecar matches its exported L6 input generation; current live L5 pass count drifted after export";
+         AC_L6_MAIN_BLOCKER = "none_l6_snapshot_valid_current_l5_drift=true";
+      }
+      else
+      {
+         AC_L6_STATUS = "Ranked sidecar accepted";
+         AC_L6_TRUST_STATE = "Ranking Ready";
+         AC_L6_VALIDATION_STATUS = "Accepted";
+         AC_L6_VALIDATION_REASON = "ranked sidecar matches exported L6 input generation and current L5 pass count";
+         AC_L6_MAIN_BLOCKER = "none";
+      }
       AC_L6_TOP20_FIRST_LINE = AC_L6FirstTop20Symbol(AC_ReadSmallTextFile(AC_L6RankedTop20Path(), 16000));
       return;
    }
@@ -228,7 +267,12 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_TRUST_STATE = "Ranking Degraded";
    AC_L6_VALIDATION_STATUS = "Degraded";
    AC_L6_VALIDATION_REASON = "manifest_ok=" + (manifest_ok ? "true" : "false")
-      + ";counts_ok=" + (counts_ok ? "true" : "false")
+      + ";generation_counts_ok=" + (AC_L6_GENERATION_COUNTS_OK ? "true" : "false")
+      + ";basic_rank_counts_ok=" + (basic_rank_counts_ok ? "true" : "false")
+      + ";source_manifest_count_ok=" + (source_manifest_count_ok ? "true" : "false")
+      + ";source_l5_export_count_ok=" + (source_l5_export_count_ok ? "true" : "false")
+      + ";source_manifest_flags_ok=" + (source_manifest_flags_ok ? "true" : "false")
+      + ";live_l5_drift=" + (AC_L6_LIVE_L5_DRIFT ? "true" : "false")
       + ";authority_ok=" + (authority_ok ? "true" : "false")
       + ";permission_ok=" + (permission_ok ? "true" : "false")
       + ";files_ok=" + (files_ok ? "true" : "false")
@@ -248,9 +292,13 @@ string AC_Layer6BoardSection()
    text += "Gateway Required:           TRUE\r\n";
    text += "Gateway Result Accepted:    " + (AC_L6_RANKED_ACCEPTED ? "TRUE" : "FALSE") + "\r\n";
    text += "Input Source:               Layer 5 pass set only\r\n";
-   text += "L5 Pass Symbols:            " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "L6 Export L5 Pass Symbols:  " + IntegerToString(AC_L6_SOURCE_L5_GATE_PASS) + "\r\n";
    text += "Manifest Input Count:       " + IntegerToString(AC_L6_MANIFEST_INPUT_COUNT) + "\r\n";
    text += "Ranked Symbols:             " + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
+   text += "Generation Counts OK:       " + (AC_L6_GENERATION_COUNTS_OK ? "TRUE" : "FALSE") + "\r\n";
+   text += "L6 Snapshot Drift:          " + (AC_L6_LIVE_L5_DRIFT ? "TRUE" : "FALSE") + "\r\n";
+   text += "L6 Drift Delta:             " + IntegerToString(AC_L6_LIVE_L5_DRIFT_DELTA) + "\r\n";
    text += "Ranked Degraded:            " + IntegerToString(AC_L6_RANKED_DEGRADED_SYMBOLS) + "\r\n";
    text += "Not Rankable Quality:       " + IntegerToString(AC_L6_NOT_RANKABLE_QUALITY_SYMBOLS) + "\r\n";
    text += "Elite Friction:             " + IntegerToString(AC_L6_ELITE_FRICTION_COUNT) + "\r\n";
@@ -290,6 +338,9 @@ string AC_Layer6DossierSection(const string symbol)
    text += "Owner: " + AC_RUNTIME4_OWNER + "\r\n";
    text += "Gateway Result Accepted: " + (AC_L6_RANKED_ACCEPTED ? "TRUE" : "FALSE") + "\r\n";
    text += "Validation: " + AC_L6_VALIDATION_STATUS + "\r\n";
+   text += "L6 Snapshot Drift: " + (AC_L6_LIVE_L5_DRIFT ? "TRUE" : "FALSE") + "\r\n";
+   text += "Current L5 Pass Symbols: " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "L6 Export L5 Pass Symbols: " + IntegerToString(AC_L6_SOURCE_L5_GATE_PASS) + "\r\n";
    text += "L5 Gate Status: " + l5_status + "\r\n";
    text += "L5 Gate Reason: " + l5_reason + "\r\n";
 
@@ -361,9 +412,17 @@ string AC_Layer6WorkbenchSection()
    text += "gateway_required=true\r\n";
    text += "gateway_result_accepted=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
    text += "job_type=" + AC_L6_JOB_TYPE + "\r\n";
-   text += "input_l5_pass_symbols=" + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "current_l5_pass_symbols=" + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "l6_export_l5_pass_symbols=" + IntegerToString(AC_L6_SOURCE_L5_GATE_PASS) + "\r\n";
    text += "manifest_input_count=" + IntegerToString(AC_L6_MANIFEST_INPUT_COUNT) + "\r\n";
    text += "ranked_symbols=" + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
+   text += "source_input_manifest_row_count=" + IntegerToString(AC_L6_SOURCE_INPUT_MANIFEST_ROW_COUNT) + "\r\n";
+   text += "source_input_payload_checksum=" + AC_L6_SOURCE_INPUT_PAYLOAD_CHECKSUM + "\r\n";
+   text += "input_csv_count_matches_input_manifest=" + (AC_L6_INPUT_COUNT_MATCHES_INPUT_MANIFEST ? "true" : "false") + "\r\n";
+   text += "input_csv_count_matches_source_l5_gate_pass=" + (AC_L6_INPUT_COUNT_MATCHES_SOURCE_L5_GATE_PASS ? "true" : "false") + "\r\n";
+   text += "generation_counts_ok=" + (AC_L6_GENERATION_COUNTS_OK ? "true" : "false") + "\r\n";
+   text += "live_l5_drift=" + (AC_L6_LIVE_L5_DRIFT ? "true" : "false") + "\r\n";
+   text += "live_l5_drift_delta=" + IntegerToString(AC_L6_LIVE_L5_DRIFT_DELTA) + "\r\n";
    text += "ranked_degraded_symbols=" + IntegerToString(AC_L6_RANKED_DEGRADED_SYMBOLS) + "\r\n";
    text += "not_rankable_quality_symbols=" + IntegerToString(AC_L6_NOT_RANKABLE_QUALITY_SYMBOLS) + "\r\n";
    text += "elite_friction_count=" + IntegerToString(AC_L6_ELITE_FRICTION_COUNT) + "\r\n";
