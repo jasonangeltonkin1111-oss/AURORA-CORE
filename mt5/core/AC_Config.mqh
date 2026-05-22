@@ -3,12 +3,12 @@
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
 static const string AC_BUILD_PHASE        = "runtime_3c_job_bus_l5_advisory_shell_source_closeout";
-static const string AC_BUILD_VERSION      = "1.040";
-static const string AC_UPGRADE_ID         = "RUNTIME_3C_JOB_BUS_RUNTIME_5_ADVISORY_SHELL_SOURCE_CLOSEOUT";
-static const string AC_UPGRADE_SUMMARY    = "Closes source-side Runtime 3C job-bus alignment and exposes Runtime 5 Deep Inspection Advisory shell truth on Board, Dossier, Workbench, diagnostics, and status rows without heavy calculations or new owner authority.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and Workbench diagnostics. Runtime 5 owns advisory shell/status only. L1-L4, FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain outside Runtime 3/5 authority.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; build worker; install global worker; confirm packaged one-folder worker runs after rebuild; confirm shared status and per-account heartbeat/result use worker_version=0.6.0_3c_job_bus_no_powershell_daemon and schema_version=2; confirm Workbench shows accepted_result=true and job_bus_status=Accepted; confirm Board/Dossier/Workbench render Layer 5 advisory shell truth.";
-static const string AC_LOGGING_POLICY     = "event_boundary_external_worker_job_bus_status_watchdog_proof_resource_telemetry_layer5_shell_no_popup_alerts_no_timer_blocking";
+static const string AC_BUILD_VERSION      = "1.041";
+static const string AC_UPGRADE_ID         = "RUNTIME_3C_JOB_BUS_RUNTIME_5_EXTERNAL_WORKER_CALCULATION_CONTRACT";
+static const string AC_UPGRADE_SUMMARY    = "Locks the Runtime 5 advisory boundary: deep calculations must flow through Runtime 3 external-worker job-bus acceptance, while Runtime 5 owns only advisory interpretation and visible Board, Dossier, Workbench, diagnostics, and status surfaces.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 3 owns worker relationship, install/status detection, worker_required control output, snapshot/job request export, heartbeat/result path contracts, global daemon/watchdog status truth, and worker result acceptance. Runtime 5 owns advisory interpretation and presentation only. L1-L4, FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated by later layers.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile in MetaEditor; build worker; install global worker; confirm packaged one-folder worker runs after rebuild; confirm shared status and per-account heartbeat/result use worker_version=0.6.0_3c_job_bus_no_powershell_daemon and schema_version=2; confirm Workbench shows accepted_result=true and job_bus_status=Accepted; confirm Board/Dossier/Workbench render Layer 5 external-worker calculation boundary and no-duplicate-owner truth.";
+static const string AC_LOGGING_POLICY     = "event_boundary_external_worker_job_bus_status_watchdog_proof_resource_telemetry_layer5_external_worker_calculation_contract_no_popup_alerts_no_timer_blocking";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - External Calculation Worker Owner";
@@ -25,7 +25,10 @@ static const string AC_LAYER_3_NAME       = "Layer 3 - Broker Specs and Value Tr
 static const string AC_LAYER_4_NAME       = "Layer 4 - Live Quote and Spread Truth";
 static const string AC_LAYER_5_NAME       = "Layer 5 - Deep Inspection Advisory Truth";
 static const string AC_LAYER_EXTERNAL_WORKER_NAME = "External Calculation Worker Foundation";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.040_runtime3c_l5_advisory_shell";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.041_runtime3c_l5_external_worker_calc_contract";
+static const string AC_L5_CALCULATION_EXECUTION_OWNER = "Runtime3_External_Worker_Job_Bus";
+static const string AC_L5_ADVISORY_SURFACE_OWNER = "Runtime5_Deep_Inspection_Advisory";
+static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_must_consume_l1_l2_l3_l4_owner_packets_and_runtime3_accepted_worker_result_only";
 static const string AC_BASE_FOLDER        = "Aurora Core";
 static const string AC_WORKBENCH_FOLDER   = "Workbench";
 static const string AC_EXTERNAL_WORKER_FOLDER = "External Worker";
