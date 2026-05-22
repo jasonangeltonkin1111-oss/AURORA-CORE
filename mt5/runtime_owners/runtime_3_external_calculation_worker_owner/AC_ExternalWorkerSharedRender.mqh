@@ -23,8 +23,12 @@ void AC_AppendExternalWorkerSharedSupervisorTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_last_check_utc=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_check_utc + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_last_action=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_last_reason=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_reason + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_restart_attempted=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_attempted + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_restart_result=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_result + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_operator_cmd_required=" + AC_EXTERNAL_WORKER_STATUS.shared_operator_cmd_required + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_cpu_logical_count=" + AC_EXTERNAL_WORKER_STATUS.shared_cpu_logical_count + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_cpu_used_percent=" + AC_EXTERNAL_WORKER_STATUS.shared_cpu_used_percent + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_memory_total_mb=" + AC_EXTERNAL_WORKER_STATUS.shared_memory_total_mb + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_memory_available_mb=" + AC_EXTERNAL_WORKER_STATUS.shared_memory_available_mb + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_memory_used_percent=" + AC_EXTERNAL_WORKER_STATUS.shared_memory_used_percent + "\r\n";
@@ -47,7 +51,12 @@ void AC_AppendExternalWorkerSharedSupervisorTexts()
       + "|shared_status_degraded_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count
       + "|shared_daemon_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state
       + "|shared_watchdog_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state
+      + "|shared_watchdog_last_action=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action
+      + "|shared_watchdog_last_reason=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_reason
+      + "|shared_watchdog_restart_attempted=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_attempted
+      + "|shared_watchdog_restart_result=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_result
       + "|shared_operator_cmd_required=" + AC_EXTERNAL_WORKER_STATUS.shared_operator_cmd_required
+      + "|shared_cpu_used_percent=" + AC_EXTERNAL_WORKER_STATUS.shared_cpu_used_percent
       + "|shared_resource_throttle_active=" + AC_EXTERNAL_WORKER_STATUS.shared_resource_throttle_active;
 }
 

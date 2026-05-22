@@ -167,8 +167,12 @@ void AC_ReadExternalWorkerSharedStatus()
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state = AC_EWValue(shared_text, "watchdog_task_state");
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_check_utc = AC_EWValue(shared_text, "watchdog_last_check_utc");
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action = AC_EWValue(shared_text, "watchdog_last_action");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_reason = AC_EWValue(shared_text, "watchdog_last_reason");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_attempted = AC_EWValue(shared_text, "watchdog_restart_attempted");
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_result = AC_EWValue(shared_text, "watchdog_restart_result");
    AC_EXTERNAL_WORKER_STATUS.shared_operator_cmd_required = AC_EWValue(shared_text, "operator_cmd_required");
    AC_EXTERNAL_WORKER_STATUS.shared_cpu_logical_count = AC_EWValue(shared_text, "cpu_logical_count");
+   AC_EXTERNAL_WORKER_STATUS.shared_cpu_used_percent = AC_EWValue(shared_text, "cpu_used_percent");
    AC_EXTERNAL_WORKER_STATUS.shared_memory_total_mb = AC_EWValue(shared_text, "memory_total_mb");
    AC_EXTERNAL_WORKER_STATUS.shared_memory_available_mb = AC_EWValue(shared_text, "memory_available_mb");
    AC_EXTERNAL_WORKER_STATUS.shared_memory_used_percent = AC_EWValue(shared_text, "memory_used_percent");

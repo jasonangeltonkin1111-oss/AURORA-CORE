@@ -69,8 +69,8 @@ void AC_RefreshExternalWorkerStatus()
       }
       else if(AC_EXTERNAL_WORKER_STATUS.launch_implementation == "not_implemented_yet")
       {
-         AC_EXTERNAL_WORKER_STATUS.launch_status = "Desired - not implemented yet";
-         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Windows task not registered or unavailable; EA process launch bridge not wired";
+         AC_EXTERNAL_WORKER_STATUS.launch_status = "Desired - daemon task missing";
+         AC_EXTERNAL_WORKER_STATUS.launch_blocker = "run install_worker_global.ps1";
       }
       else
       {
