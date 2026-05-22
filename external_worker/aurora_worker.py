@@ -20,8 +20,9 @@ from aurora_worker_io import (
     unix_time,
     utc_stamp,
 )
+from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 
-WORKER_VERSION = "0.6.3_write_failure_truth"
+WORKER_VERSION = "0.6.4_l6_friction_ranked_csv"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -231,7 +232,13 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
     p.ensure()
     try:
         result, _h, rows = validate_snapshot(p)
+        l6_summary = publish_l6_cost_friction_rankings(p.outbox)
         result_text = build_result(result, rows, worker_mode)
+        result_text += "l6_rank_status=" + l6_summary.status + "\n"
+        result_text += "l6_rank_reason=" + l6_summary.reason + "\n"
+        result_text += "l6_rank_input_count=" + str(l6_summary.input_count) + "\n"
+        result_text += "l6_rank_row_count=" + str(l6_summary.row_count) + "\n"
+        result_text += "l6_ranked_csv_path=" + l6_summary.ranked_csv_path + "\n"
         manifest_text = build_result_manifest(result, result_text)
         write_targets: List[Tuple[Path, str]] = [
             (p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode)),
@@ -244,7 +251,6 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
                 failed_paths.append(target)
         if failed_paths:
             degraded = mark_write_failure(result, failed_paths)
-            # Best-effort degraded heartbeat. If this also fails, sidecar proof from atomic_write_text remains.
             atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(degraded, worker_mode))
             return 3, degraded
         return (0 if result.ok else 2), result
