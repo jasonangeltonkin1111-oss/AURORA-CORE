@@ -26,6 +26,13 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.install_status_age_seconds) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_flat_exe_present=" + AC_EXTERNAL_WORKER_STATUS.install_flat_exe_present + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_packaged_exe_present=" + AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_present + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_flat_exe_runtime_authority=" + AC_EXTERNAL_WORKER_STATUS.install_flat_exe_runtime_authority + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_packaged_exe_runtime_authority=" + AC_EXTERNAL_WORKER_STATUS.install_packaged_exe_runtime_authority + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_packaged_internal_python_dll_present=" + AC_EXTERNAL_WORKER_STATUS.install_packaged_internal_python_dll_present + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_watchdog_method=" + AC_EXTERNAL_WORKER_STATUS.install_watchdog_method + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_watchdog_task_registered=" + AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_registered + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_watchdog_task_state=" + AC_EXTERNAL_WORKER_STATUS.install_watchdog_task_state + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_operator_cmd_required=" + AC_EXTERNAL_WORKER_STATUS.install_operator_cmd_required + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_file_present=" + (AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_fresh=" + (AC_EXTERNAL_WORKER_STATUS.lifecycle_fresh ? "true" : "false") + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_status=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_status + "\r\n";
@@ -42,10 +49,15 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_last_validation_status=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_last_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_last_validation_reason + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_last_snapshot_id=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_last_snapshot_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_last_job_id=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_last_job_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "lifecycle_last_job_type=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_last_job_type + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_validation_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds) + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_job_bus_schema_version=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_job_bus_schema_version + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_job_id=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_job_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "heartbeat_job_type=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_job_type + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_status=" + AC_EXTERNAL_WORKER_STATUS.result_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_validation_status=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.result_validation_reason + "\r\n";
@@ -54,11 +66,28 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_snapshot_id=" + AC_EXTERNAL_WORKER_STATUS.result_snapshot_id + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_row_count=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_row_count) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_payload_checksum=" + AC_EXTERNAL_WORKER_STATUS.result_payload_checksum + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_bus_schema_version=" + AC_EXTERNAL_WORKER_STATUS.result_job_bus_schema_version + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_id=" + AC_EXTERNAL_WORKER_STATUS.result_job_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_type=" + AC_EXTERNAL_WORKER_STATUS.result_job_type + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_resource_class=" + AC_EXTERNAL_WORKER_STATUS.result_job_resource_class + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_max_runtime_ms=" + AC_EXTERNAL_WORKER_STATUS.result_job_max_runtime_ms + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_job_status=" + AC_EXTERNAL_WORKER_STATUS.result_job_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_status=" + AC_EXTERNAL_WORKER_STATUS.job_bus_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_validation_status=" + AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_expected_job_id=" + AC_EXTERNAL_WORKER_STATUS.job_bus_expected_job_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_expected_job_type=" + AC_EXTERNAL_WORKER_STATUS.job_bus_expected_job_type + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_expected_schema_version=" + AC_EXTERNAL_WORKER_STATUS.job_bus_expected_schema_version + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_result_job_id=" + AC_EXTERNAL_WORKER_STATUS.job_bus_result_job_id + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_result_job_type=" + AC_EXTERNAL_WORKER_STATUS.job_bus_result_job_type + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "job_bus_result_schema_version=" + AC_EXTERNAL_WORKER_STATUS.job_bus_result_schema_version + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_authority=" + AC_EXTERNAL_WORKER_STATUS.result_authority + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "result_trade_permission=" + AC_EXTERNAL_WORKER_STATUS.result_trade_permission + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_status=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_manifest_status=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_id=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_job_id=" + AC_EXTERNAL_WORKER_LAST_JOB_ID + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_job_type=" + AC_EXTERNAL_WORKER_LAST_JOB_TYPE + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_rows=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_size=" + AC_UlongToText(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE) + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "snapshot_payload_checksum=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM + "\r\n";
@@ -86,7 +115,7 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "board_alerts=disabled_for_now\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_core_continues_if_worker_missing=true\r\n";
 
-   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v0.9|source_owner=" + AC_RUNTIME3_OWNER
+   AC_EXTERNAL_WORKER_STATUS_ROW = "schema_name=external_worker_status|schema_version=v1.0|source_owner=" + AC_RUNTIME3_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|required=" + (AC_EXTERNAL_WORKER_STATUS.required ? "true" : "false")
@@ -106,7 +135,6 @@ void AC_BuildExternalWorkerTexts()
       + "|lifecycle_mode=" + AC_EXTERNAL_WORKER_STATUS.lifecycle_mode
       + "|lifecycle_loop_count=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.lifecycle_loop_count)
       + "|lifecycle_last_loop_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.lifecycle_last_loop_age_seconds)
-      + "|exe_present_diagnostic=" + (AC_EXTERNAL_WORKER_STATUS.exe_present ? "true" : "false")
       + "|heartbeat_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_status
       + "|heartbeat_validation_status=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status
       + "|heartbeat_age_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.heartbeat_age_seconds)
@@ -117,6 +145,13 @@ void AC_BuildExternalWorkerTexts()
       + "|result_snapshot_id=" + AC_EXTERNAL_WORKER_STATUS.result_snapshot_id
       + "|result_row_count=" + IntegerToString(AC_EXTERNAL_WORKER_STATUS.result_row_count)
       + "|result_payload_checksum=" + AC_EXTERNAL_WORKER_STATUS.result_payload_checksum
+      + "|job_bus_status=" + AC_EXTERNAL_WORKER_STATUS.job_bus_status
+      + "|job_bus_validation_status=" + AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status
+      + "|job_bus_validation_reason=" + AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason
+      + "|job_bus_expected_job_id=" + AC_EXTERNAL_WORKER_STATUS.job_bus_expected_job_id
+      + "|job_bus_result_job_id=" + AC_EXTERNAL_WORKER_STATUS.job_bus_result_job_id
+      + "|job_bus_expected_schema_version=" + AC_EXTERNAL_WORKER_STATUS.job_bus_expected_schema_version
+      + "|job_bus_result_schema_version=" + AC_EXTERNAL_WORKER_STATUS.job_bus_result_schema_version
       + "|snapshot_status=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS
       + "|snapshot_rows=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS)
       + "|snapshot_payload_checksum=" + AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM
@@ -134,7 +169,7 @@ string AC_ExternalWorkerWorkbenchSection()
 string AC_ExternalWorkerStatusRow()
 {
    if(AC_EXTERNAL_WORKER_STATUS_ROW == "")
-      return "schema_name=external_worker_status|schema_version=v0.9|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
+      return "schema_name=external_worker_status|schema_version=v1.0|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
    return AC_EXTERNAL_WORKER_STATUS_ROW;
 }
 
