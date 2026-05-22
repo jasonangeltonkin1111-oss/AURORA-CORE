@@ -21,8 +21,11 @@
 AC_Runtime0Snapshot AC_SNAPSHOT;
 AC_Layer0StatusPacket AC_L0_STATUS;
 bool AC_TIMER_READY = false;
+bool AC_TIMER_BUSY = false;
 int  AC_TIMER_SETUP_ERROR = 0;
 int  AC_TIMER_TICKS_SINCE_WORKBENCH = 0;
+int  AC_TIMER_BUSY_SKIP_COUNT = 0;
+uint AC_LAST_TIMER_DURATION_MS = 0;
 string AC_MICRO_LOG = "";
 string AC_LAST_BOARD_TEXT = "";
 string AC_LAST_RUNTIME_STATUS_TEXT = "";
@@ -241,6 +244,9 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    diagnostics += "timer_setup_status=" + AC_SNAPSHOT.timer_setup_status + "\r\n";
    diagnostics += "timer_setup_error=" + IntegerToString(AC_SNAPSHOT.timer_setup_error) + "\r\n";
+   diagnostics += "timer_busy_guard=" + (AC_TIMER_BUSY ? "active" : "idle") + "\r\n";
+   diagnostics += "timer_busy_skip_count=" + IntegerToString(AC_TIMER_BUSY_SKIP_COUNT) + "\r\n";
+   diagnostics += "last_timer_duration_ms=" + IntegerToString((int)AC_LAST_TIMER_DURATION_MS) + "\r\n";
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
    diagnostics += "placeholder_status=" + AC_SNAPSHOT.placeholder_status + "\r\n";
    diagnostics += "market_board_write=" + AC_WriteResultLine("Market Board", board_write) + "\r\n";
@@ -336,6 +342,9 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    board_write = AC_WriteTextFileIfChanged(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS), AC_LAST_BOARD_TEXT, force_publication);
    runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, force_publication);
    status_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, force_publication);
+   AC_ApplyLateWriteStatus("Market Board Final Status", board_write);
+   AC_ApplyLateWriteStatus("Runtime Status Final Status", runtime_write);
+   AC_ApplyLateWriteStatus("Workbench Status Final Status", status_write);
    AC_AddMicroLog("republish_final_status_if_changed", phase_start, (board_write.ok && runtime_write.ok && status_write.ok) ? "complete" : "degraded");
 
    manifest = "";
@@ -370,9 +379,12 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_SNAPSHOT.manifest_status = manifest_final_write.ok ? manifest_final_write.status : manifest_final_write.status;
    AC_SNAPSHOT.layer_0_4_status = (board_write.ok && runtime_write.ok && status_write.ok && diagnostics_write.ok && manifest_write.ok && manifest_final_write.ok && upgrade_addendum_write.ok && micro_log_write.ok && upgrade_log_write.ok && dossier_batch_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
-   AC_WriteTextFileIfChanged(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS), AC_LAST_BOARD_TEXT, false);
-   AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, false);
-   AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, false);
+   AC_WriteResult final_board_write = AC_WriteTextFileIfChanged(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS), AC_LAST_BOARD_TEXT, false);
+   AC_WriteResult final_runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, false);
+   AC_WriteResult final_workbench_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, false);
+   AC_ApplyLateWriteStatus("Market Board Final Truth", final_board_write);
+   AC_ApplyLateWriteStatus("Runtime Status Final Truth", final_runtime_write);
+   AC_ApplyLateWriteStatus("Workbench Status Final Truth", final_workbench_write);
 }
 
 int OnInit()
@@ -387,23 +399,38 @@ int OnInit()
 
 void OnTimer()
 {
-   if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan() || AC_ExternalWorkerShouldCheck())
+   if(AC_TIMER_BUSY)
    {
-      AC_PublishRuntime0Full(false);
+      AC_TIMER_BUSY_SKIP_COUNT++;
       return;
    }
 
-   AC_HeartbeatBegin(AC_SNAPSHOT);
-   AC_SNAPSHOT.runtime_state = "board_refresh_tick";
-   AC_WriteResult board_write = AC_PublishMarketBoardOnly();
-   AC_HeartbeatFinish(AC_SNAPSHOT);
+   AC_TIMER_BUSY = true;
+   uint timer_start = GetTickCount();
+   bool full_due = (AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan() || AC_ExternalWorkerShouldCheck());
 
-   AC_TIMER_TICKS_SINCE_WORKBENCH++;
-   if(AC_TIMER_TICKS_SINCE_WORKBENCH >= AC_WORKBENCH_INTERVAL_HEARTBEATS)
+   if(full_due)
    {
-      AC_TIMER_TICKS_SINCE_WORKBENCH = 0;
       AC_PublishRuntime0Full(false);
    }
+   else
+   {
+      AC_HeartbeatBegin(AC_SNAPSHOT);
+      AC_SNAPSHOT.runtime_state = "board_refresh_tick";
+      AC_WriteResult board_write = AC_PublishMarketBoardOnly();
+      AC_RecordWriteProblem("Market Board Tick", board_write);
+      AC_HeartbeatFinish(AC_SNAPSHOT);
+
+      AC_TIMER_TICKS_SINCE_WORKBENCH++;
+      if(AC_TIMER_TICKS_SINCE_WORKBENCH >= AC_WORKBENCH_INTERVAL_HEARTBEATS)
+      {
+         AC_TIMER_TICKS_SINCE_WORKBENCH = 0;
+         AC_PublishRuntime0Full(false);
+      }
+   }
+
+   AC_LAST_TIMER_DURATION_MS = GetTickCount() - timer_start;
+   AC_TIMER_BUSY = false;
 }
 
 void OnDeinit(const int reason)
@@ -416,6 +443,8 @@ void OnDeinit(const int reason)
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
    diagnostics += "gateway_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
+   diagnostics += "timer_busy_skip_count=" + IntegerToString(AC_TIMER_BUSY_SKIP_COUNT) + "\r\n";
+   diagnostics += "last_timer_duration_ms=" + IntegerToString((int)AC_LAST_TIMER_DURATION_MS) + "\r\n";
    diagnostics += "deinit_reason=" + IntegerToString(reason) + "\r\n";
    diagnostics += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
