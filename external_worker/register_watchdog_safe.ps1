@@ -3,11 +3,11 @@ $ErrorActionPreference = "Stop"
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
 $watchdogTask = "AuroraWorker_Global_Watchdog"
 $daemonTask = "AuroraWorker_Global"
-$statusFolder = Join-Path $sharedRoot "External Worker\Status"
+$statusFolder = Join-Path $sharedRoot "Gateway\Status"
 $installStatus = Join-Path $statusFolder "shared_worker_install_status.txt"
 
 # PyInstaller one-folder build: runtime EXE must stay beside _internal.
-$watchdogWorkdir = Join-Path $sharedRoot "External Worker\AuroraWorker"
+$watchdogWorkdir = Join-Path $sharedRoot "Gateway\AuroraWorker"
 $watchdogExe = Join-Path $watchdogWorkdir "AuroraWorker.exe"
 $watchdogDll = Join-Path $watchdogWorkdir "_internal\python312.dll"
 
@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Force -Path $statusFolder | Out-Null
 Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction SilentlyContinue
 
 if (!(Test-Path $watchdogExe)) {
-    throw "Missing packaged watchdog executable: $watchdogExe"
+    throw "Missing packaged Gateway executable: $watchdogExe"
 }
 if (!(Test-Path $watchdogDll)) {
     throw "Missing packaged Python DLL: $watchdogDll"
@@ -49,7 +49,7 @@ Register-ScheduledTask `
   -Action $action `
   -Trigger $trigger `
   -Settings $settings `
-  -Description "Aurora global worker watchdog repair task" `
+  -Description "Aurora global Gateway watchdog repair task" `
   -Force | Out-Null
 
 $daemon = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
@@ -63,14 +63,14 @@ $packagedExePresent = if (Test-Path $watchdogExe) { "true" } else { "false" }
 $packagedDllPresent = if (Test-Path $watchdogDll) { "true" } else { "false" }
 
 # This is install/autostart configuration proof only.
-# It is not stale/missing daemon recovery proof. Runtime 3D closeout still requires
-# shared status freshness plus watchdog recovery evidence from the worker status file.
+# It is not stale/missing daemon recovery proof. Runtime closeout still requires
+# shared status freshness plus watchdog recovery evidence from the Gateway status file.
 $operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true" -and $packagedExePresent -eq "true" -and $packagedDllPresent -eq "true") { "false" } else { "true" }
 
 if (Test-Path $installStatus) {
     $text = Get-Content $installStatus -Raw
     $pairs = @{
-        "schema_version" = "5"
+        "schema_version" = "6"
         "scheduled_task_registered" = $daemonRegistered
         "scheduled_task_state" = $daemonState
         "watchdog_task_registered" = $watchdogRegistered
@@ -95,4 +95,4 @@ if (Test-Path $installStatus) {
     Set-Content -Path $installStatus -Value $text -Encoding ASCII
 }
 
-Write-Host "Watchdog registered=$watchdogRegistered state=$watchdogState operator_cmd_required=$operatorRequired proof_scope=registration_only_not_recovery_proof"
+Write-Host "Gateway watchdog registered=$watchdogRegistered state=$watchdogState operator_cmd_required=$operatorRequired proof_scope=registration_only_not_recovery_proof"
