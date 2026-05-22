@@ -16,6 +16,9 @@ New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-
 Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force
 $BuiltExe = Join-Path $SharedWorkerRoot "AuroraWorker.exe"
 if (!(Test-Path $BuiltExe)) { throw "Install failed: AuroraWorker.exe missing after copy." }
+
+# Flat EXE copy is retained only for legacy diagnostic visibility.
+# Runtime task authority must use the packaged one-folder EXE beside _internal.
 Copy-Item -Path $BuiltExe -Destination $SharedExeFlat -Force
 
 $daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"
@@ -53,28 +56,34 @@ if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefre
 
 $FlatPresent = Test-Path $SharedExeFlat
 $PackagedPresent = Test-Path $BuiltExe
+$PackagedInternalPresent = Test-Path (Join-Path $SharedWorkerRoot "_internal\python312.dll")
 $authority = "calculation_support_only"; $tradePermission="false"
-$operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $FlatPresent -and $PackagedPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
+$operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $FlatPresent -and $PackagedPresent -and $PackagedInternalPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
 $autoStartConfigured = if($daemonRegistered -and $watchRegistered){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
 schema_name=aurora_worker_install_status
 schema_version=4
-installed=$((($FlatPresent -and $PackagedPresent)).ToString().ToLowerInvariant())
+installed=$((($FlatPresent -and $PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_worker_plus_daemon_and_watchdog_tasks
 worker_version=0.5.1_hotfix_no_powershell_daemon
 shared_daemon=true
 shared_root=$SharedRoot
 flat_exe_present=$($FlatPresent.ToString().ToLowerInvariant())
 packaged_exe_present=$($PackagedPresent.ToString().ToLowerInvariant())
+packaged_internal_python_dll_present=$($PackagedInternalPresent.ToString().ToLowerInvariant())
 flat_exe_path=$SharedExeFlat
+flat_exe_runtime_authority=false
 packaged_exe_path=$BuiltExe
+packaged_exe_runtime_authority=true
 daemon_install_method=windows_scheduled_task_shared_daemon
+daemon_runtime_exe=$BuiltExe
+daemon_runtime_working_directory=$SharedWorkerRoot
 scheduled_task_name=$DaemonTaskName
 scheduled_task_registered=$($daemonRegistered.ToString().ToLowerInvariant())
 scheduled_task_state=$daemonState
 scheduled_task_error=$daemonError
-watchdog_install_method=windows_scheduled_task_repair_lane
+watchdog_install_method=windows_scheduled_task_repair_lane_packaged_exe
 watchdog_task_name=$WatchdogTaskName
 watchdog_task_registered=$($watchRegistered.ToString().ToLowerInvariant())
 watchdog_task_state=$watchState
