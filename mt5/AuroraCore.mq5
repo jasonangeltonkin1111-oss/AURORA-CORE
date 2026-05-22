@@ -365,7 +365,8 @@ int OnInit()
    AC_TIMER_SETUP_ERROR = AC_TIMER_READY ? 0 : GetLastError();
    AC_PublishRuntime0Full(true);
    return INIT_SUCCEEDED;
-}\n
+}
+
 void OnTimer()
 {
    if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan() || AC_ExternalWorkerShouldCheck())
