@@ -79,25 +79,40 @@ string AC_ReadSmallTextFile(const string path, const int max_chars = 120000)
    int handle = FileOpen(path, AC_FileFlags() | FILE_READ);
    if(handle == INVALID_HANDLE)
       return "";
-   int size = (int)FileSize(handle);
-   if(size < 0) size = 0;
-   if(size > max_chars) size = max_chars;
-   string text = FileReadString(handle, size);
+
+   string text = "";
+   while(!FileIsEnding(handle) && StringLen(text) < max_chars)
+   {
+      string line = FileReadString(handle);
+      text += line;
+      if(!FileIsEnding(handle))
+         text += "\n";
+   }
    FileClose(handle);
+   if(StringLen(text) > max_chars)
+      text = StringSubstr(text, 0, max_chars);
    return text;
 }
 
 string AC_KvValue(const string text, const string key, const string fallback = "not_available")
 {
    string lines[];
-   int count = StringSplit(text, '\n', lines);
+   ushort separator = StringGetCharacter("\n", 0);
+   int count = StringSplit(text, separator, lines);
    string prefix = key + "=";
    for(int i = 0; i < count; i++)
    {
       string line = lines[i];
       StringReplace(line, "\r", "");
+      StringTrimLeft(line);
+      StringTrimRight(line);
       if(StringFind(line, prefix) == 0)
-         return StringSubstr(line, StringLen(prefix));
+      {
+         string value = StringSubstr(line, StringLen(prefix));
+         StringTrimLeft(value);
+         StringTrimRight(value);
+         return value;
+      }
    }
    return fallback;
 }
@@ -119,11 +134,14 @@ double AC_KvDouble(const string text, const string key, const double fallback = 
 string AC_L6FirstTop20Symbol(const string top20_text)
 {
    string lines[];
-   int count = StringSplit(top20_text, '\n', lines);
+   ushort separator = StringGetCharacter("\n", 0);
+   int count = StringSplit(top20_text, separator, lines);
    for(int i = 0; i < count; i++)
    {
       string line = lines[i];
       StringReplace(line, "\r", "");
+      StringTrimLeft(line);
+      StringTrimRight(line);
       if(StringFind(line, "1|") == 0)
          return line;
    }
