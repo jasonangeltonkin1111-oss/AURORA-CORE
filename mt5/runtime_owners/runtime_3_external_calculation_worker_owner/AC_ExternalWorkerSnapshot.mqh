@@ -11,6 +11,12 @@ static string AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "not_exported";
 static ulong  AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = 0;
 static int    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS = 0;
 
+static string AC_L6_LAST_INPUT_EXPORT_STATUS = "not_exported";
+static string AC_L6_LAST_INPUT_MANIFEST_STATUS = "not_exported";
+static string AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = "not_available";
+static int    AC_L6_LAST_INPUT_ROWS = 0;
+static ulong  AC_L6_LAST_INPUT_SIZE = 0;
+
 string AC_ExternalWorkerSnapshotId()
 {
    return AC_AccountForRoute() + "_" + IntegerToString((int)TimeCurrent()) + "_" + IntegerToString((int)GetTickCount());
@@ -31,6 +37,268 @@ string AC_ExternalWorkerPayloadChecksum(const string payload)
 string AC_ExternalWorkerJobId(const string snapshot_id)
 {
    return snapshot_id + "_" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE;
+}
+
+string AC_L6CsvSafe(string value)
+{
+   StringReplace(value, "\r", " ");
+   StringReplace(value, "\n", " ");
+   StringReplace(value, ",", "_");
+   StringReplace(value, "|", "_");
+   return value;
+}
+
+string AC_L6BoolCsv(const bool value)
+{
+   return value ? "true" : "false";
+}
+
+string AC_L6FrictionLayerOutboxFolder()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_6_Cost_Friction_Ranking";
+}
+
+string AC_L6FrictionInputCsvPath()
+{
+   return AC_L6FrictionLayerOutboxFolder() + "\\l6_input_primitives.csv";
+}
+
+string AC_L6FrictionInputManifestPath()
+{
+   return AC_L6FrictionLayerOutboxFolder() + "\\l6_input_primitives.manifest";
+}
+
+bool AC_L6VolumeInRange(const double volume, const AC_L3SymbolSpecs &l3)
+{
+   if(volume <= 0.0) return false;
+   if(l3.volume_min > 0.0 && volume + 0.00000001 < l3.volume_min) return false;
+   if(l3.volume_max > 0.0 && volume - 0.00000001 > l3.volume_max) return false;
+   return true;
+}
+
+void AC_L6CalcSpreadCost(const string symbol,
+                         const ENUM_ORDER_TYPE order_type,
+                         const double volume,
+                         const double price_open,
+                         const double price_close,
+                         double &cost,
+                         string &status,
+                         int &error_code)
+{
+   cost = 0.0;
+   status = "not_attempted";
+   error_code = 0;
+
+   if(volume <= 0.0)
+   {
+      status = "invalid_volume";
+      return;
+   }
+   if(price_open <= 0.0 || price_close <= 0.0)
+   {
+      status = "invalid_prices";
+      return;
+   }
+
+   ResetLastError();
+   double profit = 0.0;
+   bool ok = OrderCalcProfit(order_type, symbol, volume, price_open, price_close, profit);
+   error_code = GetLastError();
+   if(!ok)
+   {
+      status = "ordercalcprofit_failed";
+      return;
+   }
+
+   cost = MathAbs(profit);
+   status = "ok";
+}
+
+string AC_L6InputCsvHeader()
+{
+   return "symbol,l5_gate_status,l5_gate_reason,asset_class,ranking_group,digits,point,contract_size,volume_min,volume_step,volume_max,value_quality,margin_quality,quote_quality,surface_quality,bid,ask,mid,spread_points,spread_bps,tick_age_seconds,zero_spread_state,spread_cost_buy_1lot_account,spread_cost_sell_1lot_account,spread_cost_worst_1lot_account,spread_cost_buy_minlot_account,spread_cost_sell_minlot_account,spread_cost_worst_minlot_account,ordercalcprofit_buy_1lot_status,ordercalcprofit_sell_1lot_status,ordercalcprofit_buy_minlot_status,ordercalcprofit_sell_minlot_status,ordercalcprofit_buy_1lot_error,ordercalcprofit_sell_1lot_error,ordercalcprofit_buy_minlot_error,ordercalcprofit_sell_minlot_error,cost_asymmetry_detected,commission_status,slippage_status,trade_permission\r\n";
+}
+
+string AC_L6BuildInputPrimitiveRows()
+{
+   string text = AC_L6InputCsvHeader();
+   int rows = 0;
+
+   for(int i = 0; i < ArraySize(AC_L5_SYMBOLS); i++)
+   {
+      if(!AC_L5_SYMBOLS[i].pass)
+         continue;
+
+      string symbol = AC_L5_SYMBOLS[i].symbol;
+      int l3_index = AC_L3FindIndex(symbol);
+      int l4_index = AC_L4FindIndex(symbol);
+
+      string asset_class = "not_available";
+      string ranking_group = "not_available";
+      long digits = 0;
+      double point = 0.0;
+      double contract_size = 0.0;
+      double volume_min = 0.0;
+      double volume_step = 0.0;
+      double volume_max = 0.0;
+      string value_quality = "not_available";
+      string margin_quality = "not_available";
+      bool one_lot_in_range = false;
+      bool min_lot_in_range = false;
+
+      if(l3_index >= 0)
+      {
+         AC_L3SymbolSpecs l3 = AC_L3_SYMBOLS[l3_index];
+         asset_class = l3.asset_class;
+         ranking_group = l3.ranking_group;
+         digits = l3.digits;
+         point = l3.point;
+         contract_size = l3.contract_size;
+         volume_min = l3.volume_min;
+         volume_step = l3.volume_step;
+         volume_max = l3.volume_max;
+         value_quality = l3.value_quality;
+         margin_quality = l3.margin_quality;
+         one_lot_in_range = AC_L6VolumeInRange(1.0, l3);
+         min_lot_in_range = AC_L6VolumeInRange(l3.volume_min, l3);
+      }
+
+      string quote_quality = "not_available";
+      string surface_quality = "not_available";
+      double bid = 0.0;
+      double ask = 0.0;
+      double mid = 0.0;
+      double spread_points = 0.0;
+      double spread_bps = 0.0;
+      double tick_age_seconds = 0.0;
+      string zero_spread_state = "not_available";
+
+      if(l4_index >= 0)
+      {
+         AC_L4SymbolPacket l4 = AC_L4_SYMBOLS[l4_index];
+         quote_quality = l4.quote_quality;
+         surface_quality = l4.surface_quality;
+         bid = l4.bid;
+         ask = l4.ask;
+         if(bid > 0.0 && ask > 0.0) mid = (bid + ask) / 2.0;
+         spread_points = l4.spread_points_live;
+         spread_bps = l4.spread_bps_live;
+         tick_age_seconds = l4.tick_age_seconds;
+         zero_spread_state = l4.zero_spread_state;
+      }
+
+      double buy_1lot = 0.0;
+      double sell_1lot = 0.0;
+      double buy_minlot = 0.0;
+      double sell_minlot = 0.0;
+      string buy_1lot_status = one_lot_in_range ? "not_attempted" : "volume_1lot_not_valid_for_symbol";
+      string sell_1lot_status = one_lot_in_range ? "not_attempted" : "volume_1lot_not_valid_for_symbol";
+      string buy_minlot_status = min_lot_in_range ? "not_attempted" : "volume_min_not_valid_for_symbol";
+      string sell_minlot_status = min_lot_in_range ? "not_attempted" : "volume_min_not_valid_for_symbol";
+      int buy_1lot_error = 0;
+      int sell_1lot_error = 0;
+      int buy_minlot_error = 0;
+      int sell_minlot_error = 0;
+
+      if(one_lot_in_range)
+      {
+         AC_L6CalcSpreadCost(symbol, ORDER_TYPE_BUY, 1.0, ask, bid, buy_1lot, buy_1lot_status, buy_1lot_error);
+         AC_L6CalcSpreadCost(symbol, ORDER_TYPE_SELL, 1.0, bid, ask, sell_1lot, sell_1lot_status, sell_1lot_error);
+      }
+      if(min_lot_in_range)
+      {
+         AC_L6CalcSpreadCost(symbol, ORDER_TYPE_BUY, volume_min, ask, bid, buy_minlot, buy_minlot_status, buy_minlot_error);
+         AC_L6CalcSpreadCost(symbol, ORDER_TYPE_SELL, volume_min, bid, ask, sell_minlot, sell_minlot_status, sell_minlot_error);
+      }
+
+      double worst_1lot = MathMax(buy_1lot, sell_1lot);
+      double worst_minlot = MathMax(buy_minlot, sell_minlot);
+      bool asymmetry = (MathAbs(buy_1lot - sell_1lot) > 0.0000001 || MathAbs(buy_minlot - sell_minlot) > 0.0000001);
+
+      text += AC_L6CsvSafe(symbol)
+         + "," + AC_L6CsvSafe(AC_L5_SYMBOLS[i].gate_status)
+         + "," + AC_L6CsvSafe(AC_L5_SYMBOLS[i].gate_reason)
+         + "," + AC_L6CsvSafe(asset_class)
+         + "," + AC_L6CsvSafe(ranking_group)
+         + "," + IntegerToString((int)digits)
+         + "," + DoubleToString(point, 10)
+         + "," + DoubleToString(contract_size, 2)
+         + "," + DoubleToString(volume_min, 4)
+         + "," + DoubleToString(volume_step, 4)
+         + "," + DoubleToString(volume_max, 4)
+         + "," + AC_L6CsvSafe(value_quality)
+         + "," + AC_L6CsvSafe(margin_quality)
+         + "," + AC_L6CsvSafe(quote_quality)
+         + "," + AC_L6CsvSafe(surface_quality)
+         + "," + DoubleToString(bid, 8)
+         + "," + DoubleToString(ask, 8)
+         + "," + DoubleToString(mid, 8)
+         + "," + DoubleToString(spread_points, 2)
+         + "," + DoubleToString(spread_bps, 4)
+         + "," + DoubleToString(tick_age_seconds, 1)
+         + "," + AC_L6CsvSafe(zero_spread_state)
+         + "," + DoubleToString(buy_1lot, 2)
+         + "," + DoubleToString(sell_1lot, 2)
+         + "," + DoubleToString(worst_1lot, 2)
+         + "," + DoubleToString(buy_minlot, 2)
+         + "," + DoubleToString(sell_minlot, 2)
+         + "," + DoubleToString(worst_minlot, 2)
+         + "," + AC_L6CsvSafe(buy_1lot_status)
+         + "," + AC_L6CsvSafe(sell_1lot_status)
+         + "," + AC_L6CsvSafe(buy_minlot_status)
+         + "," + AC_L6CsvSafe(sell_minlot_status)
+         + "," + IntegerToString(buy_1lot_error)
+         + "," + IntegerToString(sell_1lot_error)
+         + "," + IntegerToString(buy_minlot_error)
+         + "," + IntegerToString(sell_minlot_error)
+         + "," + AC_L6BoolCsv(asymmetry)
+         + ",commission_not_available_from_api"
+         + ",slippage_not_modelled_v1"
+         + ",false\r\n";
+      rows++;
+   }
+
+   AC_L6_LAST_INPUT_ROWS = rows;
+   return text;
+}
+
+AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
+{
+   string folder_detail = "";
+   AC_EnsureFolderPath(AC_L6FrictionLayerOutboxFolder(), folder_detail);
+
+   string rows = AC_L6BuildInputPrimitiveRows();
+   string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
+   AC_WriteResult csv_write = AC_WriteTextFile(AC_L6FrictionInputCsvPath(), rows);
+
+   string manifest = "";
+   manifest += "schema_name=l6_cost_friction_input_primitives_manifest\r\n";
+   manifest += "schema_version=1\r\n";
+   manifest += "layer_id=6\r\n";
+   manifest += "layer_name=Layer 6 - Cost / Friction Ranking\r\n";
+   manifest += "owner_name=Runtime 4 - Surface Scoring Owner\r\n";
+   manifest += "job_type=L6_COST_FRICTION_RANKING_V1\r\n";
+   manifest += "write_status=" + csv_write.status + "\r\n";
+   manifest += "write_ok=" + (csv_write.ok ? "true" : "false") + "\r\n";
+   manifest += "folder_detail=" + folder_detail + "\r\n";
+   manifest += "row_count=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\n";
+   manifest += "l5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   manifest += "payload_checksum=" + payload_checksum + "\r\n";
+   manifest += "csv_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
+   manifest += "source_truth_owner=L5_pass_set_plus_L3_L4_packets_plus_MT5_OrderCalcProfit_primitives\r\n";
+   manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_future_L6D\r\n";
+   manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
+   manifest += "trade_permission=false\r\n";
+   manifest += "ranking_runtime=true\r\n";
+   manifest += "selection_runtime=false\r\n";
+   manifest += "generated_unix=" + IntegerToString((int)TimeGMT()) + "\r\n";
+
+   AC_WriteResult manifest_write = AC_WriteTextFile(AC_L6FrictionInputManifestPath(), manifest);
+   AC_L6_LAST_INPUT_EXPORT_STATUS = csv_write.status;
+   AC_L6_LAST_INPUT_MANIFEST_STATUS = manifest_write.status;
+   AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
+   AC_L6_LAST_INPUT_SIZE = csv_write.final_size;
+   return csv_write;
 }
 
 string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const string job_id, const int rows, const string payload_checksum)
@@ -104,6 +372,8 @@ string AC_ExternalWorkerSnapshotRows()
 
 AC_WriteResult AC_ExportExternalWorkerSnapshot()
 {
+   AC_WriteResult l6_input_write = AC_ExportLayer6CostFrictionInputPrimitives();
+
    string rows = AC_ExternalWorkerSnapshotRows();
    string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
    if(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID != "not_exported"
@@ -112,14 +382,14 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "unchanged_cached";
-      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite");
+      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite|l6_input=" + l6_input_write.status);
    }
 
    string snapshot_id = AC_ExternalWorkerSnapshotId();
    string job_id = AC_ExternalWorkerJobId(snapshot_id);
    string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, job_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=2\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=2\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_JOB_ID = job_id;
