@@ -10,13 +10,15 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$WorkerVersion = "0.6.0_3c_job_bus_no_powershell_daemon"
+$WorkerVersion = "0.6.2_r3_snapshot_validation_labels"
 
-if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Run build_worker.ps1 first." }
+if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
 Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force
 $BuiltExe = Join-Path $SharedWorkerRoot "AuroraWorker.exe"
+$BuiltInternalDll = Join-Path $SharedWorkerRoot "_internal\python312.dll"
 if (!(Test-Path $BuiltExe)) { throw "Install failed: AuroraWorker.exe missing after copy." }
+if (!(Test-Path $BuiltInternalDll)) { throw "Install failed: packaged Python DLL missing after copy: $BuiltInternalDll" }
 
 # Flat EXE copy is retained only for legacy diagnostic visibility.
 # Runtime task authority must use the packaged one-folder EXE beside _internal.
@@ -57,17 +59,19 @@ if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefre
 
 $FlatPresent = Test-Path $SharedExeFlat
 $PackagedPresent = Test-Path $BuiltExe
-$PackagedInternalPresent = Test-Path (Join-Path $SharedWorkerRoot "_internal\python312.dll")
+$PackagedInternalPresent = Test-Path $BuiltInternalDll
 $authority = "calculation_support_only"; $tradePermission="false"
 $operatorCmdRequired = if($daemonRegistered -and $watchRegistered -and $FlatPresent -and $PackagedPresent -and $PackagedInternalPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
-$autoStartConfigured = if($daemonRegistered -and $watchRegistered){"true"}else{"false"}
+$autoStartConfigured = if($daemonRegistered -and $watchRegistered -and $PackagedPresent -and $PackagedInternalPresent){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
 schema_name=aurora_worker_install_status
-schema_version=4
+schema_version=5
 installed=$((($FlatPresent -and $PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_worker_plus_daemon_and_watchdog_tasks
 worker_version=$WorkerVersion
+package_source=external_worker/dist/AuroraWorker
+package_staleness_policy=rebuild_required_after_worker_source_change_no_source_only_runtime_claim
 shared_daemon=true
 shared_root=$SharedRoot
 flat_exe_present=$($FlatPresent.ToString().ToLowerInvariant())
