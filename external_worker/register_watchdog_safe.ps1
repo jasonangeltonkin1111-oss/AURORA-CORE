@@ -1,36 +1,15 @@
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
 $watchdogTask = "AuroraWorker_Global_Watchdog"
 $daemonTask = "AuroraWorker_Global"
-$runner = Join-Path $PSScriptRoot "watchdog_runner_global.ps1"
 $statusFolder = Join-Path $sharedRoot "External Worker\Status"
 $installStatus = Join-Path $statusFolder "shared_worker_install_status.txt"
 
 New-Item -ItemType Directory -Force -Path $statusFolder | Out-Null
 
-$runnerText = @"
-`$ErrorActionPreference = "Continue"
-`$sharedRoot = "`$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
-`$exe = Join-Path `$sharedRoot "External Worker\AuroraWorker\AuroraWorker.exe"
-`$daemonTask = "AuroraWorker_Global"
-
-`$proc = Get-Process AuroraWorker -ErrorAction SilentlyContinue
-if (-not `$proc) {
-    Start-ScheduledTask -TaskName `$daemonTask -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-}
-
-if (Test-Path `$exe) {
-    & `$exe --shared-root "`$sharedRoot" --watchdog | Out-Null
-}
-"@
-
-Set-Content -Path $runner -Value $runnerText -Encoding UTF8
-
 Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction SilentlyContinue
-
-$xmlRunner = [System.Security.SecurityElement]::Escape($runner)
+$watchdogExe = Join-Path $sharedRoot "External Worker\AuroraWorker.exe"
 $start = (Get-Date).AddMinutes(1).ToString("yyyy-MM-ddTHH:mm:ss")
 
 $xml = @"
@@ -63,24 +42,25 @@ $xml = @"
     <StartWhenAvailable>true</StartWhenAvailable>
     <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
     <Enabled>true</Enabled>
-    <Hidden>false</Hidden>
+    <Hidden>true</Hidden>
     <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
     <Priority>7</Priority>
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>powershell.exe</Command>
-      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "$xmlRunner"</Arguments>
+      <Command>$watchdogExe</Command>
+      <Arguments>--shared-root "$sharedRoot" --watchdog</Arguments>
     </Exec>
   </Actions>
 </Task>
 "@
 
-$registrationOk = $false
 $registrationError = "none"
 try {
+    if (!(Test-Path $watchdogExe)) {
+        throw "Missing shared watchdog executable: $watchdogExe"
+    }
     Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
-    $registrationOk = $true
 } catch {
     $registrationError = ($_.Exception.Message -replace "\r?\n", " ")
 }

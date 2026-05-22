@@ -6,12 +6,23 @@ $shared = Join-Path $statusDir "shared_worker_status.txt"
 $daemonTask = "AuroraWorker_Global"; $watchTask = "AuroraWorker_Global_Watchdog"
 
 Write-Host "=== Scheduled Tasks ==="
+$daemonRegistered = $false
+$watchdogRegistered = $false
+$daemonState = "not_registered"
+$watchdogState = "not_registered"
 foreach($t in @($daemonTask,$watchTask)){
   $task = Get-ScheduledTask -TaskName $t -ErrorAction SilentlyContinue
-  if($task){ Write-Host "$t registered=true state=$($task.State)"; Get-ScheduledTaskInfo -TaskName $t | Format-List LastRunTime,LastTaskResult,NextRunTime }
+  if($task){
+    if($t -eq $daemonTask){ $daemonRegistered = $true; $daemonState = $task.State.ToString() }
+    if($t -eq $watchTask){ $watchdogRegistered = $true; $watchdogState = $task.State.ToString() }
+    Write-Host "$t registered=true state=$($task.State)"; Get-ScheduledTaskInfo -TaskName $t | Format-List LastRunTime,LastTaskResult,NextRunTime
+  }
   else { Write-Host "$t registered=false state=not_registered" }
 }
-Write-Host "AuroraWorker processes: $(@(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count)"
+$procCount = @(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count
+$operatorRequired = if($daemonRegistered -and $watchdogRegistered -and $procCount -ge 1){"false"}else{"true"}
+Write-Host "AuroraWorker processes: $procCount"
+Write-Host "operator_cmd_required(actual)=$operatorRequired"
 
 function Show-Fields($path,$fields){ if(Test-Path $path){$c=Get-Content $path; foreach($f in $fields){$m=$c|Where-Object{$_ -like "$f=*"}|Select-Object -First 1; if($m){Write-Host $m}else{Write-Host "$f=not_found"}} } else {Write-Host "missing: $path"}}
 Write-Host "=== Install Proof ==="
