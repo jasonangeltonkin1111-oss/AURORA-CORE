@@ -40,7 +40,7 @@ string AC_L1PadRight(string text, const int width)
       return text + " ";
    while(StringLen(text) < width)
       text += " ";
-   return text;
+   return text + " ";
 }
 
 string AC_L1PadLeft(string text, const int width)
@@ -49,7 +49,7 @@ string AC_L1PadLeft(string text, const int width)
       return text + " ";
    while(StringLen(text) < width)
       text = " " + text;
-   return text;
+   return text + " ";
 }
 
 string AC_L1TradeModeText(const long mode)
