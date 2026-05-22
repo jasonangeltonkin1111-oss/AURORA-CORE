@@ -34,7 +34,7 @@ try {
 $watchRegistered=$false; $watchState="not_registered"; $watchError="none"
 if (Test-Path $WatchdogHelper) {
   try {
-    powershell -ExecutionPolicy Bypass -File $WatchdogHelper | Out-Host
+    powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $WatchdogHelper | Out-Host
     $watchTask = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction Stop
     $watchRegistered = $true; $watchState = $watchTask.State.ToString(); $watchError = "none"
   } catch {
@@ -47,9 +47,9 @@ if (Test-Path $WatchdogHelper) {
 }
 
 $daemonTaskRefresh = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction SilentlyContinue
-if ($daemonTaskRefresh) { $daemonRegistered = $true; $daemonState = $daemonTaskRefresh.State.ToString() }
+if ($daemonTaskRefresh) { $daemonRegistered = $true; $daemonState = $daemonTaskRefresh.State.ToString() } else { $daemonRegistered = $false; if($daemonError -eq "none"){ $daemonError = "daemon task not found after registration attempt" } }
 $watchTaskRefresh = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction SilentlyContinue
-if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefresh.State.ToString(); $watchError = "none" }
+if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefresh.State.ToString(); $watchError = "none" } else { $watchRegistered = $false; if($watchError -eq "none"){ $watchError = "watchdog task not found after registration attempt" } }
 
 $FlatPresent = Test-Path $SharedExeFlat
 $PackagedPresent = Test-Path $BuiltExe
