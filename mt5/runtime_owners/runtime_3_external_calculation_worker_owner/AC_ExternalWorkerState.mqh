@@ -54,8 +54,12 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_check_utc = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_reason = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_attempted = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_watchdog_restart_result = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_operator_cmd_required = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_cpu_logical_count = "not_available";
+   AC_EXTERNAL_WORKER_STATUS.shared_cpu_used_percent = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_memory_total_mb = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_memory_available_mb = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_memory_used_percent = "not_available";

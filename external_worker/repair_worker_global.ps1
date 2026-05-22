@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SharedRoot = "C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core"
-$WorkerExe = Join-Path $SharedRoot "External Worker\AuroraWorker\AuroraWorker.exe"
-if (!(Test-Path $WorkerExe)) { throw "Missing worker exe: $WorkerExe" }
-& $WorkerExe --shared-root $SharedRoot --watchdog
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
+$exe = Join-Path $root "External Worker\AuroraWorker\AuroraWorker.exe"
+if (!(Test-Path $exe)) { throw "Missing worker exe: $exe" }
+& $exe --shared-root "$root" --repair
+$code = $LASTEXITCODE
+Write-Host "Repair exit code: $code"
+& (Join-Path $scriptDir "status_worker_global.ps1")
+exit $code
