@@ -14,6 +14,7 @@ static string AC_L5_BOARD_SECTION = "";
 static string AC_L5_WORKBENCH_SECTION = "";
 static uint   AC_L5_SCAN_STARTED_MS = 0;
 static uint   AC_L5_SCAN_DURATION_MS = 0;
+static string AC_L5_LAST_UPSTREAM_KEY = "not_scanned";
 
 static int AC_L5_SCANNED = 0;
 static int AC_L5_GATE_PASS = 0;
@@ -78,6 +79,23 @@ static AC_L5GatePacket AC_L5_SYMBOLS[];
 string AC_L5BoolText(const bool value)
 {
    return value ? "TRUE" : "FALSE";
+}
+
+string AC_L5UpstreamKey()
+{
+   return "L2=" + (AC_L2_READY ? "ready" : "not_ready")
+      + "|L2Route=" + AC_L2_ROUTE_GENERATION_KEY
+      + "|L3=" + (AC_L3_READY ? "ready" : "not_ready")
+      + "|L3Cache=" + AC_L3_CACHE_KEY
+      + "|L4=" + (AC_L4_READY ? "ready" : "not_ready")
+      + "|L4Cache=" + AC_L4_CACHE_KEY
+      + "|L4Refresh=" + AC_L4_REFRESH_KEY;
+}
+
+bool AC_L5ShouldRefresh()
+{
+   if(!AC_L5_READY) return true;
+   return AC_L5_LAST_UPSTREAM_KEY != AC_L5UpstreamKey();
 }
 
 string AC_L5LayerGateSummary()
@@ -304,7 +322,9 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
 
 void AC_RefreshLayer5BasicSystemGate()
 {
+   string upstream_key = AC_L5UpstreamKey();
    AC_L5Reset();
+   AC_L5_LAST_UPSTREAM_KEY = upstream_key;
 
    int total = SymbolsTotal(false);
    ArrayResize(AC_L5_SYMBOLS, 0);
@@ -339,7 +359,7 @@ int AC_L5FindIndex(const string symbol)
 
 void AC_BuildLayer5Texts()
 {
-   if(!AC_L5_READY && AC_L5_STATUS != "Scanning")
+   if(AC_L5ShouldRefresh())
    {
       AC_RefreshLayer5BasicSystemGate();
       return;
@@ -377,6 +397,8 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "source_truth_owner=L2_L3_L4_existing_owner_packets_only\r\n";
    AC_L5_WORKBENCH_SECTION += "calculation_owner=none_basic_gate_only\r\n";
    AC_L5_WORKBENCH_SECTION += "gateway_required=false\r\n";
+   AC_L5_WORKBENCH_SECTION += "last_upstream_key=" + AC_L5_LAST_UPSTREAM_KEY + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "current_upstream_key=" + AC_L5UpstreamKey() + "\r\n";
    AC_L5_WORKBENCH_SECTION += "scanned_symbols=" + IntegerToString(AC_L5_SCANNED) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
@@ -401,19 +423,19 @@ void AC_BuildLayer5Texts()
 
 string AC_Layer5BoardSection()
 {
-   if(AC_L5_BOARD_SECTION == "") AC_BuildLayer5Texts();
+   if(AC_L5_BOARD_SECTION == "" || AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    return AC_L5_BOARD_SECTION;
 }
 
 string AC_Layer5WorkbenchSection()
 {
-   if(AC_L5_WORKBENCH_SECTION == "") AC_BuildLayer5Texts();
+   if(AC_L5_WORKBENCH_SECTION == "" || AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    return AC_L5_WORKBENCH_SECTION;
 }
 
 string AC_Layer5DossierSection(const string symbol)
 {
-   if(!AC_L5_READY) AC_BuildLayer5Texts();
+   if(AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    int index = AC_L5FindIndex(symbol);
    string text = "\r\nLAYER 5 - BASIC SYSTEM GATE\r\n";
    text += "----------------------------------------\r\n";
@@ -456,14 +478,16 @@ string AC_Layer5DossierSection(const string symbol)
 
 string AC_Layer5StatusRow()
 {
+   if(AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    AC_L5SyncCompatibilityFields();
-   return "schema_name=layer_status|schema_version=v5_basic_gate_1|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5_basic_gate_2|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|layer_status=" + AC_L5_STATUS
       + "|trust_state=" + AC_L5_TRUST_STATE
       + "|gate_policy=" + AC_L5_GATE_POLICY
+      + "|last_upstream_key=" + AC_L5_LAST_UPSTREAM_KEY
       + "|scanned_symbols=" + IntegerToString(AC_L5_SCANNED)
       + "|gate_pass=" + IntegerToString(AC_L5_GATE_PASS)
       + "|gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED)
