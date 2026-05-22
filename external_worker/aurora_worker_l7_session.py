@@ -21,6 +21,8 @@ L7_JOB_TYPE = "L7_SESSION_RELEVANCE_RANKING_V1"
 L7_LAYER_NAME = "Layer 7 - Session Relevance Ranking"
 L7_OWNER = "Runtime 4 - Surface Scoring Owner"
 OFF_SESSION_DEAD_TIME = "Off_Session_Dead_Time"
+L7_REASON_MAX_PARTS = 12
+L7_REASON_MAX_CHARS = 512
 
 SESSION_BUCKET_ORDER = {
     "poor_session_relevance": 0,
@@ -103,6 +105,27 @@ def _safe_int(value: str | None, default: int = 0) -> int:
 def _safe_text(row: Dict[str, str], key: str, default: str = "not_available") -> str:
     value = row.get(key, default)
     return default if value is None or str(value).strip() == "" else str(value).strip()
+
+
+def _bounded_reason(reason: str, *, max_parts: int = L7_REASON_MAX_PARTS, max_chars: int = L7_REASON_MAX_CHARS) -> str:
+    seen = set()
+    parts: List[str] = []
+    for raw in str(reason or "").replace("\r", " ").replace("\n", " ").split(";"):
+        part = raw.strip()
+        if not part or part in seen:
+            continue
+        seen.add(part)
+        parts.append(part)
+        if len(parts) >= max_parts:
+            break
+    text = ";".join(parts) if parts else "not_available"
+    if len(text) > max_chars:
+        text = text[: max(0, max_chars - 18)].rstrip("; ") + ";reason_truncated"
+    return text
+
+
+def _prepend_reason_token(reason: str, token: str) -> str:
+    return _bounded_reason(f"{token};{reason}")
 
 
 def _parse_kv_text(text: str) -> Dict[str, str]:
@@ -383,7 +406,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         "spread_session_safety_score": spread_score, "asset_class": asset_class, "ranking_group": ranking_group,
         "market_state": market_state, "quote_quality": quote_quality, "surface_quality": surface_quality,
         "tick_age_seconds": tick_age, "spread_bps": spread_bps, "daily_change_pct": daily_change,
-        "zero_spread_state": zero_spread_state, "reason": ";".join(reasons),
+        "zero_spread_state": zero_spread_state, "reason": _bounded_reason(";".join(reasons)),
         "trade_permission": "false", "selection_runtime": "false",
     }
 
@@ -411,7 +434,7 @@ def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
 def _top20_text(scored: List[Dict[str, str | float]]) -> str:
     lines = ["LAYER 7 - SESSION RELEVANCE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", "Policy: Off_Session_Dead_Time is cautionary and score-capped; it is not a trade window.", "", "rank|symbol|score|bucket|state|session|reason"]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['session_score']):.2f}|{row['session_bucket']}|{row['rank_state']}|{row['current_session']}|{row['reason']}")
+        lines.append(f"{index}|{row['symbol']}|{float(row['session_score']):.2f}|{row['session_bucket']}|{row['rank_state']}|{row['current_session']}|{_bounded_reason(str(row['reason']))}")
     lines.append("")
     return "\n".join(lines)
 
@@ -426,13 +449,14 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
         f"session_definition_source={row['session_definition_source']}", f"session_time_basis={row['session_time_basis']}", f"time_basis_confidence={float(row['time_basis_confidence']):.6f}",
         f"symbol_session_fit_score={float(row['symbol_session_fit_score']):.6f}", f"live_activity_quality_score={float(row['live_activity_quality_score']):.6f}", f"quote_freshness_quality_score={float(row['quote_freshness_quality_score']):.6f}",
         f"spread_session_safety_score={float(row['spread_session_safety_score']):.6f}", f"market_state={row['market_state']}", f"quote_quality={row['quote_quality']}", f"surface_quality={row['surface_quality']}",
-        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}", f"reason={_format_value(row['reason'])}",
+        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}", f"reason={_format_value(_bounded_reason(str(row['reason'])))}",
         "authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ]
     return "\n".join(lines)
 
 
 def _manifest(summary: L7RankSummary, input_path: Path) -> str:
+    summary.reason = _bounded_reason(summary.reason)
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
@@ -447,14 +471,14 @@ def _manifest(summary: L7RankSummary, input_path: Path) -> str:
         f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}",
         f"elite_session_relevance_count={summary.elite_count}", f"strong_session_relevance_count={summary.strong_count}", f"acceptable_session_relevance_count={summary.acceptable_count}", f"weak_session_relevance_count={summary.weak_count}", f"poor_session_relevance_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=write_expected_outputs_then_delete_stale_then_manifest_last", "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=write_expected_outputs_then_delete_stale_then_manifest_last", "session_profile_policy=static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window", f"reason_max_parts={L7_REASON_MAX_PARTS}", f"reason_max_chars={L7_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
 def _summary_from_ranked_manifest(manifest_text: str, fallback: L7RankSummary) -> L7RankSummary:
     data = _parse_kv_text(manifest_text)
     return L7RankSummary(
-        status=data.get("status", fallback.status), reason=data.get("reason", fallback.reason), input_count=_safe_int(data.get("input_count"), fallback.input_count), source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
+        status=data.get("status", fallback.status), reason=_bounded_reason(data.get("reason", fallback.reason)), input_count=_safe_int(data.get("input_count"), fallback.input_count), source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
         source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count), source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass), source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
         input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum), input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank), input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
         row_count=_safe_int(data.get("row_count"), fallback.row_count), ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count), ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count), not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
@@ -482,7 +506,10 @@ def _try_reuse_unchanged_rank_outputs(summary: L7RankSummary, manifest_path: Pat
         return None
     if existing.input_count <= 0 or existing.row_count != existing.input_count or existing.symbol_rank_files_written != existing.row_count or actual_symbol_rank_files != existing.row_count:
         return None
-    existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
+    existing.reason = _prepend_reason_token(
+        existing.reason,
+        "skipped_unchanged_input_reused_existing_ranked_outputs",
+    )
     existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
     existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
     existing.symbol_rank_files_actual = actual_symbol_rank_files
