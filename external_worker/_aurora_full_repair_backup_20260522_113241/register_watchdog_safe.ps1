@@ -5,18 +5,11 @@ $watchdogTask = "AuroraWorker_Global_Watchdog"
 $daemonTask = "AuroraWorker_Global"
 $statusFolder = Join-Path $sharedRoot "External Worker\Status"
 $installStatus = Join-Path $statusFolder "shared_worker_install_status.txt"
-$watchdogExe = Join-Path $sharedRoot "External Worker\AuroraWorker.exe"
 
 New-Item -ItemType Directory -Force -Path $statusFolder | Out-Null
 
 Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction SilentlyContinue
-
-if (!(Test-Path $watchdogExe)) {
-    throw "Missing shared watchdog executable: $watchdogExe"
-}
-
-$escapedExe = [System.Security.SecurityElement]::Escape($watchdogExe)
-$escapedArgs = [System.Security.SecurityElement]::Escape("--shared-root `"$sharedRoot`" --watchdog")
+$watchdogExe = Join-Path $sharedRoot "External Worker\AuroraWorker.exe"
 $start = (Get-Date).AddMinutes(1).ToString("yyyy-MM-ddTHH:mm:ss")
 
 $xml = @"
@@ -55,14 +48,22 @@ $xml = @"
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>$escapedExe</Command>
-      <Arguments>$escapedArgs</Arguments>
+      <Command>$watchdogExe</Command>
+      <Arguments>--shared-root "$sharedRoot" --watchdog</Arguments>
     </Exec>
   </Actions>
 </Task>
 "@
 
-Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
+$registrationError = "none"
+try {
+    if (!(Test-Path $watchdogExe)) {
+        throw "Missing shared watchdog executable: $watchdogExe"
+    }
+    Register-ScheduledTask -TaskName $watchdogTask -Xml $xml -Force | Out-Null
+} catch {
+    $registrationError = ($_.Exception.Message -replace "\r?\n", " ")
+}
 
 $daemon = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
 $watchdog = Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue
@@ -71,18 +72,21 @@ $daemonRegistered = if ($daemon) { "true" } else { "false" }
 $daemonState = if ($daemon) { $daemon.State.ToString() } else { "not_registered" }
 $watchdogRegistered = if ($watchdog) { "true" } else { "false" }
 $watchdogState = if ($watchdog) { $watchdog.State.ToString() } else { "not_registered" }
+$watchdogError = if ($watchdogRegistered -eq "true") { "none" } else { $registrationError }
 $operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true") { "false" } else { "true" }
 
 if (Test-Path $installStatus) {
     $text = Get-Content $installStatus -Raw
+
     $pairs = @{
         "scheduled_task_registered" = $daemonRegistered
         "scheduled_task_state" = $daemonState
         "watchdog_task_registered" = $watchdogRegistered
         "watchdog_task_state" = $watchdogState
-        "watchdog_task_error" = "none"
+        "watchdog_task_error" = $watchdogError
         "operator_cmd_required" = $operatorRequired
     }
+
     foreach ($key in $pairs.Keys) {
         if ($text -match "(?m)^$key=") {
             $text = $text -replace "(?m)^$key=.*$", "$key=$($pairs[$key])"
@@ -90,7 +94,8 @@ if (Test-Path $installStatus) {
             $text += "`r`n$key=$($pairs[$key])"
         }
     }
-    Set-Content -Path $installStatus -Value $text -Encoding ASCII
+
+    Set-Content -Path $installStatus -Value $text -Encoding UTF8
 }
 
 Write-Host "Watchdog registered=$watchdogRegistered state=$watchdogState operator_cmd_required=$operatorRequired"

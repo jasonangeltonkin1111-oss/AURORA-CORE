@@ -21,7 +21,7 @@ from aurora_worker_io import (
     utc_stamp,
 )
 
-WORKER_VERSION = "0.5.1_hotfix_no_powershell_daemon"
+WORKER_VERSION = "0.5.0"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -191,38 +191,8 @@ def discover_roots(shared_root: Path) -> List[Path]:
 
 
 def _powershell(command: str, timeout: int = 8) -> Tuple[bool, str]:
-    """
-    One-shot Windows helper for watchdog/repair paths only.
-    MUST NOT be called from the hot shared-daemon loop.
-    Runs hidden to prevent visible PowerShell popup storms.
-    """
     try:
-        kwargs = {
-            "text": True,
-            "stderr": subprocess.STDOUT,
-            "timeout": timeout,
-        }
-
-        if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = 0
-            kwargs["startupinfo"] = startupinfo
-            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-
-        out = subprocess.check_output(
-            [
-                "powershell",
-                "-NoProfile",
-                "-WindowStyle",
-                "Hidden",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                command,
-            ],
-            **kwargs,
-        ).strip()
+        out = subprocess.check_output(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command], text=True, stderr=subprocess.STDOUT, timeout=timeout).strip()
         return True, out
     except Exception as exc:
         return False, str(exc).replace("\r", " ").replace("\n", " ")
@@ -295,72 +265,40 @@ def _operator_cmd_required(daemon_registered: str, watchdog_registered: str, exe
 
 
 def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> str:
-    """
-    Shared daemon hot-loop status writer.
-
-    Critical hotfix:
-    - No PowerShell.
-    - No Get-ScheduledTask.
-    - No Get-Process.
-    - No task/process subprocess calls per heartbeat.
-
-    Task truth belongs to install/status scripts and one-shot watchdog/repair only.
-    """
     accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
     degraded = len(results) - accepted
     cpu = os.cpu_count() or 1
     mem_total, mem_avail, mem_used = _windows_memory()
-
+    daemon_registered, daemon_state = _get_task_state(DAEMON_TASK_NAME)
+    watchdog_registered, watchdog_state = _get_task_state(WATCHDOG_TASK_NAME)
+    worker_process_count = _proc_count("AuroraWorker")
+    terminal_process_count = _proc_count("terminal64")
+    exe_present = (shared_root / "External Worker" / "AuroraWorker" / "AuroraWorker.exe").exists()
+    status_present, age = _status_age(shared_root)
+    status_fresh = status_present and (age >= 0 and age <= STATUS_MAX_AGE_SECONDS)
     proof = watchdog or _read_existing_watchdog(shared_root)
-
+    operator_required = _operator_cmd_required(daemon_registered, watchdog_registered, exe_present, status_fresh, repair_success)
     throttle = "false"
     throttle_reason = "none"
     if mem_used.isdigit() and int(mem_used) >= 80:
         throttle = "true"
         throttle_reason = "memory_above_limit"
-
     lines = [
-        "schema_name=aurora_shared_worker_status",
-        "schema_version=3",
-        f"worker_version={WORKER_VERSION}",
-        f"process_id={PROCESS_ID}",
-        "mode=shared-daemon",
-        f"shared_root={shared_root}",
-        f"process_start_utc={PROCESS_START_UTC}",
-        f"process_start_unix={PROCESS_START_UNIX}",
-        f"last_loop_utc={utc_stamp()}",
-        f"last_loop_unix={unix_time()}",
-        f"loop_count={loop_count}",
-        f"discovered_root_count={len(roots)}",
-        f"processed_root_count={len(results)}",
-        f"accepted_root_count={accepted}",
-        f"degraded_root_count={degraded}",
-        "daemon_task_registered=not_checked_by_daemon",
-        "daemon_task_state=not_checked_by_daemon",
-        "watchdog_task_registered=not_checked_by_daemon",
-        "watchdog_task_state=not_checked_by_daemon",
-        f"watchdog_last_check_utc={proof.last_check_utc}",
-        f"watchdog_last_action={proof.last_action}",
-        f"watchdog_last_reason={proof.last_reason}",
-        f"watchdog_restart_attempted={proof.restart_attempted}",
-        f"watchdog_restart_result={proof.restart_result}",
-        "operator_cmd_required=not_available_in_daemon_status",
-        f"cpu_logical_count={cpu}",
-        "cpu_used_percent=not_available",
-        f"memory_total_mb={mem_total}",
-        f"memory_available_mb={mem_avail}",
-        f"memory_used_percent={mem_used}",
-        "memory_limit_percent=80",
-        "cpu_limit_percent=80",
-        "terminal_process_count=not_checked_by_daemon",
-        "aurora_worker_process_count=not_checked_by_daemon",
-        f"registered_root_count={len(roots)}",
-        f"resource_throttle_active={throttle}",
-        f"resource_throttle_reason={throttle_reason}",
-        "recommended_parallel_jobs=1",
-        "authority=calculation_support_only",
-        "trade_permission=false",
-        "",
+        "schema_name=aurora_shared_worker_status", "schema_version=3", f"worker_version={WORKER_VERSION}",
+        f"process_id={PROCESS_ID}", "mode=shared-daemon", f"shared_root={shared_root}",
+        f"process_start_utc={PROCESS_START_UTC}", f"process_start_unix={PROCESS_START_UNIX}",
+        f"last_loop_utc={utc_stamp()}", f"last_loop_unix={unix_time()}", f"loop_count={loop_count}",
+        f"discovered_root_count={len(roots)}", f"processed_root_count={len(results)}", f"accepted_root_count={accepted}",
+        f"degraded_root_count={degraded}", f"daemon_task_registered={daemon_registered}", f"daemon_task_state={daemon_state}",
+        f"watchdog_task_registered={watchdog_registered}", f"watchdog_task_state={watchdog_state}",
+        f"watchdog_last_check_utc={proof.last_check_utc}", f"watchdog_last_action={proof.last_action}",
+        f"watchdog_last_reason={proof.last_reason}", f"watchdog_restart_attempted={proof.restart_attempted}",
+        f"watchdog_restart_result={proof.restart_result}", f"operator_cmd_required={operator_required}",
+        f"cpu_logical_count={cpu}", f"cpu_used_percent=not_available", f"memory_total_mb={mem_total}",
+        f"memory_available_mb={mem_avail}", f"memory_used_percent={mem_used}", "memory_limit_percent=80", "cpu_limit_percent=80",
+        f"terminal_process_count={terminal_process_count}", f"aurora_worker_process_count={worker_process_count}",
+        f"registered_root_count={len(roots)}", f"resource_throttle_active={throttle}", f"resource_throttle_reason={throttle_reason}",
+        "recommended_parallel_jobs=1", "authority=calculation_support_only", "trade_permission=false", "",
         "root|exit_code|status|reason|snapshot_id|payload_checksum",
     ]
     lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.payload_checksum}" for root, code, res in results]
