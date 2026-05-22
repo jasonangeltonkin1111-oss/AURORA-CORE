@@ -522,7 +522,7 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    manifest += "cost_model_mismatch_count=" + IntegerToString(AC_L6_LAST_COST_MODEL_MISMATCH_COUNT) + "\r\n";
    manifest += "zero_cost_nonzero_spread_suspicious_count=" + IntegerToString(AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT) + "\r\n";
    manifest += "source_truth_owner=L5_pass_set_plus_L3_L4_packets_plus_MT5_OrderCalcProfit_primitives_plus_value_formula_tickvalue_contract_fallbacks\r\n";
-   manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_L6_cost_friction_ranking_support\r\n";
+   manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_future_L6D\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
    manifest += "trade_permission=false\r\n";
    manifest += "input_primitives_only=true\r\n";
@@ -551,8 +551,8 @@ string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const string jo
    text += "job_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\n";
    text += "job_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\n";
    text += "job_requested_layer=R3_GATEWAY\r\n";
-   text += "job_expected_output=snapshot_validation_plus_l6_cost_friction_input_primitives\r\n";
-   text += "gateway_job_scope=snapshot_validation_plus_l6_cost_friction_input_primitives_no_layer5_advisory_no_selection_no_permission\r\n";
+   text += "job_expected_output=snapshot_validation_shell_only\r\n";
+   text += "gateway_job_scope=snapshot_validation_only_no_layer5_advisory_no_l6_ranking\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
@@ -628,7 +628,7 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
    string job_id = AC_ExternalWorkerJobId(snapshot_id);
    string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, job_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=3\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_requested_layer=R3_GATEWAY\r\njob_expected_output=snapshot_validation_plus_l6_cost_friction_input_primitives\r\ngateway_job_scope=snapshot_validation_plus_l6_cost_friction_input_primitives_no_layer5_advisory_no_selection_no_permission\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nranking_runtime=false\r\nselection_runtime=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=3\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_requested_layer=R3_GATEWAY\r\njob_expected_output=snapshot_validation_shell_only\r\ngateway_job_scope=snapshot_validation_only_no_layer5_advisory_no_l6_ranking\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nranking_runtime=false\r\nselection_runtime=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_JOB_ID = job_id;

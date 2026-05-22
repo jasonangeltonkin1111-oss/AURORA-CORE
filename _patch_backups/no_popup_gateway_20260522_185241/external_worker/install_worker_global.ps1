@@ -24,7 +24,7 @@ if (!(Test-Path $BuiltInternalDll)) { throw "Install failed: packaged Python DLL
 # Runtime task authority must use the packaged one-folder EXE beside _internal.
 Copy-Item -Path $BuiltExe -Destination $SharedExeFlat -Force
 
-$daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"; $daemonStartAttempted=$false; $daemonStartError="none"
+$daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"
 try {
   $daemonAction = New-ScheduledTaskAction -Execute $BuiltExe -Argument "--shared-root `"$SharedRoot`" --mode shared-daemon --poll-seconds 1" -WorkingDirectory $SharedWorkerRoot
   $daemonTrigger = New-ScheduledTaskTrigger -AtLogOn
@@ -89,15 +89,11 @@ scheduled_task_name=$DaemonTaskName
 scheduled_task_registered=$($daemonRegistered.ToString().ToLowerInvariant())
 scheduled_task_state=$daemonState
 scheduled_task_error=$daemonError
-daemon_start_attempted=$($daemonStartAttempted.ToString().ToLowerInvariant())
-daemon_start_error=$daemonStartError
 watchdog_install_method=windows_scheduled_task_repair_lane_packaged_exe
 watchdog_task_name=$WatchdogTaskName
 watchdog_task_registered=$($watchRegistered.ToString().ToLowerInvariant())
 watchdog_task_state=$watchState
 watchdog_task_error=$watchError
-watchdog_default_enabled=false
-watchdog_disabled_to_prevent_popup_loop=true
 auto_start_configured=$autoStartConfigured
 operator_cmd_required=$operatorCmdRequired
 generated_unix=$($Now.ToUnixTimeSeconds())

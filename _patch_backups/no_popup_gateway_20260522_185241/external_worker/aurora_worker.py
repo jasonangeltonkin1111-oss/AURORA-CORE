@@ -386,7 +386,7 @@ def _operator_cmd_required(daemon_registered: str, watchdog_registered: str, exe
     return "false" if ok else "true"
 
 
-def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False, status_mode: str = "shared-daemon") -> str:
+def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> str:
     """
     Shared daemon hot-loop status writer.
 
@@ -417,7 +417,7 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         "schema_version=6",
         f"worker_version={WORKER_VERSION}",
         f"process_id={PROCESS_ID}",
-        f"mode={status_mode}",
+        "mode=shared-daemon",
         f"shared_root={shared_root}",
         f"gateway_status_path={shared_gateway_status_path(shared_root)}",
         f"process_start_utc={PROCESS_START_UTC}",
@@ -463,8 +463,8 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
     return "\n".join(lines)
 
 
-def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False, status_mode: str = "shared-daemon") -> bool:
-    return atomic_write_text(shared_gateway_status_path(shared_root), build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success, status_mode))
+def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False) -> bool:
+    return atomic_write_text(shared_gateway_status_path(shared_root), build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success))
 
 
 def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
@@ -481,7 +481,7 @@ def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
                 res = mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
                 code = 3
             results.append((root, code, res))
-        write_shared_status(shared_root, loop, roots, results, status_mode="shared-daemon")
+        write_shared_status(shared_root, loop, roots, results)
         time.sleep(poll_seconds)
 
 
@@ -497,7 +497,7 @@ def run_status_probe(shared_root: Path) -> int:
             code = 3
             write_failed = True
         results.append((root, code, res))
-    ok = write_shared_status(shared_root, 1, roots, results, status_mode="shared_status_probe")
+    ok = write_shared_status(shared_root, 1, roots, results)
     return 0 if ok and not write_failed else 3
 
 
@@ -559,7 +559,7 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
         restart_attempted=attempted,
         restart_result=restart_result,
     )
-    shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success, status_mode=("watchdog_probe" if watchdog_mode else "repair_probe"))
+    shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success)
     return 0 if shared_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
 
 

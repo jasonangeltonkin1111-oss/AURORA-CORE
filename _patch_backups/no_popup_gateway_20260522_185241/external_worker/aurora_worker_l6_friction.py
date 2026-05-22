@@ -150,28 +150,6 @@ def _sanitize_path_part(value: str) -> str:
     return safe
 
 
-def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
-    if not path.exists():
-        return 0, 0
-    try:
-        path.unlink()
-        return 1, 0
-    except OSError:
-        return 0, 1
-
-
-def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    if not symbol_rank_dir.exists():
-        return removed, failed
-    for path in symbol_rank_dir.glob("*.txt"):
-        r, f = _remove_file_if_exists(path)
-        removed += r
-        failed += f
-    return removed, failed
-
-
 def _bucket_from_score(score: float) -> str:
     if score >= 90.0:
         return "elite_friction"
@@ -522,7 +500,6 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         str(row["symbol"]),
     ), reverse=True)
 
-    _clear_symbol_rank_files(symbol_rank_dir)
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
