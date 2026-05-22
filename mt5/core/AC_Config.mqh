@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime3_gateway_snapshot_contract_cleanup";
-static const string AC_BUILD_VERSION      = "1.047";
-static const string AC_UPGRADE_ID         = "RUNTIME3_GATEWAY_SNAPSHOT_CONTRACT_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Cleans stale Runtime 5 / L5 deep-readiness worker job wording. Layer 5 remains Basic System Gate. Runtime 3 Gateway snapshot job is now labelled as snapshot validation only; Layer 6+ remains future cost/friction/scoring/ranking work until a real handler and ranked outputs are implemented.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 remains Gateway/calculation support only. Runtime 3 snapshot validation does not rank symbols, select candidates, grant permission, or execute trades. Layer 6+ owns future friction/scoring work after explicit implementation. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.047; confirm L5 Board still shows BASIC SYSTEM GATE; confirm Gateway snapshot/job surfaces use R3_SNAPSHOT_VALIDATION_V1 and no longer claim L5_DEEP_READINESS_SHELL; confirm L6 input primitives still publish separately as L6 cost/friction input evidence; confirm Runtime 3 Gateway remains calculation_support_only and trade_permission=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime3_gateway_snapshot_contract_cleanup_no_duplicate_owner_no_ranking_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "runtime_scheduler_and_gateway_write_truth_cleanup";
+static const string AC_BUILD_VERSION      = "1.048";
+static const string AC_UPGRADE_ID         = "RUNTIME_SCHEDULER_AND_GATEWAY_WRITE_TRUTH_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Adds Gateway worker write-failure truth and reduces Workbench/full-publication cadence pressure. Layer 5 remains Basic System Gate. Runtime 3 remains Gateway snapshot validation and calculation support only. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 owns Layers 1-5 foundation truth. Layer 5 consumes Layer 2 market-state truth, Layer 3 broker/spec/value/classification truth, and Layer 4 live quote/spread truth to produce pass/blocked basic eligibility. Runtime 3 Gateway worker now reports degraded write publication instead of silently accepting failed atomic replacements. Workbench/full-publication cadence is throttled away from every-second pressure on the 250 ms timer. Runtime 3 snapshot validation does not rank symbols, select candidates, grant permission, or execute trades. Layer 6+ owns future friction/scoring work after explicit implementation. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.048 and EA property version=1.048; confirm L5 Board still shows BASIC SYSTEM GATE; confirm Gateway worker reports 0.6.3_write_failure_truth after rebuild/install only; confirm write_degraded_root_count appears only on worker write failures; confirm Workbench/full-publication cadence no longer fires every second from AC_WORKBENCH_INTERVAL_HEARTBEATS; confirm Runtime 3 Gateway remains calculation_support_only and trade_permission=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime_scheduler_gateway_write_truth_cleanup_no_duplicate_owner_no_ranking_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "display_renamed_to_gateway_physical_external_worker_paths_preserved_until_migration_proof";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.047_runtime3_gateway_snapshot_contract_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.048_runtime_scheduler_gateway_write_truth_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
@@ -56,7 +56,7 @@ static const string AC_SELECTION_GLOBAL_FOLDER = "Global";
 static const string AC_SELECTION_INDEX_FILE = "Selection Index.txt";
 static const string AC_MARKET_BOARD_FILE  = "Market Board.txt";
 static const int    AC_TIMER_MILLISECONDS = 250;
-static const int    AC_WORKBENCH_INTERVAL_HEARTBEATS = 4;
+static const int    AC_WORKBENCH_INTERVAL_HEARTBEATS = 240;
 static const int    AC_L2_REFRESH_SECONDS = 300;
 static const int    AC_L4_DOSSIER_REFRESH_SECONDS = 60;
 static const int    AC_L4_TOP_LIST_REFRESH_SECONDS = 10;
