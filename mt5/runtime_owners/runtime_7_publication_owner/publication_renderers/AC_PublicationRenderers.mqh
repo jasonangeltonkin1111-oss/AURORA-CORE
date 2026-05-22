@@ -5,6 +5,8 @@
 // Renders prepared owner/status packets only. It must not compute trading truth,
 // ranking, selection, market-open state, broker specs, quotes, or permission.
 
+#include "../../runtime_4_surface_scoring_owner/layer_6_cost_friction_ranking/AC_CostFrictionOwner.mqh"
+
 static string AC_L0_FIRST_FAILURE = "";
 static string AC_L0_FAILURE_ADDENDUM = "";
 static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
@@ -14,6 +16,7 @@ static string AC_L0_CACHED_L3_CACHE_KEY = "";
 static string AC_L0_CACHED_L4_CACHE_KEY = "";
 static string AC_L0_CACHED_L4_REFRESH_KEY = "";
 static string AC_L0_CACHED_L5_STATUS = "";
+static string AC_L0_CACHED_L6_STATUS = "";
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -94,6 +97,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 3 Broker Specs and Value: " + (AC_L3_READY ? AC_L3_SCAN_STATUS : "Pending") + "\r\n";
    text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
    text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
+   text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
    text += "----------------------------------------\r\n";
@@ -101,7 +105,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
-   text += "Ranking Active: No\r\n";
+   text += "Cost / Friction Ranking: Pending Layer 6 Gateway calculation\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
    text += AC_Layer1DossierSection(symbol);
@@ -109,15 +113,17 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer3DossierSection(symbol);
    text += AC_Layer4DossierSection(symbol);
    text += AC_Layer5DossierSection(symbol);
+   text += AC_Layer6DossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 6 Cost / Friction Ranking consumes Layer 5 pass set only\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
+   text += (market_state == "open" ? "Next step: Layer 6 Gateway snapshot/export and Python cost ranking calculation\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
+   text += "Layer 6 ranks only the Layer 5 pass set; it does not hard-block symbols.\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
    text += "----------------------------------------\r\n";
    text += "Tradable: No\r\n";
-   text += "Ranked: No\r\n";
+   text += "Ranked: Layer 6 skeleton only\r\n";
    text += "Selected: No\r\n";
    text += "Alert Active: No\r\n";
    text += "Permission: No\r\n";
@@ -280,13 +286,15 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0_CACHED_L4_CACHE_KEY = AC_L4_CACHE_KEY;
    AC_L0_CACHED_L4_REFRESH_KEY = AC_L4_REFRESH_KEY;
    AC_L0_CACHED_L5_STATUS = AC_L5_STATUS;
+   AC_L0_CACHED_L6_STATUS = AC_L6_STATUS;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
    AC_BuildLayer2Texts();
    AC_BuildLayer3Texts();
    AC_BuildLayer4Texts();
    AC_BuildLayer5Texts();
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_sequential_symbol_by_symbol_with_l2_l3_l4_l5_sections");
+   AC_RefreshLayer6CostFrictionSkeleton();
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_sequential_symbol_by_symbol_with_l2_l3_l4_l5_l6_sections");
    return AC_L0_CACHED_RESULT;
 }
 
@@ -300,11 +308,12 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L3_CACHE_KEY == AC_L3_CACHE_KEY
       && AC_L0_CACHED_L4_CACHE_KEY == AC_L4_CACHE_KEY
       && AC_L0_CACHED_L4_REFRESH_KEY == AC_L4_REFRESH_KEY
-      && AC_L0_CACHED_L5_STATUS == AC_L5_STATUS)
+      && AC_L0_CACHED_L5_STATUS == AC_L5_STATUS
+      && AC_L0_CACHED_L6_STATUS == AC_L6_STATUS)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS);
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
@@ -329,7 +338,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Failed Dossiers:        " + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "Dossier Pass Duration:  " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "\r\n";
-   text += "CURRENT FOUNDATION\r\n";
+   text += "CURRENT FOUNDATION + SURFACE SCORING\r\n";
    text += "----------------------------------------\r\n";
    text += "Layer 0: Publication + Dossier Foundation\r\n";
    text += "Layer 1: Account / Portfolio Truth\r\n";
@@ -337,35 +346,37 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 3: Broker Specs and Value Truth\r\n";
    text += "Layer 4: Live Quote and Spread Truth\r\n";
    text += "Layer 5: Basic System Gate\r\n";
+   text += "Layer 6: Cost / Friction Ranking\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
    text += AC_Layer4BoardSection();
    text += AC_Layer5BoardSection();
+   text += AC_Layer6BoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
    text += "Specs Known:        " + (AC_L3_READY ? "See Layer 3 readiness" : "No") + "\r\n";
    text += "Quotes Known:       " + (AC_L4_READY ? "See Layer 4 readiness" : "No") + "\r\n";
-   text += "Ranking Active:     No\r\n";
+   text += "Cost Ranking:       Layer 6 skeleton pending Gateway calculation\r\n";
    text += "Selection Active:   No\r\n";
    text += "Permission Active:  No\r\n";
    text += "\r\n";
    text += "TRUST BLOCKER\r\n";
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Closed symbols are cut off from deeper layers until their Layer 2 recheck.\r\n";
+   text += "Layer 6 is ranking/scoring only; Layer 5 remains the only hard gate.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
    text += "Board refresh is atomic and writes only when state text changes.\r\n";
-   text += "No ranking, selection, alerts, or trade permission exists.\r\n";
+   text += "No selection, alerts, or trade permission exists.\r\n";
    return text;
 }
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.9|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.10|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -389,8 +400,9 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l4_cache_key=" + AC_L0_CACHED_L4_CACHE_KEY
       + "|cached_l4_refresh_key=" + AC_L0_CACHED_L4_REFRESH_KEY
       + "|cached_l5_status=" + AC_L0_CACHED_L5_STATUS
+      + "|cached_l6_status=" + AC_L0_CACHED_L6_STATUS
       + "|main_blocker=" + status.main_blocker
-      + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
+      + "|trade_permission=false|ranking_runtime=true|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
@@ -427,23 +439,25 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l4_cache_key=" + AC_L0_CACHED_L4_CACHE_KEY + "\r\n";
    text += "cached_l4_refresh_key=" + AC_L0_CACHED_L4_REFRESH_KEY + "\r\n";
    text += "cached_l5_status=" + AC_L0_CACHED_L5_STATUS + "\r\n";
+   text += "cached_l6_status=" + AC_L0_CACHED_L6_STATUS + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "gateway=not_used_for_L0_L1_L2_L3_L4_or_L5\r\n";
+   text += "gateway=not_used_for_L0_L1_L2_L3_L4_or_L5_gateway_required_for_L6_calculation_later\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
    text += AC_Layer3WorkbenchSection();
    text += AC_Layer4WorkbenchSection();
    text += AC_Layer5WorkbenchSection();
+   text += AC_Layer6WorkbenchSection();
    return text;
 }
 
 string AC_Layer0FailureAddendumText()
 {
    string text = "";
-   text += "L0_L2_L3_L4_L5_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "L0_L2_L3_L4_L5_L6_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
    text += "----------------------------------------\r\n";
    if(AC_L0_FAILURE_ADDENDUM == "")
       text += "none\r\n";
