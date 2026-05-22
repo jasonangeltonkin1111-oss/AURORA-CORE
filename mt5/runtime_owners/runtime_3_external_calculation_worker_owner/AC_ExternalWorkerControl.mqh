@@ -4,11 +4,13 @@
 void AC_BuildExternalWorkerTexts();
 void AC_AppendExternalWorkerSharedSupervisorTexts();
 
+static string AC_EXTERNAL_WORKER_LAST_REQUIRED_TEXT = "";
+
 string AC_ExternalWorkerRequiredText()
 {
    string text = "";
    text += "schema_name=external_worker_required\r\n";
-   text += "schema_version=2\r\n";
+   text += "schema_version=3\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
@@ -29,8 +31,8 @@ string AC_ExternalWorkerRequiredText()
    text += "lifecycle_status_path=" + AC_ExternalWorkerProcessStatusPath() + "\r\n";
    text += "snapshot_path=" + AC_ExternalWorkerSnapshotPath() + "\r\n";
    text += "result_path=" + AC_ExternalWorkerResultPath() + "\r\n";
+   text += "contract_timing=stable_control_contract_written_only_when_changed\r\n";
    text += "trade_permission=false\r\n";
-   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    return text;
 }
 
@@ -169,7 +171,7 @@ bool AC_ExternalWorkerShouldCheck()
 
 AC_WriteResult AC_WriteExternalWorkerRequired()
 {
-   return AC_WriteTextFile(AC_ExternalWorkerRequiredPath(), AC_ExternalWorkerRequiredText());
+   return AC_WriteTextFileIfChanged(AC_ExternalWorkerRequiredPath(), AC_ExternalWorkerRequiredText(), AC_EXTERNAL_WORKER_LAST_REQUIRED_TEXT, false);
 }
 
 #endif
