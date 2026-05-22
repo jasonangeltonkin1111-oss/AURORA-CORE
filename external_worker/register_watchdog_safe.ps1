@@ -9,6 +9,7 @@ $installStatus = Join-Path $statusFolder "shared_worker_install_status.txt"
 # PyInstaller one-folder build: runtime EXE must stay beside _internal.
 $watchdogWorkdir = Join-Path $sharedRoot "External Worker\AuroraWorker"
 $watchdogExe = Join-Path $watchdogWorkdir "AuroraWorker.exe"
+$watchdogDll = Join-Path $watchdogWorkdir "_internal\python312.dll"
 
 New-Item -ItemType Directory -Force -Path $statusFolder | Out-Null
 
@@ -17,8 +18,8 @@ Unregister-ScheduledTask -TaskName $watchdogTask -Confirm:$false -ErrorAction Si
 if (!(Test-Path $watchdogExe)) {
     throw "Missing packaged watchdog executable: $watchdogExe"
 }
-if (!(Test-Path (Join-Path $watchdogWorkdir "_internal\python312.dll"))) {
-    throw "Missing packaged Python DLL: $watchdogWorkdir\_internal\python312.dll"
+if (!(Test-Path $watchdogDll)) {
+    throw "Missing packaged Python DLL: $watchdogDll"
 }
 
 $action = New-ScheduledTaskAction `
@@ -58,11 +59,18 @@ $daemonRegistered = if ($daemon) { "true" } else { "false" }
 $daemonState = if ($daemon) { $daemon.State.ToString() } else { "not_registered" }
 $watchdogRegistered = if ($watchdog) { "true" } else { "false" }
 $watchdogState = if ($watchdog) { $watchdog.State.ToString() } else { "not_registered" }
-$operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true") { "false" } else { "true" }
+$packagedExePresent = if (Test-Path $watchdogExe) { "true" } else { "false" }
+$packagedDllPresent = if (Test-Path $watchdogDll) { "true" } else { "false" }
+
+# This is install/autostart configuration proof only.
+# It is not stale/missing daemon recovery proof. Runtime 3D closeout still requires
+# shared status freshness plus watchdog recovery evidence from the worker status file.
+$operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true" -and $packagedExePresent -eq "true" -and $packagedDllPresent -eq "true") { "false" } else { "true" }
 
 if (Test-Path $installStatus) {
     $text = Get-Content $installStatus -Raw
     $pairs = @{
+        "schema_version" = "5"
         "scheduled_task_registered" = $daemonRegistered
         "scheduled_task_state" = $daemonState
         "watchdog_task_registered" = $watchdogRegistered
@@ -70,8 +78,12 @@ if (Test-Path $installStatus) {
         "watchdog_task_error" = "none"
         "operator_cmd_required" = $operatorRequired
         "auto_start_configured" = if ($operatorRequired -eq "false") { "true" } else { "false" }
+        "packaged_exe_present" = $packagedExePresent
+        "packaged_internal_python_dll_present" = $packagedDllPresent
         "flat_exe_runtime_authority" = "false"
         "packaged_exe_runtime_authority" = "true"
+        "watchdog_proof_scope" = "registration_only_not_recovery_proof"
+        "package_staleness_policy" = "rebuild_required_after_worker_source_change_no_source_only_runtime_claim"
     }
     foreach ($key in $pairs.Keys) {
         if ($text -match "(?m)^$key=") {
@@ -83,4 +95,4 @@ if (Test-Path $installStatus) {
     Set-Content -Path $installStatus -Value $text -Encoding ASCII
 }
 
-Write-Host "Watchdog registered=$watchdogRegistered state=$watchdogState operator_cmd_required=$operatorRequired"
+Write-Host "Watchdog registered=$watchdogRegistered state=$watchdogState operator_cmd_required=$operatorRequired proof_scope=registration_only_not_recovery_proof"
