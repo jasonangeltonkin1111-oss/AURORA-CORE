@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.041"
+#property version   "1.042"
 #property description "AURORA CORE - external worker foundation"
 
 #include "core/AC_Config.mqh"
