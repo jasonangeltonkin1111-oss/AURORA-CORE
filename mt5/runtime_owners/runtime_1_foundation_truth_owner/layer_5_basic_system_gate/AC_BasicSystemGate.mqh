@@ -16,6 +16,9 @@ static uint   AC_L5_SCAN_STARTED_MS = 0;
 static uint   AC_L5_SCAN_DURATION_MS = 0;
 static uint   AC_L5_REFRESH_DURATION_MS = 0;
 static string AC_L5_LAST_UPSTREAM_KEY = "not_scanned";
+static int    AC_L5_FIND_LAST_INDEX = -1;
+static int    AC_L5_FIND_CACHE_HITS = 0;
+static int    AC_L5_FIND_FULL_SCAN_COUNT = 0;
 
 static int AC_L5_SCANNED = 0;
 static int AC_L5_GATE_PASS = 0;
@@ -148,6 +151,9 @@ void AC_L5Reset()
    AC_L5_BLOCK_L3_NOT_READY = 0;
    AC_L5_BLOCK_L4_NOT_READY = 0;
    AC_L5_WORST_BLOCKER = "None";
+   AC_L5_FIND_LAST_INDEX = -1;
+   AC_L5_FIND_CACHE_HITS = 0;
+   AC_L5_FIND_FULL_SCAN_COUNT = 0;
    ArrayResize(AC_L5_SYMBOLS, 0);
    AC_L5SyncCompatibilityFields();
 }
@@ -359,8 +365,40 @@ void AC_RefreshLayer5BasicSystemGate()
 
 int AC_L5FindIndex(const string symbol)
 {
-   for(int i = 0; i < ArraySize(AC_L5_SYMBOLS); i++)
-      if(AC_L5_SYMBOLS[i].symbol == symbol) return i;
+   int total = ArraySize(AC_L5_SYMBOLS);
+   if(total <= 0) return -1;
+
+   if(AC_L5_FIND_LAST_INDEX >= 0 && AC_L5_FIND_LAST_INDEX < total && AC_L5_SYMBOLS[AC_L5_FIND_LAST_INDEX].symbol == symbol)
+   {
+      AC_L5_FIND_CACHE_HITS++;
+      return AC_L5_FIND_LAST_INDEX;
+   }
+
+   int next_index = AC_L5_FIND_LAST_INDEX + 1;
+   if(next_index >= 0 && next_index < total && AC_L5_SYMBOLS[next_index].symbol == symbol)
+   {
+      AC_L5_FIND_LAST_INDEX = next_index;
+      AC_L5_FIND_CACHE_HITS++;
+      return next_index;
+   }
+
+   int previous_index = AC_L5_FIND_LAST_INDEX - 1;
+   if(previous_index >= 0 && previous_index < total && AC_L5_SYMBOLS[previous_index].symbol == symbol)
+   {
+      AC_L5_FIND_LAST_INDEX = previous_index;
+      AC_L5_FIND_CACHE_HITS++;
+      return previous_index;
+   }
+
+   AC_L5_FIND_FULL_SCAN_COUNT++;
+   for(int i = 0; i < total; i++)
+   {
+      if(AC_L5_SYMBOLS[i].symbol == symbol)
+      {
+         AC_L5_FIND_LAST_INDEX = i;
+         return i;
+      }
+   }
    return -1;
 }
 
@@ -406,6 +444,9 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "gateway_required=false\r\n";
    AC_L5_WORKBENCH_SECTION += "last_upstream_key=" + AC_L5_LAST_UPSTREAM_KEY + "\r\n";
    AC_L5_WORKBENCH_SECTION += "current_upstream_key=" + AC_L5UpstreamKey() + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "find_cache_last_index=" + IntegerToString(AC_L5_FIND_LAST_INDEX) + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "find_cache_hits=" + IntegerToString(AC_L5_FIND_CACHE_HITS) + "\r\n";
+   AC_L5_WORKBENCH_SECTION += "find_full_scan_count=" + IntegerToString(AC_L5_FIND_FULL_SCAN_COUNT) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "scanned_symbols=" + IntegerToString(AC_L5_SCANNED) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
@@ -487,7 +528,7 @@ string AC_Layer5StatusRow()
 {
    if(AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    AC_L5SyncCompatibilityFields();
-   return "schema_name=layer_status|schema_version=v5_basic_gate_3|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5_basic_gate_4|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -495,6 +536,9 @@ string AC_Layer5StatusRow()
       + "|trust_state=" + AC_L5_TRUST_STATE
       + "|gate_policy=" + AC_L5_GATE_POLICY
       + "|last_upstream_key=" + AC_L5_LAST_UPSTREAM_KEY
+      + "|find_cache_last_index=" + IntegerToString(AC_L5_FIND_LAST_INDEX)
+      + "|find_cache_hits=" + IntegerToString(AC_L5_FIND_CACHE_HITS)
+      + "|find_full_scan_count=" + IntegerToString(AC_L5_FIND_FULL_SCAN_COUNT)
       + "|scanned_symbols=" + IntegerToString(AC_L5_SCANNED)
       + "|gate_pass=" + IntegerToString(AC_L5_GATE_PASS)
       + "|gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED)
