@@ -161,6 +161,7 @@ Required checks:
 5. `git branch --contains <reported_commit>` if a commit was reported
 6. `git diff --stat origin/main...HEAD`
 7. `git diff --stat main...HEAD` when local main exists
+8. `git branch -a --contains <reported_commit>` if a commit was reported
 
 If reported work exists only locally, either push the branch or clearly report it as local-only. Do not redo the same patch on another branch until the existing work is located and audited.
 
