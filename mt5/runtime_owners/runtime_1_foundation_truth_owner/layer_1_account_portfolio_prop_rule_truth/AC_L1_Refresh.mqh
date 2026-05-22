@@ -7,10 +7,12 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingSymbolExposureMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingAssetExposureMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1AccountPortfolioMapsFull();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RReadinessMap();
    AC_L1_WORKBENCH_SECTION += "live_exposure=enabled_board_and_account_status\r\n";
    AC_L1_WORKBENCH_SECTION += "live_risk_at_sl=enabled_estimated_account_status_and_board_summary\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure_maps=enabled_account_status_symbol_and_asset\r\n";
+   AC_L1_WORKBENCH_SECTION += "cost_tag_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "portfolio_maps=enabled_summary_board_full_account_status\r\n";
    AC_L1_WORKBENCH_SECTION += "r_readiness=enabled_account_status_only\r\n";
 }
