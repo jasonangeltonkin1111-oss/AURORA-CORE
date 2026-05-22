@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.042"
+#property version   "1.043"
 #property description "AURORA CORE - external worker foundation"
 
 #include "core/AC_Config.mqh"
@@ -365,8 +365,7 @@ int OnInit()
    AC_TIMER_SETUP_ERROR = AC_TIMER_READY ? 0 : GetLastError();
    AC_PublishRuntime0Full(true);
    return INIT_SUCCEEDED;
-}
-
+}\n
 void OnTimer()
 {
    if(AC_L2ShouldRunFullScan() || AC_L3ShouldRunFullScan() || AC_L4ShouldRunFullScan() || AC_ExternalWorkerShouldCheck())
