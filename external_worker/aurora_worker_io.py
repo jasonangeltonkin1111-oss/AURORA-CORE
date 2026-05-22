@@ -9,6 +9,8 @@ import time
 
 READ_RETRY_ATTEMPTS = 4
 READ_RETRY_BACKOFF_SECONDS = 0.05
+WRITE_REPLACE_RETRY_ATTEMPTS = 12
+WRITE_REPLACE_RETRY_BACKOFF_SECONDS = 0.05
 
 
 @dataclass(frozen=True)
@@ -90,14 +92,73 @@ def payload_checksum(payload_rows: Iterable[str]) -> str:
     return str(checksum)
 
 
-def atomic_write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with tmp.open("w", encoding="utf-8", newline="") as handle:
+def _write_text_file_durable(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(text)
         handle.flush()
         os.fsync(handle.fileno())
-    os.replace(tmp, path)
+
+
+def _cleanup_stale_tmp(path: Path) -> None:
+    try:
+        if path.exists():
+            path.unlink()
+    except OSError:
+        pass
+
+
+def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
+    # Best-effort only. Never let failed proof writing crash the Gateway daemon.
+    try:
+        sidecar = path.with_name(path.name + ".write_failed.txt")
+        text = "\n".join([
+            "schema_name=aurora_gateway_write_failure",
+            "schema_version=1",
+            f"target_path={path}",
+            f"error_type={type(exc).__name__}",
+            f"error={str(exc).replace(chr(13), ' ').replace(chr(10), ' ')}",
+            f"generated_utc={utc_stamp()}",
+            f"generated_unix={unix_time()}",
+            "authority=calculation_support_only",
+            "trade_permission=false",
+            "",
+        ])
+        tmp = sidecar.with_name(f"{sidecar.name}.{os.getpid()}.{unix_time()}.tmp")
+        _write_text_file_durable(tmp, text)
+        try:
+            os.replace(tmp, sidecar)
+        except OSError:
+            _cleanup_stale_tmp(tmp)
+    except OSError:
+        pass
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """Durable best-effort atomic text write for Windows/MT5 shared files.
+
+    Windows can briefly lock the final status file while MT5, Explorer, antivirus,
+    or another reader opens it. A transient WinError 32 must not kill the packaged
+    Gateway daemon or create popup storms. Use a unique tmp per process/write,
+    retry boundedly, and degrade with a sidecar proof if replacement stays locked.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
+    last_error: PermissionError | OSError | None = None
+    try:
+        _write_text_file_durable(tmp, text)
+        for attempt in range(WRITE_REPLACE_RETRY_ATTEMPTS):
+            try:
+                os.replace(tmp, path)
+                return
+            except (PermissionError, OSError) as exc:
+                last_error = exc
+                if attempt + 1 >= WRITE_REPLACE_RETRY_ATTEMPTS:
+                    break
+                time.sleep(WRITE_REPLACE_RETRY_BACKOFF_SECONDS * (attempt + 1))
+        assert last_error is not None
+        _write_atomic_failure_sidecar(path, last_error)
+    finally:
+        _cleanup_stale_tmp(tmp)
 
 
 def unix_time() -> int:
