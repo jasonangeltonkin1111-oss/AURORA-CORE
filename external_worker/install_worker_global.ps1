@@ -76,3 +76,7 @@ trade_permission=false
 "@
 Set-Content -Path $SharedInstallStatusPath -Value $InstallText -Encoding ASCII
 Write-Host "Installed global worker and task proofs at $SharedInstallStatusPath"
+
+# Aurora local patch: safe watchdog registration for paths with spaces.
+powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\register_watchdog_safe.ps1"
+
