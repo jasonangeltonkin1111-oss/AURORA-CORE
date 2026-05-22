@@ -34,32 +34,8 @@ string AC_ExternalWorkerRequiredText()
    return text;
 }
 
-void AC_RefreshExternalWorkerStatus()
+void AC_RefreshExternalWorkerLaunchStatus()
 {
-   AC_ExternalWorkerInitStatus();
-   AC_EXTERNAL_WORKER_LAST_CHECK_TIME = TimeCurrent();
-
-   int common_flag = AC_CommonFlag();
-   ResetLastError();
-   AC_EXTERNAL_WORKER_STATUS.exe_flat_present = FileIsExist(AC_ExternalWorkerExePath(), common_flag);
-   AC_EXTERNAL_WORKER_STATUS.flat_exe_error = GetLastError();
-   ResetLastError();
-   AC_EXTERNAL_WORKER_STATUS.exe_folder_present = FileIsExist(AC_ExternalWorkerPackagedExePath(), common_flag);
-   AC_EXTERNAL_WORKER_STATUS.folder_exe_error = GetLastError();
-   AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
-   AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
-
-   AC_ValidateExternalWorkerInstallStatus();
-   AC_ReadExternalWorkerSharedStatus();
-   AC_ValidateExternalWorkerLifecycle();
-
-   AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
-   AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
-   AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
-
-   if(AC_L4_READY)
-      AC_ExportExternalWorkerSnapshot();
-
    if(AC_EXTERNAL_WORKER_STATUS.auto_launch_desired)
    {
       if(AC_EXTERNAL_WORKER_STATUS.install_task_registered == "true")
@@ -83,7 +59,10 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.launch_status = "Disabled";
       AC_EXTERNAL_WORKER_STATUS.launch_blocker = "Auto launch disabled by config";
    }
+}
 
+void AC_RefreshExternalWorkerWorkerStatus()
+{
    if(!AC_EXTERNAL_WORKER_STATUS.worker_installed)
    {
       AC_EXTERNAL_WORKER_STATUS.install_status = "Missing";
@@ -107,9 +86,39 @@ void AC_RefreshExternalWorkerStatus()
 
    if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
    {
+      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.worker_installed ? "Heartbeat present - " + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status : "Heartbeat present but install proof missing";
+   }
+}
+
+void AC_RefreshExternalWorkerStatus()
+{
+   AC_ExternalWorkerInitStatus();
+   AC_EXTERNAL_WORKER_LAST_CHECK_TIME = TimeCurrent();
+
+   int common_flag = AC_CommonFlag();
+   ResetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_flat_present = FileIsExist(AC_ExternalWorkerExePath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.flat_exe_error = GetLastError();
+   ResetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_folder_present = FileIsExist(AC_ExternalWorkerPackagedExePath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.folder_exe_error = GetLastError();
+   AC_EXTERNAL_WORKER_STATUS.exe_present = (AC_EXTERNAL_WORKER_STATUS.exe_flat_present || AC_EXTERNAL_WORKER_STATUS.exe_folder_present);
+   AC_EXTERNAL_WORKER_STATUS.last_error = AC_EXTERNAL_WORKER_STATUS.exe_present ? 0 : AC_EXTERNAL_WORKER_STATUS.flat_exe_error;
+
+   AC_ValidateExternalWorkerInstallStatus();
+   AC_ReadExternalWorkerSharedStatus();
+   AC_ValidateExternalWorkerLifecycle();
+
+   AC_EXTERNAL_WORKER_STATUS.heartbeat_present = FileIsExist(AC_ExternalWorkerHeartbeatPath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.result_manifest_present = FileIsExist(AC_ExternalWorkerResultManifestPath(), common_flag);
+   AC_EXTERNAL_WORKER_STATUS.result_present = FileIsExist(AC_ExternalWorkerResultPath(), common_flag);
+
+   AC_RefreshExternalWorkerLaunchStatus();
+
+   if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
+   {
       AC_EXTERNAL_WORKER_STATUS.heartbeat_status = "Present";
       AC_ValidateExternalWorkerHeartbeat();
-      AC_EXTERNAL_WORKER_STATUS.worker_status = AC_EXTERNAL_WORKER_STATUS.worker_installed ? "Heartbeat present - " + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status : "Heartbeat present but install proof missing";
    }
    else
    {
@@ -118,6 +127,9 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason = "Heartbeat file missing";
    }
 
+   // Critical ordering: validate the worker's current result against the currently remembered
+   // MT5 snapshot/job envelope before exporting the next snapshot. If export happens first,
+   // a valid result for the immediately previous snapshot is rejected as stale/mismatched.
    if(AC_EXTERNAL_WORKER_STATUS.result_present && AC_EXTERNAL_WORKER_STATUS.result_manifest_present)
    {
       AC_EXTERNAL_WORKER_STATUS.result_status = "Result files present - validating";
@@ -141,6 +153,10 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "No result files present";
    }
 
+   if(AC_L4_READY)
+      AC_ExportExternalWorkerSnapshot();
+
+   AC_RefreshExternalWorkerWorkerStatus();
    AC_BuildExternalWorkerTexts();
    AC_AppendExternalWorkerSharedSupervisorTexts();
 }
