@@ -12,14 +12,21 @@
 #include "AC_L1_Scan.mqh"
 #include "AC_L1_Maps.mqh"
 #define AC_Layer1BoardSection AC_Layer1BoardSection_Base
+#define AC_AccountTruthStatusRow AC_AccountTruthStatusRow_Base
 #include "AC_L1_Render.mqh"
 #undef AC_Layer1BoardSection
+#undef AC_AccountTruthStatusRow
 
 string AC_Layer1BoardSection()
 {
    if(!AC_L1_READY)
       return "\r\nLAYER 1 - ACCOUNT AND PORTFOLIO\r\n----------------------------------------\r\nStatus: Pending\r\n";
    return AC_Layer1BoardSection_Base() + AC_L1PortfolioMapSummary();
+}
+
+string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
+{
+   return AC_AccountTruthStatusRow_Base(account_write) + "|portfolio_maps=enabled|portfolio_map_scope=summary_board_full_account_status";
 }
 
 #endif
