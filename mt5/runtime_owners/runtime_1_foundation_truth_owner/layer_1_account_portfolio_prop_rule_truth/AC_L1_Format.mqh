@@ -36,8 +36,8 @@ string AC_L1PercentText(const double value)
 
 string AC_L1PadRight(string text, const int width)
 {
-   if(StringLen(text) > width)
-      text = StringSubstr(text, 0, width);
+   if(StringLen(text) >= width)
+      return text + " ";
    while(StringLen(text) < width)
       text += " ";
    return text;
@@ -45,8 +45,8 @@ string AC_L1PadRight(string text, const int width)
 
 string AC_L1PadLeft(string text, const int width)
 {
-   if(StringLen(text) > width)
-      text = StringSubstr(text, 0, width);
+   if(StringLen(text) >= width)
+      return text + " ";
    while(StringLen(text) < width)
       text = " " + text;
    return text;
