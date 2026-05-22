@@ -138,8 +138,8 @@ bool AC_L1ClosedRowInsideAccountStatusWindow(const AC_L1ClosedTradeRow &row,
                                              const datetime cutoff_time,
                                              const int shown_count)
 {
-   if(shown_count >= AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) return false;
-   if(cutoff_time > 0 && row.close_time > 0 && row.close_time < cutoff_time) return false;
+   if(cutoff_time > 0 && row.close_time > 0 && row.close_time < cutoff_time)
+      return (shown_count < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT);
    return true;
 }
 
@@ -147,10 +147,10 @@ bool AC_L1CancelRowInsideAccountStatusWindow(const AC_L1OrderEventRow &row,
                                              const datetime cutoff_time,
                                              const int shown_count)
 {
-   if(shown_count >= AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) return false;
    datetime event_time = row.done_time;
    if(event_time <= 0) event_time = row.setup_time;
-   if(cutoff_time > 0 && event_time > 0 && event_time < cutoff_time) return false;
+   if(cutoff_time > 0 && event_time > 0 && event_time < cutoff_time)
+      return (shown_count < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT);
    return true;
 }
 
@@ -371,7 +371,7 @@ void AC_BuildLayer1Texts()
       board_closed++;
    }
    if(board_closed <= 0) AC_L1_BOARD_SECTION += "none\r\n";
-   AC_L1_BOARD_SECTION += "\r\nCanceled / Rejected / Expired: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " total. Bounded list in Account Status.\r\n";
+   AC_L1_BOARD_SECTION += "\r\nCanceled / Rejected / Expired: " + IntegerToString(AC_L1_CANCEL_LIKE_ORDERS) + " total. Selected detail in Account Status.\r\n";
 
    AC_L1_WORKBENCH_SECTION = "L1_ACCOUNT_PORTFOLIO_SCAN\r\n";
    AC_L1_WORKBENCH_SECTION += "----------------------------------------\r\n";
@@ -380,10 +380,11 @@ void AC_BuildLayer1Texts()
    AC_L1_WORKBENCH_SECTION += "history_status=" + AC_L1_HISTORY_STATUS + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_quality=" + AC_L1_HISTORY_QUALITY + "\r\n";
    AC_L1_WORKBENCH_SECTION += "history_note=" + AC_L1_HISTORY_NOTE + "\r\n";
-   AC_L1_WORKBENCH_SECTION += "history_from=TimeCurrent_or_TimeGMT_minus_90_days\r\n";
+   AC_L1_WORKBENCH_SECTION += "history_policy=all_rows_inside_90_days_or_fill_to_100_when_available\r\n";
+   AC_L1_WORKBENCH_SECTION += "history_from=TimeCurrent_or_TimeGMT_minus_90_days_or_older_when_minimum_fill_needed\r\n";
    AC_L1_WORKBENCH_SECTION += "history_to=TimeCurrent_or_TimeGMT_fallback\r\n";
    AC_L1_WORKBENCH_SECTION += "account_status_history_days=" + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS) + "\r\n";
-   AC_L1_WORKBENCH_SECTION += "account_status_row_limit=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "account_status_minimum_closed_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
    AC_L1_WORKBENCH_SECTION += "account_status_cutoff=" + account_status_cutoff_text + "\r\n";
    AC_L1_WORKBENCH_SECTION += "report_compare_mode=not_strict_time_window_mismatch_unless_same_cutoff\r\n";
    AC_L1_WORKBENCH_SECTION += "history_deals_total=" + IntegerToString(AC_L1_HISTORY_DEALS_TOTAL) + "\r\n";
@@ -398,8 +399,8 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Build: " + AC_BUILD_VERSION + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Upgrade: " + AC_UPGRADE_ID + "\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "History Window: Selected bounded history (last 90 days to broker TimeCurrent/TimeGMT fallback). Strict MT5 report comparison needs the same cutoff.\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Detail Window: selected bounded history; recent closed trades and recent cancel-like orders; max " + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + " rows per detailed history section. Totals refer to selected bounded history window.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "History Window Policy: show all closed trades inside last 90 days; if fewer than 100 exist, fill with older closed trades up to 100 when available.\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Detail Window: selected history rows from Layer 1 scanner; totals refer to selected history, not necessarily all-time account history.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Cutoff: " + account_status_cutoff_text + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nACCOUNT SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
@@ -427,11 +428,11 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type             Vol       Price          SL          TP\r\n";
    for(int fo = 0; fo < ArraySize(AC_L1_PENDING); fo++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PendingLine(AC_L1_PENDING[fo]) + "\r\n";
    if(ArraySize(AC_L1_PENDING) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Bounded Detail\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; close_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Selected Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: all rows inside last 90 days, or older rows only until the 100-row minimum is filled when available.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol      Side      Vol      Entry      Close       Net Duration  Result | Costs and Protection\r\n";
    int closed_shown = 0;
-   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED) && closed_shown < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT; fc++)
+   for(int fc = 0; fc < ArraySize(AC_L1_CLOSED); fc++)
    {
       if(!AC_L1ClosedRowInsideAccountStatusWindow(AC_L1_CLOSED[fc], account_status_cutoff, closed_shown)) continue;
       AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedTradeDetailLine(AC_L1_CLOSED[fc]) + "\r\n";
@@ -439,11 +440,11 @@ void AC_BuildLayer1Texts()
    }
    if(closed_shown <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Closed Detail Rows Shown: " + IntegerToString(closed_shown) + " / " + IntegerToString(ArraySize(AC_L1_CLOSED)) + "\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Bounded Detail\r\n";
-   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: latest selected rows only; event_time >= " + account_status_cutoff_text + "; max_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT) + "\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Selected Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "Rule: selected recent cancel-like order evidence from Layer 1 scan.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type           State        Vol       Price\r\n";
    int cancels_shown = 0;
-   for(int x = 0; x < ArraySize(AC_L1_CANCELS) && cancels_shown < AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT; x++)
+   for(int x = 0; x < ArraySize(AC_L1_CANCELS); x++)
    {
       if(!AC_L1CancelRowInsideAccountStatusWindow(AC_L1_CANCELS[x], account_status_cutoff, cancels_shown)) continue;
       AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CancelLine(AC_L1_CANCELS[x]) + "\r\n";
@@ -543,7 +544,7 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|history_orders_total=" + IntegerToString(AC_L1_HISTORY_ORDERS_TOTAL)
       + "|history_quality=" + AC_L1_HISTORY_QUALITY
       + "|account_status_history_days=" + IntegerToString(AC_L1_ACCOUNT_STATUS_HISTORY_DAYS)
-      + "|account_status_row_limit=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT)
+      + "|account_status_minimum_closed_rows=" + IntegerToString(AC_L1_ACCOUNT_STATUS_TRADE_ROW_LIMIT)
       + "|duration_count=" + IntegerToString(AC_L1_DURATION_COUNT)
       + "|scan_status=" + AC_L1_SCAN_STATUS
       + "|trade_permission=false";
