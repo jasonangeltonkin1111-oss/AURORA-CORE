@@ -93,7 +93,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 2 Market State: " + (AC_L2_READY ? AC_L2_SCAN_STATUS : "Pending") + "\r\n";
    text += "Layer 3 Broker Specs and Value: " + (AC_L3_READY ? AC_L3_SCAN_STATUS : "Pending") + "\r\n";
    text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
-   text += "Layer 5 Deep Inspection Advisory: " + AC_L5_STATUS + "\r\n";
+   text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
    text += "----------------------------------------\r\n";
@@ -111,7 +111,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer5DossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 5 advisory calculations after shell proof\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
+   text += (market_state == "open" ? "Next step: Layer 6 Cost / Friction Ranking consumes Layer 5 pass set only\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
@@ -336,7 +336,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 2: Market Open / Closed Truth\r\n";
    text += "Layer 3: Broker Specs and Value Truth\r\n";
    text += "Layer 4: Live Quote and Spread Truth\r\n";
-   text += "Layer 5: Deep Inspection Advisory Shell\r\n";
+   text += "Layer 5: Basic System Gate\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
@@ -430,7 +430,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "python_worker=not_used_for_L0_L1_L2_L3_or_L4\r\n";
+   text += "gateway=not_used_for_L0_L1_L2_L3_L4_or_L5\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
