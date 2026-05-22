@@ -5,6 +5,9 @@ static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = "not_exported";
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "not_exported";
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "not_exported";
 static string AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM = "not_available";
+static string AC_EXTERNAL_WORKER_LAST_JOB_ID = "not_exported";
+static string AC_EXTERNAL_WORKER_LAST_JOB_TYPE = "not_available";
+static string AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "not_exported";
 static ulong  AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE = 0;
 static int    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS = 0;
 
@@ -25,12 +28,24 @@ string AC_ExternalWorkerPayloadChecksum(const string payload)
    return IntegerToString((int)checksum);
 }
 
-string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const int rows, const string payload_checksum)
+string AC_ExternalWorkerJobId(const string snapshot_id)
+{
+   return snapshot_id + "_" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE;
+}
+
+string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const string job_id, const int rows, const string payload_checksum)
 {
    string text = "";
    text += "schema_name=aurora_external_worker_snapshot\r\n";
-   text += "schema_version=1\r\n";
+   text += "schema_version=2\r\n";
    text += "snapshot_id=" + snapshot_id + "\r\n";
+   text += "job_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\n";
+   text += "job_id=" + job_id + "\r\n";
+   text += "job_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\n";
+   text += "job_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\n";
+   text += "job_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\n";
+   text += "job_requested_layer=L5\r\n";
+   text += "job_expected_output=deep_readiness_shell_only\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
@@ -40,7 +55,7 @@ string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const int rows,
    text += "server=" + AC_ServerNameForRoute() + "\r\n";
    text += "account=" + AC_AccountForRoute() + "\r\n";
    text += "source_layers=L1,L2,L3,L4\r\n";
-   text += "future_layer_5_status=not_implemented_yet\r\n";
+   text += "future_layer_5_status=job_bus_shell_only\r\n";
    text += "row_count=" + IntegerToString(rows) + "\r\n";
    text += "payload_checksum=" + payload_checksum + "\r\n";
    text += "snapshot_complete=true\r\n";
@@ -96,15 +111,20 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
    {
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "unchanged_cached";
+      AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "unchanged_cached";
       return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite");
    }
 
    string snapshot_id = AC_ExternalWorkerSnapshotId();
-   string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
+   string job_id = AC_ExternalWorkerJobId(snapshot_id);
+   string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, job_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=1\r\nsnapshot_id=" + snapshot_id + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=2\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
+   AC_EXTERNAL_WORKER_LAST_JOB_ID = job_id;
+   AC_EXTERNAL_WORKER_LAST_JOB_TYPE = AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE;
+   AC_EXTERNAL_WORKER_LAST_JOB_STATUS = snapshot_write.ok && manifest_write.ok ? "exported" : "degraded";
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = snapshot_write.status;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = manifest_write.status;
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_PAYLOAD_CHECKSUM = payload_checksum;
