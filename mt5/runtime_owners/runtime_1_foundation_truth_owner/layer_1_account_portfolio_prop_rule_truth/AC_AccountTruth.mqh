@@ -10,6 +10,7 @@
 #include "AC_L1_Format.mqh"
 #include "AC_L1_State.mqh"
 #include "AC_L1_Scan.mqh"
+#include "AC_L1_Maps.mqh"
 #include "AC_L1_Render.mqh"
 
 #endif
