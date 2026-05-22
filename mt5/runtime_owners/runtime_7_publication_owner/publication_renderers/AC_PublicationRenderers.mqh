@@ -8,15 +8,15 @@
 // in MetaEditor until Runtime 4 is promoted into the top-level include spine.
 
 static string AC_RUNTIME4_OWNER = "Runtime 4 - Surface Scoring Owner";
-static string AC_LAYER_6_NAME = "Layer 6 - Cost / Friction Ranking";
-static string AC_L6_STATUS = "Pending Gateway calculation";
-static string AC_L6_TRUST_STATE = "Ranking Not Ready";
-static string AC_L6_MAIN_BLOCKER = "L6 skeleton is waiting for Gateway calculation implementation";
-static string AC_L6_JOB_TYPE = "L6_COST_FRICTION_RANKING_V1";
-static string AC_L6_EXPECTED_OUTPUT = "l6_cost_friction_ranking_v1";
-static string AC_L6_RANKED_CSV_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols.csv";
-static string AC_L6_RANKED_MANIFEST_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols.manifest";
-static string AC_L6_TOP20_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols_top20.txt";
+static string AC_LAYER_6_NAME = "Layer 6 - Cost / Friction Input Primitives";
+static string AC_L6_STATUS = "Input primitives only";
+static string AC_L6_TRUST_STATE = "Ranking Not Runtime";
+static string AC_L6_MAIN_BLOCKER = "Ranked CSV handler is not implemented yet; only L6 input primitives may exist";
+static string AC_L6_JOB_TYPE = "L6_COST_FRICTION_INPUT_PRIMITIVES_V1";
+static string AC_L6_EXPECTED_OUTPUT = "l6_cost_friction_input_primitives_v1";
+static string AC_L6_RANKED_CSV_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\l6_input_primitives.csv";
+static string AC_L6_RANKED_MANIFEST_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\l6_input_primitives.manifest";
+static string AC_L6_TOP20_PATH = "not_available_until_ranked_output_runtime_exists";
 static int AC_L6_INPUT_L5_PASS_SYMBOLS = 0;
 static int AC_L6_RANKED_SYMBOLS = 0;
 static int AC_L6_RANKED_DEGRADED_SYMBOLS = 0;
@@ -35,9 +35,9 @@ static uint AC_L6_CALCULATION_DURATION_MS = 0;
 void AC_RefreshLayer6CostFrictionSkeleton()
 {
    AC_L6_INPUT_L5_PASS_SYMBOLS = AC_L5_GATE_PASS;
-   AC_L6_STATUS = "Pending Gateway calculation";
-   AC_L6_TRUST_STATE = "Ranking Not Ready";
-   AC_L6_MAIN_BLOCKER = "Gateway handler and ranked CSV are not implemented yet";
+   AC_L6_STATUS = "Input primitives only";
+   AC_L6_TRUST_STATE = "Ranking Not Runtime";
+   AC_L6_MAIN_BLOCKER = "Ranked CSV handler is not implemented yet; only L6 input primitives may exist";
    AC_L6_RANKED_SYMBOLS = 0;
    AC_L6_RANKED_DEGRADED_SYMBOLS = 0;
    AC_L6_NOT_RANKABLE_QUALITY_SYMBOLS = 0;
@@ -46,8 +46,8 @@ void AC_RefreshLayer6CostFrictionSkeleton()
    AC_L6_ACCEPTABLE_FRICTION_COUNT = 0;
    AC_L6_EXPENSIVE_FRICTION_COUNT = 0;
    AC_L6_HOSTILE_FRICTION_COUNT = 0;
-   AC_L6_BEST_SYMBOL = "pending";
-   AC_L6_WORST_RANKED_SYMBOL = "pending";
+   AC_L6_BEST_SYMBOL = "not_ranked";
+   AC_L6_WORST_RANKED_SYMBOL = "not_ranked";
    AC_L6_BEST_SCORE = 0.0;
    AC_L6_WORST_SCORE = 0.0;
    AC_L6_CALCULATION_DURATION_MS = 0;
@@ -56,12 +56,12 @@ void AC_RefreshLayer6CostFrictionSkeleton()
 string AC_Layer6BoardSection()
 {
    AC_RefreshLayer6CostFrictionSkeleton();
-   string text = "\r\nLAYER 6 - COST / FRICTION RANKING\r\n";
+   string text = "\r\nLAYER 6 - COST / FRICTION INPUT PRIMITIVES\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L6_STATUS + "\r\n";
    text += "Trust:                      " + AC_L6_TRUST_STATE + "\r\n";
-   text += "Owner:                      " + AC_RUNTIME4_OWNER + "\r\n";
-   text += "Gateway Required:           TRUE\r\n";
+   text += "Owner:                      " + AC_RUNTIME4_OWNER + " (reserved)\r\n";
+   text += "Gateway Required:           FALSE FOR INPUT PRIMITIVES\r\n";
    text += "Gateway Result Accepted:    FALSE\r\n";
    text += "Input Source:               Layer 5 pass set only\r\n";
    text += "L5 Pass Symbols:            " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
@@ -73,15 +73,16 @@ string AC_Layer6BoardSection()
    text += "Acceptable Friction:        " + IntegerToString(AC_L6_ACCEPTABLE_FRICTION_COUNT) + "\r\n";
    text += "Expensive Friction:         " + IntegerToString(AC_L6_EXPENSIVE_FRICTION_COUNT) + "\r\n";
    text += "Hostile Friction:           " + IntegerToString(AC_L6_HOSTILE_FRICTION_COUNT) + "\r\n";
-   text += "Best Friction Symbol:       " + AC_L6_BEST_SYMBOL + "\r\n";
-   text += "Best Score:                 pending\r\n";
-   text += "Worst Ranked Symbol:        " + AC_L6_WORST_RANKED_SYMBOL + "\r\n";
-   text += "Worst Score:                pending\r\n";
-   text += "CSV Output:                 " + AC_L6_RANKED_CSV_PATH + "\r\n";
+   text += "Best Friction Symbol:       not_ranked\r\n";
+   text += "Best Score:                 not_ranked\r\n";
+   text += "Worst Ranked Symbol:        not_ranked\r\n";
+   text += "Worst Score:                not_ranked\r\n";
+   text += "Input CSV:                  " + AC_L6_RANKED_CSV_PATH + "\r\n";
    text += "Main Blocker:               " + AC_L6_MAIN_BLOCKER + "\r\n";
-   text += "Gateway Job:                " + AC_L6_JOB_TYPE + "\r\n";
+   text += "Input Job:                  " + AC_L6_JOB_TYPE + "\r\n";
    text += "Calculation Duration:       0 ms\r\n";
-   text += "Ranking Runtime:            TRUE\r\n";
+   text += "Ranking Runtime:            FALSE\r\n";
+   text += "Ranked Output Runtime:      FALSE\r\n";
    text += "Selection Runtime:          FALSE\r\n";
    text += "Trade Permission:           FALSE\r\n";
    return text;
@@ -99,25 +100,25 @@ string AC_Layer6DossierSection(const string symbol)
       l5_reason = AC_L5_SYMBOLS[l5_index].gate_reason;
    }
 
-   string text = "\r\nLAYER 6 - COST / FRICTION RANKING\r\n";
+   string text = "\r\nLAYER 6 - COST / FRICTION INPUT PRIMITIVES\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L6_STATUS + "\r\n";
-   text += "Owner: " + AC_RUNTIME4_OWNER + "\r\n";
-   text += "Gateway Required: TRUE\r\n";
+   text += "Owner: " + AC_RUNTIME4_OWNER + " (reserved)\r\n";
+   text += "Gateway Required: FALSE for input primitives; future ranking may require Runtime 3 support\r\n";
    text += "Gateway Result Accepted: FALSE\r\n";
    text += "L5 Gate Status: " + l5_status + "\r\n";
    text += "L5 Gate Reason: " + l5_reason + "\r\n";
    if(l5_status == "pass")
    {
-      text += "Rank State: pending_gateway_calculation\r\n";
-      text += "Rank Index: pending\r\n";
-      text += "Friction Score: pending\r\n";
-      text += "Friction Bucket: pending\r\n";
-      text += "CSV Source: " + AC_L6_RANKED_CSV_PATH + "\r\n";
+      text += "Rank State: not_ranked_input_primitives_only\r\n";
+      text += "Rank Index: not_available\r\n";
+      text += "Friction Score: not_available\r\n";
+      text += "Friction Bucket: not_available\r\n";
+      text += "Input CSV Source: " + AC_L6_RANKED_CSV_PATH + "\r\n";
       text += "\r\nCost Snapshot\r\n";
       text += "----------------------------------------\r\n";
-      text += "Spread / round-trip cost values are pending L6 Gateway calculation.\r\n";
-      text += "MT5 will provide OrderCalcProfit cost primitives in L6-C; Python ranks in L6-D.\r\n";
+      text += "MT5 may export OrderCalcProfit cost primitives for later ranking.\r\n";
+      text += "No ranked CSV/result handler is accepted in current source.\r\n";
    }
    else
    {
@@ -127,10 +128,11 @@ string AC_Layer6DossierSection(const string symbol)
    }
    text += "\r\nBoundary\r\n";
    text += "----------------------------------------\r\n";
-   text += "Source Owner: Layer 5 pass set + Layer 3/4 packets + future MT5 cost primitives\r\n";
-   text += "Scoring Owner: " + AC_RUNTIME4_OWNER + "\r\n";
-   text += "Calculation Support: Runtime 3 Gateway\r\n";
-   text += "Ranking Runtime: TRUE\r\n";
+   text += "Source Owner: Layer 5 pass set + Layer 3/4 packets + MT5 cost primitives where exported\r\n";
+   text += "Scoring Owner: " + AC_RUNTIME4_OWNER + " reserved, not active ranking runtime\r\n";
+   text += "Calculation Support: Runtime 3 Gateway for future ranking only\r\n";
+   text += "Ranking Runtime: FALSE\r\n";
+   text += "Ranked Output Runtime: FALSE\r\n";
    text += "Selection Runtime: FALSE\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Execution: FALSE\r\n";
@@ -140,16 +142,16 @@ string AC_Layer6DossierSection(const string symbol)
 string AC_Layer6WorkbenchSection()
 {
    AC_RefreshLayer6CostFrictionSkeleton();
-   string text = "\r\nL6_COST_FRICTION_RANKING\r\n";
+   string text = "\r\nL6_COST_FRICTION_INPUT_PRIMITIVES\r\n";
    text += "----------------------------------------\r\n";
-   text += "owner_name=" + AC_RUNTIME4_OWNER + "\r\n";
+   text += "owner_name=" + AC_RUNTIME4_OWNER + "_reserved\r\n";
    text += "layer_name=" + AC_LAYER_6_NAME + "\r\n";
    text += "status=" + AC_L6_STATUS + "\r\n";
    text += "trust_state=" + AC_L6_TRUST_STATE + "\r\n";
-   text += "gateway_required=true\r\n";
+   text += "gateway_required=false_for_input_primitives\r\n";
    text += "gateway_result_accepted=false\r\n";
-   text += "source_truth_owner=L5_pass_set_plus_L3_L4_owner_packets_plus_future_mt5_ordercalcprofit_primitives\r\n";
-   text += "calculation_support_owner=Runtime3_Calculation_Gateway\r\n";
+   text += "source_truth_owner=L5_pass_set_plus_L3_L4_owner_packets_plus_mt5_ordercalcprofit_primitives_if_exported\r\n";
+   text += "calculation_support_owner=Runtime3_Calculation_Gateway_future_ranking_only\r\n";
    text += "job_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\n";
    text += "job_type=" + AC_L6_JOB_TYPE + "\r\n";
    text += "expected_output=" + AC_L6_EXPECTED_OUTPUT + "\r\n";
@@ -157,12 +159,14 @@ string AC_Layer6WorkbenchSection()
    text += "ranked_symbols=" + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
    text += "ranked_degraded_symbols=" + IntegerToString(AC_L6_RANKED_DEGRADED_SYMBOLS) + "\r\n";
    text += "not_rankable_quality_symbols=" + IntegerToString(AC_L6_NOT_RANKABLE_QUALITY_SYMBOLS) + "\r\n";
-   text += "ranked_csv_path=" + AC_L6_RANKED_CSV_PATH + "\r\n";
-   text += "ranked_manifest_path=" + AC_L6_RANKED_MANIFEST_PATH + "\r\n";
-   text += "top20_path=" + AC_L6_TOP20_PATH + "\r\n";
+   text += "input_csv_path=" + AC_L6_RANKED_CSV_PATH + "\r\n";
+   text += "input_manifest_path=" + AC_L6_RANKED_MANIFEST_PATH + "\r\n";
+   text += "top20_path=not_available_until_ranked_output_runtime_exists\r\n";
    text += "main_blocker=" + AC_L6_MAIN_BLOCKER + "\r\n";
    text += "calculation_duration_ms=0\r\n";
-   text += "ranking_runtime=true\r\n";
+   text += "input_primitives_only=true\r\n";
+   text += "ranking_runtime=false\r\n";
+   text += "ranked_output_runtime=false\r\n";
    text += "selection_runtime=false\r\n";
    text += "trade_permission=false\r\n";
    return text;
@@ -258,7 +262,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 3 Broker Specs and Value: " + (AC_L3_READY ? AC_L3_SCAN_STATUS : "Pending") + "\r\n";
    text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
    text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
-   text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
+   text += "Layer 6 Cost / Friction Input Primitives: " + AC_L6_STATUS + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
    text += "----------------------------------------\r\n";
@@ -266,7 +270,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
-   text += "Cost / Friction Ranking: Pending Layer 6 Gateway calculation\r\n";
+   text += "Cost / Friction Ranking: Not runtime; input primitives only\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
    text += AC_Layer1DossierSection(symbol);
@@ -277,14 +281,14 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer6DossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 6 Gateway snapshot/export and Python cost ranking calculation\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
+   text += (market_state == "open" ? "Next step: implement and prove Layer 6 ranked-output handler before any ranking claim\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
-   text += "Layer 6 ranks only the Layer 5 pass set; it does not hard-block symbols.\r\n";
+   text += "Layer 6 currently publishes input primitives/skeleton only; it does not rank or hard-block symbols.\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
    text += "----------------------------------------\r\n";
    text += "Tradable: No\r\n";
-   text += "Ranked: Layer 6 skeleton only\r\n";
+   text += "Ranked: No - Layer 6 input primitives only\r\n";
    text += "Selected: No\r\n";
    text += "Alert Active: No\r\n";
    text += "Permission: No\r\n";
@@ -499,7 +503,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Failed Dossiers:        " + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "Dossier Pass Duration:  " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "\r\n";
-   text += "CURRENT FOUNDATION + SURFACE SCORING\r\n";
+   text += "CURRENT FOUNDATION + FUTURE SURFACE SCORING\r\n";
    text += "----------------------------------------\r\n";
    text += "Layer 0: Publication + Dossier Foundation\r\n";
    text += "Layer 1: Account / Portfolio Truth\r\n";
@@ -507,7 +511,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 3: Broker Specs and Value Truth\r\n";
    text += "Layer 4: Live Quote and Spread Truth\r\n";
    text += "Layer 5: Basic System Gate\r\n";
-   text += "Layer 6: Cost / Friction Ranking\r\n";
+   text += "Layer 6: Cost / Friction Input Primitives\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
@@ -519,14 +523,14 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
    text += "Specs Known:        " + (AC_L3_READY ? "See Layer 3 readiness" : "No") + "\r\n";
    text += "Quotes Known:       " + (AC_L4_READY ? "See Layer 4 readiness" : "No") + "\r\n";
-   text += "Cost Ranking:       Layer 6 skeleton pending Gateway calculation\r\n";
+   text += "Cost Ranking:       Not runtime; Layer 6 input primitives only\r\n";
    text += "Selection Active:   No\r\n";
    text += "Permission Active:  No\r\n";
    text += "\r\n";
    text += "TRUST BLOCKER\r\n";
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Layer 6 is ranking/scoring only; Layer 5 remains the only hard gate.\r\n";
+   text += "Layer 6 is input-primitives/skeleton only; Layer 5 remains the only hard gate.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
@@ -537,7 +541,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.10|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.11|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -563,7 +567,7 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l5_status=" + AC_L0_CACHED_L5_STATUS
       + "|cached_l6_status=" + AC_L0_CACHED_L6_STATUS
       + "|main_blocker=" + status.main_blocker
-      + "|trade_permission=false|ranking_runtime=true|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
+      + "|trade_permission=false|ranking_runtime=false|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
@@ -604,7 +608,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "gateway=not_used_for_L0_L1_L2_L3_L4_or_L5_gateway_required_for_L6_calculation_later\r\n";
+   text += "gateway=not_used_for_L0_L1_L2_L3_L4_or_L5_future_L6_ranking_requires_separate_proof\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
