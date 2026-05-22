@@ -11,6 +11,7 @@ READ_RETRY_ATTEMPTS = 4
 READ_RETRY_BACKOFF_SECONDS = 0.05
 WRITE_REPLACE_RETRY_ATTEMPTS = 12
 WRITE_REPLACE_RETRY_BACKOFF_SECONDS = 0.05
+GATEWAY_FOLDER_NAME = "Gateway"
 
 
 @dataclass(frozen=True)
@@ -25,15 +26,15 @@ class WorkerPaths:
 
     @classmethod
     def from_root(cls, root: Path) -> "WorkerPaths":
-        external = root / "Workbench" / "External Worker"
+        gateway = root / "Workbench" / GATEWAY_FOLDER_NAME
         return cls(
             root=root,
-            control=external / "Control",
-            inbox=external / "Inbox",
-            outbox=external / "Outbox",
-            status=external / "Status",
-            logs=external / "Logs",
-            quarantine=external / "Quarantine",
+            control=gateway / "Control",
+            inbox=gateway / "Inbox",
+            outbox=gateway / "Outbox",
+            status=gateway / "Status",
+            logs=gateway / "Logs",
+            quarantine=gateway / "Quarantine",
         )
 
     def ensure(self) -> None:
