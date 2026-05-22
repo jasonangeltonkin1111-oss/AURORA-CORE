@@ -11,6 +11,7 @@ from aurora_worker_io import atomic_write_text, payload_checksum, read_text, uni
 
 L6_LAYER_FOLDER = "Layer_6_Cost_Friction_Ranking"
 L6_INPUT_NAME = "l6_input_primitives.csv"
+L6_INPUT_MANIFEST_NAME = "l6_input_primitives.manifest"
 L6_RANKED_NAME = "ranked_symbols.csv"
 L6_MANIFEST_NAME = "ranked_symbols.manifest"
 L6_TOP20_NAME = "ranked_symbols_top20.txt"
@@ -70,6 +71,10 @@ class L6RankSummary:
     status: str
     reason: str
     input_count: int = 0
+    source_input_manifest_present: bool = False
+    source_input_manifest_row_count: int = 0
+    source_l5_gate_pass: int = 0
+    source_input_payload_checksum: str = "not_available"
     row_count: int = 0
     ranked_count: int = 0
     ranked_degraded_count: int = 0
@@ -102,6 +107,29 @@ def _safe_float(value: str | None, default: float = 0.0) -> float:
         return number
     except ValueError:
         return default
+
+
+def _safe_int(value: str | None, default: int = 0) -> int:
+    if value is None:
+        return default
+    text = str(value).strip()
+    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
+        return default
+    try:
+        return int(float(text))
+    except ValueError:
+        return default
+
+
+def _parse_kv_text(text: str) -> Dict[str, str]:
+    data: Dict[str, str] = {}
+    for raw_line in text.replace("\r\n", "\n").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        data[key.strip()] = value.strip()
+    return data
 
 
 def _safe_text(row: Dict[str, str], key: str, default: str = "not_available") -> str:
@@ -384,9 +412,11 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
 
 
 def _manifest(summary: L6RankSummary, input_path: Path) -> str:
+    source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
+    source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=2",
+        "schema_version=3",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -394,6 +424,12 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         f"status={summary.status}",
         f"reason={summary.reason}",
         f"input_csv_path={input_path}",
+        f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
+        f"source_input_manifest_row_count={summary.source_input_manifest_row_count}",
+        f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        f"source_input_payload_checksum={summary.source_input_payload_checksum}",
+        f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
+        f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
         f"ranked_csv_path={summary.ranked_csv_path}",
         f"ranked_manifest_path={summary.manifest_path}",
         f"top20_path={summary.top20_path}",
@@ -425,6 +461,7 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
 def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     layer_dir = outbox / "Layers" / L6_LAYER_FOLDER
     input_path = layer_dir / L6_INPUT_NAME
+    input_manifest_path = layer_dir / L6_INPUT_MANIFEST_NAME
     ranked_path = layer_dir / L6_RANKED_NAME
     manifest_path = layer_dir / L6_MANIFEST_NAME
     top20_path = layer_dir / L6_TOP20_NAME
@@ -440,6 +477,12 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         top20_path=str(top20_path),
         symbol_rank_folder_path=str(symbol_rank_dir),
     )
+    if input_manifest_path.exists():
+        input_manifest = _parse_kv_text(read_text(input_manifest_path))
+        summary.source_input_manifest_present = True
+        summary.source_input_manifest_row_count = _safe_int(input_manifest.get("row_count"), 0)
+        summary.source_l5_gate_pass = _safe_int(input_manifest.get("l5_gate_pass"), 0)
+        summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
     if not input_path.exists():
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
@@ -461,7 +504,7 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "ranked all Layer 5 pass symbols from L6 input primitives"
+    summary.reason = "ranked all rows present in L6 input primitives"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_degraded_count = sum(1 for row in scored if row["rank_state"] == "ranked_degraded")
@@ -473,6 +516,13 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     summary.hostile_count = sum(1 for row in scored if row["friction_bucket"] == "hostile_friction")
     summary.zero_cost_suspicious_count = sum(1 for row in scored if row["account_cost_zero_nonzero_spread_suspicious"] == "true")
     summary.mismatch_count = sum(1 for row in scored if row["cost_model_compare_status"] in {"mismatch_gt_25pct", "warning_gt_10pct"})
+
+    if summary.source_input_manifest_present and summary.source_input_manifest_row_count != summary.input_count:
+        summary.status = "input_degraded"
+        summary.reason = f"input CSV row count {summary.input_count} differs from source input manifest row_count {summary.source_input_manifest_row_count}"
+    elif summary.source_l5_gate_pass > 0 and summary.source_l5_gate_pass != summary.input_count:
+        summary.status = "input_degraded"
+        summary.reason = f"input CSV row count {summary.input_count} differs from source l5_gate_pass {summary.source_l5_gate_pass}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
