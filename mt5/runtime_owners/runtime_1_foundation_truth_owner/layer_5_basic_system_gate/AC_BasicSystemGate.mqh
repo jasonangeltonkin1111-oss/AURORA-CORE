@@ -14,6 +14,7 @@ static string AC_L5_BOARD_SECTION = "";
 static string AC_L5_WORKBENCH_SECTION = "";
 static uint   AC_L5_SCAN_STARTED_MS = 0;
 static uint   AC_L5_SCAN_DURATION_MS = 0;
+static uint   AC_L5_REFRESH_DURATION_MS = 0;
 static string AC_L5_LAST_UPSTREAM_KEY = "not_scanned";
 
 static int AC_L5_SCANNED = 0;
@@ -107,6 +108,10 @@ string AC_L5LayerGateSummary()
 
 void AC_L5SyncCompatibilityFields()
 {
+   int normalized_blocked = AC_L5_SCANNED - AC_L5_GATE_PASS;
+   if(normalized_blocked < 0) normalized_blocked = 0;
+   AC_L5_GATE_BLOCKED = normalized_blocked;
+   AC_L5_REFRESH_DURATION_MS = AC_L5_SCAN_DURATION_MS;
    AC_L5_ELIGIBLE_OPEN = AC_L5_SCANNED;
    AC_L5_READY_SYMBOLS = AC_L5_GATE_PASS;
    AC_L5_PENDING_SYMBOLS = AC_L5_GATE_BLOCKED;
@@ -125,6 +130,7 @@ void AC_L5Reset()
    AC_L5_MAIN_BLOCKER = "Layer 5 basic gate scan in progress";
    AC_L5_SCAN_STARTED_MS = GetTickCount();
    AC_L5_SCAN_DURATION_MS = 0;
+   AC_L5_REFRESH_DURATION_MS = 0;
    AC_L5_BOARD_SECTION = "";
    AC_L5_WORKBENCH_SECTION = "";
    AC_L5_SCANNED = 0;
@@ -314,7 +320,6 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
    }
    else
    {
-      AC_L5_GATE_BLOCKED++;
       AC_L5TrackWorstBlocker(p.gate_reason);
    }
    return p;
@@ -338,12 +343,14 @@ void AC_RefreshLayer5BasicSystemGate()
       ArrayResize(AC_L5_SYMBOLS, n + 1);
       AC_L5_SYMBOLS[n] = p;
       AC_L5_SCANNED++;
-      if(!p.pass && AC_L5_WORST_BLOCKER == "None") AC_L5_WORST_BLOCKER = p.gate_reason;
+      if(!p.pass) AC_L5TrackWorstBlocker(p.gate_reason);
    }
 
    AC_L5_SCAN_DURATION_MS = GetTickCount() - AC_L5_SCAN_STARTED_MS;
+   AC_L5_REFRESH_DURATION_MS = AC_L5_SCAN_DURATION_MS;
    AC_L5_STATUS = "Complete";
    AC_L5_TRUST_STATE = "Gate Ready";
+   AC_L5SyncCompatibilityFields();
    AC_L5_MAIN_BLOCKER = (AC_L5_GATE_BLOCKED > 0 ? AC_L5_WORST_BLOCKER : "None");
    AC_L5_READY = true;
    AC_L5SyncCompatibilityFields();
@@ -480,7 +487,7 @@ string AC_Layer5StatusRow()
 {
    if(AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    AC_L5SyncCompatibilityFields();
-   return "schema_name=layer_status|schema_version=v5_basic_gate_2|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5_basic_gate_3|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
