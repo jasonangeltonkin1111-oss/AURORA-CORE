@@ -1,35 +1,51 @@
-# Aurora External Worker
+# Aurora Gateway
 
-This folder contains the first standalone worker skeleton for Aurora Core.
+This folder contains the Python implementation for Aurora Core Runtime 3 Calculation Gateway.
 
-Current worker mode:
+Internal file names may still use worker / AuroraWorker compatibility naming. Operator-facing folders and runtime proof surfaces use Gateway.
+
+Current Gateway mode:
 
 ```text
-validator_skeleton
+r3_gateway_snapshot_validation_and_calculation_support_only
 ```
 
-It reads the MT5-exported snapshot from:
+Shared package and status folder:
 
 ```text
-Workbench/External Worker/Inbox/snapshot_latest.txt
-Workbench/External Worker/Inbox/snapshot_latest.manifest
+Aurora Core/Gateway/
+Aurora Core/Gateway/AuroraWorker/AuroraWorker.exe
+Aurora Core/Gateway/Status/shared_worker_status.txt
+Aurora Core/Gateway/Status/shared_worker_install_status.txt
 ```
 
-It writes:
+Per-account Gateway IO folder:
 
 ```text
-Workbench/External Worker/Status/worker_heartbeat.txt
-Workbench/External Worker/Outbox/result_latest.txt
-Workbench/External Worker/Outbox/result_latest.manifest
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Control/worker_required.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Inbox/snapshot_latest.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Inbox/snapshot_latest.manifest
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Status/worker_heartbeat.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Outbox/result_latest.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Outbox/result_latest.manifest
 ```
 
 Run once:
 
-```bash
+```text
 python external_worker/aurora_worker.py --root "<Aurora account root>"
 ```
 
-Example root shape from generated MT5 files:
+Install and start the shared Gateway with the existing scripts:
+
+```text
+build_worker.ps1
+install_worker_global.ps1
+start_worker_global.ps1
+status_worker_global.ps1
+```
+
+Example account root shape:
 
 ```text
 Aurora Core/<SERVER>/<ACCOUNT>
@@ -41,19 +57,24 @@ Current checks:
 - snapshot file exists
 - manifest file exists
 - server/account match the control file
-- authority is `calculation_support_only`
-- permission flag remains `false`
+- authority is calculation_support_only
+- trade permission remains false
 - row counts match
 - payload checksum matches
 
-Packaging target later:
+Runtime authority boundary:
+
+```text
+authority=calculation_support_only
+trade_permission=false
+ranking_runtime=false unless a later approved layer explicitly owns ranking
+selection_runtime=false unless a later approved layer explicitly owns selection
+```
+
+Packaging target remains:
 
 ```text
 AuroraWorker.exe
 ```
 
-The EA launch bridge is not wired yet. MT5 should currently show:
-
-```text
-launch_implementation=not_implemented_yet
-```
+That executable name is internal compatibility. The runtime folder and operator-facing surface are Gateway.
