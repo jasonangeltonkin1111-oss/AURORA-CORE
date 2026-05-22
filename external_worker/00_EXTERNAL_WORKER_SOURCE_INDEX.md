@@ -17,6 +17,10 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 
 Generated build/package/dist artifacts are not source authority. They are deployment artifacts and must not be patched as logic owners before the source files above are inspected.
 
+After `aurora_worker.py` or `aurora_worker_io.py` changes, any previously committed or local `AuroraWorker.exe`, `build/`, `dist/`, `.pkg`, `.pyz`, `.toc`, DLL, or zipped package must be treated as stale until rebuilt and runtime-proven.
+
+`.gitignore` now blocks future PyInstaller/generated worker artifacts. If generated artifacts are already tracked from older commits, do not treat them as current runtime proof. Remove tracked generated artifacts only after reference checks prove deployment/install scripts no longer require the repo copy.
+
 ## Removed unsafe repair scripts
 
 The following one-shot repair scripts were removed from active `main` because they could rewrite active worker/source files, restore stale backups, stop/unregister scheduled tasks, or create new backup folders from inside the repo:
@@ -50,6 +54,8 @@ A scheduled task existing is not proof of watchdog recovery. `operator_cmd_requi
 - No duplicate worker owners.
 - No V2/shadow repair scripts.
 - No Git-tracked emergency backups treated as source.
+- No generated build/dist/package artifact treated as source truth.
+- No packaged executable readiness claim after source changes unless package rebuild and runtime proof exist.
 - No PowerShell calls inside the hot shared-daemon loop.
 - No trade permission or execution authority.
 - No broker polling from Python unless explicitly scoped later and still validated by MT5.
