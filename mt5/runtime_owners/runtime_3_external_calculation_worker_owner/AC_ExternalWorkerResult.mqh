@@ -613,9 +613,9 @@ void AC_ValidateExternalWorkerResult()
    AC_EXTERNAL_WORKER_STATUS.accepted_result = true;
    AC_EXTERNAL_WORKER_STATUS.job_bus_status = "Accepted";
    AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status = "Accepted";
-   AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "Worker result bound to latest MT5 job envelope";
+   AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason = "R3 snapshot validation result bound to latest MT5 job envelope";
    AC_EXTERNAL_WORKER_STATUS.result_validation_status = "Accepted";
-   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "Result bound to accepted install proof, fresh heartbeat, latest MT5 snapshot, and latest MT5 job envelope";
+   AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "R3 snapshot validation result bound to accepted install proof, fresh heartbeat, latest MT5 snapshot, and latest MT5 job envelope";
 }
 
 #endif
