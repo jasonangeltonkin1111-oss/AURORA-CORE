@@ -23,7 +23,7 @@ Every fact has one source owner.
 - Layer 3 owns broker specs, contract/value/margin primitives, classification/fundamental-link support, and broker metadata warnings.
 - Layer 4 owns live quote, tick freshness, bid/ask/last, spread, live MarketWatch activity, and open-symbol quote truth.
 - Runtime 3 owns external-worker relationship, snapshot/job request export, job-bus binding, worker heartbeat/result/manifest acceptance, and rejection of stale/mismatched worker results.
-- Runtime 5 owns deep-inspection advisory interpretation and presentation only.
+- Runtime 5 owns deep-inspection advisory readiness, advisory packet shell state, advisory interpretation, and presentation only.
 - Publication/FileIO/Route Service owns file paths and atomic writes.
 - Board/Dossier Renderer Service renders prepared owner packets; it must not compute owner truth.
 
@@ -101,7 +101,7 @@ calculation_lane=...
 source_truth_owner=...
 ```
 
-Workbench may contain job IDs, snapshot IDs, checksums, owner contracts, counters, timings, rejection reasons, accepted/rejected status, source-quality ledgers, and no-duplicate-owner proof. Even here, avoid copying whole earlier-layer raw packets; reference their owner/gate/status.
+Workbench may contain job IDs, snapshot IDs, checksums, owner contracts, counters, timings, rejection reasons, accepted/rejected status, source-quality ledgers, packet fields, and no-duplicate-owner proof. Even here, avoid copying whole earlier-layer raw packets; reference their owner/gate/status.
 
 ## Runtime 5 design law
 
@@ -109,9 +109,11 @@ Runtime 5 / Layer 5 is Deep Inspection Advisory Truth.
 
 Runtime 5 may:
 
-- Consume L1/L2/L3/L4 owner packets.
+- Consume L1/L2/L3/L4 owner gates.
 - Consume Runtime 3 accepted external-worker results.
-- Interpret accepted deep-inspection result packets into advisory truth.
+- Own advisory readiness state.
+- Own advisory packet shell fields.
+- Interpret accepted deep-inspection result packets into advisory truth when the Runtime 3 payload parser/calculator is implemented later.
 - Publish compact Board aggregates.
 - Publish rich per-symbol Dossier advisory sections.
 - Publish machine/meta Workbench proof.
@@ -131,13 +133,15 @@ Runtime 5 must not:
 
 ## Runtime 5 internals
 
-Runtime 5 should be structured as a small owner that consumes already-owned truth and produces advisory surfaces.
+Runtime 5 is a small owner that consumes already-owned gates and produces advisory surfaces.
 
-Recommended internal states:
+Current required owner states:
 
 - `AC_L5_STATUS`
 - `AC_L5_TRUST_STATE`
 - `AC_L5_MAIN_BLOCKER`
+- `AC_L5_READINESS_STATE`
+- `AC_L5_READINESS_REASON`
 - `AC_L5_ELIGIBLE_OPEN`
 - `AC_L5_READY_SYMBOLS`
 - `AC_L5_PENDING_SYMBOLS`
@@ -146,19 +150,34 @@ Recommended internal states:
 - `AC_L5_EXECUTION_OWNER`
 - `AC_L5_SOURCE_TRUTH_OWNER`
 - `AC_L5_SURFACE_OWNER`
+- `AC_L5_PACKET_SCHEMA_VERSION`
+- `AC_L5_PACKET_STATUS`
+- `AC_L5_PACKET_SOURCE`
+- `AC_L5_PACKET_BINDING_STATUS`
+- `AC_L5_PACKET_REASON`
+- `AC_L5_PACKET_OWNER_BOUNDARY`
+- `AC_L5_FRICTION_ADVISORY`
+- `AC_L5_VOLATILITY_ADVISORY`
+- `AC_L5_STRUCTURE_ADVISORY`
+- `AC_L5_SESSION_ADVISORY`
+- `AC_L5_RISK_ADVISORY`
+- `AC_L5_KILL_REASON`
+- `AC_L5_QUALITY_STATE`
 
-Recommended future per-symbol packet shape:
+Current packet shell shape:
 
 ```text
-symbol
-l2_gate_status
-l3_gate_status
-l4_gate_status
-runtime3_result_accepted
-runtime3_job_id
-runtime3_job_type
+packet_schema_version
+packet_status
+packet_source
+packet_binding_status
+packet_reason
+packet_owner_boundary
 readiness_state
 readiness_reason
+owner_gate_summary
+runtime3_result_accepted
+runtime3_job_bus_status
 friction_advisory
 volatility_advisory
 structure_advisory
@@ -177,17 +196,19 @@ L5 Board section should stay compact:
 ```text
 LAYER 5 - DEEP INSPECTION ADVISORY
 ----------------------------------------
-Status:                     Shell only
+Status:                     Readiness shell
 Trust:                      Advisory Not Ready
 Calculation Lane:           External Worker via Runtime 3
 Runtime 3 Result Accepted:  FALSE
-Eligible Open Symbols:      172
+Owner Gates:                L2=ready;L3=ready;L4=ready;R3=blocked
+Eligible Gate Count:        172
 Ready Advisory Packets:     0
 Pending Advisory Packets:   172
-L2/L3/L4 Gates:             See owning layer sections
-Readiness:                  Waiting for Runtime 3 worker
+Packet Status:              waiting_for_runtime3_result
+Packet Quality:             degraded_waiting_for_worker
+Readiness:                  blocked_runtime3_not_accepted
+Worst Blocker:              Waiting for Runtime 3 accepted external-worker result gate
 Scan Duration:              0 ms
-Worst Blocker:              Waiting for Runtime 3 accepted external-worker job result before deep advisory calculations
 Trade Permission:           FALSE
 Ranking Runtime:            FALSE
 Selection Runtime:          FALSE
@@ -202,27 +223,32 @@ L5 Dossier should be rich but symbol-focused:
 ```text
 LAYER 5 - DEEP INSPECTION ADVISORY
 ----------------------------------------
-Status: Shell only
+Status: Readiness shell
 Trust: Advisory Not Ready
 Calculation Lane: Runtime 3 external worker
 Runtime 3 Result Accepted: FALSE
-L2 Market Gate: See Layer 2 market section
-L3 Specs Gate: See Layer 3 broker specs/value section
-L4 Quote Gate: See Layer 4 live quote/spread section
-Readiness: Waiting for Runtime 3 worker
-Blocker: Waiting for Runtime 3 accepted external-worker job result before deep advisory calculations
+L2 Market Gate: See Layer 2 section
+L3 Specs Gate: See Layer 3 section
+L4 Quote Gate: See Layer 4 section
+Readiness State: blocked_runtime3_not_accepted
+Readiness Reason: Runtime 3 worker result gate is not accepted
+Packet Status: waiting_for_runtime3_result
+Packet Binding: not_bound_runtime3_result_not_accepted
+Packet Reason: Runtime 3 accepted worker result is required before Layer 5 can bind advisory packet fields
+Blocker: Waiting for Runtime 3 accepted external-worker result gate
 
 Advisory Packet
 ----------------------------------------
-Friction Advisory: not_implemented
-Volatility Advisory: not_implemented
-Structure Advisory: not_implemented
-Session Advisory: not_implemented
-Risk Advisory: not_implemented
-Invalidation / Kill Reason: not_implemented
+Friction Advisory: pending_runtime3_deep_result
+Volatility Advisory: pending_runtime3_deep_result
+Structure Advisory: pending_runtime3_deep_result
+Session Advisory: pending_runtime3_deep_result
+Risk Advisory: pending_runtime3_deep_result
+Invalidation / Kill Reason: runtime3_result_not_accepted
 
 Quality
 ----------------------------------------
+Quality State: degraded_waiting_for_worker
 Deep Calculations Active: FALSE
 MT5 Heavy Calculation Active: FALSE
 Degraded Publication: TRUE
@@ -243,15 +269,24 @@ L5_DEEP_INSPECTION_ADVISORY
 ----------------------------------------
 owner_name=Runtime 5 - Deep Inspection Advisory Owner
 layer_name=Layer 5 - Deep Inspection Advisory Truth
-status=Shell only
+status=Readiness shell
 trust_state=Advisory Not Ready
+readiness_state=blocked_runtime3_not_accepted
+readiness_reason=Runtime 3 worker result gate is not accepted
+packet_schema_version=l5_advisory_packet_v1
+packet_status=waiting_for_runtime3_result
+packet_source=runtime3_accepted_worker_result_required
+packet_binding_status=not_bound_runtime3_result_not_accepted
+packet_reason=Runtime 3 accepted worker result is required before Layer 5 can bind advisory packet fields
+packet_owner_boundary=advisory_packet_shell_only_no_ranking_no_selection_no_permission_no_execution
 calculation_lane=Runtime3_external_worker_job_bus_required_for_deep_calculation
 execution_owner=Runtime_3_external_worker_job_bus_and_result_acceptance
 source_truth_owner=L1_L2_L3_L4_existing_owner_gates_only
 surface_owner=Runtime_5_advisory_interpretation_shell_only
 duplicate_owner_contract=no_duplicate_L1_L2_L3_L4_Runtime3_FileIO_route_board_dossier_ranking_selection_permission_execution_owner
+no_repeat_data_contract=L5_references_owner_gates_only_no_raw_L1_L2_L3_L4_packet_duplication
 board_layout_contract=compact_operator_summary_same_style_as_L1_L2_L3_L4
-dossier_layout_contract=rich_per_symbol_advisory_packet_same_style_as_L3_L4_dossier_sections
+dossier_layout_contract=rich_per_symbol_advisory_packet_same_style_as_L3_L4_dossier_sections_without_repeating_raw_previous_layer_data
 workbench_layout_contract=machine_meta_diagnostics_same_style_as_L1_L2_L3_L4_workbench_sections
 mt5_heavy_calculation_allowed=false
 runtime3_worker_required_for_deep_calculation=true
@@ -261,16 +296,26 @@ runtime3_job_bus_validation_status=...
 runtime3_result_job_id=...
 runtime3_result_job_type=...
 runtime3_result_job_status=...
-eligible_open=...
+owner_gate_summary=L2=ready;L3=ready;L4=ready;R3=blocked
+eligible_gate_count=...
 ready_symbols=...
 pending_symbols=...
-l2_gate_status=owner_reference_only
-l3_gate_status=owner_reference_only
-l4_gate_status=owner_reference_only
-readiness=...
+blocked_l2_gate=...
+blocked_l3_gate=...
+blocked_l4_gate=...
+blocked_runtime3_gate=...
+blocked_no_eligible=...
+deep_packet_pending=...
+friction_advisory=pending_runtime3_deep_result
+volatility_advisory=pending_runtime3_deep_result
+structure_advisory=pending_runtime3_deep_result
+session_advisory=pending_runtime3_deep_result
+risk_advisory=pending_runtime3_deep_result
+kill_reason=runtime3_result_not_accepted
+quality_state=degraded_waiting_for_worker
 main_blocker=...
 inputs_consumed=L1_L2_L3_L4_owner_gates_plus_Runtime3_accepted_worker_result_only
-outputs_published=board_summary_dossier_advisory_section_workbench_machine_meta_status_row
+outputs_published=board_summary_dossier_advisory_packet_workbench_machine_meta_status_row
 permission=false
 ranking_runtime=false
 selection_runtime=false
@@ -295,7 +340,7 @@ A layer can move forward only after:
 
 ## Runtime 3 before Runtime 5
 
-Runtime 3C must be accepted before Runtime 5 can consume deep calculation results. Runtime 5 may publish degraded shell truth while Runtime 3 is pending, rejected, stale, mismatched, or absent.
+Runtime 3C/3D must be accepted before Runtime 5 can consume deep calculation results. Runtime 5 may publish degraded shell truth while Runtime 3 is pending, rejected, stale, mismatched, or absent.
 
 Runtime 3 accepted proof must include at minimum:
 
@@ -310,3 +355,19 @@ trade_permission=false
 ```
 
 If Runtime 3 is not accepted, Runtime 5 must remain advisory-not-ready and degraded, but publication must continue.
+
+## Layer 5 closeout state
+
+Layer 5 source is complete only when:
+
+- `AC_Config.mqh` build identity targets `runtime_3d_l5_advisory_packet_shell` or later.
+- `AuroraCore.mq5` property version matches the config build version.
+- `AC_DeepInspectionOwner.mqh` exposes readiness, packet status, binding, reason, advisory fields, kill reason, and quality state.
+- Market Board prints compact packet status/quality without machine bloat.
+- Dossier prints owner-gate references plus advisory packet fields.
+- Workbench prints all packet/meta/proof fields.
+- Diagnostics prints the L5 packet fields.
+- Runtime 3 remains the external-worker transport/result authority.
+- Runtime 5 does not rank, select, grant permission, execute, or repeat L1-L4 raw data.
+
+Runtime proof is still required after compile before claiming the layer is operationally accepted.
