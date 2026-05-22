@@ -9,6 +9,7 @@ $SharedStatus = Join-Path $SharedExternalWorker "Status"
 $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status.txt"
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
+$WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
 
 if (!(Test-Path $BuiltWorker)) { throw "Built worker folder not found: $BuiltWorker. Run build_worker.ps1 first." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
@@ -18,7 +19,6 @@ if (!(Test-Path $BuiltExe)) { throw "Install failed: AuroraWorker.exe missing af
 Copy-Item -Path $BuiltExe -Destination $SharedExeFlat -Force
 
 $daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"
-$watchRegistered=$false; $watchState="not_registered"; $watchError="none"
 try {
   $daemonAction = New-ScheduledTaskAction -Execute $BuiltExe -Argument "--shared-root `"$SharedRoot`" --mode shared-daemon --poll-seconds 1" -WorkingDirectory $SharedWorkerRoot
   $daemonTrigger = New-ScheduledTaskTrigger -AtLogOn
@@ -26,18 +26,30 @@ try {
   Register-ScheduledTask -TaskName $DaemonTaskName -Action $daemonAction -Trigger $daemonTrigger -Settings $daemonSettings -Description "Aurora shared external worker daemon." -Force | Out-Null
   $daemonTask = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction Stop
   $daemonRegistered = $true; $daemonState = $daemonTask.State.ToString()
-} catch { $daemonError = ($_.Exception.Message -replace "\r?\n", " "); $daemonState="registration_failed" }
+} catch {
+  $daemonError = ($_.Exception.Message -replace "\r?\n", " ")
+  $daemonState="registration_failed"
+}
 
-try {
-  $watchAction = New-ScheduledTaskAction -Execute $BuiltExe -Argument "--shared-root `"$SharedRoot`" --watchdog" -WorkingDirectory $SharedWorkerRoot
-  $watchTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date
-  $watchTrigger.RepetitionInterval = (New-TimeSpan -Minutes 1)
-  $watchTrigger.RepetitionDuration = (New-TimeSpan -Days 3650)
-  $watchSettings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-  Register-ScheduledTask -TaskName $WatchdogTaskName -Action $watchAction -Trigger $watchTrigger -Settings $watchSettings -Description "Aurora watchdog repair lane." -Force | Out-Null
-  $watchTask = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction Stop
-  $watchRegistered = $true; $watchState = $watchTask.State.ToString()
-} catch { $watchError = ($_.Exception.Message -replace "\r?\n", " "); $watchState="registration_failed" }
+$watchRegistered=$false; $watchState="not_registered"; $watchError="none"
+if (Test-Path $WatchdogHelper) {
+  try {
+    powershell -ExecutionPolicy Bypass -File $WatchdogHelper | Out-Host
+    $watchTask = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction Stop
+    $watchRegistered = $true; $watchState = $watchTask.State.ToString(); $watchError = "none"
+  } catch {
+    $watchError = ($_.Exception.Message -replace "\r?\n", " ")
+    $watchState = "registration_failed"
+  }
+} else {
+  $watchError = "register_watchdog_safe.ps1 missing"
+  $watchState = "registration_failed"
+}
+
+$daemonTaskRefresh = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction SilentlyContinue
+if ($daemonTaskRefresh) { $daemonRegistered = $true; $daemonState = $daemonTaskRefresh.State.ToString() }
+$watchTaskRefresh = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction SilentlyContinue
+if ($watchTaskRefresh) { $watchRegistered = $true; $watchState = $watchTaskRefresh.State.ToString(); $watchError = "none" }
 
 $FlatPresent = Test-Path $SharedExeFlat
 $PackagedPresent = Test-Path $BuiltExe
@@ -76,7 +88,5 @@ trade_permission=false
 "@
 Set-Content -Path $SharedInstallStatusPath -Value $InstallText -Encoding ASCII
 Write-Host "Installed global worker and task proofs at $SharedInstallStatusPath"
-
-# Aurora local patch: safe watchdog registration for paths with spaces.
-powershell -ExecutionPolicy Bypass -File "$PSScriptRoot\register_watchdog_safe.ps1"
-
+Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
+Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
