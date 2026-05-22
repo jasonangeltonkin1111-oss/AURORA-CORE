@@ -488,18 +488,31 @@ def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
 def run_status_probe(shared_root: Path) -> int:
     roots = discover_roots(shared_root)
     results: List[Tuple[Path, int, ValidationResult]] = []
-    for root in roots:
+    write_failed = False
+    for idx, root in enumerate(roots):
         code, res = run_once(root, "shared_status_probe")
+        process_ok = write_process_status(root, "shared-status-probe", 1, code, res, len(roots), idx)
+        if not process_ok:
+            res = mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
+            code = 3
+            write_failed = True
         results.append((root, code, res))
     ok = write_shared_status(shared_root, 1, roots, results)
-    return 0 if ok else 3
+    return 0 if ok and not write_failed else 3
 
 
 def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
     roots = discover_roots(shared_root)
     results: List[Tuple[Path, int, ValidationResult]] = []
-    for root in roots:
-        code, res = run_once(root, "watchdog_probe" if watchdog_mode else "repair_probe")
+    write_failed = False
+    for idx, root in enumerate(roots):
+        mode = "watchdog_probe" if watchdog_mode else "repair_probe"
+        code, res = run_once(root, mode)
+        process_ok = write_process_status(root, mode, 1, code, res, len(roots), idx)
+        if not process_ok:
+            res = mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
+            code = 3
+            write_failed = True
         results.append((root, code, res))
 
     daemon_registered, daemon_state = _get_task_state(DAEMON_TASK_NAME)
@@ -517,6 +530,8 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
         reason_bits.append("aurora_worker_process_missing")
     if daemon_state.lower() != "running":
         reason_bits.append("daemon_task_state_not_running")
+    if write_failed:
+        reason_bits.append("account_lifecycle_process_status_write_failed")
     if not reason_bits:
         reason_bits.append("daemon_status_fresh")
 
@@ -545,7 +560,7 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
         restart_result=restart_result,
     )
     shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success)
-    return 0 if shared_ok and (restart_result.startswith("not_needed") or repair_success) else 2
+    return 0 if shared_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
 
 
 def main(argv: List[str] | None = None) -> int:
