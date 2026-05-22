@@ -71,6 +71,82 @@ string AC_L1MapStatsLine(const string name,
       + "\r\n";
 }
 
+string AC_L1CleanSymbolRoot(string symbol)
+{
+   int dot = StringFind(symbol, ".");
+   if(dot > 0) symbol = StringSubstr(symbol, 0, dot);
+   return symbol;
+}
+
+bool AC_L1IsKnownCurrency(const string value)
+{
+   return (value == "USD" || value == "EUR" || value == "GBP" || value == "JPY" ||
+           value == "CHF" || value == "AUD" || value == "NZD" || value == "CAD" ||
+           value == "SGD" || value == "ZAR");
+}
+
+bool AC_L1ForexPairParts(const string symbol, string &base_ccy, string &quote_ccy)
+{
+   string root = AC_L1CleanSymbolRoot(symbol);
+   if(StringLen(root) < 6) return false;
+   base_ccy = StringSubstr(root, 0, 3);
+   quote_ccy = StringSubstr(root, 3, 3);
+   return (AC_L1IsKnownCurrency(base_ccy) && AC_L1IsKnownCurrency(quote_ccy));
+}
+
+int AC_L1AssetClassIndex(const string symbol)
+{
+   string root = AC_L1CleanSymbolRoot(symbol);
+   string base_ccy = "";
+   string quote_ccy = "";
+   if(AC_L1ForexPairParts(symbol, base_ccy, quote_ccy)) return 0;
+   if(StringFind(root, "XAU") >= 0 || StringFind(root, "XAG") >= 0) return 1;
+   if(StringFind(root, "OIL") >= 0 || StringFind(root, "WTI") >= 0 || StringFind(root, "BRENT") >= 0) return 2;
+   if(StringFind(root, "BTC") >= 0 || StringFind(root, "ETH") >= 0 || StringFind(root, "XMR") >= 0 || StringFind(root, "LTC") >= 0 || StringFind(root, "XRP") >= 0) return 3;
+   if(StringFind(root, "DJC") >= 0 || StringFind(root, "NAC") >= 0 || StringFind(root, "SPC") >= 0 || StringFind(root, "UKC") >= 0 || StringFind(root, "GEC") >= 0 || StringFind(root, "JPC") >= 0) return 4;
+   return 5;
+}
+
+string AC_L1AssetClassName(const int index)
+{
+   if(index == 0) return "Forex";
+   if(index == 1) return "Metals";
+   if(index == 2) return "Energy";
+   if(index == 3) return "Crypto";
+   if(index == 4) return "Indices/CFD";
+   return "Other";
+}
+
+int AC_L1CurrencyIndex(const string ccy)
+{
+   if(ccy == "USD") return 0;
+   if(ccy == "EUR") return 1;
+   if(ccy == "GBP") return 2;
+   if(ccy == "JPY") return 3;
+   if(ccy == "CHF") return 4;
+   if(ccy == "AUD") return 5;
+   if(ccy == "NZD") return 6;
+   if(ccy == "CAD") return 7;
+   if(ccy == "SGD") return 8;
+   if(ccy == "ZAR") return 9;
+   return -1;
+}
+
+string AC_L1CurrencyName(const int index)
+{
+   if(index == 0) return "USD";
+   if(index == 1) return "EUR";
+   if(index == 2) return "GBP";
+   if(index == 3) return "JPY";
+   if(index == 4) return "CHF";
+   if(index == 5) return "AUD";
+   if(index == 6) return "NZD";
+   if(index == 7) return "CAD";
+   if(index == 8) return "SGD";
+   if(index == 9) return "ZAR";
+   return "UNK";
+}
+
 string AC_L1RiskBudgetMap()
 {
    double unit_risk = AC_L1_EQUITY * 0.001;
@@ -91,6 +167,68 @@ string AC_L1RiskBudgetMap()
    text += "Largest Loss Usage:     " + AC_L1PercentText(largest_loss_usage) + " of 0.20% hard risk\r\n";
    text += "Worst Day Usage:        " + AC_L1PercentText(worst_day_usage) + " of 1.00% daily budget\r\n";
    text += "Policy Basis:           Jason numeric policy only; not broker or prop permission\r\n";
+   return text;
+}
+
+string AC_L1AssetClassMap()
+{
+   int trades[6];
+   int wins[6];
+   double net[6];
+   for(int r = 0; r < 6; r++) { trades[r] = 0; wins[r] = 0; net[r] = 0.0; }
+
+   for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
+   {
+      int idx = AC_L1AssetClassIndex(AC_L1_CLOSED[i].symbol);
+      if(idx < 0 || idx > 5) idx = 5;
+      trades[idx]++;
+      if(AC_L1_CLOSED[i].net_result > 0.0) wins[idx]++;
+      net[idx] += AC_L1_CLOSED[i].net_result;
+   }
+
+   string text = AC_L1MapHeader("ASSET CLASS MAP");
+   text += AC_L1PadRight("Class", 12) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
+   for(int c = 0; c < 6; c++)
+      text += AC_L1MapStatsLine(AC_L1AssetClassName(c), trades[c], wins[c], net[c]);
+   text += "Classification Basis: symbol-name heuristic only; taxonomy-owner link pending\r\n";
+   return text;
+}
+
+string AC_L1CurrencyExposureMap()
+{
+   int touches[10];
+   int wins[10];
+   double net[10];
+   for(int r = 0; r < 10; r++) { touches[r] = 0; wins[r] = 0; net[r] = 0.0; }
+
+   for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
+   {
+      string base_ccy = "";
+      string quote_ccy = "";
+      if(!AC_L1ForexPairParts(AC_L1_CLOSED[i].symbol, base_ccy, quote_ccy)) continue;
+      int b = AC_L1CurrencyIndex(base_ccy);
+      int q = AC_L1CurrencyIndex(quote_ccy);
+      double allocated = AC_L1_CLOSED[i].net_result * 0.5;
+      bool win = (AC_L1_CLOSED[i].net_result > 0.0);
+      if(b >= 0)
+      {
+         touches[b]++;
+         if(win) wins[b]++;
+         net[b] += allocated;
+      }
+      if(q >= 0)
+      {
+         touches[q]++;
+         if(win) wins[q]++;
+         net[q] += allocated;
+      }
+   }
+
+   string text = AC_L1MapHeader("CURRENCY TOUCH MAP - FOREX ONLY");
+   text += AC_L1PadRight("Currency", 12) + AC_L1PadLeft("Touches", 7) + AC_L1PadLeft("Net50", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
+   for(int c = 0; c < 10; c++)
+      text += AC_L1MapStatsLine(AC_L1CurrencyName(c), touches[c], wins[c], net[c]);
+   text += "Net Basis: forex-pair rows only, 50/50 net allocation to base and quote currency\r\n";
    return text;
 }
 
@@ -155,9 +293,7 @@ string AC_L1TimeWindowMap()
    int trades[5];
    int wins[5];
    double net[5];
-   ArrayInitialize(trades, 0);
-   ArrayInitialize(wins, 0);
-   ArrayInitialize(net, 0.0);
+   for(int r = 0; r < 5; r++) { trades[r] = 0; wins[r] = 0; net[r] = 0.0; }
 
    for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
    {
@@ -181,9 +317,7 @@ string AC_L1HoldingTimeMap()
    int trades[5];
    int wins[5];
    double net[5];
-   ArrayInitialize(trades, 0);
-   ArrayInitialize(wins, 0);
-   ArrayInitialize(net, 0.0);
+   for(int r = 0; r < 5; r++) { trades[r] = 0; wins[r] = 0; net[r] = 0.0; }
 
    for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
    {
@@ -274,6 +408,8 @@ string AC_L1AccountPortfolioMapsFull()
 {
    string text = "";
    text += AC_L1RiskBudgetMap();
+   text += AC_L1AssetClassMap();
+   text += AC_L1CurrencyExposureMap();
    text += AC_L1SymbolPainStrengthMap(5);
    text += AC_L1TimeWindowMap();
    text += AC_L1HoldingTimeMap();
