@@ -275,31 +275,51 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     score -= quote_quality_penalty + surface_quality_penalty + value_quality_penalty + margin_quality_penalty
     reasons += [quote_reason, surface_reason, value_reason, margin_reason]
 
+    # Unknown commission/slippage are real uncertainty, but not a rank-usability failure.
+    # They stay visible as penalties/reasons and bucket caps without poisoning nearly every symbol as ranked_degraded.
     commission_unknown_penalty = 0.0
-    if commission_status != "known_machine_verified":
-        commission_unknown_penalty = 10.0
+    commission_uncertain = commission_status != "known_machine_verified"
+    if commission_uncertain:
+        commission_unknown_penalty = 4.0
         bucket_cap = _apply_bucket_cap(bucket_cap, "good_friction")
-        reasons.append("commission_not_machine_verified")
+        reasons.append("commission_not_machine_verified_penalty_only")
     score -= commission_unknown_penalty
 
-    slippage_unknown_penalty = 5.0
+    slippage_unknown_penalty = 2.0
     score -= slippage_unknown_penalty
-    reasons.append("slippage_not_modelled_v1")
+    reasons.append("slippage_not_modelled_v1_penalty_only")
 
     cost_model_mismatch_penalty = 0.0
     calculation_quality = "complete_cost_model"
+    cost_model_degraded = False
+    cost_model_warning = False
     if compare_status == "mismatch_gt_25pct":
-        cost_model_mismatch_penalty = 5.0 if spread_bps < 1.0 else 15.0
-        calculation_quality = "degraded_cost_model_mismatch"
-        reasons.append("cost_model_mismatch_gt_25pct")
+        if spread_bps < 1.0 and effective_cost > 0.0:
+            cost_model_mismatch_penalty = 5.0
+            calculation_quality = "warning_micro_spread_cost_model_mismatch"
+            cost_model_warning = True
+            reasons.append("cost_model_mismatch_gt_25pct_micro_spread_penalty_only")
+        else:
+            cost_model_mismatch_penalty = 15.0
+            calculation_quality = "degraded_cost_model_mismatch"
+            cost_model_degraded = True
+            reasons.append("cost_model_mismatch_gt_25pct")
     elif compare_status == "warning_gt_10pct":
         cost_model_mismatch_penalty = 6.0
         calculation_quality = "warning_cost_model_mismatch"
+        cost_model_warning = True
         reasons.append("cost_model_warning_gt_10pct")
     elif compare_status == "primary_unavailable_or_zero":
-        cost_model_mismatch_penalty = 8.0
-        calculation_quality = "degraded_primary_cost_zero_or_unavailable"
-        reasons.append("primary_cost_zero_or_unavailable")
+        if effective_cost > 0.0:
+            cost_model_mismatch_penalty = 4.0
+            calculation_quality = "usable_fallback_cost_model_primary_unavailable"
+            cost_model_warning = True
+            reasons.append("primary_cost_zero_or_unavailable_using_fallback")
+        else:
+            cost_model_mismatch_penalty = 8.0
+            calculation_quality = "degraded_primary_cost_zero_or_unavailable"
+            cost_model_degraded = True
+            reasons.append("primary_cost_zero_or_unavailable")
     score -= cost_model_mismatch_penalty
 
     zero_cost_suspicious_penalty = 0.0
@@ -307,11 +327,13 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         zero_cost_suspicious_penalty = 22.0
         bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
         calculation_quality = "account_cost_zero_suspicious"
+        cost_model_degraded = True
         reasons.append("zero_account_cost_with_nonzero_spread")
     score -= zero_cost_suspicious_penalty
 
     volume_model_penalty = 0.0
-    if volume_model != "normal":
+    volume_model_degraded = volume_model != "normal"
+    if volume_model_degraded:
         volume_model_penalty = 12.0
         bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
         reasons.append(f"volume_model={volume_model}")
@@ -322,12 +344,15 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     rank_state = "ranked"
     score_quality = "clean"
-    if calculation_quality != "complete_cost_model" or volume_model != "normal" or commission_status != "known_machine_verified":
-        rank_state = "ranked_degraded"
-        score_quality = "degraded"
     if effective_cost <= 0.0 and spread_bps > 0.0 and zero_suspicious:
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_quality"
+    elif cost_model_degraded or volume_model_degraded:
+        rank_state = "ranked_degraded"
+        score_quality = "degraded_rank_usability"
+    elif cost_model_warning or commission_uncertain or slippage_unknown_penalty > 0.0:
+        rank_state = "ranked"
+        score_quality = "usable_with_cost_uncertainty"
 
     return {
         "symbol": symbol,
