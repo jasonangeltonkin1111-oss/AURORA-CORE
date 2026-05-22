@@ -1,5 +1,3 @@
-﻿param([switch]$ForegroundFallback)
-
 $ErrorActionPreference = "Stop"
 
 $SharedRoot = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
@@ -18,12 +16,8 @@ if ($Task) {
   $Task = Get-ScheduledTask -TaskName $TaskName
   Write-Host ("Gateway daemon task state: " + $Task.State)
 }
-elseif ($ForegroundFallback) {
-  Write-Host "Task missing; using foreground Gateway fallback"
-  & $WorkerExe --shared-root "$SharedRoot" --mode shared-daemon --poll-seconds 1
-}
 else {
-  throw "Task $TaskName not found. Run install_worker_global.ps1"
+  throw "Task $TaskName not found. Run install_worker_global.ps1. Foreground Gateway fallback is intentionally disabled to prevent popup/interface runtime."
 }
 
 $ProcCount = @(Get-Process AuroraWorker -ErrorAction SilentlyContinue).Count
