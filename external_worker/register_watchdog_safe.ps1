@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $sharedRoot = "$env:APPDATA\MetaQuotes\Terminal\Common\Files\Aurora Core"
 $watchdogTask = "AuroraWorker_Global_Watchdog"
@@ -26,9 +26,15 @@ $action = New-ScheduledTaskAction `
   -Argument "--shared-root `"$sharedRoot`" --watchdog" `
   -WorkingDirectory $watchdogWorkdir
 
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
-$trigger.Repetition.Interval = "PT1M"
-$trigger.Repetition.StopAtDurationEnd = $false
+# Use the ScheduledTasks cmdlet's supported repetition parameters instead of mutating
+# $trigger.Repetition.Interval. Some Windows/PowerShell builds return a trigger
+# object whose Repetition child does not expose settable Interval/StopAtDurationEnd
+# properties, causing watchdog registration to fail even though the daemon is valid.
+$trigger = New-ScheduledTaskTrigger `
+  -Once `
+  -At (Get-Date).AddMinutes(1) `
+  -RepetitionInterval (New-TimeSpan -Minutes 1) `
+  -RepetitionDuration (New-TimeSpan -Days 3650)
 
 $settings = New-ScheduledTaskSettingsSet `
   -MultipleInstances IgnoreNew `
@@ -63,6 +69,7 @@ if (Test-Path $installStatus) {
         "watchdog_task_state" = $watchdogState
         "watchdog_task_error" = "none"
         "operator_cmd_required" = $operatorRequired
+        "auto_start_configured" = if ($operatorRequired -eq "false") { "true" } else { "false" }
         "flat_exe_runtime_authority" = "false"
         "packaged_exe_runtime_authority" = "true"
     }
