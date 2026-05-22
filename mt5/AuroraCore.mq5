@@ -1,6 +1,6 @@
 #property strict
-#property version   "1.044"
-#property description "AURORA CORE - external worker foundation"
+#property version   "1.045"
+#property description "AURORA CORE - foundation truth and gateway support"
 
 #include "core/AC_Config.mqh"
 #include "core/AC_CommonTypes.mqh"
@@ -14,8 +14,8 @@
 #include "runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_BrokerSpecsTruth.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_4_market_watch_truth/AC_MarketWatchTruth.mqh"
+#include "runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh"
 #include "runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerOwner.mqh"
-#include "runtime_owners/runtime_5_deep_inspection_advisory_owner/AC_DeepInspectionOwner.mqh"
 #include "runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh"
 
 AC_Runtime0Snapshot AC_SNAPSHOT;
@@ -91,7 +91,6 @@ string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
       + AC_ExternalWorkerStatusRow() + "\r\n"
       + AC_UniverseStatusRow() + "\r\n\r\n"
       + AC_Layer0WorkbenchText(layer0_status)
-      + AC_Layer5WorkbenchSection()
       + AC_ExternalWorkerWorkbenchSection();
 }
 
@@ -181,7 +180,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    phase_start = GetTickCount();
    AC_RefreshExternalWorkerStatus();
    AC_WriteResult worker_required_write = AC_WriteExternalWorkerRequired();
-   AC_AddMicroLog("external_worker_status_and_required", phase_start, worker_required_write.status);
+   AC_AddMicroLog("gateway_status_and_required", phase_start, worker_required_write.status);
 
    phase_start = GetTickCount();
    AC_RefreshLayer1AccountTruth();
@@ -204,12 +203,12 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
 
    phase_start = GetTickCount();
    AC_BuildLayer5Texts();
-   AC_AddMicroLog("build_layer5_deep_inspection_shell", phase_start, AC_L5_STATUS);
+   AC_AddMicroLog("refresh_layer5_basic_system_gate", phase_start, AC_L5_STATUS);
 
    phase_start = GetTickCount();
    AC_WriteResult dossier_batch_write = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
    AC_RecordWriteProblem("Dossier Universe", dossier_batch_write);
-   AC_AddMicroLog("l0_l2_l3_l4_dossier_universe", phase_start, dossier_batch_write.status);
+   AC_AddMicroLog("l0_l2_l3_l4_l5_dossier_universe", phase_start, dossier_batch_write.status);
 
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
@@ -227,7 +226,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
-   manifest += AC_ManifestRow("External Worker Required", worker_required_write, AC_SNAPSHOT, "worker_required_control") + "\r\n";
+   manifest += AC_ManifestRow("Gateway Required", worker_required_write, AC_SNAPSHOT, "gateway_required_control") + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
 
    string diagnostics = "";
@@ -238,8 +237,8 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
    diagnostics += "board_dossier_renderer_owner=" + AC_BOARD_DOSSIER_RENDERER_OWNER + "\r\n";
    diagnostics += "foundation_truth_owner=" + AC_RUNTIME1_OWNER + "\r\n";
-   diagnostics += "external_worker_owner=" + AC_RUNTIME3_OWNER + "\r\n";
-   diagnostics += "deep_inspection_owner=" + AC_RUNTIME5_OWNER + "\r\n";
+   diagnostics += "gateway_owner=" + AC_RUNTIME3_OWNER + "\r\n";
+   diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    diagnostics += "timer_setup_status=" + AC_SNAPSHOT.timer_setup_status + "\r\n";
    diagnostics += "timer_setup_error=" + IntegerToString(AC_SNAPSHOT.timer_setup_error) + "\r\n";
    diagnostics += "folder_detail=" + folder_detail + "\r\n";
@@ -249,15 +248,15 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
-   diagnostics += "external_worker_required_write=" + AC_WriteResultLine("External Worker Required", worker_required_write) + "\r\n";
+   diagnostics += "gateway_required_write=" + AC_WriteResultLine("Gateway Required", worker_required_write) + "\r\n";
    diagnostics += "manifest_write=" + AC_WriteResultLine("Manifest", manifest_write) + "\r\n";
-   diagnostics += "external_worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
-   diagnostics += "external_worker_install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
-   diagnostics += "external_worker_expected_exe=" + AC_ExternalWorkerExePath() + "\r\n";
-   diagnostics += "external_worker_required_path=" + AC_ExternalWorkerRequiredPath() + "\r\n";
-   diagnostics += "external_worker_authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
-   diagnostics += "external_worker_popup_alerts=false\r\n";
-   diagnostics += "external_worker_core_blocking=false\r\n";
+   diagnostics += "gateway_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
+   diagnostics += "gateway_install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
+   diagnostics += "gateway_expected_exe=" + AC_ExternalWorkerExePath() + "\r\n";
+   diagnostics += "gateway_required_path=" + AC_ExternalWorkerRequiredPath() + "\r\n";
+   diagnostics += "gateway_authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
+   diagnostics += "gateway_popup_alerts=false\r\n";
+   diagnostics += "gateway_core_blocking=false\r\n";
    diagnostics += "layer1_scan_status=" + AC_L1_SCAN_STATUS + "\r\n";
    diagnostics += "layer1_scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS) + "\r\n";
    diagnostics += "layer2_scan_status=" + AC_L2_SCAN_STATUS + "\r\n";
@@ -280,33 +279,39 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer4_missing_tick=" + IntegerToString(AC_L4_MISSING_TICK) + "\r\n";
    diagnostics += "layer4_invalid_bidask=" + IntegerToString(AC_L4_INVALID_BIDASK) + "\r\n";
    diagnostics += "layer4_cache_key=" + AC_L4_CACHE_KEY + "\r\n";
+   diagnostics += "layer4_refresh_key=" + AC_L4_REFRESH_KEY + "\r\n";
    diagnostics += "layer5_status=" + AC_L5_STATUS + "\r\n";
-   diagnostics += "layer5_eligible_gate_count=" + IntegerToString(AC_L5_ELIGIBLE_OPEN) + "\r\n";
-   diagnostics += "layer5_ready_symbols=" + IntegerToString(AC_L5_READY_SYMBOLS) + "\r\n";
-   diagnostics += "layer5_pending_symbols=" + IntegerToString(AC_L5_PENDING_SYMBOLS) + "\r\n";
-   diagnostics += "layer5_owner_gate_summary=" + AC_L5LayerGateSummary() + "\r\n";
-   diagnostics += "layer5_packet_schema_version=" + AC_L5_PACKET_SCHEMA_VERSION + "\r\n";
-   diagnostics += "layer5_packet_status=" + AC_L5_PACKET_STATUS + "\r\n";
-   diagnostics += "layer5_packet_source=" + AC_L5_PACKET_SOURCE + "\r\n";
-   diagnostics += "layer5_packet_binding_status=" + AC_L5_PACKET_BINDING_STATUS + "\r\n";
-   diagnostics += "layer5_packet_reason=" + AC_L5_PACKET_REASON + "\r\n";
-   diagnostics += "layer5_packet_owner_boundary=" + AC_L5_PACKET_OWNER_BOUNDARY + "\r\n";
-   diagnostics += "layer5_friction_advisory=" + AC_L5_FRICTION_ADVISORY + "\r\n";
-   diagnostics += "layer5_volatility_advisory=" + AC_L5_VOLATILITY_ADVISORY + "\r\n";
-   diagnostics += "layer5_structure_advisory=" + AC_L5_STRUCTURE_ADVISORY + "\r\n";
-   diagnostics += "layer5_session_advisory=" + AC_L5_SESSION_ADVISORY + "\r\n";
-   diagnostics += "layer5_risk_advisory=" + AC_L5_RISK_ADVISORY + "\r\n";
-   diagnostics += "layer5_kill_reason=" + AC_L5_KILL_REASON + "\r\n";
-   diagnostics += "layer5_quality_state=" + AC_L5_QUALITY_STATE + "\r\n";
+   diagnostics += "layer5_gate_policy=" + AC_L5_GATE_POLICY + "\r\n";
+   diagnostics += "layer5_scanned_symbols=" + IntegerToString(AC_L5_SCANNED) + "\r\n";
+   diagnostics += "layer5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   diagnostics += "layer5_gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
+   diagnostics += "layer5_blocked_closed_market=" + IntegerToString(AC_L5_BLOCK_CLOSED_MARKET) + "\r\n";
+   diagnostics += "layer5_blocked_stale_quote=" + IntegerToString(AC_L5_BLOCK_STALE_QUOTE) + "\r\n";
+   diagnostics += "layer5_blocked_missing_tick=" + IntegerToString(AC_L5_BLOCK_MISSING_TICK) + "\r\n";
+   diagnostics += "layer5_blocked_invalid_bidask=" + IntegerToString(AC_L5_BLOCK_INVALID_BIDASK) + "\r\n";
+   diagnostics += "layer5_blocked_missing_specs=" + IntegerToString(AC_L5_BLOCK_MISSING_SPECS) + "\r\n";
+   diagnostics += "layer5_blocked_trade_mode=" + IntegerToString(AC_L5_BLOCK_TRADE_MODE) + "\r\n";
+   diagnostics += "layer5_blocked_absurd_spread=" + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD) + "\r\n";
+   diagnostics += "layer5_blocked_classification_review=" + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW) + "\r\n";
+   diagnostics += "layer5_blocked_l2_not_ready=" + IntegerToString(AC_L5_BLOCK_L2_NOT_READY) + "\r\n";
+   diagnostics += "layer5_blocked_l3_not_ready=" + IntegerToString(AC_L5_BLOCK_L3_NOT_READY) + "\r\n";
+   diagnostics += "layer5_blocked_l4_not_ready=" + IntegerToString(AC_L5_BLOCK_L4_NOT_READY) + "\r\n";
+   diagnostics += "layer5_last_upstream_key=" + AC_L5_LAST_UPSTREAM_KEY + "\r\n";
+   diagnostics += "layer5_current_upstream_key=" + AC_L5UpstreamKey() + "\r\n";
+   diagnostics += "layer5_calculation_owner=none_basic_gate_only\r\n";
+   diagnostics += "layer5_gateway_required=false\r\n";
+   diagnostics += "layer5_ranking_runtime=false\r\n";
+   diagnostics += "layer5_selection_runtime=false\r\n";
+   diagnostics += "layer5_trade_permission=false\r\n";
    diagnostics += "layer5_refresh_duration_ms=" + IntegerToString((int)AC_L5_REFRESH_DURATION_MS) + "\r\n";
    diagnostics += "layer2_to_layer3_contract=layer3_scans_known_open_and_closed_symbols_unknown_symbols_may_stop_earlier\r\n";
    diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "layer4_owner_contract=runtime1_foundation_truth_symbolinfotick_marketwatch_only_no_history_no_dom_no_indicators_no_ranking_no_permission\r\n";
-   diagnostics += "layer5_owner_contract=runtime5_advisory_packet_shell_consumes_l1_l2_l3_l4_owner_gates_plus_runtime3_accepted_worker_result_no_raw_previous_layer_duplication_no_heavy_calculation_no_ranking_no_selection_no_permission\r\n";
-   diagnostics += "external_worker_contract=runtime3_global_daemon_watchdog_job_bus_result_acceptance_no_popup_no_board_dossier_authority_no_permission\r\n";
+   diagnostics += "layer5_owner_contract=runtime1_basic_system_gate_consumes_l2_l3_l4_owner_packets_no_gateway_no_calculation_no_ranking_no_selection_no_permission\r\n";
+   diagnostics += "gateway_contract=runtime3_global_daemon_watchdog_job_bus_result_acceptance_no_popup_no_board_dossier_authority_no_permission\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_meta_non_trading_proof_not_trader_bloat\r\n";
-   diagnostics += "statistics_contract=owner_gate_packet_not_board_recalculation_python_worker_not_used_for_L0_L1_L2_L3_or_L4\r\n";
+   diagnostics += "statistics_contract=owner_gate_packet_not_board_recalculation_gateway_not_used_for_L0_L1_L2_L3_L4_or_L5\r\n";
    diagnostics += "symbol_packet_retry_limit=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    diagnostics += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
    diagnostics += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
@@ -314,13 +319,13 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "l4_dossier_refresh_seconds=" + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + "\r\n";
    diagnostics += "l4_top_list_refresh_seconds=" + IntegerToString(AC_L4_TOP_LIST_REFRESH_SECONDS) + "\r\n";
    diagnostics += "calculation_runtime_refresh_seconds=" + IntegerToString(AC_CALCULATION_RUNTIME_REFRESH_SECONDS) + "\r\n";
-   diagnostics += "external_worker_health_check_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS) + "\r\n";
+   diagnostics += "gateway_health_check_seconds=" + IntegerToString(AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS) + "\r\n";
    diagnostics += "experimental_timer_100ms=" + IntegerToString(AC_EXPERIMENTAL_TIMER_100MS) + "\r\n";
    diagnostics += "experimental_timer_10ms=" + IntegerToString(AC_EXPERIMENTAL_TIMER_10MS) + "\r\n";
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_advisory_packet_shell_plus_runtime3_external_worker_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_basic_system_gate_plus_runtime3_gateway_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
@@ -340,7 +345,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Diagnostics", diagnostics_write, AC_SNAPSHOT, "diagnostics") + "\r\n";
-   manifest += AC_ManifestRow("External Worker Required", worker_required_write, AC_SNAPSHOT, "worker_required_control") + "\r\n";
+   manifest += AC_ManifestRow("Gateway Required", worker_required_write, AC_SNAPSHOT, "gateway_required_control") + "\r\n";
    manifest_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_SNAPSHOT.manifest_status = manifest_write.ok ? manifest_write.status : manifest_write.status;
    AC_ApplyLateWriteStatus("Manifest Final", manifest_write);
@@ -409,8 +414,8 @@ void OnDeinit(const int reason)
    diagnostics += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    diagnostics += "runtime_owner=" + AC_RUNTIME0_OWNER + "\r\n";
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
-   diagnostics += "external_worker_owner=" + AC_RUNTIME3_OWNER + "\r\n";
-   diagnostics += "deep_inspection_owner=" + AC_RUNTIME5_OWNER + "\r\n";
+   diagnostics += "gateway_owner=" + AC_RUNTIME3_OWNER + "\r\n";
+   diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    diagnostics += "deinit_reason=" + IntegerToString(reason) + "\r\n";
    diagnostics += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
