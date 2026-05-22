@@ -4,6 +4,7 @@
 static string AC_L6_LAST_INPUT_EXPORT_STATUS = "not_exported";
 static string AC_L6_LAST_INPUT_MANIFEST_STATUS = "not_exported";
 static string AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = "not_available";
+static string AC_L6_LAST_INPUT_UPSTREAM_KEY = "not_exported";
 static int    AC_L6_LAST_INPUT_ROWS = 0;
 static ulong  AC_L6_LAST_INPUT_SIZE = 0;
 static int    AC_L6_LAST_BUY_1LOT_OK = 0;
@@ -18,6 +19,16 @@ static int    AC_L6_LAST_VALUE_FORMULA_FALLBACK_OK = 0;
 static int    AC_L6_LAST_CONTRACT_FALLBACK_OK = 0;
 static int    AC_L6_LAST_COST_MODEL_MISMATCH_COUNT = 0;
 static int    AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT = 0;
+
+string AC_L6InputUpstreamKey()
+{
+   return "l5_upstream=" + AC_L5UpstreamKey()
+      + "|l5_pass=" + IntegerToString(AC_L5_GATE_PASS)
+      + "|l3_cache=" + AC_L3_CACHE_KEY
+      + "|l4_cache=" + AC_L4_CACHE_KEY
+      + "|l4_refresh=" + AC_L4_REFRESH_KEY;
+}
+
 string AC_L6CsvSafe(string value)
 {
    StringReplace(value, "\r", " ");
@@ -454,6 +465,15 @@ string AC_L6BuildInputPrimitiveRows()
 
 AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
 {
+   string current_upstream_key = AC_L6InputUpstreamKey();
+   if(AC_L6_LAST_INPUT_UPSTREAM_KEY == current_upstream_key
+      && AC_L6_LAST_INPUT_EXPORT_STATUS != "not_exported"
+      && AC_L6_LAST_INPUT_MANIFEST_STATUS != "not_exported"
+      && AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM != "not_available")
+   {
+      return AC_MakeSyntheticWriteResult(AC_L6FrictionInputCsvPath(), true, "unchanged_cached", AC_L6_LAST_INPUT_SIZE, "l6_input_upstream_unchanged_no_ordercalcprofit_no_csv_rewrite|key=" + current_upstream_key);
+   }
+
    string folder_detail = "";
    AC_EnsureFolderPath(AC_L6FrictionLayerOutboxFolder(), folder_detail);
 
@@ -463,7 +483,7 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l6_cost_friction_input_primitives_manifest\r\n";
-   manifest += "schema_version=3\r\n";
+   manifest += "schema_version=4\r\n";
    manifest += "layer_id=6\r\n";
    manifest += "layer_name=Layer 6 - Cost / Friction Input Primitives\r\n";
    manifest += "owner_name=Runtime 4 - Surface Scoring Owner reserved; input primitives only in current source\r\n";
@@ -471,6 +491,7 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    manifest += "write_status=" + csv_write.status + "\r\n";
    manifest += "write_ok=" + (csv_write.ok ? "true" : "false") + "\r\n";
    manifest += "folder_detail=" + folder_detail + "\r\n";
+   manifest += "upstream_key=" + current_upstream_key + "\r\n";
    manifest += "row_count=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\n";
    manifest += "l5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    manifest += "payload_checksum=" + payload_checksum + "\r\n";
@@ -501,8 +522,12 @@ AC_WriteResult AC_ExportLayer6CostFrictionInputPrimitives()
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_L6FrictionInputManifestPath(), manifest);
    AC_L6_LAST_INPUT_EXPORT_STATUS = csv_write.status;
    AC_L6_LAST_INPUT_MANIFEST_STATUS = manifest_write.status;
-   AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
-   AC_L6_LAST_INPUT_SIZE = csv_write.final_size;
+   if(csv_write.ok && manifest_write.ok)
+   {
+      AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
+      AC_L6_LAST_INPUT_UPSTREAM_KEY = current_upstream_key;
+      AC_L6_LAST_INPUT_SIZE = csv_write.final_size;
+   }
    return csv_write;
 }
 
