@@ -1,0 +1,6 @@
+#ifndef AC_SHARED_OHLC_LEGAC_COMPAT_MQH
+#define AC_SHARED_OHLC_LEGAC_COMPAT_MQH
+
+#include "AC_SharedOhlcLegacyAliases.mqh"
+
+#endif
