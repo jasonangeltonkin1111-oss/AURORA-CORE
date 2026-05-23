@@ -25,9 +25,10 @@ from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 from aurora_worker_l7_session import publish_l7_session_relevance_rankings
 from aurora_worker_l8_movement import publish_l8_movement_range_rankings
 from aurora_worker_l9_structure import publish_l9_structure_location_rankings
+from aurora_worker_render_index import publish_render_index
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
 
-WORKER_VERSION = "0.6.9_l9_structure_location_sidecar"
+WORKER_VERSION = "0.6.10_render_index_l6_l9"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -239,7 +240,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         stale_or_missing += 1 if parts[4] in {"Missing Tick", "Stale", "not_available"} else 0
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result", "schema_version=5", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result", "schema_version=6", f"worker_version={WORKER_VERSION}",
         f"worker_mode={worker_mode}", "authority=calculation_support_only", "trade_permission=false",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
@@ -248,21 +249,21 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
         f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=r3_snapshot_validation_plus_l6_l7_l8_l9_surface_rankings_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
+        "notes=r3_snapshot_validation_plus_l6_l7_l8_l9_surface_rankings_plus_render_index_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
 def build_result_manifest(result: ValidationResult, result_text: str) -> str:
     job_status = "complete" if result.ok else "rejected"
     return "\n".join([
-        "schema_name=aurora_worker_result_manifest", "schema_version=5", f"worker_version={WORKER_VERSION}",
+        "schema_name=aurora_worker_result_manifest", "schema_version=6", f"worker_version={WORKER_VERSION}",
         f"source_snapshot_id={result.snapshot_id}", f"job_bus_schema_version={result.job_bus_schema_version}",
         f"job_id={result.job_id}", f"job_type={result.job_type}", f"job_resource_class={result.job_resource_class}",
         f"job_max_runtime_ms={result.job_max_runtime_ms}", f"job_status={job_status}",
         f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
-        "result_scope=r3_snapshot_validation_plus_l6_l7_l8_l9_surface_rankings_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+        "result_scope=r3_snapshot_validation_plus_l6_l7_l8_l9_surface_rankings_plus_render_index_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
 
 
@@ -304,6 +305,21 @@ def _append_rank_lines(result_text: str, layer: str, summary, duration_ms: int, 
     return result_text
 
 
+def _append_render_index_lines(result_text: str, summary, duration_ms: int) -> str:
+    result_text += "render_index_status=" + summary.status + "\n"
+    result_text += "render_index_reason=" + summary.reason + "\n"
+    result_text += "render_index_duration_ms=" + str(duration_ms) + "\n"
+    result_text += "render_index_manifest_path=" + summary.manifest_path + "\n"
+    result_text += "render_index_ohlc_row_count=" + str(summary.ohlc_row_count) + "\n"
+    result_text += "render_index_ohlc_checksum=" + summary.ohlc_index_checksum + "\n"
+    for layer_summary in summary.layer_summaries:
+        prefix = layer_summary.layer_key
+        result_text += f"render_index_{prefix}_status=" + layer_summary.status + "\n"
+        result_text += f"render_index_{prefix}_row_count=" + str(layer_summary.row_count) + "\n"
+        result_text += f"render_index_{prefix}_checksum=" + layer_summary.output_checksum + "\n"
+    return result_text
+
+
 def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple[int, ValidationResult]:
     p = WorkerPaths.from_root(root)
     p.ensure()
@@ -322,11 +338,15 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         l9_start_ns = time.perf_counter_ns()
         l9_summary = publish_l9_structure_location_rankings(p.outbox)
         l9_duration_ms = max(0, (time.perf_counter_ns() - l9_start_ns) // 1_000_000)
+        render_index_start_ns = time.perf_counter_ns()
+        render_index_summary = publish_render_index(p.outbox, WORKER_VERSION)
+        render_index_duration_ms = max(0, (time.perf_counter_ns() - render_index_start_ns) // 1_000_000)
         result_text = build_result(result, rows, worker_mode)
         result_text = _append_rank_lines(result_text, "l6", l6_summary, l6_duration_ms, [("l6_rank_reused_existing_outputs", "true" if l6_reused_existing_outputs else "false")])
         result_text = _append_rank_lines(result_text, "l7", l7_summary, l7_duration_ms)
         result_text = _append_rank_lines(result_text, "l8", l8_summary, l8_duration_ms)
         result_text = _append_rank_lines(result_text, "l9", l9_summary, l9_duration_ms)
+        result_text = _append_render_index_lines(result_text, render_index_summary, render_index_duration_ms)
         manifest_text = build_result_manifest(result, result_text)
         write_targets: List[Tuple[Path, str]] = [
             (p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode)),

@@ -133,13 +133,20 @@ def _safe_value(data: Dict[str, str], key: str, fallback: str = "not_available")
     return text if text else fallback
 
 
-def _read_kv_or_empty(path: Path) -> Dict[str, str]:
-    if not path.exists():
-        return {}
+def _read_text_or_empty(path: Path) -> str:
     try:
-        return _parse_kv_text(read_text(path))
+        if not path.exists():
+            return ""
+        return read_text(path)
     except OSError:
+        return ""
+
+
+def _read_kv_or_empty(path: Path) -> Dict[str, str]:
+    text = _read_text_or_empty(path)
+    if text == "":
         return {}
+    return _parse_kv_text(text)
 
 
 def _csv_text(rows: List[Dict[str, str]], fields: List[str]) -> str:
@@ -176,7 +183,11 @@ def _build_layer_index(outbox: Path, render_dir: Path, layer_key: str, generated
     rows: List[Dict[str, str]] = []
     skipped = 0
     for rank_file in files:
-        data = _read_kv_or_empty(rank_file)
+        rank_text = _read_text_or_empty(rank_file)
+        if rank_text == "":
+            skipped += 1
+            continue
+        data = _parse_kv_text(rank_text)
         symbol = _safe_value(data, "symbol", "")
         if not symbol:
             skipped += 1
@@ -188,7 +199,7 @@ def _build_layer_index(outbox: Path, render_dir: Path, layer_key: str, generated
         score_quality = _safe_value(data, spec["quality_key"], "not_available")
         rank_checksum = _safe_value(data, "symbol_rank_checksum", "not_available")
         if rank_checksum == "not_available":
-            rank_checksum = _checksum_text_lines(read_text(rank_file))
+            rank_checksum = _checksum_text_lines(rank_text)
         rows.append({
             "symbol": symbol,
             "layer_id": spec["layer_id"],
@@ -243,16 +254,14 @@ def _symbol_from_rank_indexes(layer_summaries: List[LayerIndexSummary], render_d
     symbols: set[str] = set()
     for summary in layer_summaries:
         path = Path(summary.output_path)
-        if not path.exists():
+        text = _read_text_or_empty(path)
+        if text == "":
             continue
-        try:
-            reader = csv.DictReader(io.StringIO(read_text(path).replace("\r\n", "\n")))
-            for row in reader:
-                symbol = str(row.get("symbol", "")).strip()
-                if symbol:
-                    symbols.add(symbol)
-        except OSError:
-            continue
+        reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
+        for row in reader:
+            symbol = str(row.get("symbol", "")).strip()
+            if symbol:
+                symbols.add(symbol)
     return sorted(symbols)
 
 
