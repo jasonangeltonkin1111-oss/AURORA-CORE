@@ -3,7 +3,10 @@ $ErrorActionPreference = "Continue"
 # Read-only proof script for REC-001 Gateway addendum recorder.
 # This script does not start, stop, repair, rebuild, install, or launch Gateway.
 # It only reads current Common\Files Gateway proof files and prints PASS/FAIL evidence.
+# Expected worker version is derived from runtime/source proof, not hardcoded.
 
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WorkerSource = Join-Path $ScriptDir "aurora_worker.py"
 $Root = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
 $GatewayStatusDir = Join-Path $Root "Gateway\Status"
 $SharedStatus = Join-Path $GatewayStatusDir "shared_worker_status.txt"
@@ -14,9 +17,7 @@ function Read-KvFile($Path) {
     $map = @{}
     if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return $map }
     foreach ($line in Get-Content -LiteralPath $Path -ErrorAction SilentlyContinue) {
-        if ($line -match '^([^=]+)=(.*)$') {
-            $map[$matches[1].Trim()] = $matches[2].Trim()
-        }
+        if ($line -match '^([^=]+)=(.*)$') { $map[$matches[1].Trim()] = $matches[2].Trim() }
     }
     return $map
 }
@@ -31,12 +32,14 @@ function PassFail($Name, $Ok, $Detail) {
     else { Write-Host "FAIL|$Name|$Detail" -ForegroundColor Red }
 }
 
-function Info($Name, $Detail) {
-    Write-Host "INFO|$Name|$Detail" -ForegroundColor Cyan
-}
+function Info($Name, $Detail) { Write-Host "INFO|$Name|$Detail" -ForegroundColor Cyan }
+function WarnInfo($Name, $Detail) { Write-Host "WARN|$Name|$Detail" -ForegroundColor Yellow }
 
-function WarnInfo($Name, $Detail) {
-    Write-Host "INFO|$Name|$Detail" -ForegroundColor Yellow
+function Get-SourceWorkerVersion($Path) {
+    if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return "missing_source" }
+    $m = Select-String -LiteralPath $Path -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $m) { return "version_not_found" }
+    return $m.Matches[0].Groups[1].Value
 }
 
 function Find-AccountRoots($RootPath) {
@@ -51,18 +54,10 @@ function Find-AccountRoots($RootPath) {
                     $accountDir = $_
                     $gateway = Join-Path $accountDir.FullName "Workbench\Gateway"
                     $result = Join-Path $gateway "Outbox\result_latest.txt"
-                    if (Test-Path -LiteralPath $gateway -PathType Container) {
-                        $roots += $accountDir.FullName
-                    } elseif (Test-Path -LiteralPath $result -PathType Leaf) {
-                        $roots += $accountDir.FullName
-                    }
+                    if ((Test-Path -LiteralPath $gateway -PathType Container) -or (Test-Path -LiteralPath $result -PathType Leaf)) { $roots += $accountDir.FullName }
                 }
         }
     return $roots
-}
-
-function Count-MatchingLines($Lines, $Pattern) {
-    return @($Lines | Where-Object { $_ -match $Pattern }).Count
 }
 
 function Get-FirstMatch($Lines, $Pattern) {
@@ -71,14 +66,19 @@ function Get-FirstMatch($Lines, $Pattern) {
     return $match
 }
 
+$SourceExpectedVersion = Get-SourceWorkerVersion $WorkerSource
+$shared = Read-KvFile $SharedStatus
+$RuntimeExpectedVersion = Field $shared "worker_version" $SourceExpectedVersion
+if ($RuntimeExpectedVersion -eq "missing" -or $RuntimeExpectedVersion -eq "watchdog_probe") { $RuntimeExpectedVersion = $SourceExpectedVersion }
+
 Write-Host "=== Aurora Gateway Recorder Proof ==="
 Write-Host "mode=read_only_no_start_no_stop_no_repair_no_install_no_rebuild_no_launch"
 Write-Host "root=$Root"
 Write-Host "shared_status=$SharedStatus"
+Write-Host "expected_worker_version=$RuntimeExpectedVersion"
 Write-Host "recorder_max_bytes=$RecorderMaxBytes"
 Write-Host "near_bound_bytes=$NearBoundBytes"
 
-$shared = Read-KvFile $SharedStatus
 PassFail "shared_status_present" (Test-Path -LiteralPath $SharedStatus -PathType Leaf) $SharedStatus
 if ($shared.Count -gt 0) {
     Write-Host ("shared_worker_version=" + (Field $shared "worker_version"))
@@ -125,9 +125,11 @@ foreach ($acct in $accountRoots) {
         Write-Host ("result_trade_permission=" + (Field $result "trade_permission"))
         Write-Host ("l6_rank_status=" + (Field $result "l6_rank_status"))
         Write-Host ("l6_rank_duration_ms=" + (Field $result "l6_rank_duration_ms"))
-        Write-Host ("l6_rank_reused_existing_outputs=" + (Field $result "l6_rank_reused_existing_outputs"))
         Write-Host ("l7_rank_status=" + (Field $result "l7_rank_status"))
         Write-Host ("l7_rank_duration_ms=" + (Field $result "l7_rank_duration_ms"))
+        Write-Host ("l8_rank_status=" + (Field $result "l8_rank_status"))
+        Write-Host ("l8_rank_duration_ms=" + (Field $result "l8_rank_duration_ms"))
+        PassFail "result_worker_version_expected" ((Field $result "worker_version") -eq $RuntimeExpectedVersion) ("result=" + (Field $result "worker_version") + " expected=" + $RuntimeExpectedVersion)
         PassFail "result_authority_safe" ((Field $result "authority") -eq "calculation_support_only") ("authority=" + (Field $result "authority"))
         PassFail "result_trade_permission_false" ((Field $result "trade_permission") -eq "false") ("trade_permission=" + (Field $result "trade_permission"))
     }
@@ -162,22 +164,29 @@ foreach ($acct in $accountRoots) {
     Write-Host "recorder_log_modified=$($logItem.LastWriteTime)"
     Write-Host "recorder_log_line_count=$($allLogLines.Count)"
     Write-Host "recorder_rotation_file_count=$($rotationFiles.Count)"
-
-    foreach ($rot in $rotationFiles | Sort-Object Name) {
-        Write-Host "rotation_file=$($rot.Name)|size=$($rot.Length)|modified=$($rot.LastWriteTime)"
-    }
+    foreach ($rot in $rotationFiles | Sort-Object Name) { Write-Host "rotation_file=$($rot.Name)|size=$($rot.Length)|modified=$($rot.LastWriteTime)" }
 
     $hasSchema = $logTail | Select-String -Pattern "schema_name=aurora_gateway_addendum_log" -Quiet
     $hasBoundary = $logTail | Select-String -Pattern "event=gateway_result_boundary" -Quiet
     $hasAuthority = $logTail | Select-String -Pattern "authority=calculation_support_only" -Quiet
     $hasTradeFalse = $logTail | Select-String -Pattern "trade_permission=false" -Quiet
-    $hasCurrentWorker = $logTail | Select-String -Pattern "worker_version=0\.6\.6_l7_session_relevance_sidecar" -Quiet
+    $hasCurrentWorker = $logTail | Select-String -Pattern ([regex]::Escape("worker_version=$RuntimeExpectedVersion")) -Quiet
+    $hasOpenEmitClose = $logTail | Select-String -Pattern "log_handle_policy=open_emit_close" -Quiet
 
     PassFail "recorder_schema_present" $hasSchema "schema_name=aurora_gateway_addendum_log"
     PassFail "recorder_boundary_event_present" $hasBoundary "event=gateway_result_boundary"
     PassFail "recorder_authority_safe" $hasAuthority "authority=calculation_support_only"
     PassFail "recorder_trade_permission_false" $hasTradeFalse "trade_permission=false"
-    PassFail "recorder_current_worker_version_seen" $hasCurrentWorker "worker_version=0.6.6_l7_session_relevance_sidecar"
+    PassFail "recorder_current_worker_version_seen" $hasCurrentWorker "worker_version=$RuntimeExpectedVersion"
+    PassFail "recorder_open_emit_close_seen" $hasOpenEmitClose "log_handle_policy=open_emit_close"
+
+    try {
+        $fs = [System.IO.File]::Open($recorderLog, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
+        $fs.Close()
+        PassFail "recorder_log_not_exclusively_locked" $true "exclusive_read_open_ok"
+    } catch {
+        PassFail "recorder_log_not_exclusively_locked" $false $_.Exception.Message
+    }
 
     $sizeOk = ($logSize -le $NearBoundBytes) -or ($rotationFiles.Count -gt 0)
     PassFail "recorder_size_near_bound_or_rotated" $sizeOk "size=$logSize maxBytes=$RecorderMaxBytes nearBound=$NearBoundBytes rotation_count=$($rotationFiles.Count)"
@@ -185,7 +194,6 @@ foreach ($acct in $accountRoots) {
     $boundaryLines = @($logTail | Where-Object { $_ -match "event=gateway_result_boundary" })
     $exceptionLines = @($logTail | Where-Object { $_ -match "event=gateway_run_once_exception" })
     $uniqueBoundaryLines = @($boundaryLines | Sort-Object -Unique)
-
     Write-Host "recent_boundary_line_count=$($boundaryLines.Count)"
     Write-Host "recent_unique_boundary_line_count=$($uniqueBoundaryLines.Count)"
     Write-Host "recent_exception_line_count=$($exceptionLines.Count)"
@@ -193,29 +201,19 @@ foreach ($acct in $accountRoots) {
     $loopText = Field $shared "loop_count" "0"
     $loopCount = 0
     if ($loopText -match '^[0-9]+$') { $loopCount = [int]$loopText }
-    if ($loopCount -gt 20 -and $boundaryLines.Count -gt ($loopCount / 2)) {
-        PassFail "recorder_no_obvious_boundary_spam" $false "recent_boundary_lines=$($boundaryLines.Count) shared_loop_count=$loopCount"
-    } else {
-        PassFail "recorder_no_obvious_boundary_spam" $true "recent_boundary_lines=$($boundaryLines.Count) shared_loop_count=$loopCount"
-    }
+    PassFail "recorder_no_obvious_boundary_spam" (!($loopCount -gt 20 -and $boundaryLines.Count -gt ($loopCount / 2))) "recent_boundary_lines=$($boundaryLines.Count) shared_loop_count=$loopCount"
 
     $duplicateRunLength = 0
     $last = ""
     $maxDuplicateRunLength = 0
     foreach ($line in $boundaryLines) {
-        if ($line -eq $last) {
-            $duplicateRunLength += 1
-        } else {
-            $duplicateRunLength = 1
-            $last = $line
-        }
+        if ($line -eq $last) { $duplicateRunLength += 1 } else { $duplicateRunLength = 1; $last = $line }
         if ($duplicateRunLength -gt $maxDuplicateRunLength) { $maxDuplicateRunLength = $duplicateRunLength }
     }
     PassFail "recorder_no_identical_consecutive_boundary_spam" ($maxDuplicateRunLength -le 3) "max_identical_consecutive_boundary_lines=$maxDuplicateRunLength"
 
     Write-Host "first_boundary_sample=$(Get-FirstMatch $logTail 'event=gateway_result_boundary')"
     Write-Host "first_exception_sample=$(Get-FirstMatch $logTail 'event=gateway_run_once_exception')"
-
     Write-Host "---- recorder tail sample ----"
     $logTail | Select-Object -Last 10 | ForEach-Object { Write-Host $_ }
 }
