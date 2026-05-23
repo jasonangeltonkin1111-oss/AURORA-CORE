@@ -1,6 +1,11 @@
 #ifndef AC_L1_EQUITY_DRAWDOWN_MAPS_MQH
 #define AC_L1_EQUITY_DRAWDOWN_MAPS_MQH
 
+string AC_L1DealTicketKey(const ulong deal_ticket)
+{
+   return IntegerToString((long)deal_ticket);
+}
+
 int AC_L1ClosedChronologicalIndexByRank(const int rank,
                                         string &used_keys)
 {
@@ -10,7 +15,7 @@ int AC_L1ClosedChronologicalIndexByRank(const int rank,
 
    for(int i = 0; i < ArraySize(AC_L1_CLOSED); i++)
    {
-      string key = IntegerToString((int)AC_L1_CLOSED[i].deal_ticket);
+      string key = AC_L1DealTicketKey(AC_L1_CLOSED[i].deal_ticket);
       if(StringFind(used_keys, "|" + key + "|") >= 0) continue;
       datetime t = AC_L1_CLOSED[i].close_time;
       ulong ticket = AC_L1_CLOSED[i].deal_ticket;
@@ -23,7 +28,7 @@ int AC_L1ClosedChronologicalIndexByRank(const int rank,
    }
 
    if(best_index >= 0)
-      used_keys += IntegerToString((int)AC_L1_CLOSED[best_index].deal_ticket) + "|";
+      used_keys += AC_L1DealTicketKey(AC_L1_CLOSED[best_index].deal_ticket) + "|";
    return best_index;
 }
 
