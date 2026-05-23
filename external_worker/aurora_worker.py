@@ -23,9 +23,10 @@ from aurora_worker_io import (
 )
 from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 from aurora_worker_l7_session import publish_l7_session_relevance_rankings
+from aurora_worker_l8_movement import publish_l8_movement_range_rankings
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
 
-WORKER_VERSION = "0.6.6_l7_session_relevance_sidecar"
+WORKER_VERSION = "0.6.7_l8_movement_range_sidecar"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -157,7 +158,7 @@ def mark_write_failure(result: ValidationResult, failed_paths: List[Path]) -> Va
     )
 
 
-def _record_gateway_result(root: Path, result: ValidationResult, worker_mode: str, exit_code: int, l6_summary, l6_duration_ms: int, l6_reused_existing_outputs: bool, l7_summary, l7_duration_ms: int, event_status: str) -> None:
+def _record_gateway_result(root: Path, result: ValidationResult, worker_mode: str, exit_code: int, l6_summary, l6_duration_ms: int, l6_reused_existing_outputs: bool, l7_summary, l7_duration_ms: int, l8_summary, l8_duration_ms: int, event_status: str) -> None:
     gateway_record_event(
         root,
         "gateway_result_boundary",
@@ -187,8 +188,13 @@ def _record_gateway_result(root: Path, result: ValidationResult, worker_mode: st
             "l7_rank_input_count": l7_summary.input_count,
             "l7_rank_row_count": l7_summary.row_count,
             "l7_rank_duration_ms": l7_duration_ms,
+            "l8_rank_status": l8_summary.status,
+            "l8_rank_reason": l8_summary.reason,
+            "l8_rank_input_count": l8_summary.input_count,
+            "l8_rank_row_count": l8_summary.row_count,
+            "l8_rank_duration_ms": l8_duration_ms,
         },
-        signature_fields=("event_status", "snapshot_id", "job_id", "result_status", "l6_rank_status", "l6_rank_reused_existing_outputs", "l7_rank_status"),
+        signature_fields=("event_status", "snapshot_id", "job_id", "result_status", "l6_rank_status", "l6_rank_reused_existing_outputs", "l7_rank_status", "l8_rank_status"),
     )
 
 
@@ -228,7 +234,7 @@ def build_result(result: ValidationResult, rows: List[str], worker_mode: str) ->
         f"row_count={result.row_count}", f"open_count={open_count}", f"closed_count={closed_count}",
         f"l4_ready_count={l4_ready_count}", f"stale_or_missing_quote_rows={stale_or_missing}",
         f"payload_checksum={result.payload_checksum}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}",
-        "notes=r3_snapshot_validation_plus_l6_cost_friction_ranking_plus_l7_session_relevance_ranking_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
+        "notes=r3_snapshot_validation_plus_l6_l7_l8_surface_rankings_no_layer5_advisory_no_selection_no_permission_no_broker_polling", ""
     ])
 
 
@@ -242,7 +248,7 @@ def build_result_manifest(result: ValidationResult, result_text: str) -> str:
         f"result_status={'complete' if result.ok else 'rejected'}", f"result_reason={result.reason}",
         f"row_count={result.row_count}", f"payload_checksum={result.payload_checksum}",
         f"result_size={len(result_text.encode('utf-8'))}", "authority=calculation_support_only", "trade_permission=false",
-        "result_scope=r3_snapshot_validation_plus_l6_cost_friction_ranking_plus_l7_session_relevance_ranking_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
+        "result_scope=r3_snapshot_validation_plus_l6_l7_l8_surface_rankings_no_layer5_advisory_no_selection_no_permission", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""
     ])
 
 
@@ -281,6 +287,9 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         l7_start_ns = time.perf_counter_ns()
         l7_summary = publish_l7_session_relevance_rankings(p.outbox)
         l7_duration_ms = max(0, (time.perf_counter_ns() - l7_start_ns) // 1_000_000)
+        l8_start_ns = time.perf_counter_ns()
+        l8_summary = publish_l8_movement_range_rankings(p.outbox)
+        l8_duration_ms = max(0, (time.perf_counter_ns() - l8_start_ns) // 1_000_000)
         result_text = build_result(result, rows, worker_mode)
         result_text += "l6_rank_status=" + l6_summary.status + "\n"
         result_text += "l6_rank_reason=" + l6_summary.reason + "\n"
@@ -297,6 +306,13 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         result_text += "l7_rank_duration_ms=" + str(l7_duration_ms) + "\n"
         result_text += "l7_rank_instrumentation_schema=1\n"
         result_text += "l7_ranked_csv_path=" + l7_summary.ranked_csv_path + "\n"
+        result_text += "l8_rank_status=" + l8_summary.status + "\n"
+        result_text += "l8_rank_reason=" + l8_summary.reason + "\n"
+        result_text += "l8_rank_input_count=" + str(l8_summary.input_count) + "\n"
+        result_text += "l8_rank_row_count=" + str(l8_summary.row_count) + "\n"
+        result_text += "l8_rank_duration_ms=" + str(l8_duration_ms) + "\n"
+        result_text += "l8_rank_instrumentation_schema=1\n"
+        result_text += "l8_ranked_csv_path=" + l8_summary.ranked_csv_path + "\n"
         manifest_text = build_result_manifest(result, result_text)
         write_targets: List[Tuple[Path, str]] = [
             (p.status / "worker_heartbeat.txt", build_heartbeat(result, worker_mode)),
@@ -310,10 +326,10 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         if failed_paths:
             degraded = mark_write_failure(result, failed_paths)
             atomic_write_text(p.status / "worker_heartbeat.txt", build_heartbeat(degraded, worker_mode))
-            _record_gateway_result(root, degraded, worker_mode, 3, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, "write_degraded")
+            _record_gateway_result(root, degraded, worker_mode, 3, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, l8_summary, l8_duration_ms, "write_degraded")
             return 3, degraded
         exit_code = 0 if result.ok else 2
-        _record_gateway_result(root, result, worker_mode, exit_code, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, "published")
+        _record_gateway_result(root, result, worker_mode, exit_code, l6_summary, l6_duration_ms, l6_reused_existing_outputs, l7_summary, l7_duration_ms, l8_summary, l8_duration_ms, "published")
         return exit_code, result
     except Exception as exc:
         error_text = "\n".join([
@@ -340,38 +356,15 @@ def discover_roots(shared_root: Path) -> List[Path]:
 
 
 def _powershell(command: str, timeout: int = 8) -> Tuple[bool, str]:
-    """
-    One-shot Windows helper for watchdog/repair paths only.
-    MUST NOT be called from the hot shared-daemon loop.
-    Runs hidden to prevent visible PowerShell popup storms.
-    """
     try:
-        kwargs = {
-            "text": True,
-            "stderr": subprocess.STDOUT,
-            "timeout": timeout,
-        }
-
+        kwargs = {"text": True, "stderr": subprocess.STDOUT, "timeout": timeout}
         if os.name == "nt":
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = 0
             kwargs["startupinfo"] = startupinfo
             kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-
-        out = subprocess.check_output(
-            [
-                "powershell",
-                "-NoProfile",
-                "-WindowStyle",
-                "Hidden",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                command,
-            ],
-            **kwargs,
-        ).strip()
+        out = subprocess.check_output(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-Command", command], **kwargs).strip()
         return True, out
     except Exception as exc:
         return False, str(exc).replace("\r", " ").replace("\n", " ")
@@ -413,13 +406,7 @@ def _read_existing_watchdog(shared_root: Path) -> WatchdogProof:
     status_path = shared_gateway_status_path(shared_root)
     try:
         kv = read_kv(status_path)
-        return WatchdogProof(
-            kv.get("watchdog_last_check_utc", "not_available"),
-            kv.get("watchdog_last_action", "not_checked"),
-            kv.get("watchdog_last_reason", "not_available"),
-            kv.get("watchdog_restart_attempted", "false"),
-            kv.get("watchdog_restart_result", "not_available"),
-        )
+        return WatchdogProof(kv.get("watchdog_last_check_utc", "not_available"), kv.get("watchdog_last_action", "not_checked"), kv.get("watchdog_last_reason", "not_available"), kv.get("watchdog_restart_attempted", "false"), kv.get("watchdog_restart_result", "not_available"))
     except Exception:
         return WatchdogProof()
 
@@ -438,81 +425,35 @@ def _status_age(shared_root: Path) -> Tuple[bool, int]:
         return False, -1
 
 
-def _operator_cmd_required(daemon_registered: str, watchdog_registered: str, exe_present: bool, status_fresh: bool, repair_success: bool) -> str:
-    ok = daemon_registered == "true" and watchdog_registered == "true" and exe_present and (status_fresh or repair_success)
-    return "false" if ok else "true"
-
-
 def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False, status_mode: str = "shared-daemon") -> str:
-    """
-    Shared daemon hot-loop status writer.
-
-    Critical hotfix:
-    - No PowerShell.
-    - No Get-ScheduledTask.
-    - No Get-Process.
-    - No task/process subprocess calls per heartbeat.
-
-    Task truth belongs to install/status scripts and one-shot watchdog/repair only.
-    """
     accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
     degraded = len(results) - accepted
     write_degraded = sum(1 for _r, code, result in results if code == 3 or result.status == "write_degraded")
     cpu = os.cpu_count() or 1
     mem_total, mem_avail, mem_used = _windows_memory()
-
     proof = watchdog or _read_existing_watchdog(shared_root)
-
     throttle = "false"
     throttle_reason = "none"
     if mem_used.isdigit() and int(mem_used) >= 80:
         throttle = "true"
         throttle_reason = "memory_above_limit"
-
     lines = [
-        "schema_name=aurora_shared_gateway_status",
-        "schema_version=6",
-        f"worker_version={WORKER_VERSION}",
-        f"process_id={PROCESS_ID}",
-        f"mode={status_mode}",
-        f"shared_root={shared_root}",
-        f"gateway_status_path={shared_gateway_status_path(shared_root)}",
-        f"process_start_utc={PROCESS_START_UTC}",
-        f"process_start_unix={PROCESS_START_UNIX}",
-        f"last_loop_utc={utc_stamp()}",
-        f"last_loop_unix={unix_time()}",
-        f"loop_count={loop_count}",
-        f"discovered_root_count={len(roots)}",
-        f"processed_root_count={len(results)}",
-        f"accepted_root_count={accepted}",
-        f"degraded_root_count={degraded}",
-        f"write_degraded_root_count={write_degraded}",
-        "daemon_task_registered=not_checked_by_daemon",
-        "daemon_task_state=not_checked_by_daemon",
-        "watchdog_task_registered=not_checked_by_daemon",
-        "watchdog_task_state=not_checked_by_daemon",
-        f"watchdog_last_check_utc={proof.last_check_utc}",
-        f"watchdog_last_action={proof.last_action}",
-        f"watchdog_last_reason={proof.last_reason}",
-        f"watchdog_restart_attempted={proof.restart_attempted}",
-        f"watchdog_restart_result={proof.restart_result}",
-        "operator_cmd_required=not_available_in_daemon_status",
-        f"cpu_logical_count={cpu}",
-        "cpu_used_percent=not_available",
-        f"memory_total_mb={mem_total}",
-        f"memory_available_mb={mem_avail}",
-        f"memory_used_percent={mem_used}",
-        "memory_limit_percent=80",
-        "cpu_limit_percent=80",
-        "terminal_process_count=not_checked_by_daemon",
-        "aurora_worker_process_count=not_checked_by_daemon",
-        f"registered_root_count={len(roots)}",
-        f"resource_throttle_active={throttle}",
-        f"resource_throttle_reason={throttle_reason}",
-        "recommended_parallel_jobs=1",
-        "authority=calculation_support_only",
-        "trade_permission=false",
-        "",
+        "schema_name=aurora_shared_gateway_status", "schema_version=6", f"worker_version={WORKER_VERSION}",
+        f"process_id={PROCESS_ID}", f"mode={status_mode}", f"shared_root={shared_root}",
+        f"gateway_status_path={shared_gateway_status_path(shared_root)}", f"process_start_utc={PROCESS_START_UTC}",
+        f"process_start_unix={PROCESS_START_UNIX}", f"last_loop_utc={utc_stamp()}", f"last_loop_unix={unix_time()}",
+        f"loop_count={loop_count}", f"discovered_root_count={len(roots)}", f"processed_root_count={len(results)}",
+        f"accepted_root_count={accepted}", f"degraded_root_count={degraded}", f"write_degraded_root_count={write_degraded}",
+        "daemon_task_registered=not_checked_by_daemon", "daemon_task_state=not_checked_by_daemon",
+        "watchdog_task_registered=not_checked_by_daemon", "watchdog_task_state=not_checked_by_daemon",
+        f"watchdog_last_check_utc={proof.last_check_utc}", f"watchdog_last_action={proof.last_action}",
+        f"watchdog_last_reason={proof.last_reason}", f"watchdog_restart_attempted={proof.restart_attempted}",
+        f"watchdog_restart_result={proof.restart_result}", "operator_cmd_required=not_available_in_daemon_status",
+        f"cpu_logical_count={cpu}", "cpu_used_percent=not_available", f"memory_total_mb={mem_total}",
+        f"memory_available_mb={mem_avail}", f"memory_used_percent={mem_used}", "memory_limit_percent=80",
+        "cpu_limit_percent=80", "terminal_process_count=not_checked_by_daemon", "aurora_worker_process_count=not_checked_by_daemon",
+        f"registered_root_count={len(roots)}", f"resource_throttle_active={throttle}", f"resource_throttle_reason={throttle_reason}",
+        "recommended_parallel_jobs=1", "authority=calculation_support_only", "trade_permission=false", "",
         "root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum",
     ]
     lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.job_id}|{res.job_type}|{res.payload_checksum}" for root, code, res in results]
@@ -571,7 +512,6 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
             code = 3
             write_failed = True
         results.append((root, code, res))
-
     daemon_registered, daemon_state = _get_task_state(DAEMON_TASK_NAME)
     status_present, age = _status_age(shared_root)
     worker_processes = _proc_count("AuroraWorker")
@@ -579,19 +519,12 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
     process_missing = worker_processes == "0"
     should_start = daemon_registered == "true" and (stale or process_missing or daemon_state.lower() != "running")
     reason_bits: List[str] = []
-    if daemon_registered != "true":
-        reason_bits.append("daemon_task_missing")
-    if stale:
-        reason_bits.append("shared_gateway_status_missing_or_stale")
-    if process_missing:
-        reason_bits.append("aurora_worker_process_missing")
-    if daemon_state.lower() != "running":
-        reason_bits.append("daemon_task_state_not_running")
-    if write_failed:
-        reason_bits.append("account_lifecycle_process_status_write_failed")
-    if not reason_bits:
-        reason_bits.append("daemon_status_fresh")
-
+    if daemon_registered != "true": reason_bits.append("daemon_task_missing")
+    if stale: reason_bits.append("shared_gateway_status_missing_or_stale")
+    if process_missing: reason_bits.append("aurora_worker_process_missing")
+    if daemon_state.lower() != "running": reason_bits.append("daemon_task_state_not_running")
+    if write_failed: reason_bits.append("account_lifecycle_process_status_write_failed")
+    if not reason_bits: reason_bits.append("daemon_status_fresh")
     attempted = "false"
     restart_result = "not_needed"
     action = "checked_no_restart_needed"
@@ -608,14 +541,7 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
     elif daemon_registered != "true":
         action = "cannot_repair_missing_daemon_task"
         restart_result = "failed_daemon_task_missing"
-
-    proof = WatchdogProof(
-        last_check_utc=utc_stamp(),
-        last_action=action,
-        last_reason=";".join(reason_bits),
-        restart_attempted=attempted,
-        restart_result=restart_result,
-    )
+    proof = WatchdogProof(utc_stamp(), action, ";".join(reason_bits), attempted, restart_result)
     shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success, status_mode=("watchdog_probe" if watchdog_mode else "repair_probe"))
     return 0 if shared_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
 
