@@ -101,7 +101,7 @@ string AC_L1RiskEfficiencyMap()
    text += "Risk Eligible Rows:     " + IntegerToString(eligible_rows) + " / " + IntegerToString(rows_total) + " (" + AC_L1PercentText(risk_ready_pct) + ")\r\n";
    text += "Risk Blocked Rows:      " + IntegerToString(blocked_rows) + "\r\n";
    text += "Total Est Risk:         " + AC_L1MoneyText(total_est_risk) + " (" + AC_L1PercentText(total_risk_pct) + " equity)\r\n";
-   text += "Net Result on Risk Rows:" + AC_L1MoneyText(net_money) + "\r\n";
+   text += "Net Result on Risk Rows: " + AC_L1MoneyText(net_money) + "\r\n";
    text += "Net / Risk:             " + DoubleToString(net_over_risk, 2) + "\r\n";
    text += "Average Risk / Row:     " + AC_L1MoneyText(avg_risk) + " (" + AC_L1PercentText(avg_risk_pct) + " equity)\r\n";
    text += "Gross Win / Loss:       " + AC_L1MoneyText(gross_win_money) + " / " + AC_L1MoneyText(gross_loss_money) + "\r\n";
@@ -151,7 +151,7 @@ string AC_L1RiskBreachMap()
    text += "Risk Eligible Rows:     " + IntegerToString(eligible_rows) + " / " + IntegerToString(rows_total) + "\r\n";
    text += "Rows Above Unit Risk:   " + IntegerToString(unit_breaches) + " (" + AC_L1PercentText(unit_pct) + ")\r\n";
    text += "Rows Above Hard Risk:   " + IntegerToString(hard_breaches) + " (" + AC_L1PercentText(hard_pct) + ")\r\n";
-   text += "Rows Above Extreme Risk:" + IntegerToString(extreme_breaches) + " (" + AC_L1PercentText(extreme_pct) + ")\r\n";
+   text += "Rows Above Extreme Risk: " + IntegerToString(extreme_breaches) + " (" + AC_L1PercentText(extreme_pct) + ")\r\n";
    text += "Loss Rows > Unit:       " + IntegerToString(loss_rows_over_unit_loss) + "\r\n";
    text += "Loss Rows > Hard:       " + IntegerToString(loss_rows_over_hard_loss) + "\r\n";
    text += "Loss Rows > Extreme:    " + IntegerToString(loss_rows_over_extreme_loss) + "\r\n";
