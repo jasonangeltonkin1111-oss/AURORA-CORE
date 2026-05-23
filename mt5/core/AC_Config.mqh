@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "shared_ohlc_raw_store_wiring";
-static const string AC_BUILD_VERSION      = "1.061";
-static const string AC_UPGRADE_ID         = "SHARED_OHLC_RAW_STORE_WIRING";
-static const string AC_UPGRADE_SUMMARY    = "Adds the Shared OHLC Raw Storage Owner scaffold as the single raw CopyRates/MqlRates storage authority for future layers. The patch wires server-level OHLC routes, status/manifest publishing, Board overview, Dossier availability overview, and Workbench proof without activating the dangerous full all-symbol 1500-bar seed loop yet. No OHLC calculations, scoring, ranking, selection, permission, or execution are created.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 Shared OHLC Raw Storage Owner owns raw storage contracts only. Publication/FileIO/Route Service still owns paths and atomic writes. Board/Dossier render overview only and do not own OHLC. Runtime 3 Gateway remains calculation support only and must consume shared raw OHLC files later instead of fetching broker history directly. Future layers must not create private CopyRates owners or private candle caches. Full boot-seed and append-only runtime scheduling remain disabled until compile/runtime proof exists.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. Compile must confirm build_version=1.061 and no include/path/type errors. Runtime proof must confirm Shared Market Data/OHLC Store/Status/status.txt and manifest.txt publish, Market Board shows Shared OHLC Raw Store overview, Dossiers show OHLC availability overview without raw bars, Workbench shows shared_ohlc_* proof rows, trade_permission=false, selection_runtime=false, and timer remains under budget. After that, activate tiny bounded OHLC seed proof before any full-universe 1500-bar run.";
-static const string AC_LOGGING_POLICY     = "event_boundary_shared_ohlc_raw_store_wiring_no_calculation_no_private_copyrates_no_permission";
+static const string AC_BUILD_PHASE        = "bounded_dossier_universe_publication";
+static const string AC_BUILD_VERSION      = "1.062";
+static const string AC_UPGRADE_ID         = "BOUNDED_DOSSIER_UNIVERSE_PUBLICATION";
+static const string AC_UPGRADE_SUMMARY    = "Performance patch: bounds Layer 0 Dossier universe publication so cache misses do not rewrite the full broker universe in one timer path. The Dossier owner now publishes an incremental slice per pass and completes over multiple timer cycles, preserving existing Board/Dossier ownership and Shared OHLC/L7 cache truth while protecting the 250 ms timer budget under 1k+ symbol load. No trading logic, ranking math, selection, permission, execution, FileIO owner, route owner, Gateway authority, or OHLC activation is changed. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication rendering remains the owner for Board/Dossier surfaces. Dossier caching and Dossier publication must be timer-bounded. Runtime 1 Shared OHLC Raw Storage Owner remains raw storage scaffolding only. Runtime 3 remains Gateway calculation support only. This patch does not create trade permission, selection runtime, basket logic, duplicate FileIO, duplicate routes, private CopyRates ownership, or a new Gateway owner. Future layers must not add full-universe rewrites to OnTimer; they must use upstream keys, bounded batches, and cached unchanged proof.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.062; fix EA property version locally if needed; confirm Dossier Universe can report dossier_universe_partial_bounded_pass during cache rebuild; confirm detail includes bounded_dossier_universe_pass_partial and max_symbols_per_pass; confirm next_symbol_index advances over timer cycles; confirm full completion eventually reports bounded_dossier_universe_pass_complete; confirm timer_duration_ms stays under 250 during a full cache miss; confirm cached_universe_status_no_symbol_rewrite returns after completion; confirm Shared OHLC status still publishes; confirm selection_runtime=false, trade_permission=false, execution=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_bounded_dossier_universe_publication_performance_no_duplicate_owner_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.061_shared_ohlc_raw_store_wiring";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.062_bounded_dossier_universe_publication";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
@@ -74,6 +74,7 @@ static const string AC_EXTERNAL_WORKER_AUTHORITY = "calculation_support_only";
 static const int    AC_EXPERIMENTAL_TIMER_100MS = 100;
 static const int    AC_EXPERIMENTAL_TIMER_10MS = 10;
 static const int    AC_DOSSIER_SHELL_WRITE_RETRIES = 3;
+static const int    AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS = 75;
 static const int    AC_BOARD_RECENT_ACTIVITY_MAX_ROWS = 100;
 static const int    AC_BOARD_CANCELED_ACTIVITY_MAX_ROWS = 20;
 static const int    AC_DOSSIER_SYMBOL_ACTIVITY_MAX_ROWS = 30;
