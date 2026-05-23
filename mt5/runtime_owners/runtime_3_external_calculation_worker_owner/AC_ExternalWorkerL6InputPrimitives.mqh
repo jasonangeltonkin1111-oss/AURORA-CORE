@@ -157,6 +157,27 @@ int AC_L6CompareRank(const string status)
    return 0;
 }
 
+bool AC_L6CandidateCompareBetter(const string candidate_status,
+                                 const double candidate_ratio,
+                                 const string best_status,
+                                 const double best_ratio)
+{
+   int candidate_rank = AC_L6CompareRank(candidate_status);
+   int best_rank = AC_L6CompareRank(best_status);
+
+   if(candidate_rank > best_rank)
+      return true;
+   if(candidate_rank < best_rank)
+      return false;
+
+   if(candidate_ratio > 0.0 && best_ratio > 0.0)
+      return candidate_ratio < best_ratio;
+   if(candidate_ratio > 0.0 && best_ratio <= 0.0)
+      return true;
+
+   return false;
+}
+
 string AC_L6BestCostModelCompareStatus(const double primary_cost,
                                        const double value_formula_cost_minlot,
                                        const string value_formula_status,
@@ -171,7 +192,6 @@ string AC_L6BestCostModelCompareStatus(const double primary_cost,
       return "primary_unavailable_or_zero";
 
    string best_status = "fallback_unavailable";
-   int best_rank = AC_L6CompareRank(best_status);
    double best_ratio = 0.0;
    double candidate_ratio = 0.0;
    string candidate_status = "";
@@ -179,10 +199,9 @@ string AC_L6BestCostModelCompareStatus(const double primary_cost,
    if(value_formula_status == "ok" && value_formula_cost_minlot > 0.0)
    {
       candidate_status = AC_L6CostModelCompareStatus(primary_cost, value_formula_cost_minlot, "ok", candidate_ratio);
-      if(AC_L6CompareRank(candidate_status) > best_rank)
+      if(AC_L6CandidateCompareBetter(candidate_status, candidate_ratio, best_status, best_ratio))
       {
          best_status = candidate_status;
-         best_rank = AC_L6CompareRank(candidate_status);
          best_ratio = candidate_ratio;
       }
    }
@@ -190,10 +209,9 @@ string AC_L6BestCostModelCompareStatus(const double primary_cost,
    if(tickvalue_status == "ok" && tickvalue_cost_minlot > 0.0)
    {
       candidate_status = AC_L6CostModelCompareStatus(primary_cost, tickvalue_cost_minlot, "ok", candidate_ratio);
-      if(AC_L6CompareRank(candidate_status) > best_rank)
+      if(AC_L6CandidateCompareBetter(candidate_status, candidate_ratio, best_status, best_ratio))
       {
          best_status = candidate_status;
-         best_rank = AC_L6CompareRank(candidate_status);
          best_ratio = candidate_ratio;
       }
    }
@@ -201,10 +219,9 @@ string AC_L6BestCostModelCompareStatus(const double primary_cost,
    if(contract_status == "raw_account_currency_ok" && contract_cost_minlot > 0.0)
    {
       candidate_status = AC_L6CostModelCompareStatus(primary_cost, contract_cost_minlot, "ok", candidate_ratio);
-      if(AC_L6CompareRank(candidate_status) > best_rank)
+      if(AC_L6CandidateCompareBetter(candidate_status, candidate_ratio, best_status, best_ratio))
       {
          best_status = candidate_status;
-         best_rank = AC_L6CompareRank(candidate_status);
          best_ratio = candidate_ratio;
       }
    }
