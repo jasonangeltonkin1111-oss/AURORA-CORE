@@ -1,0 +1,11 @@
+#ifndef AC_SHARED_OHLC_PUBLI_COMPAT_MQH
+#define AC_SHARED_OHLC_PUBLI_COMPAT_MQH
+
+// Compatibility include shim for corrupted/truncated local include lines.
+// Source truth remains AC_SharedOhlcPublicationContract.mqh.
+// This file must not define OHLC state, routes, rendering, CopyRates, ranking,
+// selection, permission, or execution logic.
+
+#include "AC_SharedOhlcPublicationContract.mqh"
+
+#endif
