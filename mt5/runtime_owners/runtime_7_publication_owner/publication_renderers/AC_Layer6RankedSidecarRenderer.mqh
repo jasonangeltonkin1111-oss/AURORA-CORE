@@ -286,7 +286,6 @@ void AC_RefreshLayer6RankedSidecar()
          AC_L6_TRUST_STATE = "Ranking Ready";
          AC_L6_VALIDATION_STATUS = "Accepted";
          AC_L6_VALIDATION_REASON = "ranked sidecar matches exported L6 input generation and current L5 pass count";
-         AC_L6_MAIN_BLOCKER = "none";
       }
       AC_L6_TOP20_FIRST_LINE = AC_L6FirstTop20Symbol(AC_ReadSmallTextFile(AC_L6RankedTop20Path(), 16000));
       return;
@@ -399,32 +398,47 @@ string AC_Layer6DossierSection(const string symbol)
    }
    else
    {
-      string rank_text = AC_ReadSmallTextFile(AC_L6SymbolRankPath(symbol), 12000);
-      if(rank_text == "")
+      AC_RenderIndexRow index_row;
+      bool index_hit = AC_RenderIndexLookup(6, symbol, index_row);
+      if(index_hit)
       {
-         text += "Rank State: symbol_rank_sidecar_missing\r\n";
-         text += "Rank Index: missing\r\n";
-         text += "Friction Score: missing\r\n";
-         text += "Friction Bucket: missing\r\n";
+         text += "Rank State: " + index_row.rank_state + "\r\n";
+         text += "Rank Index: " + index_row.rank_index + " / " + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
+         text += "Friction Score: " + index_row.score + "\r\n";
+         text += "Friction Bucket: " + index_row.bucket + "\r\n";
+         text += "Score Quality: " + index_row.score_quality + "\r\n";
+         text += "Rank Source: render_index_v1\r\n";
+         text += "Rank Path: " + index_row.rank_path + "\r\n";
       }
       else
       {
-         text += "Rank State: " + AC_KvValue(rank_text, "rank_state", "not_available") + "\r\n";
-         text += "Rank Index: " + AC_KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
-         text += "Friction Score: " + AC_KvValue(rank_text, "friction_score", "not_available") + "\r\n";
-         text += "Friction Bucket: " + AC_KvValue(rank_text, "friction_bucket", "not_available") + "\r\n";
-         text += "Score Quality: " + AC_KvValue(rank_text, "score_quality", "not_available") + "\r\n";
-         text += "Calculation Quality: " + AC_KvValue(rank_text, "calculation_quality", "not_available") + "\r\n";
-         text += "Spread BPS: " + AC_KvValue(rank_text, "spread_bps", "not_available") + "\r\n";
-         text += "Effective Min Lot Cost: " + AC_KvValue(rank_text, "effective_cost_minlot_account", "not_available") + "\r\n";
-         text += "Cost Model Compare: " + AC_KvValue(rank_text, "cost_model_compare_status", "not_available") + "\r\n";
-         text += "Zero Cost Suspicious: " + AC_KvValue(rank_text, "account_cost_zero_nonzero_spread_suspicious", "not_available") + "\r\n";
-         text += "Volume Model Quality: " + AC_KvValue(rank_text, "volume_model_quality", "not_available") + "\r\n";
-         text += "Commission Model: " + AC_KvValue(rank_text, "commission_model_status", "not_available") + "\r\n";
-         text += "Sidecar Filename: " + AC_KvValue(rank_text, "symbol_rank_filename", "not_available") + "\r\n";
-         text += "Reason: " + AC_KvValue(rank_text, "reason", "not_available") + "\r\n";
+         string rank_text = AC_ReadSmallTextFile(AC_L6SymbolRankPath(symbol), 12000);
+         if(rank_text == "")
+         {
+            text += "Rank State: symbol_rank_sidecar_missing\r\n";
+            text += "Rank Index: missing\r\n";
+            text += "Friction Score: missing\r\n";
+            text += "Friction Bucket: missing\r\n";
+         }
+         else
+         {
+            text += "Rank State: " + AC_KvValue(rank_text, "rank_state", "not_available") + "\r\n";
+            text += "Rank Index: " + AC_KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
+            text += "Friction Score: " + AC_KvValue(rank_text, "friction_score", "not_available") + "\r\n";
+            text += "Friction Bucket: " + AC_KvValue(rank_text, "friction_bucket", "not_available") + "\r\n";
+            text += "Score Quality: " + AC_KvValue(rank_text, "score_quality", "not_available") + "\r\n";
+            text += "Calculation Quality: " + AC_KvValue(rank_text, "calculation_quality", "not_available") + "\r\n";
+            text += "Spread BPS: " + AC_KvValue(rank_text, "spread_bps", "not_available") + "\r\n";
+            text += "Effective Min Lot Cost: " + AC_KvValue(rank_text, "effective_cost_minlot_account", "not_available") + "\r\n";
+            text += "Cost Model Compare: " + AC_KvValue(rank_text, "cost_model_compare_status", "not_available") + "\r\n";
+            text += "Zero Cost Suspicious: " + AC_KvValue(rank_text, "account_cost_zero_nonzero_spread_suspicious", "not_available") + "\r\n";
+            text += "Volume Model Quality: " + AC_KvValue(rank_text, "volume_model_quality", "not_available") + "\r\n";
+            text += "Commission Model: " + AC_KvValue(rank_text, "commission_model_status", "not_available") + "\r\n";
+            text += "Sidecar Filename: " + AC_KvValue(rank_text, "symbol_rank_filename", "not_available") + "\r\n";
+            text += "Reason: " + AC_KvValue(rank_text, "reason", "not_available") + "\r\n";
+         }
+         text += "Rank Source: " + AC_L6SymbolRankPath(symbol) + "\r\n";
       }
-      text += "Rank Source: " + AC_L6SymbolRankPath(symbol) + "\r\n";
    }
 
    text += "\r\nBoundary\r\n";
