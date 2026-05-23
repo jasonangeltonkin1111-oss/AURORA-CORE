@@ -2,18 +2,23 @@
 #define AC_LAYER8_MOVEMENT_RANGE_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 8 Movement / Range Ranking.
-// Reads only OHLC fast-window availability plus L8 sidecar proof files.
+// Reads only OHLC priority-window availability plus L8 sidecar proof files.
 // It must not calculate movement, rank, call CopyRates, select, permit, or execute.
+// L8 display uses the Gateway accepted surface epoch to prevent false degraded flicker
+// when the EA publishes a newer input manifest before the next Gateway rank completes.
 
 static string AC_L8_STATUS = "Pending ranked sidecar";
 static string AC_L8_TRUST_STATE = "Ranking Pending";
 static string AC_L8_VALIDATION_STATUS = "Pending";
 static string AC_L8_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
 static string AC_L8_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
+static string AC_L8_DISPLAY_STATE = "PENDING_RANK";
 static bool   AC_L8_RANKED_ACCEPTED = false;
 static bool   AC_L8_INPUT_COUNTS_OK_RENDERED = false;
 static bool   AC_L8_GENERATION_COUNTS_OK_RENDERED = false;
 static bool   AC_L8_GENERATION_IDENTITY_OK_RENDERED = false;
+static bool   AC_L8_LATEST_INPUT_PENDING_NEXT_RANK = false;
+static bool   AC_L8_ACCEPTED_HELD_RECALC_PENDING = false;
 static bool   AC_L8_SNAPSHOT_DRIFT_RENDERED = false;
 static int    AC_L8_SNAPSHOT_DRIFT_DELTA_RENDERED = 0;
 static int    AC_L8_INPUT_ROWS_RENDERED = 0;
@@ -35,12 +40,22 @@ static string AC_L8_SYMBOL_RANK_FILE_COUNT_OK_RENDERED = "false";
 static string AC_L8_SYMBOL_RANK_FILENAME_MODE_RENDERED = "not_available";
 static string AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED = "not_available";
 static string AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED = "not_available";
+static string AC_L8_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = "not_available";
+static string AC_L8_RANKED_INPUT_CHECKSUM_RENDERED = "not_available";
+static string AC_L8_RANKED_INPUT_CHECKSUM_AFTER_RENDERED = "not_available";
 static string AC_L8_TOP20_FIRST_LINE = "not_available";
 static int    AC_L8_OHLC_MIN_READY_RENDERED = 0;
 static int    AC_L8_OHLC_M5_READY_RENDERED = 0;
 static int    AC_L8_OHLC_M15_READY_RENDERED = 0;
 static int    AC_L8_OHLC_H1_READY_RENDERED = 0;
 static int    AC_L8_OHLC_H4_READY_RENDERED = 0;
+static bool   AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED = false;
+static bool   AC_L8_ACCEPTED_EPOCH_VALID_RENDERED = false;
+static string AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED = "not_available";
+static string AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED = "not_available";
+static int    AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED = 0;
+static int    AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED = 0;
+static int    AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED = -1;
 
 string AC_L8LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_8_Movement_Range_Ranking"; }
 string AC_L8InputManifestPath(){ return AC_L8LayerFolder() + "\\l8_input_primitives.manifest"; }
@@ -48,6 +63,7 @@ string AC_L8RankedManifestPath(){ return AC_L8LayerFolder() + "\\ranked_symbols.
 string AC_L8RankedCsvPath(){ return AC_L8LayerFolder() + "\\ranked_symbols.csv"; }
 string AC_L8RankedTop20Path(){ return AC_L8LayerFolder() + "\\ranked_symbols_top20.txt"; }
 string AC_L8SymbolRankFolderPath(){ return AC_L8LayerFolder() + "\\SymbolRanks"; }
+string AC_L8SurfaceAcceptedEpochPath(){ return AC_ExternalWorkerOutboxFolder() + "\\surface_accepted_epoch.manifest"; }
 
 string AC_L8ReadSmallTextFile(const string path, const int max_chars = 30000)
 {
@@ -100,6 +116,7 @@ int AC_L8KvInt(const string text, const string key, const int fallback = 0)
 
 string AC_L8BoolText(const bool value){ return value ? "TRUE" : "FALSE"; }
 string AC_L8BoolKv(const bool value){ return value ? "true" : "false"; }
+int AC_L8NowUnixSafe(){ return (int)TimeCurrent(); }
 
 string AC_L8PipeField(const string pipe_text, const int index, const string fallback = "not_available")
 {
@@ -195,6 +212,41 @@ string AC_L8PrettyTop20Line(string pipe_line)
    return "#" + rank + " " + symbol + " | " + score + " | " + AC_L8PrettyBucket(bucket) + " | " + AC_L8PrettyRankState(state) + " | " + AC_L8PrettyRegime(regime);
 }
 
+void AC_L8RefreshSurfaceAcceptedEpoch()
+{
+   AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED = false;
+   AC_L8_ACCEPTED_EPOCH_VALID_RENDERED = false;
+   AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED = "not_available";
+   AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED = "not_available";
+   AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED = 0;
+   AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED = 0;
+   AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED = -1;
+
+   string epoch_text = AC_L8ReadSmallTextFile(AC_L8SurfaceAcceptedEpochPath(), 12000);
+   if(epoch_text == "") return;
+
+   int now_unix = AC_L8NowUnixSafe();
+   AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED = true;
+   AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED = AC_L8KvValue(epoch_text, "display_epoch_status", "not_available");
+   AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED = AC_L8KvValue(epoch_text, "l8_status", "not_available");
+   AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED = AC_L8KvInt(epoch_text, "accepted_unix", 0);
+   AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED = AC_L8KvInt(epoch_text, "valid_until_unix", 0);
+   if(AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED > 0 && now_unix > 0)
+      AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED = now_unix - AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED;
+
+   AC_L8_ACCEPTED_EPOCH_VALID_RENDERED = (
+      AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED == "accepted_current" &&
+      AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED == "complete" &&
+      AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED > now_unix &&
+      now_unix > 0
+   );
+}
+
+bool AC_L8SurfaceEpochValidForL8()
+{
+   return AC_L8_ACCEPTED_EPOCH_VALID_RENDERED;
+}
+
 void AC_L8RefreshOhlcFastWindowReadiness()
 {
    AC_L8_OHLC_MIN_READY_RENDERED = 0;
@@ -225,10 +277,13 @@ void AC_L8ResetRenderState()
    AC_L8_VALIDATION_STATUS = "Pending";
    AC_L8_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
    AC_L8_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
+   AC_L8_DISPLAY_STATE = "PENDING_RANK";
    AC_L8_RANKED_ACCEPTED = false;
    AC_L8_INPUT_COUNTS_OK_RENDERED = false;
    AC_L8_GENERATION_COUNTS_OK_RENDERED = false;
    AC_L8_GENERATION_IDENTITY_OK_RENDERED = false;
+   AC_L8_LATEST_INPUT_PENDING_NEXT_RANK = false;
+   AC_L8_ACCEPTED_HELD_RECALC_PENDING = false;
    AC_L8_SNAPSHOT_DRIFT_RENDERED = false;
    AC_L8_SNAPSHOT_DRIFT_DELTA_RENDERED = 0;
    AC_L8_INPUT_ROWS_RENDERED = 0;
@@ -250,17 +305,29 @@ void AC_L8ResetRenderState()
    AC_L8_SYMBOL_RANK_FILENAME_MODE_RENDERED = "not_available";
    AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED = "not_available";
    AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED = "not_available";
+   AC_L8_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = "not_available";
+   AC_L8_RANKED_INPUT_CHECKSUM_RENDERED = "not_available";
+   AC_L8_RANKED_INPUT_CHECKSUM_AFTER_RENDERED = "not_available";
    AC_L8_TOP20_FIRST_LINE = "not_available";
+   AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED = false;
+   AC_L8_ACCEPTED_EPOCH_VALID_RENDERED = false;
+   AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED = "not_available";
+   AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED = "not_available";
+   AC_L8_ACCEPTED_EPOCH_ACCEPTED_UNIX_RENDERED = 0;
+   AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED = 0;
+   AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED = -1;
 }
 
 void AC_L8RefreshRankedSidecar()
 {
    AC_L8ResetRenderState();
    AC_L8RefreshOhlcFastWindowReadiness();
+   AC_L8RefreshSurfaceAcceptedEpoch();
 
    string input_manifest = AC_L8ReadSmallTextFile(AC_L8InputManifestPath(), 30000);
    if(input_manifest == "")
    {
+      AC_L8_DISPLAY_STATE = "PENDING_RANK";
       AC_L8_VALIDATION_STATUS = "Missing";
       AC_L8_VALIDATION_REASON = "l8_input_primitives.manifest missing or unreadable";
       AC_L8_MAIN_BLOCKER = AC_L8_VALIDATION_REASON;
@@ -281,6 +348,7 @@ void AC_L8RefreshRankedSidecar()
    string ranked_manifest = AC_L8ReadSmallTextFile(AC_L8RankedManifestPath(), 30000);
    if(ranked_manifest == "")
    {
+      AC_L8_DISPLAY_STATE = "PENDING_RANK";
       AC_L8_STATUS = "Input export ready - ranked sidecar pending";
       AC_L8_TRUST_STATE = "Ranking Pending";
       AC_L8_VALIDATION_STATUS = "InputAccepted";
@@ -304,6 +372,9 @@ void AC_L8RefreshRankedSidecar()
    string ranking_runtime = AC_L8KvValue(ranked_manifest, "ranking_runtime", "not_available");
    string selection_runtime = AC_L8KvValue(ranked_manifest, "selection_runtime", "not_available");
 
+   AC_L8_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = source_input_checksum;
+   AC_L8_RANKED_INPUT_CHECKSUM_RENDERED = ranked_input_checksum;
+   AC_L8_RANKED_INPUT_CHECKSUM_AFTER_RENDERED = ranked_input_checksum_after;
    AC_L8_RANKED_ROWS_RENDERED = ranked_rows;
    AC_L8_RANKED_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_count", 0);
    AC_L8_RANKED_PARTIAL_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_partial_count", 0);
@@ -341,15 +412,33 @@ void AC_L8RefreshRankedSidecar()
    if(input_ok && ohlc_ok && manifest_ok && counts_ok && identity_ok && authority_ok && permission_ok && files_ok)
    {
       AC_L8_RANKED_ACCEPTED = true;
+      AC_L8_DISPLAY_STATE = "ACCEPTED_CURRENT";
       AC_L8_STATUS = "Ranked sidecar accepted";
       AC_L8_TRUST_STATE = "Ranking Ready";
       AC_L8_VALIDATION_STATUS = "Accepted";
-      AC_L8_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L8 input proof, OHLC fast windows, and permission boundaries";
+      AC_L8_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L8 input proof, OHLC priority windows, and permission boundaries";
       AC_L8_MAIN_BLOCKER = "none";
       AC_L8_TOP20_FIRST_LINE = AC_L8PrettyTop20Line(AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000)));
       return;
    }
 
+   bool identity_only_blocker = input_ok && ohlc_ok && manifest_ok && counts_ok && !identity_ok && authority_ok && permission_ok && files_ok;
+   if(identity_only_blocker && AC_L8SurfaceEpochValidForL8())
+   {
+      AC_L8_RANKED_ACCEPTED = true;
+      AC_L8_ACCEPTED_HELD_RECALC_PENDING = true;
+      AC_L8_LATEST_INPUT_PENDING_NEXT_RANK = true;
+      AC_L8_DISPLAY_STATE = "ACCEPTED_HELD_RECALC_PENDING";
+      AC_L8_STATUS = "Ranked sidecar accepted - recalculation pending";
+      AC_L8_TRUST_STATE = "Ranking Held";
+      AC_L8_VALIDATION_STATUS = "AcceptedHeld";
+      AC_L8_VALIDATION_REASON = "ranked sidecar belongs to last accepted L8 epoch; latest input checksum changed and is pending next Gateway rank";
+      AC_L8_MAIN_BLOCKER = "none";
+      AC_L8_TOP20_FIRST_LINE = AC_L8PrettyTop20Line(AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000)));
+      return;
+   }
+
+   AC_L8_DISPLAY_STATE = AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED && !AC_L8_ACCEPTED_EPOCH_VALID_RENDERED ? "EXPIRED_STALE" : "DEGRADED_BROKEN";
    AC_L8_STATUS = "Ranked sidecar degraded";
    AC_L8_TRUST_STATE = "Ranking Degraded";
    AC_L8_VALIDATION_STATUS = "Degraded";
@@ -360,7 +449,8 @@ void AC_L8RefreshRankedSidecar()
       + ";identity_ok=" + (identity_ok ? "true" : "false")
       + ";authority_ok=" + (authority_ok ? "true" : "false")
       + ";permission_ok=" + (permission_ok ? "true" : "false")
-      + ";files_ok=" + (files_ok ? "true" : "false");
+      + ";files_ok=" + (files_ok ? "true" : "false")
+      + ";accepted_epoch_valid=" + (AC_L8_ACCEPTED_EPOCH_VALID_RENDERED ? "true" : "false");
    AC_L8_MAIN_BLOCKER = AC_L8_VALIDATION_REASON;
 }
 
@@ -371,11 +461,13 @@ string AC_Layer8BoardSection()
    text += "\r\nLAYER 8 - MOVEMENT / RANGE RANKING\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L8_STATUS + "\r\n";
+   text += "Display State:              " + AC_L8_DISPLAY_STATE + "\r\n";
    text += "Trust:                      " + AC_L8_TRUST_STATE + "\r\n";
    text += "Validation:                 " + AC_L8_VALIDATION_STATUS + "\r\n";
    text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Required:           TRUE\r\n";
    text += "Gateway Result Accepted:    " + AC_L8BoolText(AC_L8_RANKED_ACCEPTED) + "\r\n";
+   text += "Latest Input Pending Rank:  " + AC_L8BoolText(AC_L8_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
    text += "Input Source:               Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set\r\n";
    text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "OHLC L8 Minimum Ready:      " + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED) + " / " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
@@ -389,6 +481,9 @@ string AC_Layer8BoardSection()
    text += "Input Counts OK:            " + AC_L8BoolText(AC_L8_INPUT_COUNTS_OK_RENDERED) + "\r\n";
    text += "Generation Counts OK:       " + AC_L8BoolText(AC_L8_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
    text += "Generation Identity OK:     " + AC_L8BoolText(AC_L8_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "Accepted Epoch Valid:       " + AC_L8BoolText(AC_L8_ACCEPTED_EPOCH_VALID_RENDERED) + "\r\n";
+   text += "Accepted Epoch Age Sec:     " + IntegerToString(AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED) + "\r\n";
+   text += "Accepted Epoch Until Unix:  " + IntegerToString(AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED) + "\r\n";
    text += "L8 Snapshot Drift:          " + AC_L8BoolText(AC_L8_SNAPSHOT_DRIFT_RENDERED) + "\r\n";
    text += "L8 Drift Delta:             " + IntegerToString(AC_L8_SNAPSHOT_DRIFT_DELTA_RENDERED) + "\r\n";
    text += "Ranked Clean:               " + IntegerToString(AC_L8_RANKED_COUNT_RENDERED) + "\r\n";
@@ -434,8 +529,10 @@ string AC_Layer8DossierSection(const string symbol)
    text += "\r\nLAYER 8 - MOVEMENT / RANGE RANKING\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L8_STATUS + "\r\n";
+   text += "Display State: " + AC_L8_DISPLAY_STATE + "\r\n";
    text += "Owner: Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Result Accepted: " + AC_L8BoolText(AC_L8_RANKED_ACCEPTED) + "\r\n";
+   text += "Latest Input Pending Rank: " + AC_L8BoolText(AC_L8_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
    text += "Validation: " + AC_L8_VALIDATION_STATUS + "\r\n";
    text += "Symbol Priority: " + AC_SharedOhlcPriorityLabel(priority) + "\r\n";
    text += "L5 Gate Status: " + l5_gate_status + "\r\n";
@@ -446,6 +543,8 @@ string AC_Layer8DossierSection(const string symbol)
    text += "H4 Context Window: " + (h4 ? "available" : "pending") + "\r\n";
    text += "Generation Counts OK: " + AC_L8BoolText(AC_L8_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
    text += "Generation Identity OK: " + AC_L8BoolText(AC_L8_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
+   if(AC_L8_ACCEPTED_HELD_RECALC_PENDING)
+      text += "Note: Symbol rank belongs to last accepted L8 epoch; newer input is waiting for next Gateway rank.\r\n";
 
    if(l5_gate_status != "pass")
    {
@@ -453,9 +552,9 @@ string AC_Layer8DossierSection(const string symbol)
       text += "Movement Score: not_available\r\n";
       text += "Movement Bucket: not_available\r\n";
    }
-   else if(!ohlc_min)
+   else if(!ohlc_min && !AC_L8_ACCEPTED_HELD_RECALC_PENDING)
    {
-      text += "Rank State: ohlc_fast_windows_pending\r\n";
+      text += "Rank State: ohlc_priority_windows_pending\r\n";
       text += "Movement Score: pending\r\n";
       text += "Movement Bucket: pending\r\n";
    }
@@ -525,11 +624,20 @@ string AC_Layer8WorkbenchSection()
    text += "owner_name=Runtime 4 - Surface Scoring Owner\r\n";
    text += "layer_name=Layer 8 - Movement / Range Ranking\r\n";
    text += "status=" + AC_L8_STATUS + "\r\n";
+   text += "display_state=" + AC_L8_DISPLAY_STATE + "\r\n";
    text += "trust_state=" + AC_L8_TRUST_STATE + "\r\n";
    text += "validation_status=" + AC_L8_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L8_VALIDATION_REASON + "\r\n";
    text += "gateway_required=true\r\n";
    text += "gateway_result_accepted=" + AC_L8BoolKv(AC_L8_RANKED_ACCEPTED) + "\r\n";
+   text += "latest_input_pending_next_rank=" + AC_L8BoolKv(AC_L8_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
+   text += "accepted_held_recalc_pending=" + AC_L8BoolKv(AC_L8_ACCEPTED_HELD_RECALC_PENDING) + "\r\n";
+   text += "accepted_epoch_present=" + AC_L8BoolKv(AC_L8_ACCEPTED_EPOCH_PRESENT_RENDERED) + "\r\n";
+   text += "accepted_epoch_valid=" + AC_L8BoolKv(AC_L8_ACCEPTED_EPOCH_VALID_RENDERED) + "\r\n";
+   text += "accepted_epoch_status=" + AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED + "\r\n";
+   text += "accepted_epoch_l8_status=" + AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED + "\r\n";
+   text += "accepted_epoch_age_seconds=" + IntegerToString(AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED) + "\r\n";
+   text += "accepted_epoch_valid_until_unix=" + IntegerToString(AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED) + "\r\n";
    text += "job_type=L8_MOVEMENT_RANGE_RANKING_V1\r\n";
    text += "current_l5_pass_symbols=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "ohlc_l8_minimum_ready=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED) + "\r\n";
@@ -552,6 +660,10 @@ string AC_Layer8WorkbenchSection()
    text += "poor_movement_range_count=" + IntegerToString(AC_L8_POOR_COUNT_RENDERED) + "\r\n";
    text += "generation_counts_ok=" + AC_L8BoolKv(AC_L8_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
    text += "generation_identity_ok=" + AC_L8BoolKv(AC_L8_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "latest_input_checksum=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "ranked_source_input_checksum=" + AC_L8_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED + "\r\n";
+   text += "ranked_input_checksum=" + AC_L8_RANKED_INPUT_CHECKSUM_RENDERED + "\r\n";
+   text += "ranked_input_checksum_after=" + AC_L8_RANKED_INPUT_CHECKSUM_AFTER_RENDERED + "\r\n";
    text += "symbol_rank_filename_mode=" + AC_L8_SYMBOL_RANK_FILENAME_MODE_RENDERED + "\r\n";
    text += "symbol_rank_files_written=" + IntegerToString(AC_L8_SYMBOL_RANK_FILES_WRITTEN_RENDERED) + "\r\n";
    text += "symbol_rank_files_actual=" + IntegerToString(AC_L8_SYMBOL_RANK_FILES_ACTUAL_RENDERED) + "\r\n";
@@ -565,6 +677,7 @@ string AC_Layer8WorkbenchSection()
    text += "ranked_manifest_path=Outbox\\Layers\\Layer_8_Movement_Range_Ranking\\ranked_symbols.manifest\r\n";
    text += "top20_path=Outbox\\Layers\\Layer_8_Movement_Range_Ranking\\ranked_symbols_top20.txt\r\n";
    text += "symbol_rank_folder=Outbox\\Layers\\Layer_8_Movement_Range_Ranking\\SymbolRanks\r\n";
+   text += "surface_accepted_epoch_path=Outbox\\surface_accepted_epoch.manifest\r\n";
    text += "movement_policy=ranking_only_no_direction_no_entry_no_selection_no_execution\r\n";
    text += "main_blocker=" + AC_L8_MAIN_BLOCKER + "\r\n";
    text += "ranking_runtime=" + AC_L8BoolKv(AC_L8_RANKED_ACCEPTED) + "\r\n";
