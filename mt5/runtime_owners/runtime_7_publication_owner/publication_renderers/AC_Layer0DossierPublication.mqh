@@ -295,10 +295,12 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 
    int max_symbols = AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS;
    if(max_symbols < 1) max_symbols = 1;
+   int budget_ms = AC_DOSSIER_UNIVERSE_PASS_BUDGET_MS;
+   if(budget_ms < 10) budget_ms = 10;
    int start_index = AC_L0_INCREMENTAL_NEXT_INDEX;
    int end_limit = MathMin(total, start_index + max_symbols);
    status.batch_start_index = start_index;
-   status.batch_end_index = end_limit - 1;
+   status.batch_end_index = start_index - 1;
 
    bool all_ok = true;
    int attempted = 0;
@@ -307,6 +309,8 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    int retries_total = 0;
    for(int idx = start_index; idx < end_limit; idx++)
    {
+      if(attempted > 0 && (GetTickCount() - start_ms) >= (uint)budget_ms)
+         break;
       attempted++;
       string symbol = SymbolName(idx, false);
       if(symbol == "")
@@ -335,7 +339,8 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
       }
    }
 
-   AC_L0_INCREMENTAL_NEXT_INDEX = end_limit;
+   AC_L0_INCREMENTAL_NEXT_INDEX = start_index + attempted;
+   status.batch_end_index = AC_L0_INCREMENTAL_NEXT_INDEX - 1;
    AC_L0_INCREMENTAL_WRITTEN_TOTAL += written;
    AC_L0_INCREMENTAL_FAILED_TOTAL += failed;
    AC_L0_INCREMENTAL_RETRY_TOTAL += retries_total;
@@ -373,7 +378,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    {
       status.status = "Incremental publishing";
       status.trust_state = "Dossiers Updating";
-      status.main_blocker = "Dossier universe bounded pass in progress to protect timer budget";
+      status.main_blocker = "Dossier universe bounded time-slice in progress to protect timer budget";
    }
 
    string batch_status = status.batch_complete ? ((AC_L0_INCREMENTAL_FAILED_TOTAL == 0) ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded") : "dossier_universe_partial_bounded_pass";
@@ -392,12 +397,12 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
       AC_L0CacheLayer8Proof();
       AC_L0_CACHED_PASS_VALID = true;
       AC_L0_CACHED_STATUS = status;
-      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|source_key=" + source_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols));
+      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|source_key=" + source_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
       return AC_L0_CACHED_RESULT;
    }
 
    AC_L0_CACHED_PASS_VALID = false;
-   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_dossier_universe_pass_partial|source_key=" + source_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(end_limit - 1) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols_per_pass=" + IntegerToString(max_symbols));
+   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_dossier_universe_pass_partial|source_key=" + source_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(status.batch_end_index) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
