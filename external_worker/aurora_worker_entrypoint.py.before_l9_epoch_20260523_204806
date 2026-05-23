@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -95,27 +95,16 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
     l6_status = latest.get("l6_rank_status", "missing")
     l7_status = latest.get("l7_rank_status", "missing")
     l8_status = latest.get("l8_rank_status", "missing")
-    l9_status = latest.get("l9_rank_status", "missing")
-<<<<<<< Updated upstream
-    all_complete = (
-        result.ok
-        and l6_status == "complete"
-        and l7_status == "complete"
-        and l8_status == "complete"
-        and l9_status == "complete"
-    )
-=======
-    all_complete = result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete" and l9_status == "complete"
->>>>>>> Stashed changes
+    all_complete = result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete"
     if not all_complete:
         return False
     accepted_unix = unix_time()
     epoch_id = "|".join([
-        result.snapshot_id,        result.payload_checksum,
+        result.snapshot_id,
+        result.payload_checksum,
         l6_status,
         l7_status,
         l8_status,
-        l9_status,
     ])
     text = "\n".join([
         "schema_name=aurora_gateway_surface_accepted_epoch",
@@ -130,13 +119,8 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         f"accepted_utc={utc_stamp()}",
         f"valid_until_unix={accepted_unix + ACCEPTED_EPOCH_TTL_SECONDS}",
         f"l6_status={l6_status}",
-<<<<<<< Updated upstream
         f"l7_status={l7_status}",
         f"l8_status={l8_status}",
-=======
-        f"l7_status={l7_status}",        f"l8_status={l8_status}",
->>>>>>> Stashed changes
-        f"l9_status={l9_status}",
         f"result_latest_path={latest_path}",
         "display_epoch_status=accepted_current",
         "authority=calculation_support_only",
@@ -227,4 +211,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
