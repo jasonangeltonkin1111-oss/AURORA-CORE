@@ -1,0 +1,6 @@
+#ifndef AC_SHARED_OHLC_ACTIV_COMPAT_MQH
+#define AC_SHARED_OHLC_ACTIV_COMPAT_MQH
+
+#include "AC_SharedOhlcActiveBridge.mqh"
+
+#endif
