@@ -61,7 +61,7 @@ string AC_L8InputCsvPath()
    return AC_L8LayerOutboxFolder() + "\\l8_input_primitives.csv";
 }
 
-string AC_L8InputManifestPath()
+string AC_L8ExporterInputManifestPath()
 {
    return AC_L8LayerOutboxFolder() + "\\l8_input_primitives.manifest";
 }
@@ -320,7 +320,7 @@ AC_WriteResult AC_ExportLayer8MovementRangeInputPrimitives()
    manifest += "selection_runtime=false\r\n";
    manifest += "generated_unix=" + IntegerToString((int)TimeGMT()) + "\r\n";
 
-   AC_WriteResult manifest_write = AC_WriteTextFile(AC_L8InputManifestPath(), manifest);
+   AC_WriteResult manifest_write = AC_WriteTextFile(AC_L8ExporterInputManifestPath(), manifest);
    AC_L8_LAST_INPUT_EXPORT_STATUS = csv_write.status;
    AC_L8_LAST_INPUT_MANIFEST_STATUS = manifest_write.status;
    AC_L8_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
