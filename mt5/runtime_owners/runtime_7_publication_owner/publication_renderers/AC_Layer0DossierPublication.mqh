@@ -19,6 +19,11 @@ static bool   AC_L0_CACHED_L7_ACCEPTED = false;
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
+static string AC_L0_INCREMENTAL_SOURCE_KEY = "";
+static int    AC_L0_INCREMENTAL_NEXT_INDEX = 0;
+static int    AC_L0_INCREMENTAL_WRITTEN_TOTAL = 0;
+static int    AC_L0_INCREMENTAL_FAILED_TOTAL = 0;
+static int    AC_L0_INCREMENTAL_RETRY_TOTAL = 0;
 
 string AC_PercentText(const int complete_count, const int total_count)
 {
@@ -203,7 +208,7 @@ void AC_L0CacheLayer7Proof()
 
 void AC_L0RefreshDossierSectionDependencies()
 {
-   // Dossier shell text renders L2/L3/L4/L5/L6/L7 sections.
+   // Dossier shell text renders L2/L3/L4/L5/L6/L7/OHLC sections.
    // Refresh these packets before any symbol file is written so cached proof and physical Dossier content cannot split-brain.
    AC_BuildLayer2Texts();
    AC_BuildLayer3Texts();
@@ -211,6 +216,35 @@ void AC_L0RefreshDossierSectionDependencies()
    AC_BuildLayer5Texts();
    AC_RefreshLayer6RankedSidecar();
    AC_L0CacheLayer7Proof();
+}
+
+string AC_L0DossierSourceKey(const int total)
+{
+   return "schema=" + AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + "|total=" + IntegerToString(total)
+      + "|l2=" + AC_L2_ROUTE_GENERATION_KEY
+      + "|l3=" + AC_L3_CACHE_KEY
+      + "|l4=" + AC_L4_CACHE_KEY
+      + "|l4_refresh=" + AC_L4_REFRESH_KEY
+      + "|l5=" + AC_L5_STATUS
+      + "|l6=" + AC_L6_STATUS
+      + "|l6_checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM
+      + "|l7=" + AC_L7_STATUS
+      + "|l7_input=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|l7_ranked=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      + "|l7_rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED)
+      + "|l7_accepted=" + (AC_L7_RANKED_ACCEPTED ? "true" : "false")
+      + "|ohlc=" + AC_SHARED_OHLC_STATUS;
+}
+
+void AC_L0ResetIncrementalPass(const string source_key)
+{
+   AC_L0_INCREMENTAL_SOURCE_KEY = source_key;
+   AC_L0_INCREMENTAL_NEXT_INDEX = 0;
+   AC_L0_INCREMENTAL_WRITTEN_TOTAL = 0;
+   AC_L0_INCREMENTAL_FAILED_TOTAL = 0;
+   AC_L0_INCREMENTAL_RETRY_TOTAL = 0;
+   AC_L0_CACHED_PASS_VALID = false;
 }
 
 AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
@@ -223,15 +257,24 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    int marketwatch_total = SymbolsTotal(true);
    status.broker_symbols_total = total;
    status.marketwatch_symbols_total = marketwatch_total;
-   status.batch_start_index = 0;
-   status.batch_end_index = total - 1;
    AC_L0RefreshDossierSectionDependencies();
+   string source_key = AC_L0DossierSourceKey(total);
+   if(source_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total)
+      AC_L0ResetIncrementalPass(source_key);
+
+   int max_symbols = AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS;
+   if(max_symbols < 1) max_symbols = 1;
+   int start_index = AC_L0_INCREMENTAL_NEXT_INDEX;
+   int end_limit = MathMin(total, start_index + max_symbols);
+   status.batch_start_index = start_index;
+   status.batch_end_index = end_limit - 1;
+
    bool all_ok = true;
    int attempted = 0;
    int written = 0;
    int failed = 0;
    int retries_total = 0;
-   for(int idx = 0; idx < total; idx++)
+   for(int idx = start_index; idx < end_limit; idx++)
    {
       attempted++;
       string symbol = SymbolName(idx, false);
@@ -260,48 +303,68 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
          AC_L0_FAILURE_ADDENDUM += failure_line + "\r\n";
       }
    }
+
+   AC_L0_INCREMENTAL_NEXT_INDEX = end_limit;
+   AC_L0_INCREMENTAL_WRITTEN_TOTAL += written;
+   AC_L0_INCREMENTAL_FAILED_TOTAL += failed;
+   AC_L0_INCREMENTAL_RETRY_TOTAL += retries_total;
+
    status.batch_attempted = attempted;
    status.batch_written = written;
-   status.dossier_shells_ready = written;
-   status.dossier_shells_missing = total - written;
+   status.dossier_shells_ready = AC_L0_INCREMENTAL_WRITTEN_TOTAL;
+   status.dossier_shells_missing = total - AC_L0_INCREMENTAL_WRITTEN_TOTAL;
    if(status.dossier_shells_missing < 0) status.dossier_shells_missing = 0;
-   status.next_symbol_index = total;
-   status.batch_complete = (total > 0 && written == total);
+   status.next_symbol_index = AC_L0_INCREMENTAL_NEXT_INDEX;
+   status.batch_complete = (total > 0 && AC_L0_INCREMENTAL_NEXT_INDEX >= total);
    status.batch_duration_ms = GetTickCount() - start_ms;
-   status.failed_symbol_count = failed;
-   status.retry_count_total = retries_total;
+   status.failed_symbol_count = AC_L0_INCREMENTAL_FAILED_TOTAL;
+   status.retry_count_total = AC_L0_INCREMENTAL_RETRY_TOTAL;
    status.first_failure = AC_L0_FIRST_FAILURE;
+
    if(total <= 0)
    {
       status.status = "Waiting for broker symbol universe";
       status.main_blocker = "SymbolsTotal(false) returned zero";
    }
-   else if(status.batch_complete && failed == 0)
+   else if(status.batch_complete && AC_L0_INCREMENTAL_FAILED_TOTAL == 0)
    {
       status.status = "Complete";
       status.trust_state = "Dossiers Ready";
       status.main_blocker = AC_L6_MAIN_BLOCKER == "none" ? AC_L5_MAIN_BLOCKER : AC_L6_MAIN_BLOCKER;
    }
-   else
+   else if(status.batch_complete)
    {
       status.status = "Complete with warnings";
       status.trust_state = "Dossiers Degraded";
       status.main_blocker = "Some symbol Dossier packets failed; see Upgrade Addendum";
    }
-   string batch_status = all_ok ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded";
-   AC_L0_CACHED_SYMBOLS_TOTAL = total;
-   AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = AC_DOSSIER_SHELL_SCHEMA_VERSION;
-   AC_L0_CACHED_L2_ROUTE_GENERATION_KEY = AC_L2_ROUTE_GENERATION_KEY;
-   AC_L0_CACHED_L3_CACHE_KEY = AC_L3_CACHE_KEY;
-   AC_L0_CACHED_L4_CACHE_KEY = AC_L4_CACHE_KEY;
-   AC_L0_CACHED_L4_REFRESH_KEY = AC_L4_REFRESH_KEY;
-   AC_L0_CACHED_L5_STATUS = AC_L5_STATUS;
-   AC_L0_CACHED_L6_STATUS = AC_L6_STATUS;
-   AC_L0_CACHED_L6_CHECKSUM = AC_L6_MANIFEST_PAYLOAD_CHECKSUM;
-   AC_L0_CACHED_PASS_VALID = true;
-   AC_L0_CACHED_STATUS = status;
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_pre_refreshed_l2_l3_l4_l5_l6_l7_shared_ohlc_sections");
-   return AC_L0_CACHED_RESULT;
+   else
+   {
+      status.status = "Incremental publishing";
+      status.trust_state = "Dossiers Updating";
+      status.main_blocker = "Dossier universe bounded pass in progress to protect timer budget";
+   }
+
+   string batch_status = status.batch_complete ? ((AC_L0_INCREMENTAL_FAILED_TOTAL == 0) ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded") : "dossier_universe_partial_bounded_pass";
+   if(status.batch_complete)
+   {
+      AC_L0_CACHED_SYMBOLS_TOTAL = total;
+      AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = AC_DOSSIER_SHELL_SCHEMA_VERSION;
+      AC_L0_CACHED_L2_ROUTE_GENERATION_KEY = AC_L2_ROUTE_GENERATION_KEY;
+      AC_L0_CACHED_L3_CACHE_KEY = AC_L3_CACHE_KEY;
+      AC_L0_CACHED_L4_CACHE_KEY = AC_L4_CACHE_KEY;
+      AC_L0_CACHED_L4_REFRESH_KEY = AC_L4_REFRESH_KEY;
+      AC_L0_CACHED_L5_STATUS = AC_L5_STATUS;
+      AC_L0_CACHED_L6_STATUS = AC_L6_STATUS;
+      AC_L0_CACHED_L6_CHECKSUM = AC_L6_MANIFEST_PAYLOAD_CHECKSUM;
+      AC_L0_CACHED_PASS_VALID = true;
+      AC_L0_CACHED_STATUS = status;
+      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|source_key=" + source_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols));
+      return AC_L0_CACHED_RESULT;
+   }
+
+   AC_L0_CACHED_PASS_VALID = false;
+   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_dossier_universe_pass_partial|source_key=" + source_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(end_limit - 1) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols_per_pass=" + IntegerToString(max_symbols));
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
