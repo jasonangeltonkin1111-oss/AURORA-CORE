@@ -148,6 +148,71 @@ string AC_L6CostModelCompareStatus(const double primary_cost,
    return "aligned";
 }
 
+int AC_L6CompareRank(const string status)
+{
+   if(status == "aligned") return 4;
+   if(status == "warning_gt_10pct") return 3;
+   if(status == "mismatch_gt_25pct") return 2;
+   if(status == "primary_unavailable_or_zero") return 1;
+   return 0;
+}
+
+string AC_L6BestCostModelCompareStatus(const double primary_cost,
+                                       const double value_formula_cost_minlot,
+                                       const string value_formula_status,
+                                       const double tickvalue_cost_minlot,
+                                       const string tickvalue_status,
+                                       const double contract_cost_minlot,
+                                       const string contract_status,
+                                       double &ratio)
+{
+   ratio = 0.0;
+   if(primary_cost <= 0.0)
+      return "primary_unavailable_or_zero";
+
+   string best_status = "fallback_unavailable";
+   int best_rank = AC_L6CompareRank(best_status);
+   double best_ratio = 0.0;
+   double candidate_ratio = 0.0;
+   string candidate_status = "";
+
+   if(value_formula_status == "ok" && value_formula_cost_minlot > 0.0)
+   {
+      candidate_status = AC_L6CostModelCompareStatus(primary_cost, value_formula_cost_minlot, "ok", candidate_ratio);
+      if(AC_L6CompareRank(candidate_status) > best_rank)
+      {
+         best_status = candidate_status;
+         best_rank = AC_L6CompareRank(candidate_status);
+         best_ratio = candidate_ratio;
+      }
+   }
+
+   if(tickvalue_status == "ok" && tickvalue_cost_minlot > 0.0)
+   {
+      candidate_status = AC_L6CostModelCompareStatus(primary_cost, tickvalue_cost_minlot, "ok", candidate_ratio);
+      if(AC_L6CompareRank(candidate_status) > best_rank)
+      {
+         best_status = candidate_status;
+         best_rank = AC_L6CompareRank(candidate_status);
+         best_ratio = candidate_ratio;
+      }
+   }
+
+   if(contract_status == "raw_account_currency_ok" && contract_cost_minlot > 0.0)
+   {
+      candidate_status = AC_L6CostModelCompareStatus(primary_cost, contract_cost_minlot, "ok", candidate_ratio);
+      if(AC_L6CompareRank(candidate_status) > best_rank)
+      {
+         best_status = candidate_status;
+         best_rank = AC_L6CompareRank(candidate_status);
+         best_ratio = candidate_ratio;
+      }
+   }
+
+   ratio = best_ratio;
+   return best_status;
+}
+
 string AC_L6VolumeModelQuality(const double volume_min,
                                const double volume_step,
                                const double volume_max,
@@ -372,15 +437,29 @@ string AC_L6BuildInputPrimitiveRows()
       }
 
       double compare_ratio = 0.0;
-      string compare_status = AC_L6CostModelCompareStatus(worst_minlot, value_formula_cost_minlot, value_formula_cost_status, compare_ratio);
-      if(compare_status == "fallback_unavailable")
-         compare_status = AC_L6CostModelCompareStatus(worst_minlot, tickvalue_cost_minlot, tickvalue_cost_status, compare_ratio);
-      if(compare_status == "fallback_unavailable" && contract_cost_status == "raw_account_currency_ok")
-         compare_status = AC_L6CostModelCompareStatus(worst_minlot, contract_cost_minlot, "ok", compare_ratio);
+      string compare_status = AC_L6BestCostModelCompareStatus(worst_minlot,
+                                                               value_formula_cost_minlot,
+                                                               value_formula_cost_status,
+                                                               tickvalue_cost_minlot,
+                                                               tickvalue_cost_status,
+                                                               contract_cost_minlot,
+                                                               contract_cost_status,
+                                                               compare_ratio);
       if(compare_status == "mismatch_gt_25pct" || compare_status == "warning_gt_10pct")
          AC_L6_LAST_COST_MODEL_MISMATCH_COUNT++;
 
-      bool zero_cost_nonzero_spread = (worst_minlot <= 0.0 && spread_price > 0.0 && spread_bps > 0.0);
+      bool has_positive_usable_fallback = false;
+      if(value_formula_cost_status == "ok" && value_formula_cost_minlot > 0.0)
+         has_positive_usable_fallback = true;
+      if(tickvalue_cost_status == "ok" && tickvalue_cost_minlot > 0.0)
+         has_positive_usable_fallback = true;
+      if(contract_cost_status == "raw_account_currency_ok" && contract_cost_minlot > 0.0)
+         has_positive_usable_fallback = true;
+
+      bool zero_cost_nonzero_spread = (worst_minlot <= 0.0
+                                       && spread_price > 0.0
+                                       && spread_bps > 0.0
+                                       && !has_positive_usable_fallback);
       if(zero_cost_nonzero_spread) AC_L6_LAST_ZERO_COST_NONZERO_SPREAD_COUNT++;
 
       string volume_model_quality = AC_L6VolumeModelQuality(volume_min, volume_step, volume_max, contract_size);
