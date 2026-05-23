@@ -565,6 +565,7 @@ string AC_SharedOhlcRenderWorkbenchSection()
 }
 
 #include "AC_Layer7SessionRelevanceRenderer.mqh"
+#include "AC_Layer8MovementRangeRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_Layer0DossierPublication.mqh"
 #include "AC_MarketBoardRenderer.mqh"
