@@ -3,6 +3,7 @@
 
 #include "AC_ExternalWorkerL6InputPrimitives.mqh"
 #include "AC_ExternalWorkerL7InputPrimitives.mqh"
+#include "AC_ExternalWorkerL8InputPrimitives.mqh"
 #include "AC_ExternalWorkerSnapshotIdentity.mqh"
 #include "AC_ExternalWorkerSnapshotExport.mqh"
 
