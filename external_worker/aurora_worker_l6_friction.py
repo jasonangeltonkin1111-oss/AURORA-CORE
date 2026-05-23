@@ -740,13 +740,11 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         and summary.input_count == len(after_rows)
     )
     if not summary.input_generation_stable:
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
         summary.status = "input_changed_during_rank"
         summary.reason = (
             f"l6 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
-            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; final ranked outputs cleared"
+            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; "
+            "current ranked outputs preserved; replacement generation not promoted"
         )
         atomic_write_text(manifest_path, _manifest(summary, input_path))
         return summary
