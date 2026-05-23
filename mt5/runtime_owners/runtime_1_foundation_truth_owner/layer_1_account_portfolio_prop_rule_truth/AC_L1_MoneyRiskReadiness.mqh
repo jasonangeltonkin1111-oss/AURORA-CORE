@@ -112,8 +112,8 @@ string AC_L1ClosedMoneyRiskReadinessMap()
    text += "Total Est Risk:         " + AC_L1MoneyText(total_est_risk) + " (" + AC_L1PercentText(total_risk_pct_equity) + " equity)\r\n";
    text += "Average Est Risk:       " + AC_L1MoneyText(avg_est_risk) + "\r\n";
    text += "Largest Est Risk:       " + largest_est_risk_symbol + " " + AC_L1MoneyText(largest_est_risk) + " (" + AC_L1PercentText(largest_risk_pct_equity) + " equity)\r\n";
-   text += "Money-R Status:         " + (rows_risk_estimated > 0 ? "estimated money-risk source available for R test" : "blocked - no rows estimated") + "\r\n";
-   text += "R-Multiple Status:      readiness only; full R map still blocked until next feature run\r\n";
+   text += "Money-R Status:         " + (rows_risk_estimated > 0 ? "estimated money-risk source available for R diagnostics" : "blocked - no rows estimated") + "\r\n";
+   text += "R-Multiple Status:      see R-Multiple Map, R By Symbol Map, and Risk Efficiency Map\r\n";
    text += "Trade Permission:       FALSE\r\n";
    return text;
 }
