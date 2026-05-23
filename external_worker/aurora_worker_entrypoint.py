@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,10 +56,10 @@ def _build_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
         "schema_name=aurora_gateway_cycle_status",
         "schema_version=1",
         f"worker_version={core.WORKER_VERSION}",
-        f"mode=shared-daemon-cycle-controller",
+        "mode=shared-daemon-cycle-controller",
         f"root={root}",
         f"loop_count={loop}",
-        f"poll_seconds=1",
+        "poll_seconds=1",
         f"snapshot_stable_required_seconds={SNAPSHOT_STABLE_REQUIRED_SECONDS}",
         f"calculation_cycle_seconds={CALCULATION_CYCLE_SECONDS}",
         f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}",
@@ -96,7 +96,6 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
     l7_status = latest.get("l7_rank_status", "missing")
     l8_status = latest.get("l8_rank_status", "missing")
     l9_status = latest.get("l9_rank_status", "missing")
-<<<<<<< Updated upstream
     all_complete = (
         result.ok
         and l6_status == "complete"
@@ -104,14 +103,12 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         and l8_status == "complete"
         and l9_status == "complete"
     )
-=======
-    all_complete = result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete" and l9_status == "complete"
->>>>>>> Stashed changes
     if not all_complete:
         return False
     accepted_unix = unix_time()
     epoch_id = "|".join([
-        result.snapshot_id,        result.payload_checksum,
+        result.snapshot_id,
+        result.payload_checksum,
         l6_status,
         l7_status,
         l8_status,
@@ -121,6 +118,9 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         "schema_name=aurora_gateway_surface_accepted_epoch",
         "schema_version=1",
         f"worker_version={core.WORKER_VERSION}",
+        "status=accepted",
+        "epoch_status=accepted",
+        "display_epoch_status=accepted_current",
         f"epoch_id={epoch_id}",
         f"source_snapshot_id={result.snapshot_id}",
         f"source_payload_checksum={result.payload_checksum}",
@@ -129,16 +129,12 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         f"accepted_unix={accepted_unix}",
         f"accepted_utc={utc_stamp()}",
         f"valid_until_unix={accepted_unix + ACCEPTED_EPOCH_TTL_SECONDS}",
+        f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}",
         f"l6_status={l6_status}",
-<<<<<<< Updated upstream
         f"l7_status={l7_status}",
         f"l8_status={l8_status}",
-=======
-        f"l7_status={l7_status}",        f"l8_status={l8_status}",
->>>>>>> Stashed changes
         f"l9_status={l9_status}",
         f"result_latest_path={latest_path}",
-        "display_epoch_status=accepted_current",
         "authority=calculation_support_only",
         "trade_permission=false",
         "selection_runtime=false",
@@ -227,4 +223,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
