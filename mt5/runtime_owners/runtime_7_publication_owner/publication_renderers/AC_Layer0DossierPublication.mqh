@@ -16,6 +16,12 @@ static string AC_L0_CACHED_L7_INPUT_CHECKSUM = "";
 static string AC_L0_CACHED_L7_RANKED_CHECKSUM = "";
 static int    AC_L0_CACHED_L7_RANKED_ROWS = -1;
 static bool   AC_L0_CACHED_L7_ACCEPTED = false;
+static string AC_L0_CACHED_L8_STATUS = "";
+static string AC_L0_CACHED_L8_INPUT_CHECKSUM = "";
+static string AC_L0_CACHED_L8_RANKED_CHECKSUM = "";
+static int    AC_L0_CACHED_L8_RANKED_ROWS = -1;
+static int    AC_L0_CACHED_L8_OHLC_MIN_READY = -1;
+static bool   AC_L0_CACHED_L8_ACCEPTED = false;
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -102,6 +108,8 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
    text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
    text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
+   text += "Layer 7 Session Relevance Ranking: " + AC_L7_STATUS + "\r\n";
+   text += "Layer 8 Movement / Range Ranking: " + AC_L8_STATUS + "\r\n";
    text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
@@ -111,6 +119,8 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
    text += "Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
+   text += "Session Relevance Ranking: " + AC_L7_STATUS + "\r\n";
+   text += "Movement / Range Ranking: " + AC_L8_STATUS + "\r\n";
    text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
@@ -121,12 +131,13 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer5DossierSection(symbol);
    text += AC_Layer6DossierSection(symbol);
    text += AC_Layer7DossierSection(symbol);
+   text += AC_Layer8DossierSection(symbol);
    text += AC_SharedOhlcRenderDossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 7 only after L6 live proof is accepted\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
+   text += (market_state == "open" ? "Next step: Layer 8 movement/range proof only after OHLC fast windows and Gateway sidecars are accepted\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
-   text += "Layer 6 ranks only Layer 5 pass symbols; it does not hard-block symbols.\r\n";
+   text += "Layer 6-8 rank only Layer 5 pass symbols; they do not hard-block symbols.\r\n";
    text += "Shared OHLC is raw storage only; future layers must read it instead of calling CopyRates privately.\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
@@ -206,9 +217,20 @@ void AC_L0CacheLayer7Proof()
    AC_L0_CACHED_L7_ACCEPTED = AC_L7_RANKED_ACCEPTED;
 }
 
+void AC_L0CacheLayer8Proof()
+{
+   AC_L8RefreshRankedSidecar();
+   AC_L0_CACHED_L8_STATUS = AC_L8_STATUS;
+   AC_L0_CACHED_L8_INPUT_CHECKSUM = AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED;
+   AC_L0_CACHED_L8_RANKED_CHECKSUM = AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED;
+   AC_L0_CACHED_L8_RANKED_ROWS = AC_L8_RANKED_ROWS_RENDERED;
+   AC_L0_CACHED_L8_OHLC_MIN_READY = AC_L8_OHLC_MIN_READY_RENDERED;
+   AC_L0_CACHED_L8_ACCEPTED = AC_L8_RANKED_ACCEPTED;
+}
+
 void AC_L0RefreshDossierSectionDependencies()
 {
-   // Dossier shell text renders L2/L3/L4/L5/L6/L7/OHLC sections.
+   // Dossier shell text renders L2/L3/L4/L5/L6/L7/L8/OHLC sections.
    // Refresh these packets before any symbol file is written so cached proof and physical Dossier content cannot split-brain.
    AC_BuildLayer2Texts();
    AC_BuildLayer3Texts();
@@ -216,6 +238,7 @@ void AC_L0RefreshDossierSectionDependencies()
    AC_BuildLayer5Texts();
    AC_RefreshLayer6RankedSidecar();
    AC_L0CacheLayer7Proof();
+   AC_L0CacheLayer8Proof();
 }
 
 string AC_L0DossierSourceKey(const int total)
@@ -234,7 +257,15 @@ string AC_L0DossierSourceKey(const int total)
       + "|l7_ranked=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED
       + "|l7_rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED)
       + "|l7_accepted=" + (AC_L7_RANKED_ACCEPTED ? "true" : "false")
-      + "|ohlc=" + AC_SHARED_OHLC_STATUS;
+      + "|l8=" + AC_L8_STATUS
+      + "|l8_input=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|l8_ranked=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      + "|l8_rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED)
+      + "|l8_ohlc_min=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED)
+      + "|l8_accepted=" + (AC_L8_RANKED_ACCEPTED ? "true" : "false")
+      + "|ohlc=" + AC_SHARED_OHLC_STATUS
+      + "|ohlc_mode=" + AC_SHARED_OHLC_MODE
+      + "|ohlc_l8_fast=" + IntegerToString(AC_SHARED_OHLC_L8_FAST_READY);
 }
 
 void AC_L0ResetIncrementalPass(const string source_key)
@@ -330,7 +361,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    {
       status.status = "Complete";
       status.trust_state = "Dossiers Ready";
-      status.main_blocker = AC_L6_MAIN_BLOCKER == "none" ? AC_L5_MAIN_BLOCKER : AC_L6_MAIN_BLOCKER;
+      status.main_blocker = AC_L6_MAIN_BLOCKER == "none" ? (AC_L7_MAIN_BLOCKER == "none" ? (AC_L8_MAIN_BLOCKER == "none" ? AC_L5_MAIN_BLOCKER : AC_L8_MAIN_BLOCKER) : AC_L7_MAIN_BLOCKER) : AC_L6_MAIN_BLOCKER;
    }
    else if(status.batch_complete)
    {
@@ -357,6 +388,8 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
       AC_L0_CACHED_L5_STATUS = AC_L5_STATUS;
       AC_L0_CACHED_L6_STATUS = AC_L6_STATUS;
       AC_L0_CACHED_L6_CHECKSUM = AC_L6_MANIFEST_PAYLOAD_CHECKSUM;
+      AC_L0CacheLayer7Proof();
+      AC_L0CacheLayer8Proof();
       AC_L0_CACHED_PASS_VALID = true;
       AC_L0_CACHED_STATUS = status;
       AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|source_key=" + source_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols));
@@ -371,6 +404,7 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
 {
    AC_RefreshLayer6RankedSidecar();
    AC_L7RefreshRankedSidecar();
+   AC_L8RefreshRankedSidecar();
    int total = SymbolsTotal(false);
    if(AC_L0_CACHED_PASS_VALID
       && total == AC_L0_CACHED_SYMBOLS_TOTAL
@@ -386,11 +420,17 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L7_INPUT_CHECKSUM == AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED
       && AC_L0_CACHED_L7_RANKED_CHECKSUM == AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED
       && AC_L0_CACHED_L7_RANKED_ROWS == AC_L7_RANKED_ROWS_RENDERED
-      && AC_L0_CACHED_L7_ACCEPTED == AC_L7_RANKED_ACCEPTED)
+      && AC_L0_CACHED_L7_ACCEPTED == AC_L7_RANKED_ACCEPTED
+      && AC_L0_CACHED_L8_STATUS == AC_L8_STATUS
+      && AC_L0_CACHED_L8_INPUT_CHECKSUM == AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      && AC_L0_CACHED_L8_RANKED_CHECKSUM == AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      && AC_L0_CACHED_L8_RANKED_ROWS == AC_L8_RANKED_ROWS_RENDERED
+      && AC_L0_CACHED_L8_OHLC_MIN_READY == AC_L8_OHLC_MIN_READY_RENDERED
+      && AC_L0_CACHED_L8_ACCEPTED == AC_L8_RANKED_ACCEPTED)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "|l7=" + AC_L0_CACHED_L7_STATUS + "|l7_input_checksum=" + AC_L0_CACHED_L7_INPUT_CHECKSUM + "|l7_ranked_checksum=" + AC_L0_CACHED_L7_RANKED_CHECKSUM + "|l7_rows=" + IntegerToString(AC_L0_CACHED_L7_RANKED_ROWS));
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "|l7=" + AC_L0_CACHED_L7_STATUS + "|l7_input_checksum=" + AC_L0_CACHED_L7_INPUT_CHECKSUM + "|l7_ranked_checksum=" + AC_L0_CACHED_L7_RANKED_CHECKSUM + "|l7_rows=" + IntegerToString(AC_L0_CACHED_L7_RANKED_ROWS) + "|l8=" + AC_L0_CACHED_L8_STATUS + "|l8_input_checksum=" + AC_L0_CACHED_L8_INPUT_CHECKSUM + "|l8_ranked_checksum=" + AC_L0_CACHED_L8_RANKED_CHECKSUM + "|l8_rows=" + IntegerToString(AC_L0_CACHED_L8_RANKED_ROWS));
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
