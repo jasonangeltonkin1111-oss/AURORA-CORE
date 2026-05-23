@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 import csv
 import io
 import math
@@ -20,26 +20,30 @@ L8_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L8_JOB_TYPE = "L8_MOVEMENT_RANGE_RANKING_V1"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
+L8_REASON_MAX_PARTS = 16
+L8_REASON_MAX_CHARS = 640
 
-MOVEMENT_BUCKET_ORDER = {
+OUTPUT_FIELDS = [
+    "rank_index", "symbol", "layer_id", "layer_name", "movement_score", "movement_bucket",
+    "rank_state", "score_quality", "movement_regime", "asset_class", "ranking_group", "market_state",
+    "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps",
+    "range_availability_score", "movement_quality_score", "expansion_compression_score",
+    "multi_timeframe_agreement_score", "movement_cleanliness_score", "range_position_quality_score",
+    "quote_surface_quality_score", "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "h4_bars_copied",
+    "m5_range_points_12", "m5_range_points_48", "m5_expansion_ratio", "m5_chop_proxy", "m5_spike_ratio", "m5_close_position_pct",
+    "m15_range_points_16", "m15_range_points_64", "m15_expansion_ratio", "m15_chop_proxy", "m15_spike_ratio", "m15_close_position_pct",
+    "h1_range_points_24", "h1_range_points_72", "h1_expansion_ratio", "h1_chop_proxy", "h1_spike_ratio", "h1_close_position_pct",
+    "h4_range_points_6", "h4_range_points_30", "h4_expansion_ratio", "h4_context", "single_bar_spike_risk", "range_position_extreme",
+    "reason", "trade_permission", "selection_runtime",
+]
+
+BUCKET_ORDER = {
     "poor_movement_range": 0,
     "weak_movement_range": 1,
     "acceptable_movement_range": 2,
     "strong_movement_range": 3,
     "elite_movement_range": 4,
 }
-
-OUTPUT_FIELDS = [
-    "rank_index", "symbol", "layer_id", "layer_name", "movement_score", "movement_bucket",
-    "rank_state", "score_quality", "range_availability_score", "movement_quality_score",
-    "expansion_compression_score", "range_position_quality_score", "quote_surface_quality_score",
-    "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "m5_expansion_ratio",
-    "m15_expansion_ratio", "h1_expansion_ratio", "m5_compression_ratio", "m15_compression_ratio",
-    "h1_compression_ratio", "m5_range_points_48", "m15_range_points_64", "h1_range_points_72",
-    "m5_close_position_in_48_range_pct", "m15_close_position_in_64_range_pct",
-    "h1_close_position_in_72_range_pct", "quote_quality", "surface_quality", "tick_age_seconds",
-    "spread_bps", "reason", "trade_permission", "selection_runtime",
-]
 
 
 @dataclass
@@ -69,6 +73,8 @@ class L8RankSummary:
     symbol_rank_filename_mode: str = L8_SYMBOL_RANK_FILENAME_MODE
     stale_tmp_files_removed: int = 0
     stale_tmp_files_failed: int = 0
+    stale_final_files_removed: int = 0
+    stale_final_files_failed: int = 0
     payload_checksum: str = "not_available"
     ranked_csv_path: str = "not_available"
     manifest_path: str = "not_available"
@@ -77,27 +83,25 @@ class L8RankSummary:
 
 
 def _safe_float(value: str | None, default: float = 0.0) -> float:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending", "partial"}:
-        return default
     try:
-        number = float(text)
-        if math.isnan(number) or math.isinf(number):
+        if value is None:
             return default
-        return number
+        text = str(value).strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending", "partial"}:
+            return default
+        number = float(text)
+        return default if math.isnan(number) or math.isinf(number) else number
     except ValueError:
         return default
 
 
 def _safe_int(value: str | None, default: int = 0) -> int:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending", "partial"}:
-        return default
     try:
+        if value is None:
+            return default
+        text = str(value).strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending", "partial"}:
+            return default
         return int(float(text))
     except ValueError:
         return default
@@ -105,9 +109,28 @@ def _safe_int(value: str | None, default: int = 0) -> int:
 
 def _safe_text(row: Dict[str, str], key: str, default: str = "not_available") -> str:
     value = row.get(key, default)
-    if value is None or str(value).strip() == "":
-        return default
-    return str(value).strip()
+    return default if value is None or str(value).strip() == "" else str(value).strip()
+
+
+def _bounded_reason(reason: str, *, max_parts: int = L8_REASON_MAX_PARTS, max_chars: int = L8_REASON_MAX_CHARS) -> str:
+    seen = set()
+    parts: List[str] = []
+    for raw in str(reason or "").replace("\r", " ").replace("\n", " ").split(";"):
+        part = raw.strip()
+        if not part or part in seen:
+            continue
+        seen.add(part)
+        parts.append(part)
+        if len(parts) >= max_parts:
+            break
+    text = ";".join(parts) if parts else "not_available"
+    if len(text) > max_chars:
+        text = text[: max(0, max_chars - 18)].rstrip("; ") + ";reason_truncated"
+    return text
+
+
+def _prepend_reason_token(reason: str, token: str) -> str:
+    return _bounded_reason(f"{token};{reason}")
 
 
 def _parse_kv_text(text: str) -> Dict[str, str]:
@@ -124,7 +147,7 @@ def _parse_kv_text(text: str) -> Dict[str, str]:
 def _sanitize_path_part(value: str) -> str:
     safe = str(value).strip() or "unknown"
     for ch in ['\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ']:
-        safe = safe.replace(ch, '_')
+        safe = safe.replace(ch, "_")
     return safe
 
 
@@ -147,8 +170,7 @@ def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
 
 
 def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
+    removed = failed = 0
     if not folder.exists():
         return removed, failed
     for path in folder.glob(pattern):
@@ -158,21 +180,8 @@ def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
     return removed, failed
 
 
-def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    if not symbol_rank_dir.exists():
-        return removed, failed
-    for pattern in ("*.txt", "*.tmp", "*.write_failed.txt"):
-        r, f = _cleanup_glob(symbol_rank_dir, pattern)
-        removed += r
-        failed += f
-    return removed, failed
-
-
 def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
+    removed = failed = 0
     for pattern in ("*.tmp", "*.write_failed.txt"):
         r, f = _cleanup_glob(layer_dir, pattern)
         removed += r
@@ -180,16 +189,12 @@ def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
     return removed, failed
 
 
-def _clear_final_rank_outputs(ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    for path in (ranked_path, top20_path):
-        r, f = _remove_file_if_exists(path)
+def _cleanup_symbol_rank_tmp(symbol_rank_dir: Path) -> Tuple[int, int]:
+    removed = failed = 0
+    for pattern in ("*.tmp", "*.write_failed.txt"):
+        r, f = _cleanup_glob(symbol_rank_dir, pattern)
         removed += r
         failed += f
-    r, f = _clear_symbol_rank_files(symbol_rank_dir)
-    removed += r
-    failed += f
     return removed, failed
 
 
@@ -199,76 +204,192 @@ def _final_symbol_rank_txt_count(symbol_rank_dir: Path) -> int:
     return sum(1 for p in symbol_rank_dir.glob("*.txt") if p.is_file())
 
 
+def _delete_stale_symbol_rank_files(symbol_rank_dir: Path, expected_names: Iterable[str]) -> Tuple[int, int]:
+    expected = set(expected_names)
+    removed = failed = 0
+    if not symbol_rank_dir.exists():
+        return removed, failed
+    for path in symbol_rank_dir.glob("*.txt"):
+        if path.name in expected:
+            continue
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    return removed, failed
+
+
 def _csv_payload_checksum(text: str) -> str:
     rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
     return payload_checksum(rows)
 
 
-def _quality_score(text: str, good_words: Tuple[str, ...], warning_words: Tuple[str, ...], severe_words: Tuple[str, ...]) -> Tuple[float, str]:
-    lower = text.lower()
-    if any(word in lower for word in severe_words):
-        return 10.0, f"severe_{text}"
-    if any(word in lower for word in warning_words):
-        return 55.0, f"warning_{text}"
-    if any(word in lower for word in good_words):
-        return 90.0, f"ok_{text}"
-    if text in {"not_available", "missing", "pending"}:
-        return 30.0, f"unknown_{text}"
-    return 60.0, f"review_{text}"
+def _format_value(value: str | float | int | bool) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
 
 
-def _availability_component(copied: int, requested: int, minimum: int) -> Tuple[float, str]:
-    if requested <= 0:
-        return 0.0, "invalid_request"
-    if copied >= requested:
-        return 100.0, "bars_full"
-    if copied >= minimum:
-        return max(45.0, min(80.0, 100.0 * copied / requested)), "bars_partial"
-    if copied > 0:
-        return 20.0, "bars_insufficient"
-    return 0.0, "bars_missing"
+def _shared_ohlc_fast_window_root(outbox: Path) -> Path:
+    account_root = outbox.parents[2]
+    server_root = account_root.parent
+    return server_root / "Shared Market Data" / "OHLC Store" / "Fast Windows"
+
+
+def _read_ohlc_window(path: Path) -> List[Dict[str, int]]:
+    if not path.exists():
+        return []
+    rows: List[Dict[str, int]] = []
+    for raw in read_text(path).replace("\r\n", "\n").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or line.startswith("bar_time"):
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 8:
+            continue
+        try:
+            rows.append({
+                "bar_time": int(float(parts[0])),
+                "open_i": int(float(parts[1])),
+                "high_i": int(float(parts[2])),
+                "low_i": int(float(parts[3])),
+                "close_i": int(float(parts[4])),
+                "tick_volume": int(float(parts[5])),
+                "spread": int(float(parts[6])),
+                "real_volume": int(float(parts[7])),
+            })
+        except ValueError:
+            continue
+    rows.sort(key=lambda row: row["bar_time"], reverse=True)
+    return rows
+
+
+def _range_points(rows: List[Dict[str, int]], count: int) -> float:
+    subset = rows[:count]
+    if not subset:
+        return 0.0
+    return float(max(r["high_i"] for r in subset) - min(r["low_i"] for r in subset))
+
+
+def _avg_bar_range(rows: List[Dict[str, int]], count: int) -> float:
+    subset = rows[:count]
+    if not subset:
+        return 0.0
+    return sum(max(0, r["high_i"] - r["low_i"]) for r in subset) / float(len(subset))
+
+
+def _sum_bar_range(rows: List[Dict[str, int]], count: int) -> float:
+    subset = rows[:count]
+    return float(sum(max(0, r["high_i"] - r["low_i"]) for r in subset))
+
+
+def _largest_bar_range(rows: List[Dict[str, int]], count: int) -> float:
+    subset = rows[:count]
+    if not subset:
+        return 0.0
+    return float(max(max(0, r["high_i"] - r["low_i"]) for r in subset))
+
+
+def _position_pct(rows: List[Dict[str, int]], count: int) -> float:
+    subset = rows[:count]
+    if not subset:
+        return 50.0
+    high = max(r["high_i"] for r in subset)
+    low = min(r["low_i"] for r in subset)
+    if high <= low:
+        return 50.0
+    close = subset[0]["close_i"]
+    return max(0.0, min(100.0, ((close - low) / float(high - low)) * 100.0))
+
+
+def _tf_metrics(rows: List[Dict[str, int]], recent: int, baseline: int) -> Dict[str, float | int | str]:
+    copied = len(rows)
+    recent_avail = min(copied, recent)
+    baseline_avail = min(copied, baseline)
+    recent_range = _range_points(rows, recent_avail)
+    baseline_range = _range_points(rows, baseline_avail)
+    recent_avg = _avg_bar_range(rows, recent_avail)
+    baseline_avg = _avg_bar_range(rows, baseline_avail)
+    expansion = recent_avg / baseline_avg if baseline_avg > 0.0 else 0.0
+    chop = _sum_bar_range(rows, baseline_avail) / baseline_range if baseline_range > 0.0 else 0.0
+    spike = _largest_bar_range(rows, baseline_avail) / baseline_avg if baseline_avg > 0.0 else 0.0
+    return {
+        "bars_copied": copied,
+        "copy_status": "ok_full" if copied >= baseline else ("partial" if copied > 0 else "missing"),
+        "range_recent": recent_range,
+        "range_baseline": baseline_range,
+        "avg_recent": recent_avg,
+        "avg_baseline": baseline_avg,
+        "expansion_ratio": expansion,
+        "compression_ratio": baseline_avg / recent_avg if recent_avg > 0.0 else 0.0,
+        "chop_proxy": chop,
+        "spike_ratio": spike,
+        "close_position_pct": _position_pct(rows, baseline_avail),
+    }
+
+
+def _score_availability(m5: int, m15: int, h1: int, h4: int) -> Tuple[float, str, str]:
+    score = 0.0
+    parts: List[str] = []
+    for label, copied, target, weight in (("m5", m5, 48, 30), ("m15", m15, 64, 30), ("h1", h1, 72, 30), ("h4", h4, 30, 10)):
+        ratio = min(1.0, copied / float(target)) if target > 0 else 0.0
+        score += ratio * weight
+        parts.append(f"{label}_bars={copied}_of_{target}")
+    if m5 >= 48 and m15 >= 64 and h1 >= 72:
+        return score, "rankable", ";".join(parts + ["ohlc_minimum_ready"])
+    if m5 > 0 or m15 > 0 or h1 > 0:
+        return score, "degraded", ";".join(parts + ["ohlc_minimum_not_ready"])
+    return 0.0, "missing", ";".join(parts + ["ohlc_missing_core_windows"])
 
 
 def _expansion_score(ratio: float) -> Tuple[float, str]:
     if ratio <= 0.0:
-        return 15.0, "expansion_unavailable"
+        return 0.0, "missing_expansion"
     if ratio < 0.55:
-        return 20.0, "compressed_severe"
+        return 22.0, "compressed_dead"
     if ratio < 0.75:
-        return 40.0, "compressed"
-    if ratio < 1.05:
-        return 65.0, "neutral_to_mild_compression"
+        return 40.0, "weak_compression"
+    if ratio <= 1.05:
+        return 62.0, "neutral_movement"
     if ratio <= 1.80:
         return 92.0, "usable_expansion"
     if ratio <= 3.00:
         return 72.0, "hot_expansion_review"
-    return 35.0, "violent_expansion_review"
+    return 35.0, "violent_spike_risk"
 
 
-def _range_position_score(position_pct: float) -> Tuple[float, str]:
-    if position_pct <= 0.0:
-        return 45.0, "range_position_unavailable_or_floor"
-    if 20.0 <= position_pct <= 80.0:
-        return 90.0, "range_position_not_extreme"
-    if 5.0 <= position_pct < 20.0 or 80.0 < position_pct <= 95.0:
-        return 65.0, "range_position_edge_caution"
-    return 35.0, "range_position_extreme"
-
-
-def _movement_presence_score(row: Dict[str, str]) -> Tuple[float, str]:
-    ranges = [
-        _safe_float(row.get("m5_range_points_48")),
-        _safe_float(row.get("m15_range_points_64")),
-        _safe_float(row.get("h1_range_points_72")),
-    ]
-    nonzero = sum(1 for value in ranges if value > 0.0)
-    if nonzero == 3:
-        return 90.0, "movement_present_all_timeframes"
-    if nonzero == 2:
-        return 72.0, "movement_present_two_timeframes"
-    if nonzero == 1:
-        return 45.0, "movement_present_one_timeframe"
-    return 10.0, "movement_absent_or_unavailable"
+def _quote_surface_score(quote_quality: str, surface_quality: str, spread_bps: float, tick_age: float) -> Tuple[float, str]:
+    score = 90.0
+    reasons: List[str] = []
+    lower = f"{quote_quality} {surface_quality}".lower()
+    if any(x in lower for x in ("missing", "stale", "invalid")):
+        score -= 55.0
+        reasons.append("quote_or_surface_severe")
+    elif any(x in lower for x in ("aging", "warning", "partial")):
+        score -= 25.0
+        reasons.append("quote_or_surface_warning")
+    else:
+        reasons.append("quote_surface_usable")
+    if tick_age > 60:
+        score -= 30.0
+        reasons.append("tick_age_gt_60s")
+    elif tick_age > 20:
+        score -= 18.0
+        reasons.append("tick_age_gt_20s")
+    elif tick_age > 5:
+        score -= 8.0
+        reasons.append("tick_age_gt_5s")
+    if spread_bps >= 100:
+        score -= 35.0
+        reasons.append("spread_bps_ge_100")
+    elif spread_bps >= 50:
+        score -= 25.0
+        reasons.append("spread_bps_ge_50")
+    elif spread_bps >= 20:
+        score -= 12.0
+        reasons.append("spread_bps_ge_20")
+    return max(0.0, min(100.0, score)), ";".join(reasons)
 
 
 def _bucket_from_score(score: float) -> str:
@@ -283,124 +404,132 @@ def _bucket_from_score(score: float) -> str:
     return "poor_movement_range"
 
 
-def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
+def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | int | bool]:
     symbol = _safe_text(row, "symbol")
+    symbol_dir = fast_root / _sanitize_path_part(symbol)
+    m5 = _tf_metrics(_read_ohlc_window(symbol_dir / "M5.window.csv"), 12, 48)
+    m15 = _tf_metrics(_read_ohlc_window(symbol_dir / "M15.window.csv"), 16, 64)
+    h1 = _tf_metrics(_read_ohlc_window(symbol_dir / "H1.window.csv"), 24, 72)
+    h4 = _tf_metrics(_read_ohlc_window(symbol_dir / "H4.window.csv"), 6, 30)
+
     market_state = _safe_text(row, "market_state")
     quote_quality = _safe_text(row, "quote_quality")
     surface_quality = _safe_text(row, "surface_quality")
-    tick_age = _safe_float(row.get("tick_age_seconds"))
     spread_bps = _safe_float(row.get("spread_bps"))
+    tick_age = _safe_float(row.get("tick_age_seconds"))
 
-    m5_copied = _safe_int(row.get("m5_bars_copied"))
-    m15_copied = _safe_int(row.get("m15_bars_copied"))
-    h1_copied = _safe_int(row.get("h1_bars_copied"))
-    m5_requested = _safe_int(row.get("m5_bars_requested"), 64)
-    m15_requested = _safe_int(row.get("m15_bars_requested"), 80)
-    h1_requested = _safe_int(row.get("h1_bars_requested"), 80)
+    availability_score, availability_state, availability_reason = _score_availability(int(m5["bars_copied"]), int(m15["bars_copied"]), int(h1["bars_copied"]), int(h4["bars_copied"]))
+    exp_scores = [_expansion_score(float(m5["expansion_ratio"])), _expansion_score(float(m15["expansion_ratio"])), _expansion_score(float(h1["expansion_ratio"]))]
+    expansion_score = sum(score for score, _r in exp_scores) / 3.0
+    expansion_reasons = ";".join(reason for _score, reason in exp_scores)
 
-    a5, r5 = _availability_component(m5_copied, m5_requested, 48)
-    a15, r15 = _availability_component(m15_copied, m15_requested, 64)
-    a1, r1 = _availability_component(h1_copied, h1_requested, 72)
-    availability_score = (a5 * 0.40) + (a15 * 0.35) + (a1 * 0.25)
+    movement_presence = min(100.0, ((float(m5["range_baseline"]) > 0) * 28.0) + ((float(m15["range_baseline"]) > 0) * 32.0) + ((float(h1["range_baseline"]) > 0) * 32.0) + ((float(h4["range_baseline"]) > 0) * 8.0))
+    agreement_values = [float(m5["expansion_ratio"]), float(m15["expansion_ratio"]), float(h1["expansion_ratio"])]
+    expanding = sum(1 for x in agreement_values if x >= 1.05)
+    compressed = sum(1 for x in agreement_values if 0 < x < 0.75)
+    violent = sum(1 for x in agreement_values if x > 3.0)
+    agreement_score = max(0.0, min(100.0, 80.0 + expanding * 6.0 - compressed * 18.0 - violent * 30.0))
 
-    movement_score, movement_reason = _movement_presence_score(row)
+    chop_values = [float(m5["chop_proxy"]), float(m15["chop_proxy"]), float(h1["chop_proxy"])]
+    avg_chop = sum(chop_values) / 3.0
+    cleanliness_score = max(0.0, min(100.0, 100.0 - max(0.0, avg_chop - 1.0) * 18.0))
+    positions = [float(m5["close_position_pct"]), float(m15["close_position_pct"]), float(h1["close_position_pct"])]
+    extreme_count = sum(1 for x in positions if x < 5.0 or x > 95.0)
+    edge_count = sum(1 for x in positions if 5.0 <= x < 20.0 or 80.0 < x <= 95.0)
+    range_position_score = max(0.0, 90.0 - extreme_count * 35.0 - edge_count * 12.0)
+    quote_score, quote_reason = _quote_surface_score(quote_quality, surface_quality, spread_bps, tick_age)
+    spike_risk = any(float(tf["spike_ratio"]) > 4.0 for tf in (m5, m15, h1)) or violent > 0
 
-    e5, er5 = _expansion_score(_safe_float(row.get("m5_expansion_ratio")))
-    e15, er15 = _expansion_score(_safe_float(row.get("m15_expansion_ratio")))
-    e1, er1 = _expansion_score(_safe_float(row.get("h1_expansion_ratio")))
-    expansion_score = (e5 * 0.40) + (e15 * 0.35) + (e1 * 0.25)
-
-    p5, pr5 = _range_position_score(_safe_float(row.get("m5_close_position_in_48_range_pct")))
-    p15, pr15 = _range_position_score(_safe_float(row.get("m15_close_position_in_64_range_pct")))
-    p1, pr1 = _range_position_score(_safe_float(row.get("h1_close_position_in_72_range_pct")))
-    position_score = (p5 * 0.40) + (p15 * 0.35) + (p1 * 0.25)
-
-    quote_score, quote_reason = _quality_score(quote_quality, ("fresh", "ok", "usable"), ("aging", "warning", "partial"), ("missing", "stale", "invalid"))
-    surface_score, surface_reason = _quality_score(surface_quality, ("usable", "fresh", "ok"), ("warning", "partial", "aging"), ("missing", "stale", "invalid"))
-    live_surface_score = (quote_score * 0.55) + (surface_score * 0.45)
-    if tick_age > 60.0:
-        live_surface_score = min(live_surface_score, 35.0)
-    elif tick_age > 20.0:
-        live_surface_score = min(live_surface_score, 65.0)
-
-    score = (
+    movement_score = (
         availability_score * 0.20
-        + movement_score * 0.25
+        + movement_presence * 0.20
         + expansion_score * 0.25
-        + position_score * 0.15
-        + live_surface_score * 0.15
+        + agreement_score * 0.15
+        + cleanliness_score * 0.10
+        + range_position_score * 0.05
+        + quote_score * 0.05
     )
-    score = max(0.0, min(100.0, score))
-
-    reasons: List[str] = [
-        "ok_L5Pass", f"m5_{r5}", f"m15_{r15}", f"h1_{r1}", movement_reason,
-        f"m5_{er5}", f"m15_{er15}", f"h1_{er1}", f"m5_{pr5}", f"m15_{pr15}", f"h1_{pr1}",
-        quote_reason, surface_reason, "movement_range_ranking_only_no_direction_no_entry",
-    ]
+    movement_score = max(0.0, min(100.0, movement_score))
 
     rank_state = "ranked"
     score_quality = "usable_movement_range_model"
+    if availability_state == "missing":
+        rank_state = "not_rankable_quality"
+        score_quality = "not_rankable_ohlc_fast_windows_missing"
+    elif availability_state == "degraded":
+        rank_state = "ranked_degraded"
+        score_quality = "degraded_ohlc_fast_windows_partial"
+    elif int(h4["bars_copied"]) < 30:
+        rank_state = "ranked_partial"
+        score_quality = "usable_core_windows_h4_context_partial"
     if market_state != "open":
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_market_not_open"
-        reasons.append(f"market_state={market_state}")
-    elif m5_copied < 24 and m15_copied < 24 and h1_copied < 24:
-        rank_state = "not_rankable_quality"
-        score_quality = "not_rankable_insufficient_bars"
-    elif availability_score < 55.0:
+    elif spike_risk and rank_state == "ranked":
         rank_state = "ranked_degraded"
-        score_quality = "degraded_range_history_availability"
-    elif live_surface_score < 50.0:
+        score_quality = "degraded_single_bar_spike_or_violent_expansion_risk"
+    elif quote_score < 45 and rank_state == "ranked":
         rank_state = "ranked_degraded"
-        score_quality = "degraded_quote_or_surface_quality"
-    elif availability_score < 85.0:
-        rank_state = "ranked_partial"
-        score_quality = "usable_with_partial_range_history"
+        score_quality = "degraded_quote_surface_quality"
 
-    bucket = _bucket_from_score(score)
+    if spike_risk:
+        regime = "violent_spike_risk"
+    elif avg_chop > 4.0:
+        regime = "choppy_range"
+    elif compressed >= 2:
+        regime = "compressed"
+    elif expanding >= 2:
+        regime = "clean_expansion"
+    else:
+        regime = "normal"
+    h4_context = "unavailable" if int(h4["bars_copied"]) <= 0 else ("confirms" if float(h4["expansion_ratio"]) >= 1.05 else ("contradicts_short_term" if expanding >= 2 and float(h4["expansion_ratio"]) < 0.75 else "neutral"))
+
+    reasons = [
+        "ok_L5Pass", availability_reason, expansion_reasons, quote_reason,
+        f"regime={regime}", "source=runtime1_shared_ohlc_fast_windows", "ranking_only_no_direction_no_entry",
+    ]
+    if spike_risk:
+        reasons.append("single_bar_spike_or_violent_expansion_risk")
+    if extreme_count > 0:
+        reasons.append("range_position_extreme")
+    if avg_chop > 4.0:
+        reasons.append("chop_proxy_high")
+
     return {
         "symbol": symbol,
-        "movement_score": score,
-        "movement_bucket": bucket,
+        "movement_score": movement_score,
+        "movement_bucket": _bucket_from_score(movement_score),
         "rank_state": rank_state,
         "score_quality": score_quality,
-        "range_availability_score": availability_score,
-        "movement_quality_score": movement_score,
-        "expansion_compression_score": expansion_score,
-        "range_position_quality_score": position_score,
-        "quote_surface_quality_score": live_surface_score,
-        "m5_bars_copied": float(m5_copied),
-        "m15_bars_copied": float(m15_copied),
-        "h1_bars_copied": float(h1_copied),
-        "m5_expansion_ratio": _safe_float(row.get("m5_expansion_ratio")),
-        "m15_expansion_ratio": _safe_float(row.get("m15_expansion_ratio")),
-        "h1_expansion_ratio": _safe_float(row.get("h1_expansion_ratio")),
-        "m5_compression_ratio": _safe_float(row.get("m5_compression_ratio")),
-        "m15_compression_ratio": _safe_float(row.get("m15_compression_ratio")),
-        "h1_compression_ratio": _safe_float(row.get("h1_compression_ratio")),
-        "m5_range_points_48": _safe_float(row.get("m5_range_points_48")),
-        "m15_range_points_64": _safe_float(row.get("m15_range_points_64")),
-        "h1_range_points_72": _safe_float(row.get("h1_range_points_72")),
-        "m5_close_position_in_48_range_pct": _safe_float(row.get("m5_close_position_in_48_range_pct")),
-        "m15_close_position_in_64_range_pct": _safe_float(row.get("m15_close_position_in_64_range_pct")),
-        "h1_close_position_in_72_range_pct": _safe_float(row.get("h1_close_position_in_72_range_pct")),
+        "movement_regime": regime,
+        "asset_class": _safe_text(row, "asset_class"),
+        "ranking_group": _safe_text(row, "ranking_group"),
+        "market_state": market_state,
         "quote_quality": quote_quality,
         "surface_quality": surface_quality,
         "tick_age_seconds": tick_age,
         "spread_bps": spread_bps,
-        "reason": ";".join(reasons),
+        "range_availability_score": availability_score,
+        "movement_quality_score": movement_presence,
+        "expansion_compression_score": expansion_score,
+        "multi_timeframe_agreement_score": agreement_score,
+        "movement_cleanliness_score": cleanliness_score,
+        "range_position_quality_score": range_position_score,
+        "quote_surface_quality_score": quote_score,
+        "m5_bars_copied": int(m5["bars_copied"]), "m15_bars_copied": int(m15["bars_copied"]), "h1_bars_copied": int(h1["bars_copied"]), "h4_bars_copied": int(h4["bars_copied"]),
+        "m5_range_points_12": float(m5["range_recent"]), "m5_range_points_48": float(m5["range_baseline"]), "m5_expansion_ratio": float(m5["expansion_ratio"]), "m5_chop_proxy": float(m5["chop_proxy"]), "m5_spike_ratio": float(m5["spike_ratio"]), "m5_close_position_pct": float(m5["close_position_pct"]),
+        "m15_range_points_16": float(m15["range_recent"]), "m15_range_points_64": float(m15["range_baseline"]), "m15_expansion_ratio": float(m15["expansion_ratio"]), "m15_chop_proxy": float(m15["chop_proxy"]), "m15_spike_ratio": float(m15["spike_ratio"]), "m15_close_position_pct": float(m15["close_position_pct"]),
+        "h1_range_points_24": float(h1["range_recent"]), "h1_range_points_72": float(h1["range_baseline"]), "h1_expansion_ratio": float(h1["expansion_ratio"]), "h1_chop_proxy": float(h1["chop_proxy"]), "h1_spike_ratio": float(h1["spike_ratio"]), "h1_close_position_pct": float(h1["close_position_pct"]),
+        "h4_range_points_6": float(h4["range_recent"]), "h4_range_points_30": float(h4["range_baseline"]), "h4_expansion_ratio": float(h4["expansion_ratio"]), "h4_context": h4_context,
+        "single_bar_spike_risk": spike_risk,
+        "range_position_extreme": extreme_count > 0,
+        "reason": _bounded_reason(";".join(reasons)),
         "trade_permission": "false",
         "selection_runtime": "false",
     }
 
 
-def _format_value(value: str | float) -> str:
-    if isinstance(value, float):
-        return f"{value:.6f}"
-    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
-
-
-def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
+def _write_ranked_csv(scored: List[Dict[str, str | float | int | bool]]) -> str:
     output = io.StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=OUTPUT_FIELDS)
     writer.writeheader()
@@ -414,129 +543,79 @@ def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
     return output.getvalue().replace("\r\n", "\n").replace("\n", "\r\n")
 
 
-def _top20_text(scored: List[Dict[str, str | float]]) -> str:
+def _top20_text(scored: List[Dict[str, str | float | int | bool]]) -> str:
     lines = [
         "LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20",
         "----------------------------------------",
         f"Generated UTC: {utc_stamp()}",
         "Trade Permission: FALSE",
         "Selection Runtime: FALSE",
-        "Policy: Movement/range ranking only; no direction, entry, selection, or execution authority.",
+        "Policy: Movement/range ranking only; no direction, entry, selection, or permission.",
+        "Source: Runtime 1 Shared OHLC Fast Windows + L8 input metadata",
         "",
-        "rank|symbol|score|bucket|state|m5_expansion|m15_expansion|h1_expansion|reason",
+        "rank|symbol|score|bucket|state|regime|reason",
     ]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(
-            f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|"
-            f"{float(row['m5_expansion_ratio']):.4f}|{float(row['m15_expansion_ratio']):.4f}|{float(row['h1_expansion_ratio']):.4f}|{row['reason']}"
-        )
+        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{_bounded_reason(str(row['reason']))}")
     lines.append("")
     return "\n".join(lines)
 
 
-def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
+def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool]) -> str:
     symbol = str(row["symbol"])
     lines = [
-        "schema_name=l8_symbol_rank", "schema_version=1", "layer_id=8", f"layer_name={L8_LAYER_NAME}",
+        "schema_name=l8_symbol_rank", "schema_version=2", "layer_id=8", f"layer_name={L8_LAYER_NAME}",
         f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={symbol}",
-        f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}",
-        f"symbol_rank_checksum={_symbol_checksum(symbol)}",
-        f"movement_score={float(row['movement_score']):.6f}", f"movement_bucket={row['movement_bucket']}",
-        f"rank_state={row['rank_state']}", f"score_quality={row['score_quality']}",
-        f"range_availability_score={float(row['range_availability_score']):.6f}",
-        f"movement_quality_score={float(row['movement_quality_score']):.6f}",
-        f"expansion_compression_score={float(row['expansion_compression_score']):.6f}",
-        f"range_position_quality_score={float(row['range_position_quality_score']):.6f}",
-        f"quote_surface_quality_score={float(row['quote_surface_quality_score']):.6f}",
-        f"m5_bars_copied={float(row['m5_bars_copied']):.6f}", f"m15_bars_copied={float(row['m15_bars_copied']):.6f}",
-        f"h1_bars_copied={float(row['h1_bars_copied']):.6f}", f"m5_expansion_ratio={float(row['m5_expansion_ratio']):.6f}",
-        f"m15_expansion_ratio={float(row['m15_expansion_ratio']):.6f}", f"h1_expansion_ratio={float(row['h1_expansion_ratio']):.6f}",
-        f"m5_compression_ratio={float(row['m5_compression_ratio']):.6f}", f"m15_compression_ratio={float(row['m15_compression_ratio']):.6f}",
-        f"h1_compression_ratio={float(row['h1_compression_ratio']):.6f}", f"m5_range_points_48={float(row['m5_range_points_48']):.6f}",
-        f"m15_range_points_64={float(row['m15_range_points_64']):.6f}", f"h1_range_points_72={float(row['h1_range_points_72']):.6f}",
-        f"m5_close_position_in_48_range_pct={float(row['m5_close_position_in_48_range_pct']):.6f}",
-        f"m15_close_position_in_64_range_pct={float(row['m15_close_position_in_64_range_pct']):.6f}",
-        f"h1_close_position_in_72_range_pct={float(row['h1_close_position_in_72_range_pct']):.6f}",
-        f"quote_quality={row['quote_quality']}", f"surface_quality={row['surface_quality']}",
-        f"tick_age_seconds={float(row['tick_age_seconds']):.6f}", f"spread_bps={float(row['spread_bps']):.6f}",
-        f"reason={_format_value(row['reason'])}", "authority=calculation_support_only", "trade_permission=false",
-        "selection_runtime=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}",
+    ]
+    for key in OUTPUT_FIELDS:
+        if key in {"rank_index", "symbol", "layer_id", "layer_name"}:
+            continue
+        if key in row:
+            lines.append(f"{key}={_format_value(row[key])}")
+    lines += [
+        "authority=calculation_support_only", "trade_permission=false", "selection_runtime=false",
+        "source_owner=Runtime_1_Shared_OHLC_Fast_Windows", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ]
     return "\n".join(lines)
 
 
-def _manifest(summary: L8RankSummary, input_path: Path) -> str:
+def _manifest(summary: L8RankSummary, input_path: Path, fast_root: Path) -> str:
+    summary.reason = _bounded_reason(summary.reason)
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=1", "layer_id=8", f"layer_name={L8_LAYER_NAME}",
-        f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
-        f"input_csv_path={input_path}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
-        f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
-        f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}",
-        f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}",
-        f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
-        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}",
-        f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}",
-        f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
-        f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}",
-        f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
-        f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}",
-        f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}",
-        f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"input_count={summary.input_count}", f"row_count={summary.row_count}",
-        f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}",
-        f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}",
-        f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}",
-        f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}",
-        f"poor_movement_range_count={summary.poor_count}", f"payload_checksum={summary.payload_checksum}",
-        "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false",
-        "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution",
-        f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=2", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
+        f"input_csv_path={input_path}", f"shared_ohlc_fast_window_root={fast_root}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
+        f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
+        f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
+        f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}",
+        f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
+        f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}",
+        f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=write_expected_outputs_then_delete_stale_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", "source_owner=Runtime_1_Shared_OHLC_Fast_Windows", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
 def _summary_from_ranked_manifest(manifest_text: str, fallback: L8RankSummary) -> L8RankSummary:
     data = _parse_kv_text(manifest_text)
     return L8RankSummary(
-        status=data.get("status", fallback.status),
-        reason=data.get("reason", fallback.reason),
-        input_count=_safe_int(data.get("input_count"), fallback.input_count),
-        source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
-        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count),
-        source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass),
-        source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
-        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum),
-        input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank),
-        input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
-        row_count=_safe_int(data.get("row_count"), fallback.row_count),
-        ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count),
-        ranked_partial_count=_safe_int(data.get("ranked_partial_count"), fallback.ranked_partial_count),
-        ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count),
-        not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
-        elite_count=_safe_int(data.get("elite_movement_range_count"), fallback.elite_count),
-        strong_count=_safe_int(data.get("strong_movement_range_count"), fallback.strong_count),
-        acceptable_count=_safe_int(data.get("acceptable_movement_range_count"), fallback.acceptable_count),
-        weak_count=_safe_int(data.get("weak_movement_range_count"), fallback.weak_count),
-        poor_count=_safe_int(data.get("poor_movement_range_count"), fallback.poor_count),
-        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written),
-        symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual),
-        symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
-        stale_tmp_files_removed=fallback.stale_tmp_files_removed,
-        stale_tmp_files_failed=fallback.stale_tmp_files_failed,
-        payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
-        ranked_csv_path=fallback.ranked_csv_path,
-        manifest_path=fallback.manifest_path,
-        top20_path=fallback.top20_path,
-        symbol_rank_folder_path=fallback.symbol_rank_folder_path,
+        status=data.get("status", fallback.status), reason=_bounded_reason(data.get("reason", fallback.reason)), input_count=_safe_int(data.get("input_count"), fallback.input_count), source_input_manifest_present=data.get("source_input_manifest_present", "false").lower() == "true",
+        source_input_manifest_row_count=_safe_int(data.get("source_input_manifest_row_count"), fallback.source_input_manifest_row_count), source_l5_gate_pass=_safe_int(data.get("source_l5_gate_pass"), fallback.source_l5_gate_pass), source_input_payload_checksum=data.get("source_input_payload_checksum", fallback.source_input_payload_checksum),
+        input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum), input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank), input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
+        row_count=_safe_int(data.get("row_count"), fallback.row_count), ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count), ranked_partial_count=_safe_int(data.get("ranked_partial_count"), fallback.ranked_partial_count), ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count), not_rankable_quality_count=_safe_int(data.get("not_rankable_quality_count"), fallback.not_rankable_quality_count),
+        elite_count=_safe_int(data.get("elite_movement_range_count"), fallback.elite_count), strong_count=_safe_int(data.get("strong_movement_range_count"), fallback.strong_count), acceptable_count=_safe_int(data.get("acceptable_movement_range_count"), fallback.acceptable_count), weak_count=_safe_int(data.get("weak_movement_range_count"), fallback.weak_count), poor_count=_safe_int(data.get("poor_movement_range_count"), fallback.poor_count),
+        symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written), symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual), symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
+        stale_tmp_files_removed=fallback.stale_tmp_files_removed, stale_tmp_files_failed=fallback.stale_tmp_files_failed, stale_final_files_removed=fallback.stale_final_files_removed, stale_final_files_failed=fallback.stale_final_files_failed, payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
+        ranked_csv_path=fallback.ranked_csv_path, manifest_path=fallback.manifest_path, top20_path=fallback.top20_path, symbol_rank_folder_path=fallback.symbol_rank_folder_path,
     )
 
 
-def _try_reuse_unchanged_rank_outputs(summary: L8RankSummary, manifest_path: Path, ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> L8RankSummary | None:
-    if not summary.source_input_manifest_present:
-        return None
-    if summary.source_input_payload_checksum in {"", "not_available"}:
+def _try_reuse_unchanged_rank_outputs(summary: L8RankSummary, manifest_path: Path, ranked_path: Path, top20_path: Path, symbol_rank_dir: Path, fast_root: Path) -> L8RankSummary | None:
+    if not summary.source_input_manifest_present or summary.source_input_payload_checksum in {"", "not_available"}:
         return None
     if summary.input_payload_checksum != summary.source_input_payload_checksum:
         return None
@@ -546,23 +625,15 @@ def _try_reuse_unchanged_rank_outputs(summary: L8RankSummary, manifest_path: Pat
     actual_symbol_rank_files = _final_symbol_rank_txt_count(symbol_rank_dir)
     if existing.status not in {"complete", "input_degraded"}:
         return None
-    if existing.symbol_rank_filename_mode != L8_SYMBOL_RANK_FILENAME_MODE:
+    if existing.symbol_rank_filename_mode != L8_SYMBOL_RANK_FILENAME_MODE or not existing.input_generation_stable:
         return None
-    if not existing.input_generation_stable:
+    if existing.input_payload_checksum != summary.input_payload_checksum or existing.input_payload_checksum_after_rank != summary.input_payload_checksum or existing.source_input_payload_checksum != summary.source_input_payload_checksum:
         return None
-    if existing.input_payload_checksum != summary.input_payload_checksum:
+    if existing.input_count <= 0 or existing.row_count != existing.input_count or existing.symbol_rank_files_written != existing.row_count or actual_symbol_rank_files != existing.row_count:
         return None
-    if existing.input_payload_checksum_after_rank != summary.input_payload_checksum:
+    if str(fast_root) not in read_text(manifest_path):
         return None
-    if existing.source_input_payload_checksum != summary.source_input_payload_checksum:
-        return None
-    if existing.input_count <= 0 or existing.row_count != existing.input_count:
-        return None
-    if existing.symbol_rank_files_written != existing.row_count:
-        return None
-    if actual_symbol_rank_files != existing.row_count:
-        return None
-    existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
+    existing.reason = _prepend_reason_token(existing.reason, "skipped_unchanged_input_reused_existing_ranked_outputs")
     existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
     existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
     existing.symbol_rank_files_actual = actual_symbol_rank_files
@@ -577,6 +648,7 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     manifest_path = layer_dir / L8_MANIFEST_NAME
     top20_path = layer_dir / L8_TOP20_NAME
     symbol_rank_dir = layer_dir / L8_SYMBOL_RANK_FOLDER
+    fast_root = _shared_ohlc_fast_window_root(outbox)
     layer_dir.mkdir(parents=True, exist_ok=True)
     symbol_rank_dir.mkdir(parents=True, exist_ok=True)
 
@@ -589,61 +661,41 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
         summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
 
     removed, failed = _clear_layer_transient_files(layer_dir)
-    sr_removed, sr_failed = _cleanup_glob(symbol_rank_dir, "*.tmp")
+    sr_removed, sr_failed = _cleanup_symbol_rank_tmp(symbol_rank_dir)
     summary.stale_tmp_files_removed += removed + sr_removed
     summary.stale_tmp_files_failed += failed + sr_failed
 
     if not input_path.exists():
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
-        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
         return summary
 
     text = read_text(input_path)
     summary.input_payload_checksum = _csv_payload_checksum(text)
-    reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir)
+    reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir, fast_root)
     if reused is not None:
-        atomic_write_text(manifest_path, _manifest(reused, input_path))
+        atomic_write_text(manifest_path, _manifest(reused, input_path, fast_root))
         return reused
 
-    reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
-    rows = [row for row in reader]
+    rows = [row for row in csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))]
     summary.input_count = len(rows)
-    scored = [_score_row(row) for row in rows]
-    scored.sort(key=lambda row: (
-        MOVEMENT_BUCKET_ORDER.get(str(row["movement_bucket"]), 0),
-        float(row["movement_score"]),
-        float(row["range_availability_score"]),
-        float(row["expansion_compression_score"]),
-        str(row["symbol"]),
-    ), reverse=True)
+    scored = [_score_row(row, fast_root) for row in rows]
+    scored.sort(key=lambda row: (BUCKET_ORDER.get(str(row["movement_bucket"]), 0), float(row["movement_score"]), float(row["expansion_compression_score"]), float(row["multi_timeframe_agreement_score"]), str(row["symbol"])), reverse=True)
 
     text_after_rank = read_text(input_path)
     summary.input_payload_checksum_after_rank = _csv_payload_checksum(text_after_rank)
     after_rows = [row for row in csv.DictReader(io.StringIO(text_after_rank.replace("\r\n", "\n")))]
     summary.input_generation_stable = summary.input_payload_checksum == summary.input_payload_checksum_after_rank and summary.input_count == len(after_rows)
     if not summary.input_generation_stable:
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
         summary.status = "input_changed_during_rank"
-        summary.reason = (
-            f"l8 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
-            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; final ranked outputs cleared"
-        )
-        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        summary.reason = f"l8 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; existing ranked outputs intentionally left untouched"
+        atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
         return summary
-
-    removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-    summary.stale_tmp_files_removed += removed
-    summary.stale_tmp_files_failed += failed
 
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "ranked all rows present in stable L8 input generation"
+    summary.reason = "ranked all rows from stable L8 input using Runtime 1 shared OHLC fast windows"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_partial_count = sum(1 for row in scored if row["rank_state"] == "ranked_partial")
@@ -664,15 +716,19 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
+    expected_names = [_symbol_rank_filename(str(row["symbol"])) for row in scored]
     files_written = 0
     for index, row in enumerate(scored, start=1):
         if atomic_write_text(symbol_rank_dir / _symbol_rank_filename(str(row["symbol"])), _symbol_rank_text(index, row)):
             files_written += 1
+    stale_removed, stale_failed = _delete_stale_symbol_rank_files(symbol_rank_dir, expected_names)
+    summary.stale_final_files_removed += stale_removed
+    summary.stale_final_files_failed += stale_failed
     summary.symbol_rank_files_written = files_written
     summary.symbol_rank_files_actual = _final_symbol_rank_txt_count(symbol_rank_dir)
 
     if not ranked_ok or not top20_ok or files_written != len(scored) or summary.symbol_rank_files_actual != len(scored):
         summary.status = "write_degraded"
         summary.reason = "ranked CSV, top20, or per-symbol rank write failed; sidecar proof may be partial"
-    atomic_write_text(manifest_path, _manifest(summary, input_path))
+    atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
     return summary
