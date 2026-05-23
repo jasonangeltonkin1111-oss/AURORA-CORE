@@ -66,14 +66,6 @@ def shared_gateway_status_path(shared_root: Path) -> Path:
     return shared_root / GATEWAY_FOLDER_NAME / "Status" / "shared_worker_status.txt"
 
 
-def watchdog_gateway_status_path(shared_root: Path) -> Path:
-    return shared_root / GATEWAY_FOLDER_NAME / "Status" / "watchdog_status.txt"
-
-
-def repair_gateway_status_path(shared_root: Path) -> Path:
-    return shared_root / GATEWAY_FOLDER_NAME / "Status" / "repair_status.txt"
-
-
 def _result_from_header(ok: bool, status: str, reason: str, header: Dict[str, str], row_count: int = 0, checksum: str = "not_available") -> ValidationResult:
     return ValidationResult(
         ok=ok,
@@ -473,61 +465,6 @@ def write_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
     return atomic_write_text(shared_gateway_status_path(shared_root), build_shared_status(shared_root, loop_count, roots, results, watchdog, repair_success, status_mode))
 
 
-def build_probe_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], proof: WatchdogProof, repair_success: bool, status_mode: str) -> str:
-    accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
-    degraded = len(results) - accepted
-    write_degraded = sum(1 for _r, code, result in results if code == 3 or result.status == "write_degraded")
-    is_watchdog = status_mode == "watchdog_probe"
-    status_path = watchdog_gateway_status_path(shared_root) if is_watchdog else repair_gateway_status_path(shared_root)
-    schema_name = "aurora_gateway_watchdog_status" if is_watchdog else "aurora_gateway_repair_status"
-    path_key = "watchdog_status_path" if is_watchdog else "repair_status_path"
-
-    lines = [
-        f"schema_name={schema_name}",
-        "schema_version=1",
-        f"worker_version={WORKER_VERSION}",
-        f"process_id={PROCESS_ID}",
-        f"mode={status_mode}",
-        f"shared_root={shared_root}",
-        f"daemon_status_path={shared_gateway_status_path(shared_root)}",
-        f"{path_key}={status_path}",
-        f"process_start_utc={PROCESS_START_UTC}",
-        f"process_start_unix={PROCESS_START_UNIX}",
-        f"last_check_utc={proof.last_check_utc}",
-        f"last_check_unix={unix_time()}",
-        f"loop_count={loop_count}",
-        f"discovered_root_count={len(roots)}",
-        f"processed_root_count={len(results)}",
-        f"accepted_root_count={accepted}",
-        f"degraded_root_count={degraded}",
-        f"write_degraded_root_count={write_degraded}",
-        f"last_action={proof.last_action}",
-        f"last_reason={proof.last_reason}",
-        f"restart_attempted={proof.restart_attempted}",
-        f"restart_result={proof.restart_result}",
-        f"repair_success={'true' if repair_success else 'false'}",
-        "daemon_truth_owner=shared_worker_status.txt",
-        "probe_truth_owner=watchdog_status.txt_or_repair_status.txt",
-        "authority=calculation_support_only",
-        "trade_permission=false",
-        "",
-        "root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum",
-    ]
-    lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.job_id}|{res.job_type}|{res.payload_checksum}" for root, code, res in results]
-    lines.append("")
-    return "\n".join(lines)
-
-
-def write_probe_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], proof: WatchdogProof, repair_success: bool, status_mode: str) -> bool:
-    if status_mode == "watchdog_probe":
-        target = watchdog_gateway_status_path(shared_root)
-    elif status_mode == "repair_probe":
-        target = repair_gateway_status_path(shared_root)
-    else:
-        raise ValueError(f"unsupported probe status mode: {status_mode}")
-    return atomic_write_text(target, build_probe_status(shared_root, loop_count, roots, results, proof, repair_success, status_mode))
-
-
 def run_shared_daemon(shared_root: Path, poll_seconds: float) -> int:
     poll_seconds = max(0.25, poll_seconds)
     loop = 0
@@ -605,9 +542,8 @@ def run_repair(shared_root: Path, watchdog_mode: bool) -> int:
         action = "cannot_repair_missing_daemon_task"
         restart_result = "failed_daemon_task_missing"
     proof = WatchdogProof(utc_stamp(), action, ";".join(reason_bits), attempted, restart_result)
-    probe_mode = "watchdog_probe" if watchdog_mode else "repair_probe"
-    probe_ok = write_probe_status(shared_root, 1, roots, results, proof, repair_success, probe_mode)
-    return 0 if probe_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
+    shared_ok = write_shared_status(shared_root, 1, roots, results, proof, repair_success, status_mode=("watchdog_probe" if watchdog_mode else "repair_probe"))
+    return 0 if shared_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
 
 
 def main(argv: List[str] | None = None) -> int:
