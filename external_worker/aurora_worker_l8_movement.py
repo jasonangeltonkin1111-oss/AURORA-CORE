@@ -18,22 +18,26 @@ L8_TOP20_NAME = "ranked_symbols_top20.txt"
 L8_SYMBOL_RANK_FOLDER = "SymbolRanks"
 L8_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L8_JOB_TYPE = "L8_MOVEMENT_RANGE_RANKING_V1"
+L8_MODEL_VERSION = "true_range_v2"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
+L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Fast_Windows"
 L8_REASON_MAX_PARTS = 16
 L8_REASON_MAX_CHARS = 640
 
 OUTPUT_FIELDS = [
-    "rank_index", "symbol", "layer_id", "layer_name", "movement_score", "movement_bucket",
+    "rank_index", "symbol", "layer_id", "layer_name", "l8_model_version", "movement_score", "movement_bucket",
     "rank_state", "score_quality", "movement_regime", "asset_class", "ranking_group", "market_state",
     "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps",
     "range_availability_score", "movement_quality_score", "expansion_compression_score",
     "multi_timeframe_agreement_score", "movement_cleanliness_score", "range_position_quality_score",
     "quote_surface_quality_score", "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "h4_bars_copied",
-    "m5_range_points_12", "m5_range_points_48", "m5_expansion_ratio", "m5_chop_proxy", "m5_spike_ratio", "m5_close_position_pct",
-    "m15_range_points_16", "m15_range_points_64", "m15_expansion_ratio", "m15_chop_proxy", "m15_spike_ratio", "m15_close_position_pct",
-    "h1_range_points_24", "h1_range_points_72", "h1_expansion_ratio", "h1_chop_proxy", "h1_spike_ratio", "h1_close_position_pct",
-    "h4_range_points_6", "h4_range_points_30", "h4_expansion_ratio", "h4_context", "single_bar_spike_risk", "range_position_extreme",
+    "ohlc_fast_window_checksum", "ohlc_window_files_seen", "ohlc_window_files_missing",
+    "m5_window_checksum", "m15_window_checksum", "h1_window_checksum", "h4_window_checksum",
+    "m5_range_points_12", "m5_range_points_48", "m5_avg_true_range_12", "m5_avg_true_range_48", "m5_expansion_ratio", "m5_chop_proxy", "m5_spike_ratio", "m5_close_position_pct",
+    "m15_range_points_16", "m15_range_points_64", "m15_avg_true_range_16", "m15_avg_true_range_64", "m15_expansion_ratio", "m15_chop_proxy", "m15_spike_ratio", "m15_close_position_pct",
+    "h1_range_points_24", "h1_range_points_72", "h1_avg_true_range_24", "h1_avg_true_range_72", "h1_expansion_ratio", "h1_chop_proxy", "h1_spike_ratio", "h1_close_position_pct",
+    "h4_range_points_6", "h4_range_points_30", "h4_avg_true_range_6", "h4_avg_true_range_30", "h4_expansion_ratio", "h4_context", "single_bar_spike_risk", "range_position_extreme",
     "reason", "trade_permission", "selection_runtime",
 ]
 
@@ -75,6 +79,9 @@ class L8RankSummary:
     stale_tmp_files_failed: int = 0
     stale_final_files_removed: int = 0
     stale_final_files_failed: int = 0
+    ohlc_fast_window_payload_checksum: str = "not_available"
+    ohlc_window_files_seen: int = 0
+    ohlc_window_files_missing: int = 0
     payload_checksum: str = "not_available"
     ranked_csv_path: str = "not_available"
     manifest_path: str = "not_available"
@@ -229,6 +236,33 @@ def _shared_ohlc_fast_window_root(outbox: Path) -> Path:
     return server_root / "Shared Market Data" / "OHLC Store" / "Fast Windows"
 
 
+def _file_payload_checksum(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    rows = [line for line in read_text(path).replace("\r\n", "\n").splitlines() if line.strip()]
+    return payload_checksum(rows)
+
+
+def _ohlc_window_checksum_packet(symbol_dir: Path) -> Dict[str, str | int]:
+    checksums: Dict[str, str | int] = {}
+    seen = 0
+    missing = 0
+    aggregate_parts: List[str] = []
+    for tf in ("M5", "M15", "H1", "H4"):
+        path = symbol_dir / f"{tf}.window.csv"
+        checksum = _file_payload_checksum(path)
+        checksums[f"{tf.lower()}_window_checksum"] = checksum
+        aggregate_parts.append(f"{tf}={checksum}")
+        if checksum == "missing":
+            missing += 1
+        else:
+            seen += 1
+    checksums["ohlc_window_files_seen"] = seen
+    checksums["ohlc_window_files_missing"] = missing
+    checksums["ohlc_fast_window_checksum"] = payload_checksum(aggregate_parts)
+    return checksums
+
+
 def _read_ohlc_window(path: Path) -> List[Dict[str, int]]:
     if not path.exists():
         return []
@@ -264,22 +298,36 @@ def _range_points(rows: List[Dict[str, int]], count: int) -> float:
     return float(max(r["high_i"] for r in subset) - min(r["low_i"] for r in subset))
 
 
-def _avg_bar_range(rows: List[Dict[str, int]], count: int) -> float:
+def _true_ranges(rows: List[Dict[str, int]], count: int) -> List[float]:
     subset = rows[:count]
-    if not subset:
+    values: List[float] = []
+    for index, row in enumerate(subset):
+        high_low = max(0, row["high_i"] - row["low_i"])
+        if index + 1 < len(rows):
+            previous_close = rows[index + 1]["close_i"]
+            tr = max(high_low, abs(row["high_i"] - previous_close), abs(row["low_i"] - previous_close))
+        else:
+            tr = high_low
+        values.append(float(max(0, tr)))
+    return values
+
+
+def _avg_true_range(rows: List[Dict[str, int]], count: int) -> float:
+    values = _true_ranges(rows, count)
+    if not values:
         return 0.0
-    return sum(max(0, r["high_i"] - r["low_i"]) for r in subset) / float(len(subset))
+    return sum(values) / float(len(values))
 
 
-def _sum_bar_range(rows: List[Dict[str, int]], count: int) -> float:
-    return float(sum(max(0, r["high_i"] - r["low_i"]) for r in rows[:count]))
+def _sum_true_range(rows: List[Dict[str, int]], count: int) -> float:
+    return float(sum(_true_ranges(rows, count)))
 
 
-def _largest_bar_range(rows: List[Dict[str, int]], count: int) -> float:
-    subset = rows[:count]
-    if not subset:
+def _largest_true_range(rows: List[Dict[str, int]], count: int) -> float:
+    values = _true_ranges(rows, count)
+    if not values:
         return 0.0
-    return float(max(max(0, r["high_i"] - r["low_i"]) for r in subset))
+    return float(max(values))
 
 
 def _position_pct(rows: List[Dict[str, int]], count: int) -> float:
@@ -300,17 +348,17 @@ def _tf_metrics(rows: List[Dict[str, int]], recent: int, baseline: int) -> Dict[
     baseline_avail = min(copied, baseline)
     recent_range = _range_points(rows, recent_avail)
     baseline_range = _range_points(rows, baseline_avail)
-    recent_avg = _avg_bar_range(rows, recent_avail)
-    baseline_avg = _avg_bar_range(rows, baseline_avail)
-    expansion = recent_avg / baseline_avg if baseline_avg > 0.0 else 0.0
-    chop = _sum_bar_range(rows, baseline_avail) / baseline_range if baseline_range > 0.0 else 0.0
-    spike = _largest_bar_range(rows, baseline_avail) / baseline_avg if baseline_avg > 0.0 else 0.0
+    recent_true = _avg_true_range(rows, recent_avail)
+    baseline_true = _avg_true_range(rows, baseline_avail)
+    expansion = recent_true / baseline_true if baseline_true > 0.0 else 0.0
+    chop = _sum_true_range(rows, baseline_avail) / baseline_range if baseline_range > 0.0 else 0.0
+    spike = _largest_true_range(rows, baseline_avail) / baseline_true if baseline_true > 0.0 else 0.0
     return {
         "bars_copied": copied,
         "range_recent": recent_range,
         "range_baseline": baseline_range,
-        "avg_recent": recent_avg,
-        "avg_baseline": baseline_avg,
+        "avg_true_recent": recent_true,
+        "avg_true_baseline": baseline_true,
         "expansion_ratio": expansion,
         "chop_proxy": chop,
         "spike_ratio": spike,
@@ -334,18 +382,18 @@ def _score_availability(m5: int, m15: int, h1: int, h4: int) -> Tuple[float, str
 
 def _expansion_score(ratio: float) -> Tuple[float, str]:
     if ratio <= 0.0:
-        return 0.0, "missing_expansion"
+        return 0.0, "missing_true_range_expansion"
     if ratio < 0.55:
-        return 22.0, "compressed_dead"
+        return 22.0, "compressed_dead_true_range"
     if ratio < 0.75:
-        return 40.0, "weak_compression"
+        return 40.0, "weak_compression_true_range"
     if ratio <= 1.05:
-        return 62.0, "neutral_movement"
+        return 62.0, "neutral_true_range_movement"
     if ratio <= 1.80:
-        return 92.0, "usable_expansion"
+        return 92.0, "usable_true_range_expansion"
     if ratio <= 3.00:
-        return 72.0, "hot_expansion_review"
-    return 35.0, "violent_spike_risk"
+        return 72.0, "hot_true_range_expansion_review"
+    return 35.0, "violent_true_range_spike_risk"
 
 
 def _quote_surface_score(quote_quality: str, surface_quality: str, spread_bps: float, tick_age: float) -> Tuple[float, str]:
@@ -396,6 +444,7 @@ def _bucket_from_score(score: float) -> str:
 def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | int | bool]:
     symbol = _safe_text(row, "symbol")
     symbol_dir = fast_root / _sanitize_path_part(symbol)
+    checksums = _ohlc_window_checksum_packet(symbol_dir)
     m5 = _tf_metrics(_read_ohlc_window(symbol_dir / "M5.window.csv"), 12, 48)
     m15 = _tf_metrics(_read_ohlc_window(symbol_dir / "M15.window.csv"), 16, 64)
     h1 = _tf_metrics(_read_ohlc_window(symbol_dir / "H1.window.csv"), 24, 72)
@@ -412,7 +461,7 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
     expansion_score = sum(score for score, _reason in exp_scores) / 3.0
     expansion_reasons = ";".join(reason for _score, reason in exp_scores)
 
-    movement_presence = min(100.0, ((float(m5["range_baseline"]) > 0) * 28.0) + ((float(m15["range_baseline"]) > 0) * 32.0) + ((float(h1["range_baseline"]) > 0) * 32.0) + ((float(h4["range_baseline"]) > 0) * 8.0))
+    movement_presence = min(100.0, ((float(m5["avg_true_baseline"]) > 0) * 28.0) + ((float(m15["avg_true_baseline"]) > 0) * 32.0) + ((float(h1["avg_true_baseline"]) > 0) * 32.0) + ((float(h4["avg_true_baseline"]) > 0) * 8.0))
     agreement_values = [float(m5["expansion_ratio"]), float(m15["expansion_ratio"]), float(h1["expansion_ratio"])]
     expanding = sum(1 for x in agreement_values if x >= 1.05)
     compressed = sum(1 for x in agreement_values if 0 < x < 0.75)
@@ -431,7 +480,7 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
     movement_score = max(0.0, min(100.0, availability_score * 0.20 + movement_presence * 0.20 + expansion_score * 0.25 + agreement_score * 0.15 + cleanliness_score * 0.10 + range_position_score * 0.05 + quote_score * 0.05))
 
     rank_state = "ranked"
-    score_quality = "usable_movement_range_model"
+    score_quality = "usable_true_range_movement_range_model"
     if availability_state == "missing":
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_ohlc_fast_windows_missing"
@@ -446,7 +495,7 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
         score_quality = "not_rankable_market_not_open"
     elif spike_risk and rank_state == "ranked":
         rank_state = "ranked_degraded"
-        score_quality = "degraded_single_bar_spike_or_violent_expansion_risk"
+        score_quality = "degraded_single_bar_true_range_spike_or_violent_expansion_risk"
     elif quote_score < 45 and rank_state == "ranked":
         rank_state = "ranked_degraded"
         score_quality = "degraded_quote_surface_quality"
@@ -463,24 +512,26 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
         regime = "normal"
     h4_context = "unavailable" if int(h4["bars_copied"]) <= 0 else ("confirms" if float(h4["expansion_ratio"]) >= 1.05 else ("contradicts_short_term" if expanding >= 2 and float(h4["expansion_ratio"]) < 0.75 else "neutral"))
 
-    reasons = ["ok_L5Pass", availability_reason, expansion_reasons, quote_reason, f"regime={regime}", "source=runtime1_shared_ohlc_fast_windows", "ranking_only_no_direction_no_entry"]
+    reasons = ["ok_L5Pass", availability_reason, expansion_reasons, quote_reason, f"regime={regime}", f"model={L8_MODEL_VERSION}", f"source={L8_SOURCE_OWNER}", "ranking_only_no_direction_no_entry"]
     if spike_risk:
-        reasons.append("single_bar_spike_or_violent_expansion_risk")
+        reasons.append("single_bar_true_range_spike_or_violent_expansion_risk")
     if extreme_count > 0:
         reasons.append("range_position_extreme")
     if avg_chop > 4.0:
-        reasons.append("chop_proxy_high")
+        reasons.append("true_range_chop_proxy_high")
 
     return {
-        "symbol": symbol, "movement_score": movement_score, "movement_bucket": _bucket_from_score(movement_score), "rank_state": rank_state, "score_quality": score_quality, "movement_regime": regime,
+        "symbol": symbol, "l8_model_version": L8_MODEL_VERSION, "movement_score": movement_score, "movement_bucket": _bucket_from_score(movement_score), "rank_state": rank_state, "score_quality": score_quality, "movement_regime": regime,
         "asset_class": _safe_text(row, "asset_class"), "ranking_group": _safe_text(row, "ranking_group"), "market_state": market_state, "quote_quality": quote_quality, "surface_quality": surface_quality,
         "tick_age_seconds": tick_age, "spread_bps": spread_bps, "range_availability_score": availability_score, "movement_quality_score": movement_presence, "expansion_compression_score": expansion_score,
         "multi_timeframe_agreement_score": agreement_score, "movement_cleanliness_score": cleanliness_score, "range_position_quality_score": range_position_score, "quote_surface_quality_score": quote_score,
         "m5_bars_copied": int(m5["bars_copied"]), "m15_bars_copied": int(m15["bars_copied"]), "h1_bars_copied": int(h1["bars_copied"]), "h4_bars_copied": int(h4["bars_copied"]),
-        "m5_range_points_12": float(m5["range_recent"]), "m5_range_points_48": float(m5["range_baseline"]), "m5_expansion_ratio": float(m5["expansion_ratio"]), "m5_chop_proxy": float(m5["chop_proxy"]), "m5_spike_ratio": float(m5["spike_ratio"]), "m5_close_position_pct": float(m5["close_position_pct"]),
-        "m15_range_points_16": float(m15["range_recent"]), "m15_range_points_64": float(m15["range_baseline"]), "m15_expansion_ratio": float(m15["expansion_ratio"]), "m15_chop_proxy": float(m15["chop_proxy"]), "m15_spike_ratio": float(m15["spike_ratio"]), "m15_close_position_pct": float(m15["close_position_pct"]),
-        "h1_range_points_24": float(h1["range_recent"]), "h1_range_points_72": float(h1["range_baseline"]), "h1_expansion_ratio": float(h1["expansion_ratio"]), "h1_chop_proxy": float(h1["chop_proxy"]), "h1_spike_ratio": float(h1["spike_ratio"]), "h1_close_position_pct": float(h1["close_position_pct"]),
-        "h4_range_points_6": float(h4["range_recent"]), "h4_range_points_30": float(h4["range_baseline"]), "h4_expansion_ratio": float(h4["expansion_ratio"]), "h4_context": h4_context,
+        "ohlc_fast_window_checksum": checksums["ohlc_fast_window_checksum"], "ohlc_window_files_seen": int(checksums["ohlc_window_files_seen"]), "ohlc_window_files_missing": int(checksums["ohlc_window_files_missing"]),
+        "m5_window_checksum": checksums["m5_window_checksum"], "m15_window_checksum": checksums["m15_window_checksum"], "h1_window_checksum": checksums["h1_window_checksum"], "h4_window_checksum": checksums["h4_window_checksum"],
+        "m5_range_points_12": float(m5["range_recent"]), "m5_range_points_48": float(m5["range_baseline"]), "m5_avg_true_range_12": float(m5["avg_true_recent"]), "m5_avg_true_range_48": float(m5["avg_true_baseline"]), "m5_expansion_ratio": float(m5["expansion_ratio"]), "m5_chop_proxy": float(m5["chop_proxy"]), "m5_spike_ratio": float(m5["spike_ratio"]), "m5_close_position_pct": float(m5["close_position_pct"]),
+        "m15_range_points_16": float(m15["range_recent"]), "m15_range_points_64": float(m15["range_baseline"]), "m15_avg_true_range_16": float(m15["avg_true_recent"]), "m15_avg_true_range_64": float(m15["avg_true_baseline"]), "m15_expansion_ratio": float(m15["expansion_ratio"]), "m15_chop_proxy": float(m15["chop_proxy"]), "m15_spike_ratio": float(m15["spike_ratio"]), "m15_close_position_pct": float(m15["close_position_pct"]),
+        "h1_range_points_24": float(h1["range_recent"]), "h1_range_points_72": float(h1["range_baseline"]), "h1_avg_true_range_24": float(h1["avg_true_recent"]), "h1_avg_true_range_72": float(h1["avg_true_baseline"]), "h1_expansion_ratio": float(h1["expansion_ratio"]), "h1_chop_proxy": float(h1["chop_proxy"]), "h1_spike_ratio": float(h1["spike_ratio"]), "h1_close_position_pct": float(h1["close_position_pct"]),
+        "h4_range_points_6": float(h4["range_recent"]), "h4_range_points_30": float(h4["range_baseline"]), "h4_avg_true_range_6": float(h4["avg_true_recent"]), "h4_avg_true_range_30": float(h4["avg_true_baseline"]), "h4_expansion_ratio": float(h4["expansion_ratio"]), "h4_context": h4_context,
         "single_bar_spike_risk": spike_risk, "range_position_extreme": extreme_count > 0, "reason": _bounded_reason(";".join(reasons)), "trade_permission": "false", "selection_runtime": "false",
     }
 
@@ -500,22 +551,22 @@ def _write_ranked_csv(scored: List[Dict[str, str | float | int | bool]]) -> str:
 
 
 def _top20_text(scored: List[Dict[str, str | float | int | bool]]) -> str:
-    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Fast Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|reason"]
+    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", f"Model Version: {L8_MODEL_VERSION}", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Fast Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|ohlc_checksum|reason"]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{_bounded_reason(str(row['reason']))}")
+        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{row['ohlc_fast_window_checksum']}|{_bounded_reason(str(row['reason']))}")
     lines.append("")
     return "\n".join(lines)
 
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool]) -> str:
     symbol = str(row["symbol"])
-    lines = ["schema_name=l8_symbol_rank", "schema_version=2", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
+    lines = ["schema_name=l8_symbol_rank", "schema_version=3", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
     for key in OUTPUT_FIELDS:
         if key in {"rank_index", "symbol", "layer_id", "layer_name"}:
             continue
         if key in row:
             lines.append(f"{key}={_format_value(row[key])}")
-    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", "source_owner=Runtime_1_Shared_OHLC_Fast_Windows", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
+    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
@@ -526,14 +577,15 @@ def _manifest(summary: L8RankSummary, input_path: Path, fast_root: Path) -> str:
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=2", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"status={summary.status}", f"reason={summary.reason}",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=3", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
         f"input_csv_path={input_path}", f"shared_ohlc_fast_window_root={fast_root}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
         f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
+        f"ohlc_fast_window_payload_checksum={summary.ohlc_fast_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_ohlc_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", "source_owner=Runtime_1_Shared_OHLC_Fast_Windows", "reuse_policy=disabled_until_ohlc_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_ohlc_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_ohlc_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
@@ -583,11 +635,15 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
         atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
         return summary
 
+    summary.ohlc_fast_window_payload_checksum = payload_checksum([str(row["symbol"]) + "=" + str(row["ohlc_fast_window_checksum"]) for row in scored])
+    summary.ohlc_window_files_seen = sum(int(row["ohlc_window_files_seen"]) for row in scored)
+    summary.ohlc_window_files_missing = sum(int(row["ohlc_window_files_missing"]) for row in scored)
+
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "recomputed all rows from stable L8 symbol metadata and current Runtime 1 shared OHLC fast windows"
+    summary.reason = "recomputed true-range model rows from stable L8 symbol metadata and current Runtime 1 shared OHLC fast windows"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_partial_count = sum(1 for row in scored if row["rank_state"] == "ranked_partial")
@@ -605,6 +661,9 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     elif summary.source_l5_gate_pass > 0 and summary.source_l5_gate_pass != summary.input_count:
         summary.status = "input_degraded"
         summary.reason = f"input CSV row count {summary.input_count} differs from source l5_gate_pass {summary.source_l5_gate_pass}"
+    if summary.ohlc_window_files_missing > 0 and summary.status == "complete":
+        summary.status = "input_degraded"
+        summary.reason = f"OHLC fast-window files missing for L8 calculation; missing={summary.ohlc_window_files_missing}; seen={summary.ohlc_window_files_seen}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
