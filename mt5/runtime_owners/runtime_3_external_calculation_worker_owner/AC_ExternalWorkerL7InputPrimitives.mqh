@@ -7,6 +7,7 @@ static string AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM = "not_available";
 static string AC_L7_LAST_INPUT_UPSTREAM_KEY = "not_exported";
 static int    AC_L7_LAST_INPUT_ROWS = 0;
 static ulong  AC_L7_LAST_INPUT_SIZE = 0;
+static string AC_L7_LAST_SESSION_TIME_BASIS = "not_available";
 
 string AC_L7InputUpstreamKey()
 {
@@ -16,6 +17,33 @@ string AC_L7InputUpstreamKey()
       + "|l4_cache=" + AC_L4_CACHE_KEY
       + "|l4_refresh=" + AC_L4_REFRESH_KEY
       + "|symbols_total=" + IntegerToString(SymbolsTotal(false));
+}
+
+datetime AC_L7SessionSourceTime()
+{
+   // L7 input identity must be tied to the upstream source epoch, not to a fresh
+   // TimeCurrent() call on every publication pass. Otherwise the Gateway can rank
+   // a clean L7 snapshot while the EA immediately rewrites a different checksum.
+   string upstream_key = AC_L5UpstreamKey();
+   string needle = "scan_time=";
+   int start = StringFind(upstream_key, needle);
+   if(start >= 0)
+   {
+      start += StringLen(needle);
+      int end = StringFind(upstream_key, "|", start);
+      string raw = end >= 0 ? StringSubstr(upstream_key, start, end - start) : StringSubstr(upstream_key, start);
+      StringTrimLeft(raw);
+      StringTrimRight(raw);
+      long value = StringToInteger(raw);
+      if(value > 0)
+      {
+         AC_L7_LAST_SESSION_TIME_BASIS = "broker_server_time_of_day_from_L5_upstream_scan_time_marketwatch_caveat";
+         return (datetime)value;
+      }
+   }
+
+   AC_L7_LAST_SESSION_TIME_BASIS = "broker_server_time_of_day_from_TimeCurrent_fallback_marketwatch_caveat";
+   return TimeCurrent();
 }
 
 string AC_L7CsvSafe(string value)
@@ -68,13 +96,13 @@ string AC_L7BuildInputPrimitiveRows()
    string text = AC_L7InputCsvHeader();
    int rows = 0;
 
-   datetime server_time = TimeCurrent();
+   datetime server_time = AC_L7SessionSourceTime();
    MqlDateTime server_dt;
    TimeToStruct(server_time, server_dt);
    int server_time_of_day_seconds = (server_dt.hour * 3600) + (server_dt.min * 60) + server_dt.sec;
    string server_time_unix = IntegerToString((int)server_time);
    string server_day_of_week = IntegerToString(server_dt.day_of_week);
-   string session_time_basis = "broker_server_time_of_day_from_TimeCurrent_marketwatch_caveat";
+   string session_time_basis = AC_L7_LAST_SESSION_TIME_BASIS;
    string session_definition_source = "pending_gateway_static_profile";
 
    for(int i = 0; i < ArraySize(AC_L5_SYMBOLS); i++)
@@ -160,7 +188,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l7_session_relevance_input_primitives_manifest\r\n";
-   manifest += "schema_version=1\r\n";
+   manifest += "schema_version=2\r\n";
    manifest += "layer_id=7\r\n";
    manifest += "layer_name=Layer 7 - Session Relevance Input Primitives\r\n";
    manifest += "owner_name=Runtime 4 - Surface Scoring Owner reserved; input primitives only in current source\r\n";
@@ -174,8 +202,9 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "payload_checksum=" + payload_checksum + "\r\n";
    manifest += "csv_path=" + AC_L7SessionInputCsvPath() + "\r\n";
    manifest += "csv_precision_policy=price_10_decimals_spread_bps_6_decimals_tick_age_6_decimals\r\n";
-   manifest += "session_time_basis=broker_server_time_of_day_from_TimeCurrent_marketwatch_caveat\r\n";
+   manifest += "session_time_basis=" + AC_L7_LAST_SESSION_TIME_BASIS + "\r\n";
    manifest += "session_definition_source=pending_gateway_static_profile\r\n";
+   manifest += "input_epoch_policy=L7_uses_L5_upstream_scan_time_when_available_to_prevent_identity_churn\r\n";
    manifest += "source_truth_owner=L5_pass_set_plus_L2_market_state_plus_L3_taxonomy_plus_L4_quote_surface_packets\r\n";
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_L7_session_relevance_support_pending\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
