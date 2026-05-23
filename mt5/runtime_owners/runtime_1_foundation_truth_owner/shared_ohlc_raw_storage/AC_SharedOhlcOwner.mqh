@@ -55,7 +55,7 @@ int AC_SharedOhlcPriorityForSymbol(const string symbol)
    // Priority 3 is reserved for future candidate/ranked/selected symbols once those owners exist.
    // This owner must not infer candidate/ranking state itself.
 
-   int selected = SymbolInfoInteger(symbol, SYMBOL_SELECT);
+   bool selected = (bool)SymbolInfoInteger(symbol, SYMBOL_SELECT);
    if(selected)
       return AC_SHARED_OHLC_PRIORITY_OTHER_OPEN;
 
@@ -139,8 +139,10 @@ bool AC_SharedOhlcSeedSymbolTimeframe(const string symbol,
       return false;
    }
 
-   status.newest_closed_bar_time = closed_rates[0].time;
-   status.oldest_bar_time = closed_rates[copied - 1].time;
+   // CopyRates stores the oldest copied element at physical index 0.
+   // start_pos=1 excludes the current forming bar, so copied-1 is newest closed.
+   status.oldest_bar_time = closed_rates[0].time;
+   status.newest_closed_bar_time = closed_rates[copied - 1].time;
    string closed_csv = AC_SharedOhlcRatesToClosedCsv(symbol, frame.label, closed_rates, copied);
    AC_WriteResult closed_write = AC_WriteTextFileFastAtomic(AC_SharedOhlcClosedBarsPath(symbol, frame.label), closed_csv);
    if(!closed_write.ok)
