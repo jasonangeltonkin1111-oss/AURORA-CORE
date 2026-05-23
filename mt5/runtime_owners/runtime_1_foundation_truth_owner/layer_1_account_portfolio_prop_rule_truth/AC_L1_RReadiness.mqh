@@ -64,7 +64,7 @@ string AC_L1RReadinessMap()
    double geometry_pct = (rows_total > 0 ? ((double)rows_with_valid_risk_geometry * 100.0) / rows_total : 0.0);
 
    string text = AC_L1MapHeader("R READINESS MAP");
-   text += "Purpose:                readiness only; no R-multiple calculated here\r\n";
+   text += "Purpose:                input readiness summary for the money-risk and R diagnostic maps\r\n";
    text += "Selected Closed Rows:   " + IntegerToString(rows_total) + "\r\n";
    text += "Rows With Entry Truth:  " + IntegerToString(rows_with_entry) + " / " + IntegerToString(rows_total) + " (" + AC_L1PercentText(entry_pct) + ")\r\n";
    text += "Rows Without Entry:     " + IntegerToString(rows_without_entry) + "\r\n";
@@ -77,8 +77,9 @@ string AC_L1RReadinessMap()
    text += "Order Context Complete: " + IntegerToString(rows_with_order_context_complete) + "\r\n";
    text += "Order Context Partial:  " + IntegerToString(rows_with_order_context_partial) + "\r\n";
    text += "Order Context Missing:  " + IntegerToString(rows_with_order_context_unavailable) + "\r\n";
-   text += "Money-R Status:         unavailable_until_tick_value_contract_currency_and_SL_money_risk_are_proved\r\n";
-   text += "R-Multiple Status:      blocked_until_money_risk_source_is_proved\r\n";
+   text += "Money-R Status:         see Closed Trade Money-Risk Readiness Map\r\n";
+   text += "R-Multiple Status:      see R-Multiple Map and R By Symbol Map\r\n";
+   text += "Trade Permission:       FALSE\r\n";
    return text;
 }
 
