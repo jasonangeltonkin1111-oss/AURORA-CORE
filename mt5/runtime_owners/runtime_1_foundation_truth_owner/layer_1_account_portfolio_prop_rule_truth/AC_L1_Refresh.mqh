@@ -12,6 +12,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DataQualityLedger();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1EquityDrawdownRecoveryMap();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RecoveryDamageMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedMoneyRiskReadinessMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RMultipleMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RiskEfficiencyMapsFull();
@@ -21,6 +22,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "live_exposure_maps=enabled_account_status_symbol_and_asset\r\n";
    AC_L1_WORKBENCH_SECTION += "portfolio_concentration=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "currency_risk_maps=enabled_account_status_only\r\n";
+   AC_L1_WORKBENCH_SECTION += "recovery_damage_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "cost_tag_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "data_quality_ledger=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "equity_drawdown_map=enabled_account_status_only\r\n";
