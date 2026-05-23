@@ -65,6 +65,7 @@ class L8RankSummary:
     row_count: int = 0
     ranked_count: int = 0
     ranked_partial_count: int = 0
+    ranked_risk_review_count: int = 0
     ranked_degraded_count: int = 0
     not_rankable_quality_count: int = 0
     elite_count: int = 0
@@ -486,8 +487,8 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_priority_windows_missing"
     elif availability_state == "degraded":
-        rank_state = "ranked_degraded"
-        score_quality = "degraded_priority_windows_partial"
+        rank_state = "ranked_partial"
+        score_quality = "partial_priority_windows_not_minimum_ready"
     elif int(h4["bars_copied"]) < 30:
         rank_state = "ranked_partial"
         score_quality = "usable_core_windows_h4_context_partial"
@@ -495,11 +496,11 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_market_not_open"
     elif spike_risk and rank_state == "ranked":
-        rank_state = "ranked_degraded"
-        score_quality = "degraded_single_bar_true_range_spike_or_violent_expansion_risk"
+        rank_state = "ranked_risk_review"
+        score_quality = "risk_review_single_bar_true_range_spike_or_violent_expansion_risk"
     elif quote_score < 45 and rank_state == "ranked":
-        rank_state = "ranked_degraded"
-        score_quality = "degraded_quote_surface_quality"
+        rank_state = "ranked_risk_review"
+        score_quality = "risk_review_quote_surface_quality"
 
     if spike_risk:
         regime = "violent_spike_risk"
@@ -585,7 +586,7 @@ def _manifest(summary: L8RankSummary, input_path: Path, store_root: Path) -> str
         f"ohlc_priority_window_payload_checksum={summary.ohlc_priority_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
-        f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
+        f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_risk_review_count={summary.ranked_risk_review_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
         f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
@@ -648,6 +649,7 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_partial_count = sum(1 for row in scored if row["rank_state"] == "ranked_partial")
+    summary.ranked_risk_review_count = sum(1 for row in scored if row["rank_state"] == "ranked_risk_review")
     summary.ranked_degraded_count = sum(1 for row in scored if row["rank_state"] == "ranked_degraded")
     summary.not_rankable_quality_count = sum(1 for row in scored if row["rank_state"] == "not_rankable_quality")
     summary.elite_count = sum(1 for row in scored if row["movement_bucket"] == "elite_movement_range")
