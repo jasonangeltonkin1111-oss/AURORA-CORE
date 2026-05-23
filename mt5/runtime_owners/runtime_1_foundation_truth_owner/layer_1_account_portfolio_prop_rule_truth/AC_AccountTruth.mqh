@@ -15,6 +15,7 @@ string AC_L1ClusterKey(const AC_L1ClosedTradeRow &row);
 #include "AC_L1_RReadiness.mqh"
 #include "AC_L1_MoneyRiskReadiness.mqh"
 #include "AC_L1_RMultipleMaps.mqh"
+#include "AC_L1_RiskEfficiencyMaps.mqh"
 #include "AC_L1_LiveExposure.mqh"
 #include "AC_L1_LiveExposureMaps.mqh"
 #include "AC_L1_CostTagMaps.mqh"
@@ -77,7 +78,7 @@ string AC_Layer1BoardSection()
 
 string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
 {
-   return AC_AccountTruthStatusRow_Base(account_write) + "|portfolio_maps=enabled|portfolio_map_scope=summary_board_full_account_status|r_readiness=enabled|money_risk_readiness=enabled|r_multiple_maps=enabled|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled|equity_drawdown_map=enabled|board_layer1_compact=true";
+   return AC_AccountTruthStatusRow_Base(account_write) + "|portfolio_maps=enabled|portfolio_map_scope=summary_board_full_account_status|r_readiness=enabled|money_risk_readiness=enabled|r_multiple_maps=enabled|risk_efficiency_maps=enabled|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled|equity_drawdown_map=enabled|board_layer1_compact=true";
 }
 
 #endif
