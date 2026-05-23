@@ -29,7 +29,10 @@ string AC_ExternalWorkerSnapshotUpstreamKey()
       + "|l6_input=" + AC_L6_LAST_INPUT_UPSTREAM_KEY
       + "|l6_checksum=" + AC_L6_LAST_INPUT_PAYLOAD_CHECKSUM
       + "|l7_input=" + AC_L7_LAST_INPUT_UPSTREAM_KEY
-      + "|l7_rows=" + IntegerToString(AC_L7_LAST_INPUT_ROWS);
+      + "|l7_rows=" + IntegerToString(AC_L7_LAST_INPUT_ROWS)
+      + "|l8_input=" + AC_L8_LAST_INPUT_UPSTREAM_KEY
+      + "|l8_rows=" + IntegerToString(AC_L8_LAST_INPUT_ROWS)
+      + "|l8_checksum=" + AC_L8_LAST_INPUT_PAYLOAD_CHECKSUM;
 }
 
 string AC_ExternalWorkerPayloadChecksum(const string payload)
