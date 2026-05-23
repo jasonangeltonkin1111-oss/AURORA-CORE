@@ -13,7 +13,7 @@ This document corrects a previous architecture drift: Runtime Owner numbers and 
 Canonical source:
 
 ```text
-docs/01_LOGICAL_LAYER_BLUEPRINT.md
+blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 ```
 
 Core distinction:
@@ -260,69 +260,251 @@ DOM used as trade permission
 
 ---
 
-## 8. Dossier Output Order After Layer Owners Exist
+## 8. Future Layer Chain For Flow / Liquidity / Structure
 
-Future Dossier files should be assembled from layer/owner outputs in this order:
+Order-flow style evidence must move through the later-layer chain instead of being forced into early surface ranking.
+
+Correct chain:
 
 ```text
-1. Header / symbol identity / generated time
-2. Current status: placeholder, partial, complete, degraded, omitted
-3. Runtime 2 taxonomy / lookup lane while current skeleton exists
-4. Operator omit status
-5. Layer 1 account/broker context reference
-6. Layer 2 market open/closed truth and fundamental links where applicable
-7. Layer 3 broker specs and calculation mode/spec-validation output
-8. Layer 4 Market Watch / quote-truth output
-9. Broker metadata, advisory only
-10. Layer 22 DOM snapshot summary later, only when deliberately sampled
-11. Contradiction ledger
-12. Ranking/selection eligibility later
-13. trade_permission=false
+L8  = surface movement/range ranking from bounded OHLC primitives
+L9  = surface structure/location geometry from existing OHLC-derived high/low/open/close context
+L18 = selected raw OHLC bar pack for deep selected symbols only
+L19 = selected wick/candle geometry derived one-to-one from L18
+L20 = selected rolling tick pack using CopyTicks/CopyTicksRange for selected symbols only
+L21 = selected indicator/reference pack
+L22 = selected deep market evidence, liquidity map, tick-flow proxy, and MT5 DOM proxy
+L23 = permission/alert state; consumes proof, does not invent edge
 ```
 
-This order is a display contract only. It does not move later logical layers earlier.
+Meaning:
+
+```text
+L8/L9 may rank attention using surface primitives.
+L18-L22 gather deeper evidence only after selection.
+L22 is where order-flow proxy belongs.
+L23 is where alerts/permission are decided later, after validation.
+```
+
+No layer before L22 may claim institutional order flow, confirmed buyer/seller aggression, or hidden liquidity truth.
 
 ---
 
-## 9. Falsifiers
+## 9. L8 / L9 Boundary For Current And Future Work
 
-Hold or kill a patch if:
+Layer 8 current implementation uses M5/M15/H1 movement/range primitives and is surface ranking only.
+
+Layer 8 may use:
 
 ```text
-Dossiers become random raw dumps
-Runtime Owner numbers are confused with Logical Layer numbers
-Layer 7 is treated as complete because Runtime 7 publication exists
-fundamental links appear as trade permission
-forex symbols are forced to have stock links
-broker Sector/Industry overwrites Runtime 2 taxonomy
-calculation mode is placed outside Layer 3 without explicit blueprint revision
-heavy calculations are buried inside Dossier publication
-DOM is called fundamentals
-DOM is implemented before Layer 22 prerequisites
-DOM subscriptions are full-universe or unbounded
-OnBookEvent becomes a heavy processing path
-DOM missing state blocks normal Dossier publication
+range_5m
+range_15m
+range_60m
+range_day later only if sourced cleanly
+movement_score
+compression_score
+expansion_score
+movement_quality_score
+range_stability_score
+```
+
+Layer 9 may use:
+
+```text
+daily/session/weekly high-low-open-close context
+position_in_range_pct
+distance_to_high/low
+available_surface_room
+surface_obstacle_distance
+surface_location_score
+surface_structure_score
+```
+
+Layer 8 must not own:
+
+```text
+DOM
+tick-flow capture
+liquidity map
+candle/wick deep geometry
+setup validation
+trade permission
+```
+
+Layer 9 must not own:
+
+```text
+DOM
+tick-flow capture
+selected raw OHLC packs
+indicator packs
+liquidity map synthesis
+trade permission
+```
+
+L8 and L9 are surface attention layers. They decide what is worth inspecting, not what is worth trading.
+
+---
+
+## 10. L20 Tick-Flow Proxy Control
+
+Layer 20 is the selected rolling tick pack.
+
+It may use MQL5 tick history functions only for selected symbols, not the full broker universe.
+
+Required future fields:
+
+```text
+tick_pack_status=available|partial|unavailable|sync_pending|error
+tick_window_seconds=600
+tick_count_1m
+tick_count_5m
+tick_count_10m
+bid_change_count_10m
+ask_change_count_10m
+last_change_count_10m
+volume_change_count_10m
+spread_min_10m
+spread_max_10m
+spread_avg_10m
+spread_stddev_10m
+spread_spike_count_10m
+tick_gap_max_seconds
+tick_gap_avg_seconds
+tick_flags_observed
+```
+
+Implementation constraints:
+
+```text
+CopyTicks / CopyTicksRange only on selected symbols.
+Do not request deep multi-day tick history inside heartbeat loops.
+Cache/snapshot results so repeated calls do not starve OnTimer.
+If synchronization is pending or partial, publish partial truth instead of fake completeness.
+```
+
+Tick-flow proxy wording must remain honest:
+
+```text
+allowed: tick_flow_proxy_up|down|mixed|flat|unavailable
+allowed: quote_pressure_proxy
+forbidden: real institutional order flow confirmed
+forbidden: guaranteed market-buy/sell aggression
 ```
 
 ---
 
-## 10. Current Decision State
+## 11. L22 DOM / Liquidity Proxy Control
+
+Layer 22 owns selected deep market evidence and MT5 order-flow proxy.
+
+Required future fields:
 
 ```text
-control_doc_corrected_against_original_logical_blueprint
-Runtime7_vs_Layer7_distinction_landed
-Layer2_fundamental_link_support_direction_recorded
-Layer3_broker_specs_and_calculation_mode_direction_recorded
-Layer4_market_watch_direction_recorded
-Layer22_DOM_direction_recorded
-Dossier_content_not_yet_rich
-fundamental_links_not_yet_printed
-DOM_not_yet_sampled
-trade_permission=false
+order_flow_source=mt5_tick_proxy|mt5_dom_proxy|combined_proxy|unavailable
+dom_available_flag
+dom_subscription_status=not_attempted|subscribed|unavailable|release_failed|error
+dom_last_update_time
+dom_bid_levels_count
+dom_ask_levels_count
+dom_bid_volume_total
+dom_ask_volume_total
+dom_top_bid_volume
+dom_top_ask_volume
+dom_imbalance_ratio
+dom_depth_gap_points_bid
+dom_depth_gap_points_ask
+tick_flow_proxy_available
+tick_count_10m
+bid_change_count_10m
+ask_change_count_10m
+spread_spike_count_10m
+order_flow_confidence
 ```
 
-Decision:
+Implementation constraints:
 
 ```text
-TEST FIRST
+Subscribe only selected symbols: Global Top 10, selected evidence basket, open positions, pending orders, manual watch later.
+Keep MarketBookAdd and MarketBookRelease balanced per symbol.
+OnBookEvent must filter by symbol and do bounded work only.
+DOM snapshots may be unavailable, empty, synthetic, stale, or broker-specific.
+DOM output must include source/proxy/confidence labels.
+```
+
+Use of L22 results:
+
+```text
+Can inform execution-friction caution.
+Can inform liquidity-risk caution.
+Can support later setup-review evidence.
+Cannot override L1 prop/risk controls.
+Cannot reopen L5-blocked symbols.
+Cannot grant trade permission.
+Cannot claim exchange-wide or institutional order flow.
+```
+
+---
+
+## 12. Board / Dossier / Workbench Surface Standard For Future Flow
+
+Board surface must stay compact:
+
+```text
+LAYER 22 - DEEP MARKET EVIDENCE / LIQUIDITY
+----------------------------------------
+Status:                     Partial
+Selected Symbols:           10
+Tick Pack Ready:            8
+DOM Available:              2
+Worst Blocker:              dom_unavailable_or_tick_sync_pending
+Trade Permission:           FALSE
+```
+
+Dossier may show per-symbol selected evidence:
+
+```text
+LAYER 22 - DEEP MARKET EVIDENCE / LIQUIDITY
+----------------------------------------
+Status: Partial
+Source: MT5 tick proxy + MT5 DOM proxy where available
+Order Flow Source: mt5_tick_proxy
+DOM Status: unavailable
+Tick Flow Proxy: available
+Spread Spike Count 10m: 2
+Order Flow Confidence: low
+Boundary: proxy evidence only; no institutional order-flow claim; no trade permission
+```
+
+Workbench may show machine proof:
+
+```text
+selected_symbol_count=10
+tick_copy_status=partial
+dom_subscribe_attempted=2
+dom_subscribe_ok=1
+dom_release_ok=1
+onbookevent_filtered=true
+payload_checksum=<value>
+accepted_by_runtime3=<true|false>
+```
+
+---
+
+## 13. Research-Backed MQL5 Constraints
+
+The official MQL5 documentation constrains the design:
+
+```text
+MarketBookAdd opens Depth of Market and subscribes for DOM change notifications.
+MarketBookGet returns an MqlBookInfo array and requires Depth of Market to be opened first.
+OnBookEvent receives the symbol and subscriptions must be filtered and released correctly.
+CopyTicks returns MqlTick records, flags show what changed, and requests may trigger tick database synchronization.
+```
+
+Architectural consequence:
+
+```text
+DOM and tick-flow work must be selected-symbol, bounded, cached, and honestly degraded.
+Full-universe DOM/tick deep collection is forbidden because it breaks performance and creates fake source authority.
 ```
