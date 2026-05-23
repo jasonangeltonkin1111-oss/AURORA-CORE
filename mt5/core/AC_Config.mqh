@@ -75,10 +75,11 @@ static const int    AC_EXPERIMENTAL_TIMER_100MS = 100;
 static const int    AC_EXPERIMENTAL_TIMER_10MS = 10;
 static const int    AC_DOSSIER_SHELL_WRITE_RETRIES = 3;
 static const int    AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS = 75;
+static const int    AC_DOSSIER_UNIVERSE_PASS_BUDGET_MS = 650;
 static const int    AC_BOARD_RECENT_ACTIVITY_MAX_ROWS = 100;
 static const int    AC_BOARD_CANCELED_ACTIVITY_MAX_ROWS = 20;
 static const int    AC_DOSSIER_SYMBOL_ACTIVITY_MAX_ROWS = 30;
-static const uint   AC_TIMER_BUDGET_MS    = 250;
+static const uint   AC_TIMER_BUDGET_MS    = 900;
 static const bool   AC_USE_COMMON_FILES   = true;
 
 #endif
