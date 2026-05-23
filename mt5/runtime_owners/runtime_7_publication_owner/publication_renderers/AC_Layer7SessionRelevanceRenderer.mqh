@@ -40,6 +40,7 @@ static string AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = "not_available";
 static string AC_L7_SESSION_TIME_BASIS_RENDERED = "pending";
 static string AC_L7_SESSION_DEFINITION_SOURCE_RENDERED = "pending";
 static string AC_L7_SESSION_PROFILE_POLICY_RENDERED = "not_available";
+static long   AC_L7_LAST_REFRESH_HEARTBEAT_ID = -1;
 
 string AC_L7LayerFolder()
 {
@@ -228,6 +229,10 @@ void AC_L7ResetRenderState()
 
 void AC_L7RefreshRankedSidecar()
 {
+   if(AC_L7_LAST_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID)
+      return;
+   AC_L7_LAST_REFRESH_HEARTBEAT_ID = AC_HEARTBEAT_ID;
+
    AC_L7ResetRenderState();
 
    string input_manifest = AC_L7ReadSmallTextFile(AC_L7InputManifestPath(), 30000);
