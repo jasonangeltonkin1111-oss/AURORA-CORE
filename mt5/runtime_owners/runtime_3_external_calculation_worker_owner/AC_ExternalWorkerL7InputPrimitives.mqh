@@ -22,24 +22,12 @@ string AC_L7InputUpstreamKey()
 datetime AC_L7SessionSourceTime()
 {
    // L7 input identity must be tied to the upstream source epoch, not to a fresh
-   // TimeCurrent() call on every publication pass. Otherwise the Gateway can rank
-   // a clean L7 snapshot while the EA immediately rewrites a different checksum.
-   string upstream_key = AC_L5UpstreamKey();
-   string needle = "scan_time=";
-   int start = StringFind(upstream_key, needle);
-   if(start >= 0)
+   // TimeCurrent() call on every publication pass. L7 consumes L4 quote/surface
+   // packets, so the L4 refresh timestamp is the correct stable source epoch.
+   if(AC_L4_LAST_REFRESH_TIME > 0)
    {
-      start += StringLen(needle);
-      int end = StringFind(upstream_key, "|", start);
-      string raw = end >= 0 ? StringSubstr(upstream_key, start, end - start) : StringSubstr(upstream_key, start);
-      StringTrimLeft(raw);
-      StringTrimRight(raw);
-      long value = StringToInteger(raw);
-      if(value > 0)
-      {
-         AC_L7_LAST_SESSION_TIME_BASIS = "broker_server_time_of_day_from_L5_upstream_scan_time_marketwatch_caveat";
-         return (datetime)value;
-      }
+      AC_L7_LAST_SESSION_TIME_BASIS = "broker_server_time_of_day_from_L4_refresh_time_marketwatch_caveat";
+      return AC_L4_LAST_REFRESH_TIME;
    }
 
    AC_L7_LAST_SESSION_TIME_BASIS = "broker_server_time_of_day_from_TimeCurrent_fallback_marketwatch_caveat";
@@ -188,7 +176,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l7_session_relevance_input_primitives_manifest\r\n";
-   manifest += "schema_version=2\r\n";
+   manifest += "schema_version=3\r\n";
    manifest += "layer_id=7\r\n";
    manifest += "layer_name=Layer 7 - Session Relevance Input Primitives\r\n";
    manifest += "owner_name=Runtime 4 - Surface Scoring Owner reserved; input primitives only in current source\r\n";
@@ -204,7 +192,7 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "csv_precision_policy=price_10_decimals_spread_bps_6_decimals_tick_age_6_decimals\r\n";
    manifest += "session_time_basis=" + AC_L7_LAST_SESSION_TIME_BASIS + "\r\n";
    manifest += "session_definition_source=pending_gateway_static_profile\r\n";
-   manifest += "input_epoch_policy=L7_uses_L5_upstream_scan_time_when_available_to_prevent_identity_churn\r\n";
+   manifest += "input_epoch_policy=L7_uses_L4_refresh_time_when_available_to_prevent_identity_churn\r\n";
    manifest += "source_truth_owner=L5_pass_set_plus_L2_market_state_plus_L3_taxonomy_plus_L4_quote_surface_packets\r\n";
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_L7_session_relevance_support_pending\r\n";
    manifest += "authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
