@@ -1,0 +1,131 @@
+#ifndef AC_L1_ASSET_RISK_HEAT_MAPS_MQH
+#define AC_L1_ASSET_RISK_HEAT_MAPS_MQH
+
+string AC_L1AssetRiskHeatLine(const string asset,
+                              const int rows,
+                              const double net,
+                              const double risk,
+                              const double net_r,
+                              const double best_r,
+                              const double worst_r,
+                              const int unit_breaches,
+                              const int hard_breaches,
+                              const int extreme_breaches)
+{
+   double net_over_risk = (risk > 0.0 ? net / risk : 0.0);
+   double avg_r = (rows > 0 ? net_r / rows : 0.0);
+   return AC_L1PadRight(asset, 13)
+      + AC_L1PadLeft(IntegerToString(rows), 6)
+      + AC_L1PadLeft(AC_L1MoneyText(net), 11)
+      + AC_L1PadLeft(AC_L1MoneyText(risk), 11)
+      + AC_L1PadLeft(DoubleToString(net_over_risk, 2), 10)
+      + AC_L1PadLeft(DoubleToString(net_r, 2), 10)
+      + AC_L1PadLeft(DoubleToString(avg_r, 2), 9)
+      + AC_L1PadLeft(DoubleToString(best_r, 2), 9)
+      + AC_L1PadLeft(DoubleToString(worst_r, 2), 9)
+      + AC_L1PadLeft(IntegerToString(unit_breaches), 7)
+      + AC_L1PadLeft(IntegerToString(hard_breaches), 7)
+      + AC_L1PadLeft(IntegerToString(extreme_breaches), 8)
+      + "\r\n";
+}
+
+string AC_L1AssetRiskHeatMapV2()
+{
+   int rows[6];
+   double net[6];
+   double risk[6];
+   double net_r[6];
+   double best_r[6];
+   double worst_r[6];
+   int unit_breaches[6];
+   int hard_breaches[6];
+   int extreme_breaches[6];
+
+   for(int i = 0; i < 6; i++)
+   {
+      rows[i] = 0;
+      net[i] = 0.0;
+      risk[i] = 0.0;
+      net_r[i] = 0.0;
+      best_r[i] = -999999.0;
+      worst_r[i] = 999999.0;
+      unit_breaches[i] = 0;
+      hard_breaches[i] = 0;
+      extreme_breaches[i] = 0;
+   }
+
+   int total_rows = ArraySize(AC_L1_CLOSED);
+   int risk_rows = 0;
+   double unit_risk_money = AC_L1_EQUITY * 0.001;
+   double hard_risk_money = AC_L1_EQUITY * 0.002;
+   double extreme_risk_money = AC_L1_EQUITY * 0.005;
+
+   for(int r = 0; r < total_rows; r++)
+   {
+      int asset = AC_L1AssetClassIndex(AC_L1_CLOSED[r].symbol);
+      if(asset < 0 || asset > 5) asset = 5;
+      double row_risk = 0.0;
+      if(!AC_L1EstimateClosedInitialRiskMoney(AC_L1_CLOSED[r], row_risk))
+         continue;
+
+      double row_r = AC_L1ClosedTradeRMultiple(AC_L1_CLOSED[r], row_risk);
+      rows[asset]++;
+      risk_rows++;
+      net[asset] += AC_L1_CLOSED[r].net_result;
+      risk[asset] += row_risk;
+      net_r[asset] += row_r;
+      if(row_r > best_r[asset]) best_r[asset] = row_r;
+      if(row_r < worst_r[asset]) worst_r[asset] = row_r;
+      if(row_risk > unit_risk_money) unit_breaches[asset]++;
+      if(row_risk > hard_risk_money) hard_breaches[asset]++;
+      if(row_risk > extreme_risk_money) extreme_breaches[asset]++;
+   }
+
+   string worst_asset = "none";
+   double worst_net_over_risk = 0.0;
+   bool first_worst = true;
+   for(int a = 0; a < 6; a++)
+   {
+      if(rows[a] <= 0) continue;
+      double nor = (risk[a] > 0.0 ? net[a] / risk[a] : 0.0);
+      if(first_worst || nor < worst_net_over_risk)
+      {
+         first_worst = false;
+         worst_net_over_risk = nor;
+         worst_asset = AC_L1AssetClassName(a);
+      }
+   }
+
+   string text = AC_L1MapHeader("ASSET RISK HEAT MAP V2");
+   text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
+   text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
+   text += "Policy Basis:           Jason numeric policy: 0.10% unit, 0.20% hard, 0.50% extreme\r\n";
+   text += "Selected Closed Rows:   " + IntegerToString(total_rows) + "\r\n";
+   text += "Risk Eligible Rows:     " + IntegerToString(risk_rows) + " / " + IntegerToString(total_rows) + "\r\n";
+   text += "Worst Asset Net/Risk:   " + worst_asset + " " + DoubleToString(worst_net_over_risk, 2) + "\r\n";
+   text += AC_L1PadRight("Asset", 13)
+      + AC_L1PadLeft("Rows", 6)
+      + AC_L1PadLeft("Net", 11)
+      + AC_L1PadLeft("Risk", 11)
+      + AC_L1PadLeft("Net/Risk", 10)
+      + AC_L1PadLeft("Net R", 10)
+      + AC_L1PadLeft("Avg R", 9)
+      + AC_L1PadLeft("Best R", 9)
+      + AC_L1PadLeft("Worst R", 9)
+      + AC_L1PadLeft("Unit", 7)
+      + AC_L1PadLeft("Hard", 7)
+      + AC_L1PadLeft("Extreme", 8)
+      + "\r\n";
+
+   for(int i = 0; i < 6; i++)
+   {
+      double br = (rows[i] > 0 ? best_r[i] : 0.0);
+      double wr = (rows[i] > 0 ? worst_r[i] : 0.0);
+      text += AC_L1AssetRiskHeatLine(AC_L1AssetClassName(i), rows[i], net[i], risk[i], net_r[i], br, wr, unit_breaches[i], hard_breaches[i], extreme_breaches[i]);
+   }
+
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
+#endif
