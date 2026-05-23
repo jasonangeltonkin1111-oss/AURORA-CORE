@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from logging import Formatter, LogRecord, getLogger
+from logging import Formatter, LogRecord
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, Iterable, Mapping
@@ -154,9 +154,11 @@ def gateway_record_event(
     signature repeats, it is skipped to avoid per-heartbeat log spam. It never
     raises into the daemon path; logging failure must not break Gateway calculation.
     """
-    _publish_surface_overseer_best_effort(root)
     log_dir = root / "Workbench" / "Gateway" / "Logs"
-    return gateway_record_event_to_log_dir(log_dir, event_name, fields, signature_fields=signature_fields, force=force)
+    written = gateway_record_event_to_log_dir(log_dir, event_name, fields, signature_fields=signature_fields, force=force)
+    if written or force:
+        _publish_surface_overseer_best_effort(root)
+    return written
 
 
 def gateway_record_exception(root: Path, event_name: str, exc: BaseException, fields: Mapping[str, object] | None = None) -> bool:
