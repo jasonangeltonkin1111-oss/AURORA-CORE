@@ -7,6 +7,9 @@ from typing import Dict, Iterable, Mapping
 import logging
 import time
 
+from aurora_worker_io import WorkerPaths
+from aurora_worker_surface_overseer import publish_surface_overseer_status
+
 RECORDER_SCHEMA_VERSION = "1"
 RECORDER_LOG_NAME = "gateway_addendum.log"
 RECORDER_MAX_BYTES = 262_144
@@ -81,6 +84,19 @@ def _write_rotating_line(log_dir: Path, line: str) -> bool:
                 pass
 
 
+def _publish_surface_overseer_best_effort(root: Path) -> None:
+    """Publish layer-agnostic Gateway sidecar proof without owning EA surfaces.
+
+    Gateway must not rewrite Market Board, Workbench, Dossiers, selection, or
+    trade permission. The overseer status is Gateway-owned evidence only. EA/MT5
+    remains the publication authority that decides when to consume or render it.
+    """
+    try:
+        publish_surface_overseer_status(WorkerPaths.from_root(root))
+    except Exception:
+        pass
+
+
 def gateway_record_event_to_log_dir(
     log_dir: Path,
     event_name: str,
@@ -138,6 +154,7 @@ def gateway_record_event(
     signature repeats, it is skipped to avoid per-heartbeat log spam. It never
     raises into the daemon path; logging failure must not break Gateway calculation.
     """
+    _publish_surface_overseer_best_effort(root)
     log_dir = root / "Workbench" / "Gateway" / "Logs"
     return gateway_record_event_to_log_dir(log_dir, event_name, fields, signature_fields=signature_fields, force=force)
 
