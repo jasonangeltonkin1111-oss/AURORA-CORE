@@ -6,9 +6,12 @@ from typing import Dict, List, Tuple
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, unix_time, utc_stamp
 
-SURFACE_OVERSEER_SCHEMA_VERSION = "1"
+SURFACE_OVERSEER_SCHEMA_VERSION = "2"
 SURFACE_OVERSEER_STATUS_NAME = "surface_overseer_status.txt"
 EXPECTED_AUTHORITY = "calculation_support_only"
+
+RANKED_MANIFEST_NAME = "ranked_symbols.manifest"
+INPUT_MANIFEST_SUFFIXES = ("_input_primitives.manifest", "input_primitives.manifest")
 
 
 @dataclass
@@ -18,6 +21,8 @@ class LayerSurfaceProof:
     layer_id: str = "not_available"
     layer_name: str = "not_available"
     job_type: str = "not_available"
+    manifest_role: str = "unknown"
+    lifecycle_state: str = "missing_manifest"
     status: str = "missing_manifest"
     reason: str = "manifest missing"
     input_count: int = 0
@@ -32,6 +37,7 @@ class LayerSurfaceProof:
     selection_runtime: str = "not_available"
     ranking_runtime: str = "not_available"
     accepted: bool = False
+    pending: bool = False
     mismatch: bool = True
     mismatch_reason: str = "manifest missing"
 
@@ -42,6 +48,7 @@ class SurfaceOverseerSummary:
     reason: str
     layer_count: int = 0
     accepted_layer_count: int = 0
+    pending_layer_count: int = 0
     degraded_layer_count: int = 0
     mismatch_count: int = 0
     newest_manifest_unix: int = 0
@@ -66,20 +73,38 @@ def _safe_text(value: object, default: str = "not_available") -> str:
     return text if text else default
 
 
+def _is_input_manifest(path: Path) -> bool:
+    name = path.name.lower()
+    return any(name.endswith(suffix) for suffix in INPUT_MANIFEST_SUFFIXES) or name.endswith("_input.manifest")
+
+
 def _manifest_candidates(layer_dir: Path) -> List[Path]:
-    preferred = [layer_dir / "ranked_symbols.manifest"]
-    if preferred[0].exists():
-        return preferred
+    ranked = layer_dir / RANKED_MANIFEST_NAME
+    if ranked.exists():
+        return [ranked]
+    input_manifests = sorted(p for p in layer_dir.glob("*.manifest") if p.is_file() and _is_input_manifest(p))
+    if input_manifests:
+        return input_manifests[:1]
     manifests = sorted(p for p in layer_dir.glob("*.manifest") if p.is_file())
     return manifests[:1]
 
 
+def _manifest_role(path: Path) -> str:
+    if path.name == RANKED_MANIFEST_NAME:
+        return "ranked_output"
+    if _is_input_manifest(path):
+        return "input_primitives"
+    return "generic_manifest"
+
+
 def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfaceProof:
-    proof = LayerSurfaceProof(folder_name=layer_dir.name, manifest_path=str(manifest_path))
+    role = _manifest_role(manifest_path)
+    proof = LayerSurfaceProof(folder_name=layer_dir.name, manifest_path=str(manifest_path), manifest_role=role)
     try:
         data: Dict[str, str] = read_kv(manifest_path)
     except Exception as exc:
         proof.status = "unreadable_manifest"
+        proof.lifecycle_state = "degraded"
         proof.reason = f"manifest unreadable: {type(exc).__name__}: {_safe_text(exc)}"
         proof.mismatch_reason = proof.reason
         return proof
@@ -89,43 +114,59 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
     proof.job_type = data.get("job_type", "not_available")
     proof.status = data.get("status", "not_available")
     proof.reason = data.get("reason", "not_available")
-    proof.input_count = _safe_int(data.get("input_count"), _safe_int(data.get("source_input_manifest_row_count")))
-    proof.row_count = _safe_int(data.get("row_count"))
+    proof.input_count = _safe_int(data.get("input_count"), _safe_int(data.get("source_input_manifest_row_count"), _safe_int(data.get("row_count"), _safe_int(data.get("l5_gate_pass")))))
+    proof.row_count = _safe_int(data.get("row_count"), proof.input_count if role == "input_primitives" else 0)
     proof.symbol_rank_files_written = _safe_int(data.get("symbol_rank_files_written"))
     proof.symbol_rank_files_actual = _safe_int(data.get("symbol_rank_files_actual"))
     proof.payload_checksum = data.get("payload_checksum", "not_available")
-    proof.input_payload_checksum = data.get("input_payload_checksum", data.get("source_input_payload_checksum", "not_available"))
+    proof.input_payload_checksum = data.get("input_payload_checksum", data.get("source_input_payload_checksum", proof.payload_checksum))
     proof.input_generation_stable = data.get("input_generation_stable", "not_available")
-    proof.authority = data.get("authority", "not_available")
-    proof.trade_permission = data.get("trade_permission", "not_available")
-    proof.selection_runtime = data.get("selection_runtime", "not_available")
-    proof.ranking_runtime = data.get("ranking_runtime", "not_available")
+    proof.authority = data.get("authority", EXPECTED_AUTHORITY if role == "input_primitives" else "not_available")
+    proof.trade_permission = data.get("trade_permission", "false" if role == "input_primitives" else "not_available")
+    proof.selection_runtime = data.get("selection_runtime", "false" if role == "input_primitives" else "not_available")
+    proof.ranking_runtime = data.get("ranking_runtime", "false" if role == "input_primitives" else "not_available")
 
-    status_ok = proof.status in {"complete", "input_degraded"}
+    failures: List[str] = []
     authority_ok = proof.authority == EXPECTED_AUTHORITY
     trade_ok = proof.trade_permission == "false"
     selection_ok = proof.selection_runtime in {"false", "not_available"}
-    row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
-    files_ok = True
-    if "symbol_rank_files_written" in data or "symbol_rank_files_actual" in data:
-        files_ok = proof.symbol_rank_files_written == proof.row_count and proof.symbol_rank_files_actual == proof.row_count
-
-    failures: List[str] = []
-    if not status_ok:
-        failures.append(f"status={proof.status}")
     if not authority_ok:
         failures.append(f"authority={proof.authority}")
     if not trade_ok:
         failures.append(f"trade_permission={proof.trade_permission}")
     if not selection_ok:
         failures.append(f"selection_runtime={proof.selection_runtime}")
+
+    if role == "input_primitives":
+        row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
+        if not row_ok:
+            failures.append(f"input_row_count={proof.row_count}/input_count={proof.input_count}")
+        proof.pending = len(failures) == 0
+        proof.accepted = False
+        proof.mismatch = len(failures) > 0
+        proof.lifecycle_state = "input_ready_rank_pending" if proof.pending else "input_degraded"
+        proof.mismatch_reason = "none_input_waiting_for_ranked_output" if proof.pending else ";".join(failures)
+        if proof.reason == "not_available":
+            proof.reason = "input primitives manifest present; ranked output manifest not published yet"
+        return proof
+
+    status_ok = proof.status in {"complete", "input_degraded"}
+    row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
+    files_ok = True
+    if "symbol_rank_files_written" in data or "symbol_rank_files_actual" in data:
+        files_ok = proof.symbol_rank_files_written == proof.row_count and proof.symbol_rank_files_actual == proof.row_count
+
+    if not status_ok:
+        failures.append(f"status={proof.status}")
     if not row_ok:
         failures.append(f"row_count={proof.row_count}/input_count={proof.input_count}")
     if not files_ok:
         failures.append(f"symbol_rank_files_written={proof.symbol_rank_files_written}/actual={proof.symbol_rank_files_actual}/row_count={proof.row_count}")
 
     proof.accepted = len(failures) == 0
+    proof.pending = False
     proof.mismatch = not proof.accepted
+    proof.lifecycle_state = "ranked_output_accepted" if proof.accepted else "ranked_output_degraded"
     proof.mismatch_reason = "none" if proof.accepted else ";".join(failures)
     return proof
 
@@ -139,7 +180,7 @@ def _discover_layer_proofs(paths: WorkerPaths) -> Tuple[List[LayerSurfaceProof],
     for layer_dir in sorted(p for p in layers_root.iterdir() if p.is_dir()):
         candidates = _manifest_candidates(layer_dir)
         if not candidates:
-            proofs.append(LayerSurfaceProof(folder_name=layer_dir.name, manifest_path=str(layer_dir / "ranked_symbols.manifest")))
+            proofs.append(LayerSurfaceProof(folder_name=layer_dir.name, manifest_path=str(layer_dir / RANKED_MANIFEST_NAME)))
             continue
         manifest = candidates[0]
         try:
@@ -158,10 +199,12 @@ def _status_text(summary: SurfaceOverseerSummary, proofs: List[LayerSurfaceProof
         f"reason={summary.reason}",
         f"layer_count={summary.layer_count}",
         f"accepted_layer_count={summary.accepted_layer_count}",
+        f"pending_layer_count={summary.pending_layer_count}",
         f"degraded_layer_count={summary.degraded_layer_count}",
         f"mismatch_count={summary.mismatch_count}",
         f"newest_manifest_unix={summary.newest_manifest_unix}",
         "scope=layer_agnostic_gateway_sidecar_manifest_observer",
+        "lifecycle_policy=ranked_outputs_must_align_input_manifests_input_only_layers_are_pending_not_mismatch",
         "surface_write_authority=false",
         "ea_publication_authority=true",
         "authority=calculation_support_only",
@@ -170,14 +213,17 @@ def _status_text(summary: SurfaceOverseerSummary, proofs: List[LayerSurfaceProof
         f"generated_utc={utc_stamp()}",
         f"generated_unix={unix_time()}",
         "",
-        "folder_name|layer_id|status|accepted|mismatch|row_count|input_count|symbol_rank_files_actual|payload_checksum|mismatch_reason|manifest_path",
+        "folder_name|layer_id|manifest_role|lifecycle_state|status|accepted|pending|mismatch|row_count|input_count|symbol_rank_files_actual|payload_checksum|mismatch_reason|manifest_path",
     ]
     for proof in proofs:
         lines.append("|".join([
             _safe_text(proof.folder_name),
             _safe_text(proof.layer_id),
+            _safe_text(proof.manifest_role),
+            _safe_text(proof.lifecycle_state),
             _safe_text(proof.status),
             "true" if proof.accepted else "false",
+            "true" if proof.pending else "false",
             "true" if proof.mismatch else "false",
             str(proof.row_count),
             str(proof.input_count),
@@ -201,14 +247,18 @@ def publish_surface_overseer_status(paths: WorkerPaths) -> SurfaceOverseerSummar
     proofs, newest = _discover_layer_proofs(paths)
     layer_count = len(proofs)
     accepted = sum(1 for p in proofs if p.accepted)
+    pending = sum(1 for p in proofs if p.pending)
     mismatch_count = sum(1 for p in proofs if p.mismatch)
-    degraded = layer_count - accepted
+    degraded = layer_count - accepted - pending
     if layer_count <= 0:
         status = "no_layers_found"
         reason = "Outbox/Layers contains no layer directories"
-    elif mismatch_count == 0:
+    elif mismatch_count == 0 and pending == 0:
         status = "accepted"
-        reason = "all discovered Gateway layer manifests are internally aligned"
+        reason = "all discovered Gateway layer ranked manifests are internally aligned"
+    elif mismatch_count == 0:
+        status = "accepted_with_pending_layers"
+        reason = f"{pending} layer manifest(s) are input-ready but awaiting ranked output"
     else:
         status = "mismatch_detected"
         reason = f"{mismatch_count} layer manifest(s) are degraded or internally mismatched"
@@ -217,6 +267,7 @@ def publish_surface_overseer_status(paths: WorkerPaths) -> SurfaceOverseerSummar
         reason=reason,
         layer_count=layer_count,
         accepted_layer_count=accepted,
+        pending_layer_count=pending,
         degraded_layer_count=degraded,
         mismatch_count=mismatch_count,
         newest_manifest_unix=newest,
