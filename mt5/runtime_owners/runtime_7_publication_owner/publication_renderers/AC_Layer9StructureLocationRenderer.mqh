@@ -2,7 +2,7 @@
 #define AC_LAYER9_STRUCTURE_LOCATION_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 9 Structure / Location Geometry.
-// Reads only L9 sidecar proof files and Runtime 1 OHLC priority-window file existence.
+// Reads only L9 sidecar proof files, accepted surface epoch proof, and Runtime 1 OHLC priority-window file existence.
 // It must not calculate structure/location, rank, call CopyRates, select, permit, or execute.
 
 static string AC_L9_STATUS = "Pending ranked sidecar";
@@ -10,7 +10,23 @@ static string AC_L9_TRUST_STATE = "Geometry Pending";
 static string AC_L9_VALIDATION_STATUS = "Pending";
 static string AC_L9_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
 static string AC_L9_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
+static string AC_L9_DISPLAY_STATE = "PENDING_RANK";
 static bool   AC_L9_RANKED_ACCEPTED = false;
+static bool   AC_L9_STATUS_OK_RENDERED = false;
+static bool   AC_L9_COUNTS_OK_RENDERED = false;
+static bool   AC_L9_FILES_OK_RENDERED = false;
+static bool   AC_L9_AUTHORITY_OK_RENDERED = false;
+static bool   AC_L9_PERMISSION_OK_RENDERED = false;
+static bool   AC_L9_IDENTITY_OK_RENDERED = false;
+static bool   AC_L9_LATEST_INPUT_PENDING_NEXT_RANK = false;
+static bool   AC_L9_ACCEPTED_EPOCH_PRESENT = false;
+static bool   AC_L9_ACCEPTED_EPOCH_VALID = false;
+static long   AC_L9_ACCEPTED_EPOCH_AGE_SECONDS = -1;
+static long   AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX = 0;
+static string AC_L9_ACCEPTED_EPOCH_STATUS = "not_available";
+static string AC_L9_ACCEPTED_EPOCH_L9_STATUS = "not_available";
+static string AC_L9_ACCEPTED_EPOCH_SOURCE_SNAPSHOT_ID = "not_available";
+static string AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = "not_available";
 static int    AC_L9_INPUT_ROWS_RENDERED = 0;
 static int    AC_L9_RANKED_ROWS_RENDERED = 0;
 static int    AC_L9_RANKED_COUNT_RENDERED = 0;
@@ -44,6 +60,7 @@ string AC_L9RankedManifestPath(){ return AC_L9LayerFolder() + "\\ranked_symbols.
 string AC_L9RankedCsvPath(){ return AC_L9LayerFolder() + "\\ranked_symbols.csv"; }
 string AC_L9RankedTop20Path(){ return AC_L9LayerFolder() + "\\ranked_symbols_top20.txt"; }
 string AC_L9SymbolRankFolderPath(){ return AC_L9LayerFolder() + "\\SymbolRanks"; }
+string AC_L9AcceptedEpochManifestPath(){ return AC_ExternalWorkerOutboxFolder() + "\\surface_accepted_epoch.manifest"; }
 
 string AC_L9ReadSmallTextFile(const string path, const int max_chars = 30000)
 {
@@ -92,6 +109,15 @@ int AC_L9KvInt(const string text, const string key, const int fallback = 0)
    string value = AC_L9KvValue(text, key, "");
    if(value == "") return fallback;
    return (int)StringToInteger(value);
+}
+
+long AC_L9KvLong3(const string text, const string key1, const string key2, const string key3, const long fallback = 0)
+{
+   string value = AC_L9KvValue(text, key1, "");
+   if(value == "" && key2 != "") value = AC_L9KvValue(text, key2, "");
+   if(value == "" && key3 != "") value = AC_L9KvValue(text, key3, "");
+   if(value == "") return fallback;
+   return (long)StringToInteger(value);
 }
 
 string AC_L9BoolText(const bool value){ return value ? "TRUE" : "FALSE"; }
@@ -215,16 +241,56 @@ void AC_L9RefreshOhlcWindowReadiness()
    }
 }
 
+void AC_L9RefreshAcceptedEpoch()
+{
+   AC_L9_ACCEPTED_EPOCH_PRESENT = false;
+   AC_L9_ACCEPTED_EPOCH_VALID = false;
+   AC_L9_ACCEPTED_EPOCH_AGE_SECONDS = -1;
+   AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX = 0;
+   AC_L9_ACCEPTED_EPOCH_STATUS = "not_available";
+   AC_L9_ACCEPTED_EPOCH_L9_STATUS = "not_available";
+   AC_L9_ACCEPTED_EPOCH_SOURCE_SNAPSHOT_ID = "not_available";
+
+   string epoch_text = AC_L9ReadSmallTextFile(AC_L9AcceptedEpochManifestPath(), 30000);
+   if(epoch_text == "") return;
+
+   AC_L9_ACCEPTED_EPOCH_PRESENT = true;
+   AC_L9_ACCEPTED_EPOCH_STATUS = AC_L9KvValue(epoch_text, "status", AC_L9KvValue(epoch_text, "epoch_status", "not_available"));
+   AC_L9_ACCEPTED_EPOCH_L9_STATUS = AC_L9KvValue(epoch_text, "l9_status", "not_available");
+   AC_L9_ACCEPTED_EPOCH_SOURCE_SNAPSHOT_ID = AC_L9KvValue(epoch_text, "source_snapshot_id", "not_available");
+   long accepted_unix = AC_L9KvLong3(epoch_text, "accepted_unix", "accepted_epoch_unix", "generated_unix", 0);
+   AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX = AC_L9KvLong3(epoch_text, "valid_until_unix", "accepted_epoch_valid_until_unix", "epoch_valid_until_unix", 0);
+   long now_unix = (long)TimeGMT();
+   if(accepted_unix > 0) AC_L9_ACCEPTED_EPOCH_AGE_SECONDS = now_unix - accepted_unix;
+
+   bool epoch_status_ok = (AC_L9_ACCEPTED_EPOCH_STATUS == "complete" || AC_L9_ACCEPTED_EPOCH_STATUS == "accepted" || AC_L9_ACCEPTED_EPOCH_STATUS == "all_complete");
+   bool l9_status_ok = (AC_L9_ACCEPTED_EPOCH_L9_STATUS == "complete" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "accepted" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "Ranked sidecar accepted");
+   bool ttl_ok = (AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX > 0 && now_unix <= AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX);
+   AC_L9_ACCEPTED_EPOCH_VALID = epoch_status_ok && l9_status_ok && ttl_ok;
+}
+
 void AC_L9RefreshRankedSidecar()
 {
    AC_L9RefreshOhlcWindowReadiness();
+   AC_L9RefreshAcceptedEpoch();
    AC_L9_RANKED_ACCEPTED = false;
+   AC_L9_STATUS_OK_RENDERED = false;
+   AC_L9_COUNTS_OK_RENDERED = false;
+   AC_L9_FILES_OK_RENDERED = false;
+   AC_L9_AUTHORITY_OK_RENDERED = false;
+   AC_L9_PERMISSION_OK_RENDERED = false;
+   AC_L9_IDENTITY_OK_RENDERED = false;
+   AC_L9_LATEST_INPUT_PENDING_NEXT_RANK = false;
+   AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = "not_available";
+   AC_L9_TOP20_FIRST_LINE = "not_available";
+
    string input_manifest = AC_L9ReadSmallTextFile(AC_L9InputManifestPath(), 30000);
    if(input_manifest == "")
    {
       AC_L9_STATUS = "Input pending";
       AC_L9_TRUST_STATE = "Geometry Pending";
       AC_L9_VALIDATION_STATUS = "Missing";
+      AC_L9_DISPLAY_STATE = "PENDING_RANK";
       AC_L9_VALIDATION_REASON = "l9_input_primitives.manifest missing or unreadable";
       AC_L9_MAIN_BLOCKER = AC_L9_VALIDATION_REASON;
       return;
@@ -239,6 +305,7 @@ void AC_L9RefreshRankedSidecar()
       AC_L9_STATUS = "Input export ready - ranked sidecar pending";
       AC_L9_TRUST_STATE = "Geometry Pending";
       AC_L9_VALIDATION_STATUS = "InputAccepted";
+      AC_L9_DISPLAY_STATE = "PENDING_RANK";
       AC_L9_VALIDATION_REASON = "input manifest accepted; ranked_symbols.manifest missing or unreadable";
       AC_L9_MAIN_BLOCKER = "ranked_symbols.manifest has not been built or accepted yet";
       return;
@@ -263,31 +330,71 @@ void AC_L9RefreshRankedSidecar()
    AC_L9_SYMBOL_RANK_FILES_ACTUAL_RENDERED = AC_L9KvInt(ranked_manifest, "symbol_rank_files_actual", 0);
    AC_L9_SYMBOL_RANK_FILE_COUNT_OK_RENDERED = AC_L9KvValue(ranked_manifest, "symbol_rank_file_count_ok", "false");
    AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED = AC_L9KvValue(ranked_manifest, "ranked_payload_checksum", "not_available");
+   AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = AC_L9KvValue(ranked_manifest, "input_payload_checksum", "not_available");
 
-   bool status_ok = (ranked_status == "complete" || ranked_status == "empty_input");
-   bool counts_ok = (AC_L9_INPUT_ROWS_RENDERED == AC_L9_RANKED_ROWS_RENDERED && AC_L9_RANKED_ROWS_RENDERED >= 0);
-   bool files_ok = FileIsExist(AC_L9RankedCsvPath(), AC_CommonFlag())
+   AC_L9_STATUS_OK_RENDERED = (ranked_status == "complete" || ranked_status == "empty_input");
+   AC_L9_COUNTS_OK_RENDERED = (AC_L9_INPUT_ROWS_RENDERED == AC_L9_RANKED_ROWS_RENDERED && AC_L9_RANKED_ROWS_RENDERED >= 0);
+   AC_L9_FILES_OK_RENDERED = FileIsExist(AC_L9RankedCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L9RankedTop20Path(), AC_CommonFlag())
       && AC_L9_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true";
+   AC_L9_AUTHORITY_OK_RENDERED = (AC_L9KvValue(ranked_manifest, "authority", "not_available") == "calculation_support_only");
+   AC_L9_PERMISSION_OK_RENDERED = (AC_L9KvValue(ranked_manifest, "trade_permission", "not_available") == "false"
+      && AC_L9KvValue(ranked_manifest, "selection_runtime", "not_available") == "false"
+      && AC_L9KvValue(ranked_manifest, "entry_signal", "not_available") == "false");
+   AC_L9_IDENTITY_OK_RENDERED = (AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED != "not_available"
+      && AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED != "not_available"
+      && AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED == AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED);
+   AC_L9_LATEST_INPUT_PENDING_NEXT_RANK = !AC_L9_IDENTITY_OK_RENDERED;
+   AC_L9_TOP20_FIRST_LINE = AC_L9PrettyTop20Line(AC_L9FirstTop20Symbol(AC_L9ReadSmallTextFile(AC_L9RankedTop20Path(), 16000)));
 
-   if(status_ok && counts_ok && files_ok)
+   bool hard_ok = AC_L9_STATUS_OK_RENDERED && AC_L9_COUNTS_OK_RENDERED && AC_L9_FILES_OK_RENDERED && AC_L9_AUTHORITY_OK_RENDERED && AC_L9_PERMISSION_OK_RENDERED;
+
+   if(hard_ok && AC_L9_IDENTITY_OK_RENDERED)
    {
       AC_L9_RANKED_ACCEPTED = true;
       AC_L9_STATUS = "Ranked sidecar accepted";
       AC_L9_TRUST_STATE = "Geometry Ready";
       AC_L9_VALIDATION_STATUS = "Accepted";
-      AC_L9_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L9 input proof and permission boundaries";
+      AC_L9_DISPLAY_STATE = "ACCEPTED_CURRENT";
+      AC_L9_VALIDATION_REASON = "ranked manifest identity/counts/files/authority/permission all match current L9 input";
       AC_L9_MAIN_BLOCKER = "none";
-      AC_L9_TOP20_FIRST_LINE = AC_L9PrettyTop20Line(AC_L9FirstTop20Symbol(AC_L9ReadSmallTextFile(AC_L9RankedTop20Path(), 16000)));
+      return;
+   }
+
+   if(hard_ok && !AC_L9_IDENTITY_OK_RENDERED && AC_L9_ACCEPTED_EPOCH_VALID)
+   {
+      AC_L9_RANKED_ACCEPTED = true;
+      AC_L9_STATUS = "Accepted held - recalculation pending";
+      AC_L9_TRUST_STATE = "Geometry Ready Held";
+      AC_L9_VALIDATION_STATUS = "AcceptedHeldRecalcPending";
+      AC_L9_DISPLAY_STATE = "ACCEPTED_HELD_RECALC_PENDING";
+      AC_L9_VALIDATION_REASON = "ranked sidecar belongs to last accepted epoch; newer L9 input checksum is pending next Gateway rank";
+      AC_L9_MAIN_BLOCKER = "none_current_accepted_epoch_held_until_recalculation_finishes";
+      return;
+   }
+
+   if(hard_ok && !AC_L9_IDENTITY_OK_RENDERED && AC_L9_ACCEPTED_EPOCH_PRESENT && !AC_L9_ACCEPTED_EPOCH_VALID)
+   {
+      AC_L9_STATUS = "Accepted epoch expired - rank stale";
+      AC_L9_TRUST_STATE = "Geometry Expired";
+      AC_L9_VALIDATION_STATUS = "ExpiredStale";
+      AC_L9_DISPLAY_STATE = "EXPIRED_STALE";
+      AC_L9_VALIDATION_REASON = "identity mismatch and accepted epoch is missing/expired; waiting for fresh L9 rank";
+      AC_L9_MAIN_BLOCKER = AC_L9_VALIDATION_REASON;
       return;
    }
 
    AC_L9_STATUS = "Ranked sidecar degraded";
    AC_L9_TRUST_STATE = "Geometry Degraded";
    AC_L9_VALIDATION_STATUS = "Degraded";
-   AC_L9_VALIDATION_REASON = "status_ok=" + (status_ok ? "true" : "false")
-      + ";counts_ok=" + (counts_ok ? "true" : "false")
-      + ";files_ok=" + (files_ok ? "true" : "false");
+   AC_L9_DISPLAY_STATE = "DEGRADED_BROKEN";
+   AC_L9_VALIDATION_REASON = "status_ok=" + (AC_L9_STATUS_OK_RENDERED ? "true" : "false")
+      + ";counts_ok=" + (AC_L9_COUNTS_OK_RENDERED ? "true" : "false")
+      + ";files_ok=" + (AC_L9_FILES_OK_RENDERED ? "true" : "false")
+      + ";authority_ok=" + (AC_L9_AUTHORITY_OK_RENDERED ? "true" : "false")
+      + ";permission_ok=" + (AC_L9_PERMISSION_OK_RENDERED ? "true" : "false")
+      + ";identity_ok=" + (AC_L9_IDENTITY_OK_RENDERED ? "true" : "false")
+      + ";accepted_epoch_valid=" + (AC_L9_ACCEPTED_EPOCH_VALID ? "true" : "false");
    AC_L9_MAIN_BLOCKER = AC_L9_VALIDATION_REASON;
 }
 
@@ -298,11 +405,18 @@ string AC_Layer9BoardSection()
    text += "\r\nLAYER 9 - STRUCTURE / LOCATION GEOMETRY\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L9_STATUS + "\r\n";
+   text += "Display State:              " + AC_L9_DISPLAY_STATE + "\r\n";
    text += "Trust:                      " + AC_L9_TRUST_STATE + "\r\n";
    text += "Validation:                 " + AC_L9_VALIDATION_STATUS + "\r\n";
    text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Required:           TRUE\r\n";
    text += "Gateway Result Accepted:    " + AC_L9BoolText(AC_L9_RANKED_ACCEPTED) + "\r\n";
+   text += "Accepted Epoch Present:     " + AC_L9BoolText(AC_L9_ACCEPTED_EPOCH_PRESENT) + "\r\n";
+   text += "Accepted Epoch Valid:       " + AC_L9BoolText(AC_L9_ACCEPTED_EPOCH_VALID) + "\r\n";
+   text += "Accepted Epoch Age Seconds: " + IntegerToString((int)AC_L9_ACCEPTED_EPOCH_AGE_SECONDS) + "\r\n";
+   text += "Latest Input Pending Rank:  " + AC_L9BoolText(AC_L9_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
+   text += "Identity OK:                " + AC_L9BoolText(AC_L9_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "Counts/Files/Auth/Perm OK:  " + AC_L9BoolText(AC_L9_COUNTS_OK_RENDERED) + " / " + AC_L9BoolText(AC_L9_FILES_OK_RENDERED) + " / " + AC_L9BoolText(AC_L9_AUTHORITY_OK_RENDERED) + " / " + AC_L9BoolText(AC_L9_PERMISSION_OK_RENDERED) + "\r\n";
    text += "Input Source:               Runtime 1 OHLC Priority Windows + Layer 5 pass set\r\n";
    text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "M15/H1/H4/D1 Ready:         " + IntegerToString(AC_L9_OHLC_M15_READY_RENDERED) + " / " + IntegerToString(AC_L9_OHLC_H1_READY_RENDERED) + " / " + IntegerToString(AC_L9_OHLC_H4_READY_RENDERED) + " / " + IntegerToString(AC_L9_OHLC_D1_READY_RENDERED) + "\r\n";
@@ -320,7 +434,6 @@ string AC_Layer9BoardSection()
    text += "Compression At Boundary:    " + IntegerToString(AC_L9_COMPRESSION_COUNT_RENDERED) + "\r\n";
    text += "Top Ranked:                 " + AC_L9_TOP20_FIRST_LINE + "\r\n";
    text += "Geometry Policy:            watchlist_only_no_direction_no_entry_no_selection_no_execution\r\n";
-   text += "Ranked CSV:                 Outbox\\Layers\\Layer_9_Structure_Location_Geometry\\ranked_symbols.csv\r\n";
    text += "Main Blocker:               " + AC_L9_MAIN_BLOCKER + "\r\n";
    text += "Gateway Job:                L9_STRUCTURE_LOCATION_GEOMETRY_V1\r\n";
    text += "Ranking Runtime:            " + AC_L9BoolText(AC_L9_RANKED_ACCEPTED) + "\r\n";
@@ -336,9 +449,12 @@ string AC_Layer9DossierSection(const string symbol)
    text += "\r\nLAYER 9 - STRUCTURE / LOCATION GEOMETRY\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L9_STATUS + "\r\n";
+   text += "Display State: " + AC_L9_DISPLAY_STATE + "\r\n";
    text += "Owner: Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Result Accepted: " + AC_L9BoolText(AC_L9_RANKED_ACCEPTED) + "\r\n";
    text += "Validation: " + AC_L9_VALIDATION_STATUS + "\r\n";
+   text += "Latest Input Pending Next Rank: " + AC_L9BoolText(AC_L9_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
+   text += "Accepted Epoch Valid: " + AC_L9BoolText(AC_L9_ACCEPTED_EPOCH_VALID) + "\r\n";
    text += "M15/H1/H4/D1 Windows: " + (AC_L9FastWindowAvailable(symbol,"M15") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"H1") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"H4") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"D1") ? "available" : "pending") + "\r\n";
 
    if(!AC_L9_RANKED_ACCEPTED)
@@ -395,10 +511,24 @@ string AC_Layer9WorkbenchSection()
    text += "owner_name=Runtime 4 - Surface Scoring Owner\r\n";
    text += "layer_name=Layer 9 - Structure / Location Geometry\r\n";
    text += "status=" + AC_L9_STATUS + "\r\n";
+   text += "display_state=" + AC_L9_DISPLAY_STATE + "\r\n";
    text += "trust_state=" + AC_L9_TRUST_STATE + "\r\n";
    text += "validation_status=" + AC_L9_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L9_VALIDATION_REASON + "\r\n";
-   text += "gateway_required=true\r\n";
+   text += "accepted_epoch_present=" + AC_L9BoolKv(AC_L9_ACCEPTED_EPOCH_PRESENT) + "\r\n";
+   text += "accepted_epoch_valid=" + AC_L9BoolKv(AC_L9_ACCEPTED_EPOCH_VALID) + "\r\n";
+   text += "accepted_epoch_age_seconds=" + IntegerToString((int)AC_L9_ACCEPTED_EPOCH_AGE_SECONDS) + "\r\n";
+   text += "accepted_epoch_valid_until_unix=" + IntegerToString((int)AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX) + "\r\n";
+   text += "accepted_epoch_l9_status=" + AC_L9_ACCEPTED_EPOCH_L9_STATUS + "\r\n";
+   text += "accepted_epoch_source_snapshot_id=" + AC_L9_ACCEPTED_EPOCH_SOURCE_SNAPSHOT_ID + "\r\n";
+   text += "latest_input_pending_next_rank=" + AC_L9BoolKv(AC_L9_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
+   text += "latest_input_checksum=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "ranked_source_input_checksum=" + AC_L9_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED + "\r\n";
+   text += "identity_ok=" + AC_L9BoolKv(AC_L9_IDENTITY_OK_RENDERED) + "\r\n";
+   text += "counts_ok=" + AC_L9BoolKv(AC_L9_COUNTS_OK_RENDERED) + "\r\n";
+   text += "files_ok=" + AC_L9BoolKv(AC_L9_FILES_OK_RENDERED) + "\r\n";
+   text += "authority_ok=" + AC_L9BoolKv(AC_L9_AUTHORITY_OK_RENDERED) + "\r\n";
+   text += "permission_ok=" + AC_L9BoolKv(AC_L9_PERMISSION_OK_RENDERED) + "\r\n";
    text += "gateway_result_accepted=" + AC_L9BoolKv(AC_L9_RANKED_ACCEPTED) + "\r\n";
    text += "job_type=L9_STRUCTURE_LOCATION_GEOMETRY_V1\r\n";
    text += "current_l5_pass_symbols=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
