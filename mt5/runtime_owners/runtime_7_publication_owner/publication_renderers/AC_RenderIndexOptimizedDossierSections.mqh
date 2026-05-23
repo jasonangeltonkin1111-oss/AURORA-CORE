@@ -67,7 +67,6 @@ string AC_RILayerBlockedSection(const string layer_title, const string owner, co
 
 string AC_Layer6DossierSection_RenderIndex(const string symbol)
 {
-   AC_RIEnsureL6DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_status = "not_available";
    string l5_reason = "symbol not found in Layer 5 gate packet";
@@ -79,6 +78,7 @@ string AC_Layer6DossierSection_RenderIndex(const string symbol)
    if(l5_status != "pass")
       return AC_RILayerBlockedSection("LAYER 6 - COST / FRICTION RANKING", AC_RUNTIME4_OWNER, l5_status, l5_reason, "Friction Score", "Friction Bucket", "Layer 5 pass set + Layer 3/4 packets + MT5 cost primitives", "Cost Policy: ranking only; no selection, permission, or execution");
 
+   AC_RIEnsureL6DossierRefresh();
    AC_RenderIndexRow row;
    bool index_hit = (AC_L6_RANKED_ACCEPTED && AC_RenderIndexLookup(6, symbol, row));
    if(!index_hit)
@@ -118,7 +118,6 @@ string AC_Layer6DossierSection_RenderIndex(const string symbol)
 
 string AC_Layer7DossierSection_RenderIndex(const string symbol)
 {
-   AC_RIEnsureL7DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -126,6 +125,7 @@ string AC_Layer7DossierSection_RenderIndex(const string symbol)
    if(l5_gate_status != "pass")
       return AC_RILayerBlockedSection("LAYER 7 - SESSION RELEVANCE RANKING", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Session Score", "Session Bucket", "Layer 5 pass set + Layer 2/3/4 packets", "Session Policy: off-session caution only; not a trade-time recommendation");
 
+   AC_RIEnsureL7DossierRefresh();
    AC_RenderIndexRow row;
    bool index_hit = (AC_L7_RANKED_ACCEPTED && AC_RenderIndexLookup(7, symbol, row));
    if(!index_hit)
@@ -164,7 +164,6 @@ string AC_Layer7DossierSection_RenderIndex(const string symbol)
 
 string AC_Layer8DossierSection_RenderIndex(const string symbol)
 {
-   AC_RIEnsureL8DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -172,6 +171,7 @@ string AC_Layer8DossierSection_RenderIndex(const string symbol)
    if(l5_gate_status != "pass")
       return AC_RILayerBlockedSection("LAYER 8 - MOVEMENT / RANGE RANKING", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Movement Score", "Movement Bucket", "Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set", "Movement Policy: ranking only; no direction, entry, selection, permission, or execution");
 
+   AC_RIEnsureL8DossierRefresh();
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
    bool index_hit = (AC_L8_RANKED_ACCEPTED && AC_RenderIndexLookup(8, symbol, row));
@@ -217,7 +217,6 @@ string AC_Layer8DossierSection_RenderIndex(const string symbol)
 
 string AC_Layer9DossierSection_RenderIndex(const string symbol)
 {
-   AC_RIEnsureL9DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -225,6 +224,7 @@ string AC_Layer9DossierSection_RenderIndex(const string symbol)
    if(l5_gate_status != "pass")
       return AC_RILayerBlockedSection("LAYER 9 - STRUCTURE / LOCATION GEOMETRY", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Structure Watchlist Score", "Structure Bucket", "Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set", "Structure Policy: watchlist only; no direction, entry, selection, permission, or execution");
 
+   AC_RIEnsureL9DossierRefresh();
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
    bool index_hit = (AC_L9_RANKED_ACCEPTED && AC_RenderIndexLookup(9, symbol, row));
