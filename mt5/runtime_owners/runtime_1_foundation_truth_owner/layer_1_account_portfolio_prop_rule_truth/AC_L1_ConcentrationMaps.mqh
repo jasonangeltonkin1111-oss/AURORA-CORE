@@ -9,9 +9,16 @@ string AC_L1ConcentrationLevel(const double share_pct)
    return "diversified enough for sample";
 }
 
+int AC_L1HourOfDatetime(const datetime t)
+{
+   MqlDateTime parts;
+   TimeToStruct(t, parts);
+   return parts.hour;
+}
+
 string AC_L1ConcentrationTimeWindow(const datetime t)
 {
-   int h = TimeHour(t);
+   int h = AC_L1HourOfDatetime(t);
    if(h < 6) return "00-06";
    if(h < 10) return "06-10";
    if(h < 14) return "10-14";
@@ -125,63 +132,38 @@ string AC_L1PortfolioConcentrationMap()
          sell_net += AC_L1_CLOSED[r].net_result;
       }
 
-      string tw = AC_L1ConcentrationTimeWindow(AC_L1_CLOSED[r].close_time);
-      int ti = 4;
-      if(tw == "00-06") ti = 0;
-      else if(tw == "06-10") ti = 1;
-      else if(tw == "10-14") ti = 2;
-      else if(tw == "14-18") ti = 3;
-      time_rows[ti]++;
-      time_net[ti] += AC_L1_CLOSED[r].net_result;
+      string window = AC_L1ConcentrationTimeWindow(AC_L1_CLOSED[r].close_time);
+      int wi = 4;
+      if(window == "00-06") wi = 0;
+      else if(window == "06-10") wi = 1;
+      else if(window == "10-14") wi = 2;
+      else if(window == "14-18") wi = 3;
+      time_rows[wi]++;
+      time_net[wi] += AC_L1_CLOSED[r].net_result;
 
-      string hb = AC_L1ConcentrationHoldBucket(AC_L1_CLOSED[r].entry_time, AC_L1_CLOSED[r].close_time);
+      string hold = AC_L1ConcentrationHoldBucket(AC_L1_CLOSED[r].entry_time, AC_L1_CLOSED[r].close_time);
       int hi = 4;
-      if(hb == "0-5m") hi = 0;
-      else if(hb == "5-30m") hi = 1;
-      else if(hb == "30m-2h") hi = 2;
-      else if(hb == "2h-1d") hi = 3;
+      if(hold == "0-5m") hi = 0;
+      else if(hold == "5-30m") hi = 1;
+      else if(hold == "30m-2h") hi = 2;
+      else if(hold == "2h-1d") hi = 3;
       hold_rows[hi]++;
       hold_net[hi] += AC_L1_CLOSED[r].net_result;
    }
 
-   int top_direction_rows = (buy_rows >= sell_rows ? buy_rows : sell_rows);
-   double top_direction_net = (buy_rows >= sell_rows ? buy_net : sell_net);
-   string top_direction = (buy_rows >= sell_rows ? "buy" : "sell");
+   double top_symbol_share = (total_rows > 0 ? (100.0 * top_symbol_rows / total_rows) : 0.0);
+   double top_asset_share = (total_rows > 0 ? (100.0 * top_asset_rows / total_rows) : 0.0);
+   double buy_share = (total_rows > 0 ? (100.0 * buy_rows / total_rows) : 0.0);
+   double sell_share = (total_rows > 0 ? (100.0 * sell_rows / total_rows) : 0.0);
 
-   int top_time_i = 0;
-   int top_hold_i = 0;
-   for(int i = 1; i < 5; i++)
-   {
-      if(time_rows[i] > time_rows[top_time_i]) top_time_i = i;
-      if(hold_rows[i] > hold_rows[top_hold_i]) top_hold_i = i;
-   }
-   string time_name[5] = {"00-06", "06-10", "10-14", "14-18", "18-24"};
-   string hold_name[5] = {"0-5m", "5-30m", "30m-2h", "2h-1d", "1d+"};
-
-   double top_symbol_share = (total_rows > 0 ? ((double)top_symbol_rows * 100.0) / total_rows : 0.0);
-   double top_asset_share = (total_rows > 0 ? ((double)top_asset_rows * 100.0) / total_rows : 0.0);
-   double top_direction_share = (total_rows > 0 ? ((double)top_direction_rows * 100.0) / total_rows : 0.0);
-   double top_time_share = (total_rows > 0 ? ((double)time_rows[top_time_i] * 100.0) / total_rows : 0.0);
-   double top_hold_share = (total_rows > 0 ? ((double)hold_rows[top_hold_i] * 100.0) / total_rows : 0.0);
-
-   double max_share = top_symbol_share;
-   string max_basis = "symbol";
-   if(top_asset_share > max_share){ max_share = top_asset_share; max_basis = "asset"; }
-   if(top_direction_share > max_share){ max_share = top_direction_share; max_basis = "direction"; }
-   if(top_time_share > max_share){ max_share = top_time_share; max_basis = "time window"; }
-   if(top_hold_share > max_share){ max_share = top_hold_share; max_basis = "holding time"; }
-
-   string text = AC_L1MapHeader("PORTFOLIO CONCENTRATION MAP");
-   text += "Scope:                  selected closed history only\r\n";
-   text += "Purpose:                show where sample exposure is clustered by count, not edge proof\r\n";
-   text += "Selected Closed Rows:   " + IntegerToString(total_rows) + "\r\n";
-   text += "Top Symbol Share:       " + top_symbol + " " + IntegerToString(top_symbol_rows) + " rows (" + AC_L1PercentText(top_symbol_share) + ") | Net " + AC_L1MoneyText(top_symbol_net) + "\r\n";
-   text += "Top Asset Share:        " + top_asset + " " + IntegerToString(top_asset_rows) + " rows (" + AC_L1PercentText(top_asset_share) + ") | Net " + AC_L1MoneyText(top_asset_net) + "\r\n";
-   text += "Top Direction Share:    " + top_direction + " " + IntegerToString(top_direction_rows) + " rows (" + AC_L1PercentText(top_direction_share) + ") | Net " + AC_L1MoneyText(top_direction_net) + "\r\n";
-   text += "Top Time Window Share:  " + time_name[top_time_i] + " " + IntegerToString(time_rows[top_time_i]) + " rows (" + AC_L1PercentText(top_time_share) + ") | Net " + AC_L1MoneyText(time_net[top_time_i]) + "\r\n";
-   text += "Top Hold Window Share:  " + hold_name[top_hold_i] + " " + IntegerToString(hold_rows[top_hold_i]) + " rows (" + AC_L1PercentText(top_hold_share) + ") | Net " + AC_L1MoneyText(hold_net[top_hold_i]) + "\r\n";
-   text += "Concentration Peak:     " + max_basis + " " + AC_L1PercentText(max_share) + " - " + AC_L1ConcentrationLevel(max_share) + "\r\n";
-   text += "Trade Permission:       FALSE\r\n";
+   string text = "";
+   text += "Portfolio Concentration Map\r\n";
+   text += "Top Symbol: " + top_symbol + " | Rows: " + IntegerToString(top_symbol_rows) + " | Share: " + AC_PercentText(top_symbol_rows, total_rows) + " | Net: " + AC_MoneyText(top_symbol_net) + " | Level: " + AC_L1ConcentrationLevel(top_symbol_share) + "\r\n";
+   text += "Top Asset Class: " + top_asset + " | Rows: " + IntegerToString(top_asset_rows) + " | Share: " + AC_PercentText(top_asset_rows, total_rows) + " | Net: " + AC_MoneyText(top_asset_net) + " | Level: " + AC_L1ConcentrationLevel(top_asset_share) + "\r\n";
+   text += "Direction Mix: Buy " + IntegerToString(buy_rows) + " (" + DoubleToString(buy_share, 1) + "%) Net " + AC_MoneyText(buy_net) + " | Sell " + IntegerToString(sell_rows) + " (" + DoubleToString(sell_share, 1) + "%) Net " + AC_MoneyText(sell_net) + "\r\n";
+   text += "Time Window Rows: 00-06=" + IntegerToString(time_rows[0]) + " | 06-10=" + IntegerToString(time_rows[1]) + " | 10-14=" + IntegerToString(time_rows[2]) + " | 14-18=" + IntegerToString(time_rows[3]) + " | 18-24=" + IntegerToString(time_rows[4]) + "\r\n";
+   text += "Hold Buckets: 0-5m=" + IntegerToString(hold_rows[0]) + " | 5-30m=" + IntegerToString(hold_rows[1]) + " | 30m-2h=" + IntegerToString(hold_rows[2]) + " | 2h-1d=" + IntegerToString(hold_rows[3]) + " | 1d+=" + IntegerToString(hold_rows[4]) + "\r\n";
+   text += "Concentration Policy: concentration is diagnostic only; it does not grant trade permission.\r\n";
    return text;
 }
 
