@@ -197,6 +197,18 @@ void AC_L0CacheLayer7Proof()
    AC_L0_CACHED_L7_ACCEPTED = AC_L7_RANKED_ACCEPTED;
 }
 
+void AC_L0RefreshDossierSectionDependencies()
+{
+   // Dossier shell text renders L2/L3/L4/L5/L6/L7 sections.
+   // Refresh these packets before any symbol file is written so cached proof and physical Dossier content cannot split-brain.
+   AC_BuildLayer2Texts();
+   AC_BuildLayer3Texts();
+   AC_BuildLayer4Texts();
+   AC_BuildLayer5Texts();
+   AC_RefreshLayer6RankedSidecar();
+   AC_L0CacheLayer7Proof();
+}
+
 AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 {
    AC_Layer0InitStatus(status);
@@ -209,6 +221,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    status.marketwatch_symbols_total = marketwatch_total;
    status.batch_start_index = 0;
    status.batch_end_index = total - 1;
+   AC_L0RefreshDossierSectionDependencies();
    bool all_ok = true;
    int attempted = 0;
    int written = 0;
@@ -283,13 +296,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0_CACHED_L6_CHECKSUM = AC_L6_MANIFEST_PAYLOAD_CHECKSUM;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
-   AC_BuildLayer2Texts();
-   AC_BuildLayer3Texts();
-   AC_BuildLayer4Texts();
-   AC_BuildLayer5Texts();
-   AC_RefreshLayer6RankedSidecar();
-   AC_L0CacheLayer7Proof();
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_sequential_symbol_by_symbol_with_l2_l3_l4_l5_l6_l7_ranked_sidecar_sections");
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_pre_refreshed_l2_l3_l4_l5_l6_l7_sections");
    return AC_L0_CACHED_RESULT;
 }
 
