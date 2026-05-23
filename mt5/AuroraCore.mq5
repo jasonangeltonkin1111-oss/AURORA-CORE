@@ -31,7 +31,7 @@ string AC_LAST_BOARD_TEXT = "";
 string AC_LAST_RUNTIME_STATUS_TEXT = "";
 string AC_LAST_WORKBENCH_STATUS_TEXT = "";
 string AC_LAST_ACCOUNT_STATUS_TEXT = "";
-string AC_LAST_WORKBENCH_L7_SYNC_KEY = "";
+string AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = "";
 
 void AC_AppendReason(const string reason)
 {
@@ -149,6 +149,31 @@ string AC_L7SurfaceSyncKeyFromRenderedState()
       + "|ranked_checksum=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED;
 }
 
+string AC_L8SurfaceSyncKeyFromRenderedState()
+{
+   return AC_L8_STATUS
+      + "|validation=" + AC_L8_VALIDATION_STATUS
+      + "|accepted=" + AC_L8BoolKv(AC_L8_RANKED_ACCEPTED)
+      + "|input_rows=" + IntegerToString(AC_L8_INPUT_ROWS_RENDERED)
+      + "|l5_pass=" + IntegerToString(AC_L8_EXPORT_L5_PASS_RENDERED)
+      + "|ranked_rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED)
+      + "|counts=" + AC_L8BoolKv(AC_L8_GENERATION_COUNTS_OK_RENDERED)
+      + "|identity=" + AC_L8BoolKv(AC_L8_GENERATION_IDENTITY_OK_RENDERED)
+      + "|symbol_files=" + IntegerToString(AC_L8_SYMBOL_RANK_FILES_ACTUAL_RENDERED)
+      + "|ohlc_min=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED)
+      + "|m5=" + IntegerToString(AC_L8_OHLC_M5_READY_RENDERED)
+      + "|m15=" + IntegerToString(AC_L8_OHLC_M15_READY_RENDERED)
+      + "|h1=" + IntegerToString(AC_L8_OHLC_H1_READY_RENDERED)
+      + "|h4=" + IntegerToString(AC_L8_OHLC_H4_READY_RENDERED)
+      + "|input_checksum=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|ranked_checksum=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED;
+}
+
+string AC_SurfaceSyncKeyFromRenderedState()
+{
+   return "L7{" + AC_L7SurfaceSyncKeyFromRenderedState() + "}|L8{" + AC_L8SurfaceSyncKeyFromRenderedState() + "}";
+}
+
 AC_WriteResult AC_PublishMarketBoardOnly()
 {
    AC_SNAPSHOT.terminal_connected = TerminalInfoInteger(TERMINAL_CONNECTED) ? "true" : "false";
@@ -164,13 +189,13 @@ AC_WriteResult AC_PublishMarketBoardOnly()
    string board_text = AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS);
    AC_WriteResult board_write = AC_WriteTextFileIfChanged(AC_MarketBoardPath(), board_text, AC_LAST_BOARD_TEXT, false);
 
-   string l7_sync_key = AC_L7SurfaceSyncKeyFromRenderedState();
-   if(l7_sync_key != AC_LAST_WORKBENCH_L7_SYNC_KEY)
+   string surface_sync_key = AC_SurfaceSyncKeyFromRenderedState();
+   if(surface_sync_key != AC_LAST_WORKBENCH_SURFACE_SYNC_KEY)
    {
-      AC_WriteResult synthetic_account_write = AC_MakeSyntheticWriteResult(AC_AccountStatusPath(), true, "unchanged_no_write", (ulong)StringLen(AC_LAST_ACCOUNT_STATUS_TEXT), "board_tick_l7_surface_sync_no_account_status_write");
+      AC_WriteResult synthetic_account_write = AC_MakeSyntheticWriteResult(AC_AccountStatusPath(), true, "unchanged_no_write", (ulong)StringLen(AC_LAST_ACCOUNT_STATUS_TEXT), "board_tick_surface_sync_no_account_status_write");
       AC_WriteResult workbench_sync_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(synthetic_account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, false);
       if(workbench_sync_write.ok)
-         AC_LAST_WORKBENCH_L7_SYNC_KEY = l7_sync_key;
+         AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = surface_sync_key;
    }
 
    return board_write;
@@ -250,7 +275,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_WriteResult runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, force_publication);
    AC_WriteResult status_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, force_publication);
    if(status_write.ok)
-      AC_LAST_WORKBENCH_L7_SYNC_KEY = AC_L7SurfaceSyncKeyFromRenderedState();
+      AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = AC_SurfaceSyncKeyFromRenderedState();
    AC_AddMicroLog("write_primary_surfaces_if_changed", phase_start, (board_write.ok && account_write.ok && runtime_write.ok && status_write.ok) ? "complete" : "degraded");
 
    string manifest = "";
@@ -373,7 +398,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, force_publication);
    status_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, force_publication);
    if(status_write.ok)
-      AC_LAST_WORKBENCH_L7_SYNC_KEY = AC_L7SurfaceSyncKeyFromRenderedState();
+      AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = AC_SurfaceSyncKeyFromRenderedState();
    AC_ApplyLateWriteStatus("Market Board Final Status", board_write);
    AC_ApplyLateWriteStatus("Runtime Status Final Status", runtime_write);
    AC_ApplyLateWriteStatus("Workbench Status Final Status", status_write);
@@ -415,7 +440,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_WriteResult final_runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, false);
    AC_WriteResult final_workbench_write = AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), AC_BuildWorkbenchStatusText(account_write, AC_L0_STATUS), AC_LAST_WORKBENCH_STATUS_TEXT, false);
    if(final_workbench_write.ok)
-      AC_LAST_WORKBENCH_L7_SYNC_KEY = AC_L7SurfaceSyncKeyFromRenderedState();
+      AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = AC_SurfaceSyncKeyFromRenderedState();
    AC_ApplyLateWriteStatus("Market Board Final Truth", final_board_write);
    AC_ApplyLateWriteStatus("Runtime Status Final Truth", final_runtime_write);
    AC_ApplyLateWriteStatus("Workbench Status Final Truth", final_workbench_write);
