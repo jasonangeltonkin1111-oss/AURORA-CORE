@@ -4,7 +4,10 @@ $ErrorActionPreference = "Continue"
 # This is an intentional recovery test: it stops the daemon task and kills AuroraWorker once,
 # then waits for the registered watchdog lane to restart the daemon.
 # It does not rebuild, reinstall, modify source, repair files, or touch EA/MT5.
+# Expected worker version is derived from aurora_worker.py, not hardcoded.
 
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WorkerSource = Join-Path $ScriptDir "aurora_worker.py"
 $Root = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files\Aurora Core"
 $GatewayRoot = Join-Path $Root "Gateway"
 $RuntimeDir = Join-Path $GatewayRoot "AuroraWorker"
@@ -12,7 +15,6 @@ $RuntimeExe = Join-Path $RuntimeDir "AuroraWorker.exe"
 $SharedStatus = Join-Path $GatewayRoot "Status\shared_worker_status.txt"
 $DaemonTask = "AuroraWorker_Global"
 $WatchdogTask = "AuroraWorker_Global_Watchdog"
-$ExpectedWorkerVersion = "0.6.6_l7_session_relevance_sidecar"
 $MaxWaitSeconds = 150
 
 function Read-KvFile($Path) {
@@ -32,6 +34,13 @@ function Field($Map, $Key, $Default = "missing") {
 function PassFail($Name, $Ok, $Detail) {
     if ($Ok) { Write-Host "PASS|$Name|$Detail" -ForegroundColor Green }
     else { Write-Host "FAIL|$Name|$Detail" -ForegroundColor Red }
+}
+
+function Get-SourceWorkerVersion($Path) {
+    if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return "missing_source" }
+    $m = Select-String -LiteralPath $Path -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $m) { return "version_not_found" }
+    return $m.Matches[0].Groups[1].Value
 }
 
 function Show-TaskAction($TaskName) {
@@ -55,19 +64,23 @@ function Show-TaskAction($TaskName) {
     return $true
 }
 
+$ExpectedWorkerVersion = Get-SourceWorkerVersion $WorkerSource
+
 Write-Host "=== Aurora Gateway Watchdog Recovery Proof ==="
 Write-Host "mode=intentional_daemon_kill_recovery_test"
 Write-Host "root=$Root"
 Write-Host "runtime_exe=$RuntimeExe"
+Write-Host "expected_worker_version=$ExpectedWorkerVersion"
 Write-Host "max_wait_seconds=$MaxWaitSeconds"
 
+PassFail "expected_worker_version_valid" ($ExpectedWorkerVersion -ne "missing_source" -and $ExpectedWorkerVersion -ne "version_not_found") $ExpectedWorkerVersion
 PassFail "runtime_exe_present" (Test-Path -LiteralPath $RuntimeExe -PathType Leaf) $RuntimeExe
 $daemonOk = Show-TaskAction $DaemonTask
 $watchdogOk = Show-TaskAction $WatchdogTask
 
-if (!(Test-Path -LiteralPath $RuntimeExe -PathType Leaf) -or !$daemonOk -or !$watchdogOk) {
+if (!(Test-Path -LiteralPath $RuntimeExe -PathType Leaf) -or !$daemonOk -or !$watchdogOk -or $ExpectedWorkerVersion -eq "missing_source" -or $ExpectedWorkerVersion -eq "version_not_found") {
     Write-Host "DECISION=HOLD" -ForegroundColor Red
-    Write-Host "REASON=Runtime EXE or scheduled tasks are missing. Rebuild/install/register before recovery proof."
+    Write-Host "REASON=Runtime EXE, source version, or scheduled tasks are missing. Rebuild/install/register before recovery proof."
     exit 1
 }
 
