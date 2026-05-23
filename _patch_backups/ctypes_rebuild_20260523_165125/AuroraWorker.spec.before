@@ -1,14 +1,12 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
+
 
 a = Analysis(
     ['aurora_worker_entrypoint.py'],
     pathex=[],
-    binaries=[
-        (r'C:\Users\Jason\AppData\Local\Programs\Python\Python312\DLLs\_ctypes.pyd', '.'),
-        (r'C:\Users\Jason\AppData\Local\Programs\Python\Python312\DLLs\libffi-8.dll', '.'),
-    ],
+    binaries=[],
     datas=[],
-    hiddenimports=['_ctypes', 'ctypes', 'ctypes.util'],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

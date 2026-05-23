@@ -302,7 +302,7 @@ void AC_L7RefreshRankedSidecar()
    AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED = ranked_payload_checksum;
    AC_L7_SESSION_PROFILE_POLICY_RENDERED = AC_L7KvValue(ranked_manifest, "session_profile_policy", "not_available");
 
-   bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass);
+   bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass && input_rows == AC_L5_GATE_PASS);
    bool manifest_ok = (ranked_status == "complete");
    bool counts_ok = (ranked_input_count == ranked_rows && ranked_rows == input_rows && source_input_rows == input_rows && source_l5_gate_pass == input_l5_pass);
    bool identity_ok = (source_input_checksum == input_payload_checksum && input_payload_checksum != "not_available")

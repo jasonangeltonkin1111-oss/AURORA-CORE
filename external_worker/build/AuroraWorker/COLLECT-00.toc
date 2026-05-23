@@ -9,7 +9,7 @@
    'EXTENSION'),
   ('_ctypes.pyd',
    'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\DLLs\\_ctypes.pyd',
-   'EXTENSION'),
+   'BINARY'),
   ('_decimal.pyd',
    'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\DLLs\\_decimal.pyd',
    'EXTENSION'),

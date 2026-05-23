@@ -273,7 +273,7 @@ void AC_L8RefreshRankedSidecar()
    AC_L8_SYMBOL_RANK_FILENAME_MODE_RENDERED = AC_L8KvValue(ranked_manifest, "symbol_rank_filename_mode", "not_available");
    AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED = ranked_payload_checksum;
 
-   bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass);
+   bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass && input_rows == AC_L5_GATE_PASS);
    bool ohlc_ok = (AC_L8_OHLC_MIN_READY_RENDERED == AC_L5_GATE_PASS && AC_L5_GATE_PASS > 0);
    bool manifest_ok = (ranked_status == "complete" || ranked_status == "input_degraded");
    bool counts_ok = (ranked_input_count == ranked_rows && ranked_rows == input_rows && source_input_rows == input_rows && source_l5_gate_pass == input_l5_pass);
