@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['aurora_worker.py'],
+    ['aurora_worker_entrypoint.py'],
     pathex=[],
     binaries=[],
     datas=[],
