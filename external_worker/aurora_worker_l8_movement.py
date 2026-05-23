@@ -18,27 +18,27 @@ L8_TOP20_NAME = "ranked_symbols_top20.txt"
 L8_SYMBOL_RANK_FOLDER = "SymbolRanks"
 L8_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L8_JOB_TYPE = "L8_MOVEMENT_RANGE_RANKING_V1"
-L8_MODEL_VERSION = "true_range_v2"
+L8_MODEL_VERSION = "true_range_v2_priority_windows"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
-L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Fast_Windows"
+L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Priority_Windows"
 L8_REASON_MAX_PARTS = 16
 L8_REASON_MAX_CHARS = 640
 
 OUTPUT_FIELDS = [
     "rank_index", "symbol", "layer_id", "layer_name", "l8_model_version", "movement_score", "movement_bucket",
     "rank_state", "score_quality", "movement_regime", "asset_class", "ranking_group", "market_state",
-    "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps",
-    "range_availability_score", "movement_quality_score", "expansion_compression_score",
-    "multi_timeframe_agreement_score", "movement_cleanliness_score", "range_position_quality_score",
-    "quote_surface_quality_score", "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "h4_bars_copied",
-    "ohlc_fast_window_checksum", "ohlc_window_files_seen", "ohlc_window_files_missing",
+    "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps", "range_availability_score",
+    "movement_quality_score", "expansion_compression_score", "multi_timeframe_agreement_score",
+    "movement_cleanliness_score", "range_position_quality_score", "quote_surface_quality_score",
+    "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "h4_bars_copied",
+    "ohlc_priority_window_checksum", "ohlc_window_files_seen", "ohlc_window_files_missing",
     "m5_window_checksum", "m15_window_checksum", "h1_window_checksum", "h4_window_checksum",
     "m5_range_points_12", "m5_range_points_48", "m5_avg_true_range_12", "m5_avg_true_range_48", "m5_expansion_ratio", "m5_chop_proxy", "m5_spike_ratio", "m5_close_position_pct",
     "m15_range_points_16", "m15_range_points_64", "m15_avg_true_range_16", "m15_avg_true_range_64", "m15_expansion_ratio", "m15_chop_proxy", "m15_spike_ratio", "m15_close_position_pct",
     "h1_range_points_24", "h1_range_points_72", "h1_avg_true_range_24", "h1_avg_true_range_72", "h1_expansion_ratio", "h1_chop_proxy", "h1_spike_ratio", "h1_close_position_pct",
-    "h4_range_points_6", "h4_range_points_30", "h4_avg_true_range_6", "h4_avg_true_range_30", "h4_expansion_ratio", "h4_context", "single_bar_spike_risk", "range_position_extreme",
-    "reason", "trade_permission", "selection_runtime",
+    "h4_range_points_6", "h4_range_points_30", "h4_avg_true_range_6", "h4_avg_true_range_30", "h4_expansion_ratio", "h4_context",
+    "single_bar_spike_risk", "range_position_extreme", "reason", "trade_permission", "selection_runtime",
 ]
 
 BUCKET_ORDER = {
@@ -79,7 +79,7 @@ class L8RankSummary:
     stale_tmp_files_failed: int = 0
     stale_final_files_removed: int = 0
     stale_final_files_failed: int = 0
-    ohlc_fast_window_payload_checksum: str = "not_available"
+    ohlc_priority_window_payload_checksum: str = "not_available"
     ohlc_window_files_seen: int = 0
     ohlc_window_files_missing: int = 0
     payload_checksum: str = "not_available"
@@ -158,6 +158,19 @@ def _symbol_rank_filename(symbol: str) -> str:
     return f"{_sanitize_path_part(symbol)}__{_symbol_checksum(symbol)}.txt"
 
 
+def _csv_payload_checksum(text: str) -> str:
+    rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
+    return payload_checksum(rows)
+
+
+def _format_value(value: str | float | int | bool) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
+
+
 def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
     if not path.exists():
         return 0, 0
@@ -217,23 +230,15 @@ def _delete_stale_symbol_rank_files(symbol_rank_dir: Path, expected_names: Itera
     return removed, failed
 
 
-def _csv_payload_checksum(text: str) -> str:
-    rows = [line for line in text.replace("\r\n", "\n").splitlines() if line.strip()]
-    return payload_checksum(rows)
-
-
-def _format_value(value: str | float | int | bool) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, float):
-        return f"{value:.6f}"
-    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
-
-
-def _shared_ohlc_fast_window_root(outbox: Path) -> Path:
+def _shared_ohlc_store_root(outbox: Path) -> Path:
+    # outbox = <server>/<account>/Workbench/Gateway/Outbox
     account_root = outbox.parents[2]
     server_root = account_root.parent
-    return server_root / "Shared Market Data" / "OHLC Store" / "Fast Windows"
+    return server_root / "Shared Market Data" / "OHLC Store"
+
+
+def _symbol_priority_window_dir(outbox: Path, symbol: str) -> Path:
+    return _shared_ohlc_store_root(outbox) / "Symbols" / _sanitize_path_part(symbol) / "Priority Windows"
 
 
 def _file_payload_checksum(path: Path) -> str:
@@ -259,7 +264,7 @@ def _ohlc_window_checksum_packet(symbol_dir: Path) -> Dict[str, str | int]:
             seen += 1
     checksums["ohlc_window_files_seen"] = seen
     checksums["ohlc_window_files_missing"] = missing
-    checksums["ohlc_fast_window_checksum"] = payload_checksum(aggregate_parts)
+    checksums["ohlc_priority_window_checksum"] = payload_checksum(aggregate_parts)
     return checksums
 
 
@@ -304,8 +309,8 @@ def _true_ranges(rows: List[Dict[str, int]], count: int) -> List[float]:
     for index, row in enumerate(subset):
         high_low = max(0, row["high_i"] - row["low_i"])
         if index + 1 < len(rows):
-            previous_close = rows[index + 1]["close_i"]
-            tr = max(high_low, abs(row["high_i"] - previous_close), abs(row["low_i"] - previous_close))
+            prev_close = rows[index + 1]["close_i"]
+            tr = max(high_low, abs(row["high_i"] - prev_close), abs(row["low_i"] - prev_close))
         else:
             tr = high_low
         values.append(float(max(0, tr)))
@@ -314,9 +319,7 @@ def _true_ranges(rows: List[Dict[str, int]], count: int) -> List[float]:
 
 def _avg_true_range(rows: List[Dict[str, int]], count: int) -> float:
     values = _true_ranges(rows, count)
-    if not values:
-        return 0.0
-    return sum(values) / float(len(values))
+    return 0.0 if not values else sum(values) / float(len(values))
 
 
 def _sum_true_range(rows: List[Dict[str, int]], count: int) -> float:
@@ -325,9 +328,7 @@ def _sum_true_range(rows: List[Dict[str, int]], count: int) -> float:
 
 def _largest_true_range(rows: List[Dict[str, int]], count: int) -> float:
     values = _true_ranges(rows, count)
-    if not values:
-        return 0.0
-    return float(max(values))
+    return 0.0 if not values else float(max(values))
 
 
 def _position_pct(rows: List[Dict[str, int]], count: int) -> float:
@@ -441,9 +442,9 @@ def _bucket_from_score(score: float) -> str:
     return "poor_movement_range"
 
 
-def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | int | bool]:
+def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int | bool]:
     symbol = _safe_text(row, "symbol")
-    symbol_dir = fast_root / _sanitize_path_part(symbol)
+    symbol_dir = _symbol_priority_window_dir(outbox, symbol)
     checksums = _ohlc_window_checksum_packet(symbol_dir)
     m5 = _tf_metrics(_read_ohlc_window(symbol_dir / "M5.window.csv"), 12, 48)
     m15 = _tf_metrics(_read_ohlc_window(symbol_dir / "M15.window.csv"), 16, 64)
@@ -480,13 +481,13 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
     movement_score = max(0.0, min(100.0, availability_score * 0.20 + movement_presence * 0.20 + expansion_score * 0.25 + agreement_score * 0.15 + cleanliness_score * 0.10 + range_position_score * 0.05 + quote_score * 0.05))
 
     rank_state = "ranked"
-    score_quality = "usable_true_range_movement_range_model"
+    score_quality = "usable_true_range_priority_window_model"
     if availability_state == "missing":
         rank_state = "not_rankable_quality"
-        score_quality = "not_rankable_ohlc_fast_windows_missing"
+        score_quality = "not_rankable_priority_windows_missing"
     elif availability_state == "degraded":
         rank_state = "ranked_degraded"
-        score_quality = "degraded_ohlc_fast_windows_partial"
+        score_quality = "degraded_priority_windows_partial"
     elif int(h4["bars_copied"]) < 30:
         rank_state = "ranked_partial"
         score_quality = "usable_core_windows_h4_context_partial"
@@ -526,7 +527,7 @@ def _score_row(row: Dict[str, str], fast_root: Path) -> Dict[str, str | float | 
         "tick_age_seconds": tick_age, "spread_bps": spread_bps, "range_availability_score": availability_score, "movement_quality_score": movement_presence, "expansion_compression_score": expansion_score,
         "multi_timeframe_agreement_score": agreement_score, "movement_cleanliness_score": cleanliness_score, "range_position_quality_score": range_position_score, "quote_surface_quality_score": quote_score,
         "m5_bars_copied": int(m5["bars_copied"]), "m15_bars_copied": int(m15["bars_copied"]), "h1_bars_copied": int(h1["bars_copied"]), "h4_bars_copied": int(h4["bars_copied"]),
-        "ohlc_fast_window_checksum": checksums["ohlc_fast_window_checksum"], "ohlc_window_files_seen": int(checksums["ohlc_window_files_seen"]), "ohlc_window_files_missing": int(checksums["ohlc_window_files_missing"]),
+        "ohlc_priority_window_checksum": checksums["ohlc_priority_window_checksum"], "ohlc_window_files_seen": int(checksums["ohlc_window_files_seen"]), "ohlc_window_files_missing": int(checksums["ohlc_window_files_missing"]),
         "m5_window_checksum": checksums["m5_window_checksum"], "m15_window_checksum": checksums["m15_window_checksum"], "h1_window_checksum": checksums["h1_window_checksum"], "h4_window_checksum": checksums["h4_window_checksum"],
         "m5_range_points_12": float(m5["range_recent"]), "m5_range_points_48": float(m5["range_baseline"]), "m5_avg_true_range_12": float(m5["avg_true_recent"]), "m5_avg_true_range_48": float(m5["avg_true_baseline"]), "m5_expansion_ratio": float(m5["expansion_ratio"]), "m5_chop_proxy": float(m5["chop_proxy"]), "m5_spike_ratio": float(m5["spike_ratio"]), "m5_close_position_pct": float(m5["close_position_pct"]),
         "m15_range_points_16": float(m15["range_recent"]), "m15_range_points_64": float(m15["range_baseline"]), "m15_avg_true_range_16": float(m15["avg_true_recent"]), "m15_avg_true_range_64": float(m15["avg_true_baseline"]), "m15_expansion_ratio": float(m15["expansion_ratio"]), "m15_chop_proxy": float(m15["chop_proxy"]), "m15_spike_ratio": float(m15["spike_ratio"]), "m15_close_position_pct": float(m15["close_position_pct"]),
@@ -551,41 +552,41 @@ def _write_ranked_csv(scored: List[Dict[str, str | float | int | bool]]) -> str:
 
 
 def _top20_text(scored: List[Dict[str, str | float | int | bool]]) -> str:
-    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", f"Model Version: {L8_MODEL_VERSION}", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Fast Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|ohlc_checksum|reason"]
+    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", f"Model Version: {L8_MODEL_VERSION}", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Priority Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|priority_window_checksum|reason"]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{row['ohlc_fast_window_checksum']}|{_bounded_reason(str(row['reason']))}")
+        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{row['ohlc_priority_window_checksum']}|{_bounded_reason(str(row['reason']))}")
     lines.append("")
     return "\n".join(lines)
 
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool]) -> str:
     symbol = str(row["symbol"])
-    lines = ["schema_name=l8_symbol_rank", "schema_version=3", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
+    lines = ["schema_name=l8_symbol_rank", "schema_version=4", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
     for key in OUTPUT_FIELDS:
         if key in {"rank_index", "symbol", "layer_id", "layer_name"}:
             continue
         if key in row:
             lines.append(f"{key}={_format_value(row[key])}")
-    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
+    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
-def _manifest(summary: L8RankSummary, input_path: Path, fast_root: Path) -> str:
+def _manifest(summary: L8RankSummary, input_path: Path, store_root: Path) -> str:
     summary.reason = _bounded_reason(summary.reason)
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=3", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
-        f"input_csv_path={input_path}", f"shared_ohlc_fast_window_root={fast_root}", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=4", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
+        f"input_csv_path={input_path}", f"shared_ohlc_store_root={store_root}", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
         f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
-        f"ohlc_fast_window_payload_checksum={summary.ohlc_fast_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
+        f"ohlc_priority_window_payload_checksum={summary.ohlc_priority_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_ohlc_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_ohlc_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
@@ -597,7 +598,7 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     manifest_path = layer_dir / L8_MANIFEST_NAME
     top20_path = layer_dir / L8_TOP20_NAME
     symbol_rank_dir = layer_dir / L8_SYMBOL_RANK_FOLDER
-    fast_root = _shared_ohlc_fast_window_root(outbox)
+    store_root = _shared_ohlc_store_root(outbox)
     layer_dir.mkdir(parents=True, exist_ok=True)
     symbol_rank_dir.mkdir(parents=True, exist_ok=True)
 
@@ -615,14 +616,14 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     summary.stale_tmp_files_failed += failed + sr_failed
 
     if not input_path.exists():
-        atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
+        atomic_write_text(manifest_path, _manifest(summary, input_path, store_root))
         return summary
 
     text = read_text(input_path)
     summary.input_payload_checksum = _csv_payload_checksum(text)
     rows = [row for row in csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))]
     summary.input_count = len(rows)
-    scored = [_score_row(row, fast_root) for row in rows]
+    scored = [_score_row(row, outbox) for row in rows]
     scored.sort(key=lambda row: (BUCKET_ORDER.get(str(row["movement_bucket"]), 0), float(row["movement_score"]), float(row["expansion_compression_score"]), float(row["multi_timeframe_agreement_score"]), str(row["symbol"])), reverse=True)
 
     text_after_rank = read_text(input_path)
@@ -632,10 +633,10 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     if not summary.input_generation_stable:
         summary.status = "input_changed_during_rank"
         summary.reason = f"l8 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; ranked outputs intentionally not refreshed"
-        atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
+        atomic_write_text(manifest_path, _manifest(summary, input_path, store_root))
         return summary
 
-    summary.ohlc_fast_window_payload_checksum = payload_checksum([str(row["symbol"]) + "=" + str(row["ohlc_fast_window_checksum"]) for row in scored])
+    summary.ohlc_priority_window_payload_checksum = payload_checksum([str(row["symbol"]) + "=" + str(row["ohlc_priority_window_checksum"]) for row in scored])
     summary.ohlc_window_files_seen = sum(int(row["ohlc_window_files_seen"]) for row in scored)
     summary.ohlc_window_files_missing = sum(int(row["ohlc_window_files_missing"]) for row in scored)
 
@@ -643,7 +644,7 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "recomputed true-range model rows from stable L8 symbol metadata and current Runtime 1 shared OHLC fast windows"
+    summary.reason = "recomputed true-range model rows from stable L8 metadata and current Runtime 1 priority-window OHLC files"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_partial_count = sum(1 for row in scored if row["rank_state"] == "ranked_partial")
@@ -663,7 +664,7 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
         summary.reason = f"input CSV row count {summary.input_count} differs from source l5_gate_pass {summary.source_l5_gate_pass}"
     if summary.ohlc_window_files_missing > 0 and summary.status == "complete":
         summary.status = "input_degraded"
-        summary.reason = f"OHLC fast-window files missing for L8 calculation; missing={summary.ohlc_window_files_missing}; seen={summary.ohlc_window_files_seen}"
+        summary.reason = f"OHLC priority-window files missing for L8 calculation; missing={summary.ohlc_window_files_missing}; seen={summary.ohlc_window_files_seen}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
@@ -681,5 +682,5 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     if not ranked_ok or not top20_ok or files_written != len(scored) or summary.symbol_rank_files_actual != len(scored):
         summary.status = "write_degraded"
         summary.reason = "ranked CSV, top20, or per-symbol rank write failed; sidecar proof may be partial"
-    atomic_write_text(manifest_path, _manifest(summary, input_path, fast_root))
+    atomic_write_text(manifest_path, _manifest(summary, input_path, store_root))
     return summary
