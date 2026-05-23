@@ -187,6 +187,47 @@ string AC_SharedOhlcIndexHeader()
    return "symbol,timeframe,priority,requested_bars,copied_bars,oldest_bar_time,newest_closed_bar_time,current_bar_time,storage_status,seed_complete\r\n";
 }
 
+string AC_SharedOhlcBoardSection()
+{
+   string text = "\r\nSHARED OHLC RAW STORE\r\n";
+   text += "----------------------------------------\r\n";
+   text += "Status:                 " + AC_SHARED_OHLC_STATUS + "\r\n";
+   text += "Mode:                   " + AC_SHARED_OHLC_MODE + "\r\n";
+   text += "Server Scope:           " + AC_ServerNameForRoute() + "\r\n";
+   text += "Symbols Tracked:        " + IntegerToString(AC_SHARED_OHLC_SYMBOLS_TOTAL) + "\r\n";
+   text += "Timeframes Enabled:     " + IntegerToString(AC_SHARED_OHLC_TIMEFRAMES_ENABLED) + "\r\n";
+   text += "Target Bars / TF:       " + IntegerToString(AC_SHARED_OHLC_TARGET_SEED_BARS) + "\r\n";
+   text += "Seeded Symbol-TFs:      " + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_SEEDED) + " / " + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_TOTAL) + "\r\n";
+   text += "Partial Symbol-TFs:     " + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_PARTIAL) + "\r\n";
+   text += "Pending Symbol-TFs:     " + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_PENDING) + "\r\n";
+   text += "Append Backlog:         P1=" + IntegerToString(AC_SHARED_OHLC_APPEND_BACKLOG_P1)
+      + " P2=" + IntegerToString(AC_SHARED_OHLC_APPEND_BACKLOG_P2)
+      + " P3=" + IntegerToString(AC_SHARED_OHLC_APPEND_BACKLOG_P3)
+      + " P4=" + IntegerToString(AC_SHARED_OHLC_APPEND_BACKLOG_P4)
+      + " P5=" + IntegerToString(AC_SHARED_OHLC_APPEND_BACKLOG_P5) + "\r\n";
+   text += "Raw Bars Printed:       FALSE\r\n";
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
+string AC_SharedOhlcDossierSection(const string symbol)
+{
+   string text = "\r\nSHARED OHLC RAW STORE OVERVIEW\r\n";
+   text += "----------------------------------------\r\n";
+   text += "Owner:                  " + AC_SHARED_OHLC_OWNER_NAME + "\r\n";
+   text += "Symbol:                 " + symbol + "\r\n";
+   text += "Server Scope:           " + AC_ServerNameForRoute() + "\r\n";
+   text += "Store Status:           " + AC_SHARED_OHLC_STATUS + "\r\n";
+   text += "Store Mode:             " + AC_SHARED_OHLC_MODE + "\r\n";
+   text += "Target Bars / TF:       " + IntegerToString(AC_SHARED_OHLC_TARGET_SEED_BARS) + "\r\n";
+   text += "Timeframes Enabled:     " + IntegerToString(AC_SHARED_OHLC_TIMEFRAMES_ENABLED) + "\r\n";
+   text += "Raw Bars Shown Here:    FALSE\r\n";
+   text += "Raw Store Route:        " + AC_SharedOhlcSymbolFolder(symbol) + "\r\n";
+   text += "Layer Access Policy:    " + AC_SHARED_OHLC_LAYER_ACCESS_POLICY + "\r\n";
+   text += "Calculation Policy:     " + AC_SHARED_OHLC_CALCULATION_POLICY + "\r\n";
+   return text;
+}
+
 string AC_SharedOhlcWorkbenchSection()
 {
    string text = "SHARED_OHLC_RAW_STORAGE_OWNER\r\n";
