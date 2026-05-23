@@ -1,0 +1,12 @@
+#ifndef AC_EXTERNAL_WORKER_RENDER_INDEX_MQ_COMPAT
+#define AC_EXTERNAL_WORKER_RENDER_INDEX_MQ_COMPAT
+
+// Compatibility include shim for MetaEditor/local include resolution that requests
+// AC_ExternalWorkerRenderIndex.mq instead of AC_ExternalWorkerRenderIndex.mqh.
+// Source truth remains AC_ExternalWorkerRenderIndex.mqh.
+// This file must not gain logic, scoring, selection, permission, execution,
+// FileIO ownership, or route ownership.
+
+#include "AC_ExternalWorkerRenderIndex.mqh"
+
+#endif
