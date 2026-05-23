@@ -51,6 +51,8 @@ string AC_Layer6DossierSection_RenderIndex(const string symbol)
       l5_status = AC_L5_SYMBOLS[l5_index].gate_status;
       l5_reason = AC_L5_SYMBOLS[l5_index].gate_reason;
    }
+   if(l5_status != "pass")
+      return AC_Layer6DossierSection(symbol);
 
    AC_RenderIndexRow row;
    bool index_hit = (AC_L6_RANKED_ACCEPTED && AC_RenderIndexLookup(6, symbol, row));
@@ -96,6 +98,8 @@ string AC_Layer7DossierSection_RenderIndex(const string symbol)
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
+   if(l5_gate_status != "pass")
+      return AC_Layer7DossierSection(symbol);
 
    AC_RenderIndexRow row;
    bool index_hit = (AC_L7_RANKED_ACCEPTED && AC_RenderIndexLookup(7, symbol, row));
@@ -140,6 +144,8 @@ string AC_Layer8DossierSection_RenderIndex(const string symbol)
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
+   if(l5_gate_status != "pass")
+      return AC_Layer8DossierSection(symbol);
 
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
@@ -191,6 +197,8 @@ string AC_Layer9DossierSection_RenderIndex(const string symbol)
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
+   if(l5_gate_status != "pass")
+      return AC_Layer9DossierSection(symbol);
 
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
