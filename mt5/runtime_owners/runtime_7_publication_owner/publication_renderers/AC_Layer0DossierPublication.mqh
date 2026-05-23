@@ -97,6 +97,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
    text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
    text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
+   text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "\r\n";
    text += "CURRENT LIMITS\r\n";
    text += "----------------------------------------\r\n";
@@ -105,6 +106,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
    text += "Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
+   text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "Selection Active: No\r\n";
    text += "Permission Active: No\r\n";
    text += AC_Layer1DossierSection(symbol);
@@ -114,11 +116,13 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer5DossierSection(symbol);
    text += AC_Layer6DossierSection(symbol);
    text += AC_Layer7DossierSection(symbol);
+   text += AC_SharedOhlcDossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
    text += (market_state == "open" ? "Next step: Layer 7 only after L6 live proof is accepted\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
    text += "Layer 6 ranks only Layer 5 pass symbols; it does not hard-block symbols.\r\n";
+   text += "Shared OHLC is raw storage only; future layers must read it instead of calling CopyRates privately.\r\n";
    text += "\r\n";
    text += "NO GO\r\n";
    text += "----------------------------------------\r\n";
@@ -296,7 +300,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0_CACHED_L6_CHECKSUM = AC_L6_MANIFEST_PAYLOAD_CHECKSUM;
    AC_L0_CACHED_PASS_VALID = true;
    AC_L0_CACHED_STATUS = status;
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_pre_refreshed_l2_l3_l4_l5_l6_l7_sections");
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_pre_refreshed_l2_l3_l4_l5_l6_l7_shared_ohlc_sections");
    return AC_L0_CACHED_RESULT;
 }
 
