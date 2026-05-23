@@ -11,6 +11,11 @@ static string AC_L0_CACHED_L4_REFRESH_KEY = "";
 static string AC_L0_CACHED_L5_STATUS = "";
 static string AC_L0_CACHED_L6_STATUS = "";
 static string AC_L0_CACHED_L6_CHECKSUM = "";
+static string AC_L0_CACHED_L7_STATUS = "";
+static string AC_L0_CACHED_L7_INPUT_CHECKSUM = "";
+static string AC_L0_CACHED_L7_RANKED_CHECKSUM = "";
+static int    AC_L0_CACHED_L7_RANKED_ROWS = -1;
+static bool   AC_L0_CACHED_L7_ACCEPTED = false;
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -182,6 +187,16 @@ bool AC_WriteLayer0ShellWithRetries(const string symbol,
    return false;
 }
 
+void AC_L0CacheLayer7Proof()
+{
+   AC_L7RefreshRankedSidecar();
+   AC_L0_CACHED_L7_STATUS = AC_L7_STATUS;
+   AC_L0_CACHED_L7_INPUT_CHECKSUM = AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED;
+   AC_L0_CACHED_L7_RANKED_CHECKSUM = AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED;
+   AC_L0_CACHED_L7_RANKED_ROWS = AC_L7_RANKED_ROWS_RENDERED;
+   AC_L0_CACHED_L7_ACCEPTED = AC_L7_RANKED_ACCEPTED;
+}
+
 AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 {
    AC_Layer0InitStatus(status);
@@ -273,13 +288,15 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_BuildLayer4Texts();
    AC_BuildLayer5Texts();
    AC_RefreshLayer6RankedSidecar();
-   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_sequential_symbol_by_symbol_with_l2_l3_l4_l5_l6_ranked_sidecar_sections");
+   AC_L0CacheLayer7Proof();
+   AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "full_universe_dossier_pass_sequential_symbol_by_symbol_with_l2_l3_l4_l5_l6_l7_ranked_sidecar_sections");
    return AC_L0_CACHED_RESULT;
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
 {
    AC_RefreshLayer6RankedSidecar();
+   AC_L7RefreshRankedSidecar();
    int total = SymbolsTotal(false);
    if(AC_L0_CACHED_PASS_VALID
       && total == AC_L0_CACHED_SYMBOLS_TOTAL
@@ -290,11 +307,16 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L4_REFRESH_KEY == AC_L4_REFRESH_KEY
       && AC_L0_CACHED_L5_STATUS == AC_L5_STATUS
       && AC_L0_CACHED_L6_STATUS == AC_L6_STATUS
-      && AC_L0_CACHED_L6_CHECKSUM == AC_L6_MANIFEST_PAYLOAD_CHECKSUM)
+      && AC_L0_CACHED_L6_CHECKSUM == AC_L6_MANIFEST_PAYLOAD_CHECKSUM
+      && AC_L0_CACHED_L7_STATUS == AC_L7_STATUS
+      && AC_L0_CACHED_L7_INPUT_CHECKSUM == AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      && AC_L0_CACHED_L7_RANKED_CHECKSUM == AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      && AC_L0_CACHED_L7_RANKED_ROWS == AC_L7_RANKED_ROWS_RENDERED
+      && AC_L0_CACHED_L7_ACCEPTED == AC_L7_RANKED_ACCEPTED)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM);
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "|l7=" + AC_L0_CACHED_L7_STATUS + "|l7_input_checksum=" + AC_L0_CACHED_L7_INPUT_CHECKSUM + "|l7_ranked_checksum=" + AC_L0_CACHED_L7_RANKED_CHECKSUM + "|l7_rows=" + IntegerToString(AC_L0_CACHED_L7_RANKED_ROWS));
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
