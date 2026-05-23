@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "shared_ohlc_priority_window_storage_repair";
-static const string AC_BUILD_VERSION      = "1.063";
-static const string AC_UPGRADE_ID         = "SHARED_OHLC_PRIORITY_WINDOW_STORAGE_REPAIR";
-static const string AC_UPGRADE_SUMMARY    = "Repairs Shared OHLC storage ownership and priority-window routing after runtime proof showed a root Fast Windows folder beside Symbols. Priority windows are now integrated under each symbol inside the single OHLC Store/Symbols tree so the raw warehouse has one visible source owner. Status, manifest, Board, Dossier, and Workbench wording now describe priority windows rather than L8-owned fast windows. The priority flow remains P1 open/pending, P2 Layer 5 pass, P3 explicit future candidate hook, P4 other open, P5 closed/blocked/unknown. No trading logic, selection, permission, execution, ranking calculation, or Gateway authority is added.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 Shared OHLC Raw Storage Owner remains the sole raw CopyRates/MqlRates storage authority. Runtime 7 renders visibility only and must not own raw OHLC truth. Priority windows are cache files inside Symbols/<symbol>/Priority Windows and are not a second root source owner. Layer 8 may read priority-window availability but must not call CopyRates privately or treat the window cache as ranking output. The legacy OHLC Store/Fast Windows folder from prior runs is deprecated and should not be written by current source.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. Compile must confirm build_version=1.063. Runtime proof must confirm Status/status.txt schema_version=active_raw_store_v4, window_storage_policy=integrated_under_symbols_symbol_priority_windows_no_root_fast_windows_owner, manifest priority_window_storage=integrated_under_each_symbol_folder, Board says Window Storage integrated under Symbols/<symbol>/Priority Windows, Dossiers show Priority Window Route under the symbol folder, and no new files are written into OHLC Store/Fast Windows. Trade permission, selection runtime, calculation runtime, and execution must remain false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_shared_ohlc_priority_window_storage_repair_no_duplicate_owner_no_private_copyrates_no_permission";
+static const string AC_BUILD_PHASE        = "shared_ohlc_priority_speed_topup_service";
+static const string AC_BUILD_VERSION      = "1.064";
+static const string AC_UPGRADE_ID         = "SHARED_OHLC_PRIORITY_SPEED_TOPUP_SERVICE";
+static const string AC_UPGRADE_SUMMARY    = "Moves the active Shared OHLC raw-storage bridge into Runtime 1 ownership, returns Runtime 7 to render-only inclusion, and adds priority-speed scheduling plus top-up behavior. P1 open/pending symbols are serviced fastest, P2 Layer 5 pass symbols stay active, P3 remains reserved for explicit future candidate/ranked/selected symbols, P4 other open symbols run standard, and P5 closed/blocked/unknown symbols run slow background. Partial/error seeds are no longer one-pass forgotten states: the service keeps retrying top-up cycles so symbols can eventually reach the 1500-bar target when broker history becomes available. No trading logic, selection, permission, execution, ranking calculation, or Gateway authority is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 Shared OHLC Raw Storage Owner remains the sole raw CopyRates/MqlRates storage authority. Runtime 7 renders visibility only by including the Runtime 1 active bridge. Priority windows remain under Symbols/<symbol>/Priority Windows and are not a second root source owner. Layer 8 may read priority-window availability but must not call CopyRates privately or treat the window cache as ranking output. The legacy OHLC Store/Fast Windows folder is deprecated and should not be written by current source.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. Compile must confirm build_version=1.064. Runtime proof must confirm Status/status.txt schema_version=active_raw_store_v5, priority_policy=P1_fastest_open_pending_P2_active_L5_pass_P3_reserved_P4_standard_other_open_P5_slow_background_closed_blocked_unknown, topup_active=true, shared_ohlc_priority_speed rows in Workbench, Runtime 7 renderer dispatcher contains no active CopyRates/storage body, trade permission false, selection runtime false, calculation runtime false, and no new writes into OHLC Store/Fast Windows.";
+static const string AC_LOGGING_POLICY     = "event_boundary_shared_ohlc_priority_speed_topup_no_duplicate_owner_no_private_copyrates_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.063_shared_ohlc_priority_window_storage_repair";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.064_shared_ohlc_priority_speed_topup_service";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
