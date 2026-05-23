@@ -36,7 +36,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_Layer5BoardSection();
    text += AC_Layer6BoardSection();
    text += AC_Layer7BoardSection();
-   text += AC_SharedOhlcBoardSection();
+   text += AC_SharedOhlcRenderBoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
@@ -143,7 +143,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer5WorkbenchSection();
    text += AC_Layer6WorkbenchSection();
    text += AC_Layer7WorkbenchSection();
-   text += "\r\n" + AC_SharedOhlcWorkbenchSection();
+   text += "\r\n" + AC_SharedOhlcRenderWorkbenchSection();
    return text;
 }
 
