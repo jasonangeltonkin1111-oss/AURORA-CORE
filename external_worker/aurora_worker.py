@@ -26,7 +26,7 @@ from aurora_worker_l7_session import publish_l7_session_relevance_rankings
 from aurora_worker_l8_movement import publish_l8_movement_range_rankings
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
 
-WORKER_VERSION = "0.6.7_l8_movement_range_sidecar"
+WORKER_VERSION = "0.6.8_l8_risk_review_runtime_proof"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
