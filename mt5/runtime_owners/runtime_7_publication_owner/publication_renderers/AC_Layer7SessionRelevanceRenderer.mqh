@@ -12,6 +12,7 @@ static string AC_L7_TRUST_STATE = "Ranking Pending";
 static string AC_L7_VALIDATION_STATUS = "Pending";
 static string AC_L7_VALIDATION_REASON = "ranked sidecar not checked yet";
 static string AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
+static string AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar pending";
 static bool   AC_L7_RANKED_ACCEPTED = false;
 static bool   AC_L7_INPUT_COUNTS_OK_RENDERED = false;
 static bool   AC_L7_GENERATION_COUNTS_OK_RENDERED = false;
@@ -197,6 +198,7 @@ void AC_L7ResetRenderState()
    AC_L7_VALIDATION_STATUS = "Pending";
    AC_L7_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
    AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
+   AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar pending";
    AC_L7_RANKED_ACCEPTED = false;
    AC_L7_INPUT_COUNTS_OK_RENDERED = false;
    AC_L7_GENERATION_COUNTS_OK_RENDERED = false;
@@ -227,6 +229,13 @@ void AC_L7ResetRenderState()
    AC_L7_SESSION_PROFILE_POLICY_RENDERED = "not_available";
 }
 
+void AC_L7LoadTop20Evidence()
+{
+   string top20_text = AC_L7ReadSmallTextFile(AC_L7RankedTop20Path(), 16000);
+   AC_L7_TOP20_FIRST_LINE = AC_L7FirstTop20Symbol(top20_text);
+   AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = AC_L7PipeField(AC_L7_TOP20_FIRST_LINE, 5, "not_available");
+}
+
 void AC_L7RefreshRankedSidecar()
 {
    if(AC_L7_LAST_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID)
@@ -241,6 +250,7 @@ void AC_L7RefreshRankedSidecar()
       AC_L7_VALIDATION_STATUS = "Missing";
       AC_L7_VALIDATION_REASON = "l7_input_primitives.manifest missing or unreadable";
       AC_L7_MAIN_BLOCKER = AC_L7_VALIDATION_REASON;
+      AC_L7_OPERATOR_SUMMARY = "Missing L7 input manifest";
       return;
    }
 
@@ -268,6 +278,7 @@ void AC_L7RefreshRankedSidecar()
       AC_L7_MAIN_BLOCKER = "ranked_symbols.manifest has not been built or accepted yet";
       AC_L7_STATUS = "Input export ready - ranked sidecar pending";
       AC_L7_TRUST_STATE = "Ranking Pending";
+      AC_L7_OPERATOR_SUMMARY = "L7 input ready; Gateway ranked sidecar pending";
       return;
    }
 
@@ -317,6 +328,8 @@ void AC_L7RefreshRankedSidecar()
 
    AC_L7_GENERATION_COUNTS_OK_RENDERED = counts_ok && files_ok;
    AC_L7_GENERATION_IDENTITY_OK_RENDERED = identity_ok;
+   if(files_ok)
+      AC_L7LoadTop20Evidence();
 
    if(input_ok && manifest_ok && counts_ok && identity_ok && authority_ok && permission_ok && files_ok)
    {
@@ -326,8 +339,7 @@ void AC_L7RefreshRankedSidecar()
       AC_L7_VALIDATION_STATUS = "Accepted";
       AC_L7_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L7 input proof and permission boundaries";
       AC_L7_MAIN_BLOCKER = "none";
-      AC_L7_TOP20_FIRST_LINE = AC_L7FirstTop20Symbol(AC_L7ReadSmallTextFile(AC_L7RankedTop20Path(), 16000));
-      AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = AC_L7PipeField(AC_L7_TOP20_FIRST_LINE, 5, "not_available");
+      AC_L7_OPERATOR_SUMMARY = "Complete - ranked sidecar accepted for current L7 input epoch";
       return;
    }
 
@@ -342,6 +354,17 @@ void AC_L7RefreshRankedSidecar()
       + ";permission_ok=" + (permission_ok ? "true" : "false")
       + ";files_ok=" + (files_ok ? "true" : "false");
    AC_L7_MAIN_BLOCKER = AC_L7_VALIDATION_REASON;
+
+   if(!identity_ok && manifest_ok && counts_ok && authority_ok && permission_ok && files_ok)
+      AC_L7_OPERATOR_SUMMARY = "Ranked sidecar complete but rejected because ranked epoch does not match latest L7 input checksum";
+   else if(!files_ok)
+      AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar files are incomplete or missing";
+   else if(!counts_ok)
+      AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar count contract mismatch";
+   else if(!authority_ok || !permission_ok)
+      AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar permission or authority boundary mismatch";
+   else
+      AC_L7_OPERATOR_SUMMARY = "Gateway ranked sidecar degraded; see Workbench boolean ledger";
 }
 
 string AC_Layer7BoardSection()
@@ -351,47 +374,60 @@ string AC_Layer7BoardSection()
    text += "\r\nLAYER 7 - SESSION RELEVANCE RANKING\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L7_STATUS + "\r\n";
-   text += "Trust:                      " + AC_L7_TRUST_STATE + "\r\n";
-   text += "Validation:                 " + AC_L7_VALIDATION_STATUS + "\r\n";
-   text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
-   text += "Gateway Required:           TRUE\r\n";
+   text += "Summary:                    " + AC_L7_OPERATOR_SUMMARY + "\r\n";
    text += "Gateway Result Accepted:    " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "Input Source:               Layer 5 pass set only\r\n";
    text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "L7 Export L5 Pass Symbols:  " + IntegerToString(AC_L7_EXPORT_L5_PASS_RENDERED) + "\r\n";
    text += "Manifest Input Count:       " + IntegerToString(AC_L7_INPUT_ROWS_RENDERED) + "\r\n";
    text += "Ranked Symbols:             " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
-   text += "Input Counts OK:            " + AC_L7BoolText(AC_L7_INPUT_COUNTS_OK_RENDERED) + "\r\n";
-   text += "Generation Counts OK:       " + AC_L7BoolText(AC_L7_GENERATION_COUNTS_OK_RENDERED) + "\r\n";
-   text += "Generation Identity OK:     " + AC_L7BoolText(AC_L7_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
-   text += "L7 Snapshot Drift:          " + AC_L7BoolText(AC_L7_SNAPSHOT_DRIFT_RENDERED) + "\r\n";
-   text += "L7 Drift Delta:             " + IntegerToString(AC_L7_SNAPSHOT_DRIFT_DELTA_RENDERED) + "\r\n";
-   text += "Ranked Partial/Clean:       " + IntegerToString(AC_L7_RANKED_COUNT_RENDERED) + "\r\n";
+   text += "Counts Contract:            " + (AC_L7_GENERATION_COUNTS_OK_RENDERED ? "OK" : "CHECK") + "\r\n";
+   text += "Identity Contract:          " + (AC_L7_GENERATION_IDENTITY_OK_RENDERED ? "OK" : "CHECK") + "\r\n";
+   text += "Snapshot Drift:             " + (AC_L7_SNAPSHOT_DRIFT_RENDERED ? "YES" : "NO") + "\r\n";
+   text += "Ranked Clean/Partial:       " + IntegerToString(AC_L7_RANKED_COUNT_RENDERED) + "\r\n";
    text += "Ranked Degraded:            " + IntegerToString(AC_L7_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
    text += "Not Rankable Quality:       " + IntegerToString(AC_L7_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
-   text += "Elite Session Relevance:    " + IntegerToString(AC_L7_ELITE_COUNT_RENDERED) + "\r\n";
-   text += "Strong Session Relevance:   " + IntegerToString(AC_L7_STRONG_COUNT_RENDERED) + "\r\n";
-   text += "Acceptable Session:         " + IntegerToString(AC_L7_ACCEPTABLE_COUNT_RENDERED) + "\r\n";
-   text += "Weak Session Relevance:     " + IntegerToString(AC_L7_WEAK_COUNT_RENDERED) + "\r\n";
-   text += "Poor Session Relevance:     " + IntegerToString(AC_L7_POOR_COUNT_RENDERED) + "\r\n";
-   text += "SymbolRank Filename Mode:   " + AC_L7_SYMBOL_RANK_FILENAME_MODE_RENDERED + "\r\n";
-   text += "SymbolRank Files Written:   " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED) + "\r\n";
-   text += "SymbolRank Files Actual:    " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED) + "\r\n";
-   text += "SymbolRank File Count OK:   " + AC_L7BoolText(AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true") + "\r\n";
-   text += "Top Ranked:                 " + AC_L7_TOP20_FIRST_LINE + "\r\n";
+   text += "Session Buckets:            elite=" + IntegerToString(AC_L7_ELITE_COUNT_RENDERED)
+      + "; strong=" + IntegerToString(AC_L7_STRONG_COUNT_RENDERED)
+      + "; acceptable=" + IntegerToString(AC_L7_ACCEPTABLE_COUNT_RENDERED)
+      + "; weak=" + IntegerToString(AC_L7_WEAK_COUNT_RENDERED)
+      + "; poor=" + IntegerToString(AC_L7_POOR_COUNT_RENDERED) + "\r\n";
+   text += "SymbolRank Files:           " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_ACTUAL_RENDERED) + " / " + IntegerToString(AC_L7_SYMBOL_RANK_FILES_WRITTEN_RENDERED)
+      + " count_ok=" + AC_L7BoolText(AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true") + "\r\n";
+   text += "Top Ranked Evidence:        " + AC_L7_TOP20_FIRST_LINE + "\r\n";
    text += "Current Global Session:     " + AC_L7_CURRENT_GLOBAL_SESSION_RENDERED + "\r\n";
    text += "Session Basis:              " + AC_L7_SESSION_TIME_BASIS_RENDERED + "\r\n";
    text += "Session Definition Source:  " + AC_L7_SESSION_DEFINITION_SOURCE_RENDERED + "\r\n";
    text += "Session Policy:             " + AC_L7_SESSION_PROFILE_POLICY_RENDERED + "\r\n";
    text += "Dead Time Meaning:          off-session caution; not a trade-time recommendation\r\n";
-   text += "Ranked CSV:                 Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols.csv\r\n";
-   text += "Manifest:                   Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols.manifest\r\n";
-   text += "Top20:                      Outbox\\Layers\\Layer_7_Session_Relevance_Ranking\\ranked_symbols_top20.txt\r\n";
-   text += "Main Blocker:               " + AC_L7_MAIN_BLOCKER + "\r\n";
+   text += "Diagnostics:                Workbench L7 section has full boolean blocker ledger\r\n";
    text += "Gateway Job:                L7_SESSION_RELEVANCE_RANKING_V1\r\n";
    text += "Ranking Runtime:            " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "Selection Runtime:          FALSE\r\n";
    text += "Trade Permission:           FALSE\r\n";
+   return text;
+}
+
+string AC_L7RenderRankEvidenceBlock(const string rank_text, const string rank_path, const bool accepted)
+{
+   string prefix = accepted ? "" : "Last Ranked ";
+   string text = "";
+   text += "Rank Evidence: " + (accepted ? "accepted_current_epoch" : "unaccepted_stale_or_mismatched_epoch") + "\r\n";
+   text += prefix + "Rank State: " + AC_L7KvValue(rank_text, "rank_state", "not_available") + "\r\n";
+   text += prefix + "Rank Index: " + AC_L7KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
+   text += prefix + "Session Score: " + AC_L7KvValue(rank_text, "session_score", "not_available") + "\r\n";
+   text += prefix + "Session Bucket: " + AC_L7KvValue(rank_text, "session_bucket", "not_available") + "\r\n";
+   text += prefix + "Score Quality: " + AC_L7KvValue(rank_text, "score_quality", "not_available") + "\r\n";
+   text += prefix + "Current Session: " + AC_L7KvValue(rank_text, "current_session", "not_available") + "\r\n";
+   text += "Session Definition Source: " + AC_L7KvValue(rank_text, "session_definition_source", "not_available") + "\r\n";
+   text += "Session Time Basis: " + AC_L7KvValue(rank_text, "session_time_basis", "not_available") + "\r\n";
+   text += "Time Basis Confidence: " + AC_L7KvValue(rank_text, "time_basis_confidence", "not_available") + "\r\n";
+   text += "Symbol Session Fit Score: " + AC_L7KvValue(rank_text, "symbol_session_fit_score", "not_available") + "\r\n";
+   text += "Live Activity Quality Score: " + AC_L7KvValue(rank_text, "live_activity_quality_score", "not_available") + "\r\n";
+   text += "Quote Freshness Quality Score: " + AC_L7KvValue(rank_text, "quote_freshness_quality_score", "not_available") + "\r\n";
+   text += "Spread Session Safety Score: " + AC_L7KvValue(rank_text, "spread_session_safety_score", "not_available") + "\r\n";
+   text += "Reason: " + AC_L7KvValue(rank_text, "reason", "not_available") + "\r\n";
+   text += "Rank Source: " + rank_path + "\r\n";
    return text;
 }
 
@@ -407,6 +443,7 @@ string AC_Layer7DossierSection(const string symbol)
    text += "\r\nLAYER 7 - SESSION RELEVANCE RANKING\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L7_STATUS + "\r\n";
+   text += "Summary: " + AC_L7_OPERATOR_SUMMARY + "\r\n";
    text += "Owner: Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Result Accepted: " + AC_L7BoolText(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "Validation: " + AC_L7_VALIDATION_STATUS + "\r\n";
@@ -416,16 +453,11 @@ string AC_Layer7DossierSection(const string symbol)
 
    if(l5_gate_status != "pass")
    {
+      text += "Rank Evidence: not_applicable\r\n";
       text += "Rank State: not_ranked_l5_gate_failed\r\n";
       text += "Session Score: not_available\r\n";
       text += "Session Bucket: not_available\r\n";
-   }
-   else if(!AC_L7_RANKED_ACCEPTED)
-   {
-      text += "Rank State: ranked_sidecar_not_accepted\r\n";
-      text += "Session Score: pending\r\n";
-      text += "Session Bucket: pending\r\n";
-      text += "Validation Reason: " + AC_L7_VALIDATION_REASON + "\r\n";
+      text += "Note: Layer 7 ranks only the current Layer 5 pass set.\r\n";
    }
    else
    {
@@ -433,27 +465,20 @@ string AC_Layer7DossierSection(const string symbol)
       string rank_text = rank_path == "" ? "" : AC_L7ReadSmallTextFile(rank_path, 12000);
       if(rank_text == "")
       {
+         text += "Rank Evidence: missing_symbol_sidecar\r\n";
          text += "Rank State: symbol_rank_sidecar_missing\r\n";
          text += "Session Score: missing\r\n";
          text += "Session Bucket: missing\r\n";
+         text += "Validation Reason: " + AC_L7_VALIDATION_REASON + "\r\n";
       }
       else
       {
-         text += "Rank State: " + AC_L7KvValue(rank_text, "rank_state", "not_available") + "\r\n";
-         text += "Rank Index: " + AC_L7KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
-         text += "Session Score: " + AC_L7KvValue(rank_text, "session_score", "not_available") + "\r\n";
-         text += "Session Bucket: " + AC_L7KvValue(rank_text, "session_bucket", "not_available") + "\r\n";
-         text += "Score Quality: " + AC_L7KvValue(rank_text, "score_quality", "not_available") + "\r\n";
-         text += "Current Session: " + AC_L7KvValue(rank_text, "current_session", "not_available") + "\r\n";
-         text += "Session Definition Source: " + AC_L7KvValue(rank_text, "session_definition_source", "not_available") + "\r\n";
-         text += "Session Time Basis: " + AC_L7KvValue(rank_text, "session_time_basis", "not_available") + "\r\n";
-         text += "Time Basis Confidence: " + AC_L7KvValue(rank_text, "time_basis_confidence", "not_available") + "\r\n";
-         text += "Symbol Session Fit Score: " + AC_L7KvValue(rank_text, "symbol_session_fit_score", "not_available") + "\r\n";
-         text += "Live Activity Quality Score: " + AC_L7KvValue(rank_text, "live_activity_quality_score", "not_available") + "\r\n";
-         text += "Quote Freshness Quality Score: " + AC_L7KvValue(rank_text, "quote_freshness_quality_score", "not_available") + "\r\n";
-         text += "Spread Session Safety Score: " + AC_L7KvValue(rank_text, "spread_session_safety_score", "not_available") + "\r\n";
-         text += "Reason: " + AC_L7KvValue(rank_text, "reason", "not_available") + "\r\n";
-         text += "Rank Source: " + rank_path + "\r\n";
+         if(!AC_L7_RANKED_ACCEPTED)
+         {
+            text += "Acceptance Note: symbol sidecar exists but is not accepted as current truth until the ranked manifest identity matches the latest L7 input.\r\n";
+            text += "Validation Reason: " + AC_L7_VALIDATION_REASON + "\r\n";
+         }
+         text += AC_L7RenderRankEvidenceBlock(rank_text, rank_path, AC_L7_RANKED_ACCEPTED);
       }
    }
 
@@ -481,6 +506,7 @@ string AC_Layer7WorkbenchSection()
    text += "trust_state=" + AC_L7_TRUST_STATE + "\r\n";
    text += "validation_status=" + AC_L7_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L7_VALIDATION_REASON + "\r\n";
+   text += "operator_summary=" + AC_L7_OPERATOR_SUMMARY + "\r\n";
    text += "gateway_required=true\r\n";
    text += "gateway_result_accepted=" + AC_L7BoolKv(AC_L7_RANKED_ACCEPTED) + "\r\n";
    text += "job_type=L7_SESSION_RELEVANCE_RANKING_V1\r\n";

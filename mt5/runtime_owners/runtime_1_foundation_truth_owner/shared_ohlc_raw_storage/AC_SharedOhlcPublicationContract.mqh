@@ -4,9 +4,9 @@
 // Runtime 1 Shared OHLC Raw Storage Owner - publication contract.
 // Stable include path consumed by Runtime 7 renderers.
 // Delegates to the current active Runtime 1 bridge.
-// No duplicate owner: AC_SharedOhlcActiveBridgeV6.mqh owns raw CopyRates/MqlRates storage.
+// No duplicate owner: AC_SharedOhlcActiveBridgeV7.mqh owns the single visible source file per symbol/timeframe.
 
-#include "AC_SharedOhlcActiveBridgeV6.mqh"
+#include "AC_SharedOhlcActiveBridgeV7.mqh"
 #include "AC_SharedOhlcLegacyAliases.mqh"
 
 #endif

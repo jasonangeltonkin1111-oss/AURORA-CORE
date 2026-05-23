@@ -389,11 +389,17 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     zero_cost_suspicious_penalty = 0.0
     if zero_suspicious:
-        zero_cost_suspicious_penalty = 22.0
-        bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
-        calculation_quality = "account_cost_zero_suspicious"
-        cost_model_degraded = True
-        reasons.append("zero_account_cost_with_nonzero_spread")
+        if effective_cost > 0.0:
+            zero_cost_suspicious_penalty = 5.0
+            calculation_quality = "warning_primary_cost_zero_fallback_positive"
+            cost_model_warning = True
+            reasons.append("primary_cost_zero_but_positive_fallback_cost")
+        else:
+            zero_cost_suspicious_penalty = 22.0
+            bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
+            calculation_quality = "account_cost_zero_suspicious"
+            cost_model_degraded = True
+            reasons.append("zero_account_cost_with_nonzero_spread")
     score -= zero_cost_suspicious_penalty
 
     volume_model_penalty = 0.0
