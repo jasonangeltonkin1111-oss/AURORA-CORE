@@ -44,7 +44,6 @@ string AC_L1EquityDrawdownRecoveryMap()
    datetime peak_time = 0;
    datetime max_dd_peak_time = 0;
    datetime max_dd_low_time = 0;
-   datetime last_peak_time = 0;
    datetime current_drawdown_start = 0;
    int max_dd_start_trade_rank = 0;
    int max_dd_low_trade_rank = 0;
@@ -52,6 +51,7 @@ string AC_L1EquityDrawdownRecoveryMap()
    int max_recovery_trades = 0;
    int current_recovery_trades = 0;
    int unrecovered_drawdown = 0;
+   bool max_dd_started_from_initial_balance = false;
 
    string used = "|";
    for(int rank = 0; rank < rows; rank++)
@@ -68,7 +68,6 @@ string AC_L1EquityDrawdownRecoveryMap()
             max_recovery_trades = current_recovery_trades;
          peak_equity = running_equity;
          peak_time = close_time;
-         last_peak_time = close_time;
          current_drawdown_start = 0;
          current_recovery_trades = 0;
       }
@@ -89,7 +88,8 @@ string AC_L1EquityDrawdownRecoveryMap()
          max_drawdown_pct = dd_pct;
          max_dd_peak_time = (current_drawdown_start > 0 ? current_drawdown_start : peak_time);
          max_dd_low_time = close_time;
-         max_dd_start_trade_rank = rank + 1 - current_recovery_trades;
+         max_dd_started_from_initial_balance = (max_dd_peak_time <= 0);
+         max_dd_start_trade_rank = (max_dd_started_from_initial_balance ? 0 : rank + 1 - current_recovery_trades);
          max_dd_low_trade_rank = rank + 1;
       }
    }
@@ -100,6 +100,10 @@ string AC_L1EquityDrawdownRecoveryMap()
    double current_distance_pct = (peak_equity > 0.0 ? (current_distance_from_peak / peak_equity) * 100.0 : 0.0);
    double selected_return_money = running_equity - start_equity_est;
    double selected_return_pct = (start_equity_est > 0.0 ? (selected_return_money / start_equity_est) * 100.0 : 0.0);
+   string max_dd_peak_text = (max_dd_started_from_initial_balance ? "initial_selected_history_balance" : AC_L1TimeText(max_dd_peak_time));
+   string max_dd_span_text = (max_dd_started_from_initial_balance
+      ? "initial_balance_to_" + IntegerToString(max_dd_low_trade_rank) + " chronological ranks"
+      : IntegerToString(max_dd_start_trade_rank) + " to " + IntegerToString(max_dd_low_trade_rank) + " chronological ranks");
 
    string text = AC_L1MapHeader("EQUITY / DRAWDOWN RECOVERY MAP");
    text += "Scope:                  selected closed history only; open equity shown separately by live exposure maps\r\n";
@@ -110,9 +114,9 @@ string AC_L1EquityDrawdownRecoveryMap()
    text += "Peak Equity Estimate:   " + AC_L1MoneyText(peak_equity) + "\r\n";
    text += "Lowest Equity Estimate: " + AC_L1MoneyText(lowest_equity) + "\r\n";
    text += "Max Drawdown:           " + AC_L1MoneyText(max_drawdown_money) + " (" + AC_L1PercentText(max_drawdown_pct) + ")\r\n";
-   text += "Max DD Peak Time:       " + AC_L1TimeText(max_dd_peak_time) + "\r\n";
+   text += "Max DD Peak Basis:      " + max_dd_peak_text + "\r\n";
    text += "Max DD Low Time:        " + AC_L1TimeText(max_dd_low_time) + "\r\n";
-   text += "Max DD Trade Span:      " + IntegerToString(max_dd_start_trade_rank) + " to " + IntegerToString(max_dd_low_trade_rank) + " chronological ranks\r\n";
+   text += "Max DD Trade Span:      " + max_dd_span_text + "\r\n";
    text += "Max Recovery Trades:    " + IntegerToString(max_recovery_trades) + "\r\n";
    text += "Current Distance Peak:  " + AC_L1MoneyText(current_distance_from_peak) + " (" + AC_L1PercentText(current_distance_pct) + ")\r\n";
    text += "Trades Since Peak:      " + IntegerToString(trades_since_peak) + "\r\n";
