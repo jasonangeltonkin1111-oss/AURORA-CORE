@@ -53,7 +53,7 @@ string AC_L1LiveExposureLine(const string label,
                              const double volume,
                              const double pl)
 {
-   return AC_L1PadRight(label, 16)
+   return AC_L1PadRight(AC_L1DisplayText(label), 16)
       + AC_L1PadLeft(IntegerToString(count), 7)
       + AC_L1PadLeft(AC_L1VolumeText(volume), 10)
       + AC_L1PadLeft(AC_L1MoneyText(pl), 12)
@@ -123,7 +123,7 @@ string AC_L1OpenPendingRiskReadinessMap()
    string text = AC_L1MapHeader("OPEN / PENDING RISK-AT-SL READINESS MAP");
    text += "Purpose:                estimated risk-at-SL readiness for live open/pending rows\r\n";
    text += "Estimate Source:        OrderCalcProfit using entry/open price to SL in account currency\r\n";
-   text += "Proof Status:           estimated_not_execution_permission_not_prop_rule_proof\r\n";
+   text += "Proof Status:           estimated, not execution permission or prop-rule proof\r\n";
    text += "Open Positions:         " + IntegerToString(open_total) + "\r\n";
    text += "Open With SL:           " + IntegerToString(open_with_sl) + "\r\n";
    text += "Open Without SL:        " + IntegerToString(open_without_sl) + "\r\n";
@@ -136,7 +136,7 @@ string AC_L1OpenPendingRiskReadinessMap()
    text += "Pending With SL:        " + IntegerToString(pending_with_sl) + "\r\n";
    text += "Pending Without SL:     " + IntegerToString(pending_without_sl) + "\r\n";
    text += "Pending Valid Geometry: " + IntegerToString(pending_valid_geometry) + "\r\n";
-   text += "Pending Invalid Geometry:" + IntegerToString(pending_invalid_geometry) + "\r\n";
+   text += "Pending Invalid Geometry: " + IntegerToString(pending_invalid_geometry) + "\r\n";
    text += "Pending Risk Estimated: " + IntegerToString(pending_risk_estimated) + " / " + IntegerToString(pending_total) + "\r\n";
    text += "Pending Risk Blocked:   " + IntegerToString(pending_risk_blocked) + "\r\n";
    text += "Pending Est Risk Money: " + AC_L1MoneyText(pending_est_risk_money) + " (" + AC_L1PercentText(pending_risk_pct) + " equity)\r\n";
@@ -221,9 +221,9 @@ string AC_L1OpenPendingLiveMap()
    text += "Open Rows Without TP:   " + IntegerToString(no_tp_count) + "\r\n";
    text += "Pending Direction Map\r\n";
    text += AC_L1PadRight("Side", 16) + AC_L1PadLeft("Count", 7) + AC_L1PadLeft("Volume", 10) + AC_L1PadLeft("P/L", 12) + "\r\n";
-   text += AC_L1LiveExposureLine("buy_pending", pending_buy_count, pending_buy_volume, 0.0);
-   text += AC_L1LiveExposureLine("sell_pending", pending_sell_count, pending_sell_volume, 0.0);
-   text += AC_L1LiveExposureLine("pending_total", pending_total, pending_total_volume, 0.0);
+   text += AC_L1LiveExposureLine("buy pending", pending_buy_count, pending_buy_volume, 0.0);
+   text += AC_L1LiveExposureLine("sell pending", pending_sell_count, pending_sell_volume, 0.0);
+   text += AC_L1LiveExposureLine("pending total", pending_total, pending_total_volume, 0.0);
    text += "Pending Rows Without SL: " + IntegerToString(pending_no_sl_count) + "\r\n";
    text += "Pending Rows Without TP: " + IntegerToString(pending_no_tp_count) + "\r\n";
    text += "Trade Permission:       FALSE\r\n";
@@ -286,7 +286,7 @@ string AC_L1OpenPendingBoardSummary()
    text += "Pending No SL/TP:     " + IntegerToString(pending_no_sl) + " / " + IntegerToString(pending_no_tp) + "\r\n";
    text += "Est Risk at SL:       " + AC_L1MoneyText(combined_risk) + " (" + AC_L1PercentText(combined_risk_pct) + " equity)\r\n";
    text += "Risk Rows Estimated:  " + IntegerToString(open_risk_estimated) + " open / " + IntegerToString(pending_risk_estimated) + " pending\r\n";
-   text += "Refresh Source:       near_live_snapshot_scan\r\n";
+   text += "Refresh Source:       near-live snapshot scan\r\n";
    text += "Trade Permission:     FALSE\r\n";
    return text;
 }
