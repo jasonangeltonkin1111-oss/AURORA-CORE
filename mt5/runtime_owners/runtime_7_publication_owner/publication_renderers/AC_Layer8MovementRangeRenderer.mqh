@@ -21,6 +21,7 @@ static int    AC_L8_EXPORT_L5_PASS_RENDERED = 0;
 static int    AC_L8_RANKED_ROWS_RENDERED = 0;
 static int    AC_L8_RANKED_COUNT_RENDERED = 0;
 static int    AC_L8_RANKED_PARTIAL_COUNT_RENDERED = 0;
+static int    AC_L8_RANKED_RISK_REVIEW_COUNT_RENDERED = 0;
 static int    AC_L8_RANKED_DEGRADED_COUNT_RENDERED = 0;
 static int    AC_L8_NOT_RANKABLE_QUALITY_COUNT_RENDERED = 0;
 static int    AC_L8_ELITE_COUNT_RENDERED = 0;
@@ -149,6 +150,51 @@ bool AC_L8FastWindowAvailable(const string symbol, const string tf)
    return FileIsExist(AC_SharedOhlcFastWindowPath(symbol, tf), AC_CommonFlag());
 }
 
+string AC_L8PrettyRankState(string value)
+{
+   if(value == "ranked") return "Ranked";
+   if(value == "ranked_partial") return "Ranked Partial";
+   if(value == "ranked_risk_review" || value == "ranked_degraded") return "Risk Review";
+   if(value == "not_rankable_quality") return "Not Rankable";
+   StringReplace(value, "_", " ");
+   return value;
+}
+
+string AC_L8PrettyBucket(string value)
+{
+   if(value == "elite_movement_range") return "Elite Movement / Range";
+   if(value == "strong_movement_range") return "Strong Movement / Range";
+   if(value == "acceptable_movement_range") return "Acceptable Movement / Range";
+   if(value == "weak_movement_range") return "Weak Movement / Range";
+   if(value == "poor_movement_range") return "Poor Movement / Range";
+   StringReplace(value, "_", " ");
+   return value;
+}
+
+string AC_L8PrettyRegime(string value)
+{
+   if(value == "violent_spike_risk") return "Violent Spike Risk";
+   if(value == "choppy_range") return "Choppy Range";
+   if(value == "compressed") return "Compressed";
+   if(value == "clean_expansion") return "Clean Expansion";
+   if(value == "normal") return "Normal";
+   StringReplace(value, "_", " ");
+   return value;
+}
+
+string AC_L8PrettyTop20Line(string pipe_line)
+{
+   if(pipe_line == "" || pipe_line == "not_available") return "not_available";
+   string rank = AC_L8PipeField(pipe_line, 0, "");
+   string symbol = AC_L8PipeField(pipe_line, 1, "");
+   string score = AC_L8PipeField(pipe_line, 2, "");
+   string bucket = AC_L8PipeField(pipe_line, 3, "");
+   string state = AC_L8PipeField(pipe_line, 4, "");
+   string regime = AC_L8PipeField(pipe_line, 5, "");
+   if(rank == "" || symbol == "" || score == "" || bucket == "" || state == "" || regime == "") return "not_available";
+   return "#" + rank + " " + symbol + " | " + score + " | " + AC_L8PrettyBucket(bucket) + " | " + AC_L8PrettyRankState(state) + " | " + AC_L8PrettyRegime(regime);
+}
+
 void AC_L8RefreshOhlcFastWindowReadiness()
 {
    AC_L8_OHLC_MIN_READY_RENDERED = 0;
@@ -190,6 +236,7 @@ void AC_L8ResetRenderState()
    AC_L8_RANKED_ROWS_RENDERED = 0;
    AC_L8_RANKED_COUNT_RENDERED = 0;
    AC_L8_RANKED_PARTIAL_COUNT_RENDERED = 0;
+   AC_L8_RANKED_RISK_REVIEW_COUNT_RENDERED = 0;
    AC_L8_RANKED_DEGRADED_COUNT_RENDERED = 0;
    AC_L8_NOT_RANKABLE_QUALITY_COUNT_RENDERED = 0;
    AC_L8_ELITE_COUNT_RENDERED = 0;
@@ -260,6 +307,7 @@ void AC_L8RefreshRankedSidecar()
    AC_L8_RANKED_ROWS_RENDERED = ranked_rows;
    AC_L8_RANKED_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_count", 0);
    AC_L8_RANKED_PARTIAL_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_partial_count", 0);
+   AC_L8_RANKED_RISK_REVIEW_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_risk_review_count", AC_L8KvInt(ranked_manifest, "ranked_degraded_count", 0));
    AC_L8_RANKED_DEGRADED_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "ranked_degraded_count", 0);
    AC_L8_NOT_RANKABLE_QUALITY_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "not_rankable_quality_count", 0);
    AC_L8_ELITE_COUNT_RENDERED = AC_L8KvInt(ranked_manifest, "elite_movement_range_count", 0);
@@ -298,7 +346,7 @@ void AC_L8RefreshRankedSidecar()
       AC_L8_VALIDATION_STATUS = "Accepted";
       AC_L8_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L8 input proof, OHLC fast windows, and permission boundaries";
       AC_L8_MAIN_BLOCKER = "none";
-      AC_L8_TOP20_FIRST_LINE = AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000));
+      AC_L8_TOP20_FIRST_LINE = AC_L8PrettyTop20Line(AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000)));
       return;
    }
 
@@ -328,7 +376,7 @@ string AC_Layer8BoardSection()
    text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Required:           TRUE\r\n";
    text += "Gateway Result Accepted:    " + AC_L8BoolText(AC_L8_RANKED_ACCEPTED) + "\r\n";
-   text += "Input Source:               Runtime 1 Shared OHLC Fast Windows + Layer 5 pass set\r\n";
+   text += "Input Source:               Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set\r\n";
    text += "Current L5 Pass Symbols:    " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "OHLC L8 Minimum Ready:      " + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED) + " / " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    text += "M5 Windows Ready:           " + IntegerToString(AC_L8_OHLC_M5_READY_RENDERED) + " / " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
@@ -345,7 +393,7 @@ string AC_Layer8BoardSection()
    text += "L8 Drift Delta:             " + IntegerToString(AC_L8_SNAPSHOT_DRIFT_DELTA_RENDERED) + "\r\n";
    text += "Ranked Clean:               " + IntegerToString(AC_L8_RANKED_COUNT_RENDERED) + "\r\n";
    text += "Ranked Partial:             " + IntegerToString(AC_L8_RANKED_PARTIAL_COUNT_RENDERED) + "\r\n";
-   text += "Ranked Degraded:            " + IntegerToString(AC_L8_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
+   text += "Risk Review:                " + IntegerToString(AC_L8_RANKED_RISK_REVIEW_COUNT_RENDERED) + "\r\n";
    text += "Not Rankable Quality:       " + IntegerToString(AC_L8_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
    text += "Elite Movement / Range:     " + IntegerToString(AC_L8_ELITE_COUNT_RENDERED) + "\r\n";
    text += "Strong Movement / Range:    " + IntegerToString(AC_L8_STRONG_COUNT_RENDERED) + "\r\n";
@@ -430,10 +478,13 @@ string AC_Layer8DossierSection(const string symbol)
       }
       else
       {
-         text += "Rank State: " + AC_L8KvValue(rank_text, "rank_state", "not_available") + "\r\n";
+         string raw_rank_state = AC_L8KvValue(rank_text, "rank_state", "not_available");
+         text += "Symbol Review State: " + AC_L8PrettyRankState(raw_rank_state) + "\r\n";
+         text += "Rank State: " + raw_rank_state + "\r\n";
          text += "Rank Index: " + AC_L8KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + "\r\n";
          text += "Movement Score: " + AC_L8KvValue(rank_text, "movement_score", "not_available") + "\r\n";
          text += "Movement Bucket: " + AC_L8KvValue(rank_text, "movement_bucket", "not_available") + "\r\n";
+         text += "Movement Regime: " + AC_L8PrettyRegime(AC_L8KvValue(rank_text, "movement_regime", "not_available")) + "\r\n";
          text += "Score Quality: " + AC_L8KvValue(rank_text, "score_quality", "not_available") + "\r\n";
          text += "Range Availability Score: " + AC_L8KvValue(rank_text, "range_availability_score", "not_available") + "\r\n";
          text += "Movement Quality Score: " + AC_L8KvValue(rank_text, "movement_quality_score", "not_available") + "\r\n";
@@ -456,7 +507,7 @@ string AC_Layer8DossierSection(const string symbol)
 
    text += "Movement Policy: ranking only; no direction, entry, selection, permission, or execution\r\n";
    text += "Boundary:\r\n";
-   text += "Source Owner: Runtime 1 Shared OHLC Fast Windows + Layer 5 pass set\r\n";
+   text += "Source Owner: Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set\r\n";
    text += "Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support\r\n";
    text += "Layer 8 Blocks Symbols: FALSE\r\n";
    text += "Selection Runtime: FALSE\r\n";
@@ -491,7 +542,8 @@ string AC_Layer8WorkbenchSection()
    text += "ranked_symbols=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + "\r\n";
    text += "ranked_count=" + IntegerToString(AC_L8_RANKED_COUNT_RENDERED) + "\r\n";
    text += "ranked_partial_count=" + IntegerToString(AC_L8_RANKED_PARTIAL_COUNT_RENDERED) + "\r\n";
-   text += "ranked_degraded_count=" + IntegerToString(AC_L8_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
+   text += "ranked_risk_review_count=" + IntegerToString(AC_L8_RANKED_RISK_REVIEW_COUNT_RENDERED) + "\r\n";
+   text += "legacy_ranked_degraded_count=" + IntegerToString(AC_L8_RANKED_DEGRADED_COUNT_RENDERED) + "\r\n";
    text += "not_rankable_quality_count=" + IntegerToString(AC_L8_NOT_RANKABLE_QUALITY_COUNT_RENDERED) + "\r\n";
    text += "elite_movement_range_count=" + IntegerToString(AC_L8_ELITE_COUNT_RENDERED) + "\r\n";
    text += "strong_movement_range_count=" + IntegerToString(AC_L8_STRONG_COUNT_RENDERED) + "\r\n";
