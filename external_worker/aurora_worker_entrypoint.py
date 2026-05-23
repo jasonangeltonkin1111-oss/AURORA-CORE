@@ -95,7 +95,14 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
     l6_status = latest.get("l6_rank_status", "missing")
     l7_status = latest.get("l7_rank_status", "missing")
     l8_status = latest.get("l8_rank_status", "missing")
-    all_complete = result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete"
+    l9_status = latest.get("l9_rank_status", "missing")
+    all_complete = (
+        result.ok
+        and l6_status == "complete"
+        and l7_status == "complete"
+        and l8_status == "complete"
+        and l9_status == "complete"
+    )
     if not all_complete:
         return False
     accepted_unix = unix_time()
@@ -105,6 +112,7 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         l6_status,
         l7_status,
         l8_status,
+        l9_status,
     ])
     text = "\n".join([
         "schema_name=aurora_gateway_surface_accepted_epoch",
@@ -121,6 +129,7 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         f"l6_status={l6_status}",
         f"l7_status={l7_status}",
         f"l8_status={l8_status}",
+        f"l9_status={l9_status}",
         f"result_latest_path={latest_path}",
         "display_epoch_status=accepted_current",
         "authority=calculation_support_only",
