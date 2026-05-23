@@ -31,7 +31,10 @@ static AC_SharedOhlcTimeframeContract AC_SHARED_OHLC_FRAMES[];
 
 void AC_SharedOhlcResetCounters()
 {
-   AC_SHARED_OHLC_SYMBOLS_TOTAL = SymbolsTotal(true);
+   // Shared OHLC is a broker-universe source owner. It must not silently scope
+   // itself to Market Watch only, otherwise future layers may read a partial
+   // raw store while the surface appears healthy.
+   AC_SHARED_OHLC_SYMBOLS_TOTAL = SymbolsTotal(false);
    AC_SharedOhlcDefaultTimeframes(AC_SHARED_OHLC_FRAMES);
    AC_SHARED_OHLC_TIMEFRAMES_ENABLED = 0;
    for(int i = 0; i < ArraySize(AC_SHARED_OHLC_FRAMES); i++)
@@ -57,6 +60,7 @@ string AC_SharedOhlcStatusRow()
    string row = "shared_ohlc_schema=" + AC_SHARED_OHLC_SCHEMA_VERSION + "\r\n";
    row += "shared_ohlc_owner=" + AC_SHARED_OHLC_OWNER_NAME + "\r\n";
    row += "shared_ohlc_authority=" + AC_SHARED_OHLC_AUTHORITY + "\r\n";
+   row += "shared_ohlc_scope=broker_universe_symbols_total_false\r\n";
    row += "shared_ohlc_status=" + AC_SHARED_OHLC_STATUS + "\r\n";
    row += "shared_ohlc_mode=" + AC_SHARED_OHLC_MODE + "\r\n";
    row += "shared_ohlc_boot_seed_complete=" + (AC_SHARED_OHLC_BOOT_SEED_COMPLETE ? "true" : "false") + "\r\n";
