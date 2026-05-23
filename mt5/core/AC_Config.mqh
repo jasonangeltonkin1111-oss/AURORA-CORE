@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer7_publication_order_hardening";
-static const string AC_BUILD_VERSION      = "1.059";
-static const string AC_UPGRADE_ID         = "LAYER7_PUBLICATION_ORDER_HARDENING";
-static const string AC_UPGRADE_SUMMARY    = "Hardens Layer 7 sidecar publication after runtime archive 18503(30) showed L7 manifest proof could claim SymbolRanks existed while the archived SymbolRanks folder was empty and a ranked_symbols.csv temp file was visible. L7 worker now writes expected ranked outputs first, deletes stale SymbolRanks only after successful replacement, and writes manifest last. Existing outputs are intentionally left untouched if input changes mid-rank. This preserves selection_runtime=false, trade_permission=false, and execution=false. No compile/runtime proof is claimed by source changes alone.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication rendering may display accepted Layer 7 session relevance ranked sidecar proof, but Layer 7 still does not select, permit, execute, or block symbols. Runtime 3 remains Gateway calculation support only. L7 worker publication now reduces empty-folder/partial-sidecar exposure for readers and zip captures by avoiding pre-delete of final SymbolRanks. This patch does not create trade permission, selection runtime, basket logic, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.059; fix EA property version locally if needed; rebuild/reinstall Gateway worker; confirm L7 ranked_symbols.manifest schema_version=3 and publication_order=write_expected_outputs_then_delete_stale_then_manifest_last; confirm SymbolRanks folder count equals symbol_rank_files_actual and row_count; confirm no lingering ranked_symbols.csv.*.tmp after worker settles; confirm L7 validation_status=Accepted when ranked sidecar proof matches input manifest; confirm selection_runtime=false, trade_permission=false, execution=false; confirm timer remains under budget.";
-static const string AC_LOGGING_POLICY     = "event_boundary_layer7_publication_order_hardening_no_duplicate_owner_no_selection_no_permission";
+static const string AC_BUILD_PHASE        = "dossier_cache_layer7_proof_key";
+static const string AC_BUILD_VERSION      = "1.060";
+static const string AC_UPGRADE_ID         = "DOSSIER_CACHE_LAYER7_PROOF_KEY";
+static const string AC_UPGRADE_SUMMARY    = "Fixes stale Dossier/Workbench L7 truth after runtime archive 18503(36) showed Market Board could render L7 accepted while Workbench/Dossiers still showed older degraded L7 sections. The Dossier universe cache key now includes L7 status, input checksum, ranked checksum, ranked rows, and accepted flag so Dossiers are rewritten when L7 ranked sidecar proof changes. This preserves selection_runtime=false, trade_permission=false, and execution=false. No compile/runtime proof is claimed by source changes alone.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication rendering remains the owner for Board/Dossier surfaces. Dossier caching must not treat L7 proof changes as irrelevant. Runtime 3 remains Gateway calculation support only. This patch does not create trade permission, selection runtime, basket logic, duplicate FileIO, duplicate routes, or a new Gateway owner. FileIO, routes, Board/Dossier rendering, ranking, selection, and operator permission remain single-owner boundaries and must not be duplicated.";
+static const string AC_UPGRADE_TEST_PLAN  = "No compile proof is claimed by this source patch. When tested later: confirm build_version=1.060; fix EA property version locally if needed; rebuild/reinstall Gateway worker if needed; confirm Dossier Universe does not stay cached when L7 status/checksum/rows/accepted changes; confirm Workbench, Market Board, and a sample Open Dossier agree on L7 validation_status=Accepted when ranked sidecar proof matches; confirm cached_universe_status_no_symbol_rewrite detail includes l7 status/checksums/rows when cache is valid; confirm selection_runtime=false, trade_permission=false, execution=false; confirm timer remains under budget.";
+static const string AC_LOGGING_POLICY     = "event_boundary_dossier_cache_layer7_proof_key_no_duplicate_owner_no_selection_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.059_layer7_publication_order_hardening";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.060_dossier_cache_layer7_proof_key";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
