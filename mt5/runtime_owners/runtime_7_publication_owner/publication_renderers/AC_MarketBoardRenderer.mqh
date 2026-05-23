@@ -13,12 +13,14 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "\r\n";
    text += "DOSSIER COVERAGE\r\n";
    text += "----------------------------------------\r\n";
-   text += "Broker Symbols Seen:    " + IntegerToString(status.broker_symbols_total) + "\r\n";
-   text += "Dossiers Ready:         " + IntegerToString(status.dossier_shells_ready) + " / " + IntegerToString(status.broker_symbols_total) + "\r\n";
-   text += "Dossiers Missing:       " + IntegerToString(status.dossier_shells_missing) + "\r\n";
-   text += "Completion:             " + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
-   text += "Failed Dossiers:        " + IntegerToString(status.failed_symbol_count) + "\r\n";
-   text += "Dossier Pass Duration:  " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
+   text += "Broker Symbols Seen:        " + IntegerToString(status.broker_symbols_total) + "\r\n";
+   text += "Current Generation Updated: " + IntegerToString(status.dossier_shells_ready) + " / " + IntegerToString(status.broker_symbols_total) + "\r\n";
+   text += "Current Generation Left:    " + IntegerToString(status.dossier_shells_missing) + "\r\n";
+   text += "Generation Progress:        " + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
+   text += "Physical Missing:           not_reconciled_by_this_counter\r\n";
+   text += "Counter Truth:              ready/left counts are current-generation refresh progress, not physical file count\r\n";
+   text += "Failed Current Writes:      " + IntegerToString(status.failed_symbol_count) + "\r\n";
+   text += "Dossier Pass Duration:      " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "\r\n";
    text += "CURRENT FOUNDATION + SURFACE SCORING\r\n";
    text += "----------------------------------------\r\n";
@@ -67,17 +69,19 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.12|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.13|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
       + "|broker_symbols_total=" + IntegerToString(status.broker_symbols_total)
       + "|marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total)
-      + "|dossier_shells_ready=" + IntegerToString(status.dossier_shells_ready)
-      + "|dossier_shells_missing=" + IntegerToString(status.dossier_shells_missing)
-      + "|failed_symbol_count=" + IntegerToString(status.failed_symbol_count)
+      + "|dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready)
+      + "|dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing)
+      + "|dossier_physical_missing=not_reconciled_by_generation_counter"
+      + "|dossier_counter_truth=current_generation_progress_not_physical_file_count"
+      + "|failed_current_write_count=" + IntegerToString(status.failed_symbol_count)
       + "|retry_count_total=" + IntegerToString(status.retry_count_total)
-      + "|completion=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total)
+      + "|generation_progress=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total)
       + "|pass_start_index=" + IntegerToString(status.batch_start_index)
       + "|pass_end_index=" + IntegerToString(status.batch_end_index)
       + "|symbols_attempted=" + IntegerToString(status.batch_attempted)
@@ -114,11 +118,13 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "trust_state=" + status.trust_state + "\r\n";
    text += "broker_symbols_total=" + IntegerToString(status.broker_symbols_total) + "\r\n";
    text += "marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total) + "\r\n";
-   text += "dossier_shells_ready=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
-   text += "dossier_shells_missing=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
-   text += "failed_symbol_count=" + IntegerToString(status.failed_symbol_count) + "\r\n";
+   text += "dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
+   text += "dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
+   text += "dossier_physical_missing=not_reconciled_by_generation_counter\r\n";
+   text += "dossier_counter_truth=current_generation_progress_not_physical_file_count\r\n";
+   text += "failed_current_write_count=" + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "retry_count_total=" + IntegerToString(status.retry_count_total) + "\r\n";
-   text += "completion=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
+   text += "generation_progress=" + AC_PercentText(status.dossier_shells_ready, status.broker_symbols_total) + "\r\n";
    text += "pass_start_index=" + IntegerToString(status.batch_start_index) + "\r\n";
    text += "pass_end_index=" + IntegerToString(status.batch_end_index) + "\r\n";
    text += "symbols_attempted=" + IntegerToString(status.batch_attempted) + "\r\n";
