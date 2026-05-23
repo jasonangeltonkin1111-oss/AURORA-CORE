@@ -116,7 +116,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    text += AC_Layer5DossierSection(symbol);
    text += AC_Layer6DossierSection(symbol);
    text += AC_Layer7DossierSection(symbol);
-   text += AC_SharedOhlcDossierSection(symbol);
+   text += AC_SharedOhlcRenderDossierSection(symbol);
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
    text += (market_state == "open" ? "Next step: Layer 7 only after L6 live proof is accepted\r\n" : "Next step: wait for Layer 2 recheck before deeper layers\r\n");
