@@ -13,6 +13,7 @@
 #include "../../runtime_1_foundation_truth_owner/shared_ohlc_raw_storage/AC_SharedOhlcLegacyAliases.mqh"
 #include "AC_Layer7SessionRelevanceRenderer.mqh"
 #include "AC_Layer8MovementRangeRenderer.mqh"
+#include "AC_Layer9StructureLocationRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_Layer0DossierPublication.mqh"
 #include "AC_MarketBoardRenderer.mqh"
