@@ -2,14 +2,96 @@
 #define AC_RENDER_INDEX_OPTIMIZED_DOSSIER_SECTIONS_MQH
 
 // RenderIndex v1 Dossier wrappers.
-// These wrappers are included after the original L7/L8/L9 renderer functions and before
+// These wrappers are included after the original L6/L7/L8/L9 renderer functions and before
 // AC_Layer0DossierPublication.mqh. They let Dossier publication use compact worker indexes
 // when accepted, while preserving the original renderers as fallback.
 // No scoring, selection, permission, execution, route ownership, or FileIO ownership is added.
 
+static long AC_RI_L6_DOSSIER_REFRESH_HEARTBEAT_ID = -1;
+static long AC_RI_L7_DOSSIER_REFRESH_HEARTBEAT_ID = -1;
+static long AC_RI_L8_DOSSIER_REFRESH_HEARTBEAT_ID = -1;
+static long AC_RI_L9_DOSSIER_REFRESH_HEARTBEAT_ID = -1;
+
+void AC_RIEnsureL6DossierRefresh()
+{
+   if(AC_RI_L6_DOSSIER_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID) return;
+   AC_RI_L6_DOSSIER_REFRESH_HEARTBEAT_ID = AC_HEARTBEAT_ID;
+   AC_RefreshLayer6RankedSidecar();
+}
+
+void AC_RIEnsureL7DossierRefresh()
+{
+   if(AC_RI_L7_DOSSIER_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID) return;
+   AC_RI_L7_DOSSIER_REFRESH_HEARTBEAT_ID = AC_HEARTBEAT_ID;
+   AC_L7RefreshRankedSidecar();
+}
+
+void AC_RIEnsureL8DossierRefresh()
+{
+   if(AC_RI_L8_DOSSIER_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID) return;
+   AC_RI_L8_DOSSIER_REFRESH_HEARTBEAT_ID = AC_HEARTBEAT_ID;
+   AC_L8RefreshRankedSidecar();
+}
+
+void AC_RIEnsureL9DossierRefresh()
+{
+   if(AC_RI_L9_DOSSIER_REFRESH_HEARTBEAT_ID == AC_HEARTBEAT_ID) return;
+   AC_RI_L9_DOSSIER_REFRESH_HEARTBEAT_ID = AC_HEARTBEAT_ID;
+   AC_L9RefreshRankedSidecar();
+}
+
+string AC_Layer6DossierSection_RenderIndex(const string symbol)
+{
+   AC_RIEnsureL6DossierRefresh();
+   int l5_index = AC_L5FindIndex(symbol);
+   string l5_status = "not_available";
+   string l5_reason = "symbol not found in Layer 5 gate packet";
+   if(l5_index >= 0)
+   {
+      l5_status = AC_L5_SYMBOLS[l5_index].gate_status;
+      l5_reason = AC_L5_SYMBOLS[l5_index].gate_reason;
+   }
+
+   AC_RenderIndexRow row;
+   bool index_hit = (AC_L6_RANKED_ACCEPTED && AC_RenderIndexLookup(6, symbol, row));
+   if(!index_hit)
+      return AC_Layer6DossierSection(symbol);
+
+   string text = "\r\nLAYER 6 - COST / FRICTION RANKING\r\n";
+   text += "----------------------------------------\r\n";
+   text += "Status: " + AC_L6_STATUS + "\r\n";
+   text += "Owner: " + AC_RUNTIME4_OWNER + "\r\n";
+   text += "Gateway Result Accepted: " + (AC_L6_RANKED_ACCEPTED ? "TRUE" : "FALSE") + "\r\n";
+   text += "Validation: " + AC_L6_VALIDATION_STATUS + "\r\n";
+   text += "L6 Snapshot Drift: " + (AC_L6_LIVE_L5_DRIFT ? "TRUE" : "FALSE") + "\r\n";
+   text += "Current L5 Pass Symbols: " + IntegerToString(AC_L6_INPUT_L5_PASS_SYMBOLS) + "\r\n";
+   text += "L6 Export L5 Pass Symbols: " + IntegerToString(AC_L6_SOURCE_L5_GATE_PASS) + "\r\n";
+   text += "SymbolRank Filename Mode: " + AC_L6_MANIFEST_SYMBOL_RANK_FILENAME_MODE + "\r\n";
+   text += "Expected SymbolRank File: " + AC_L6SymbolRankFilename(symbol) + "\r\n";
+   text += "L5 Gate Status: " + l5_status + "\r\n";
+   text += "L5 Gate Reason: " + l5_reason + "\r\n";
+   text += "Rank Evidence: accepted_current_epoch_render_index_v1\r\n";
+   text += "Rank State: " + row.rank_state + "\r\n";
+   text += "Rank Index: " + row.rank_index + " / " + IntegerToString(AC_L6_RANKED_SYMBOLS) + "\r\n";
+   text += "Friction Score: " + row.score + "\r\n";
+   text += "Friction Bucket: " + row.bucket + "\r\n";
+   text += "Score Quality: " + row.score_quality + "\r\n";
+   text += "Rank Source: render_index_v1\r\n";
+   text += "Rank Path: " + row.rank_path + "\r\n";
+   text += "\r\nBoundary\r\n";
+   text += "----------------------------------------\r\n";
+   text += "Source Owner: Layer 5 pass set + Layer 3/4 packets + MT5 cost primitives\r\n";
+   text += "Scoring Owner: " + AC_RUNTIME4_OWNER + " via Runtime 3 Gateway support\r\n";
+   text += "Layer 6 Blocks Symbols: FALSE\r\n";
+   text += "Selection Runtime: FALSE\r\n";
+   text += "Trade Permission: FALSE\r\n";
+   text += "Execution: FALSE\r\n";
+   return text;
+}
+
 string AC_Layer7DossierSection_RenderIndex(const string symbol)
 {
-   AC_L7RefreshRankedSidecar();
+   AC_RIEnsureL7DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -53,7 +135,7 @@ string AC_Layer7DossierSection_RenderIndex(const string symbol)
 
 string AC_Layer8DossierSection_RenderIndex(const string symbol)
 {
-   AC_L8RefreshRankedSidecar();
+   AC_RIEnsureL8DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -104,7 +186,7 @@ string AC_Layer8DossierSection_RenderIndex(const string symbol)
 
 string AC_Layer9DossierSection_RenderIndex(const string symbol)
 {
-   AC_L9RefreshRankedSidecar();
+   AC_RIEnsureL9DossierRefresh();
    int l5_index = AC_L5FindIndex(symbol);
    string l5_gate_status = "not_available";
    if(l5_index >= 0)
@@ -149,6 +231,7 @@ string AC_Layer9DossierSection_RenderIndex(const string symbol)
    return text;
 }
 
+#define AC_Layer6DossierSection AC_Layer6DossierSection_RenderIndex
 #define AC_Layer7DossierSection AC_Layer7DossierSection_RenderIndex
 #define AC_Layer8DossierSection AC_Layer8DossierSection_RenderIndex
 #define AC_Layer9DossierSection AC_Layer9DossierSection_RenderIndex
