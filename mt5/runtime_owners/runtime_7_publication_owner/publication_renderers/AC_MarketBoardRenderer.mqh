@@ -36,12 +36,14 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_Layer5BoardSection();
    text += AC_Layer6BoardSection();
    text += AC_Layer7BoardSection();
+   text += AC_SharedOhlcBoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
    text += "Market State Known: " + ((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0 ? "Partial or Complete" : "No") + "\r\n";
    text += "Specs Known:        " + (AC_L3_READY ? "See Layer 3 readiness" : "No") + "\r\n";
    text += "Quotes Known:       " + (AC_L4_READY ? "See Layer 4 readiness" : "No") + "\r\n";
    text += "Cost Ranking:       " + AC_L6_STATUS + "\r\n";
+   text += "OHLC Raw Store:     " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "Selection Active:   No\r\n";
    text += "Permission Active:  No\r\n";
    text += "\r\n";
@@ -49,6 +51,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
    text += "Layer 6 is ranking/scoring only; Layer 5 remains the only hard gate.\r\n";
+   text += "Shared OHLC is raw storage only; no strategy, selection, or permission authority.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
@@ -85,6 +88,9 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l5_status=" + AC_L0_CACHED_L5_STATUS
       + "|cached_l6_status=" + AC_L0_CACHED_L6_STATUS
       + "|cached_l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM
+      + "|shared_ohlc_status=" + AC_SHARED_OHLC_STATUS
+      + "|shared_ohlc_mode=" + AC_SHARED_OHLC_MODE
+      + "|shared_ohlc_seed_complete=" + (AC_SHARED_OHLC_BOOT_SEED_COMPLETE ? "true" : "false")
       + "|main_blocker=" + status.main_blocker
       + "|trade_permission=false|ranking_runtime=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
@@ -137,6 +143,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer5WorkbenchSection();
    text += AC_Layer6WorkbenchSection();
    text += AC_Layer7WorkbenchSection();
+   text += "\r\n" + AC_SharedOhlcWorkbenchSection();
    return text;
 }
 
