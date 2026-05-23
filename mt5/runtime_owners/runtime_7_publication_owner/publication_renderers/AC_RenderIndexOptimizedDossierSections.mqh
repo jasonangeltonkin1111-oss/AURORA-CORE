@@ -40,6 +40,31 @@ void AC_RIEnsureL9DossierRefresh()
    AC_L9RefreshRankedSidecar();
 }
 
+string AC_RILayerBlockedSection(const string layer_title, const string owner, const string l5_status, const string l5_reason, const string score_label, const string bucket_label, const string boundary_source_owner, const string policy_line)
+{
+   string text = "\r\n" + layer_title + "\r\n";
+   text += "----------------------------------------\r\n";
+   text += "Status: not_ranked_l5_gate_failed\r\n";
+   text += "Owner: " + owner + "\r\n";
+   text += "Gateway Result Accepted: FALSE\r\n";
+   text += "Validation: blocked_by_current_layer5_gate\r\n";
+   text += "L5 Gate Status: " + l5_status + "\r\n";
+   text += "L5 Gate Reason: " + l5_reason + "\r\n";
+   text += "Rank State: not_ranked_l5_gate_failed\r\n";
+   text += score_label + ": not_available\r\n";
+   text += bucket_label + ": not_available\r\n";
+   text += "Rank Source: skipped_current_l5_gate_not_pass\r\n";
+   text += policy_line + "\r\n";
+   text += "Boundary:\r\n";
+   text += "Source Owner: " + boundary_source_owner + "\r\n";
+   text += "Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support\r\n";
+   text += "Layer Blocks Symbols: FALSE\r\n";
+   text += "Selection Runtime: FALSE\r\n";
+   text += "Trade Permission: FALSE\r\n";
+   text += "Execution: FALSE\r\n";
+   return text;
+}
+
 string AC_Layer6DossierSection_RenderIndex(const string symbol)
 {
    AC_RIEnsureL6DossierRefresh();
@@ -52,7 +77,7 @@ string AC_Layer6DossierSection_RenderIndex(const string symbol)
       l5_reason = AC_L5_SYMBOLS[l5_index].gate_reason;
    }
    if(l5_status != "pass")
-      return AC_Layer6DossierSection(symbol);
+      return AC_RILayerBlockedSection("LAYER 6 - COST / FRICTION RANKING", AC_RUNTIME4_OWNER, l5_status, l5_reason, "Friction Score", "Friction Bucket", "Layer 5 pass set + Layer 3/4 packets + MT5 cost primitives", "Cost Policy: ranking only; no selection, permission, or execution");
 
    AC_RenderIndexRow row;
    bool index_hit = (AC_L6_RANKED_ACCEPTED && AC_RenderIndexLookup(6, symbol, row));
@@ -99,7 +124,7 @@ string AC_Layer7DossierSection_RenderIndex(const string symbol)
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
    if(l5_gate_status != "pass")
-      return AC_Layer7DossierSection(symbol);
+      return AC_RILayerBlockedSection("LAYER 7 - SESSION RELEVANCE RANKING", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Session Score", "Session Bucket", "Layer 5 pass set + Layer 2/3/4 packets", "Session Policy: off-session caution only; not a trade-time recommendation");
 
    AC_RenderIndexRow row;
    bool index_hit = (AC_L7_RANKED_ACCEPTED && AC_RenderIndexLookup(7, symbol, row));
@@ -145,7 +170,7 @@ string AC_Layer8DossierSection_RenderIndex(const string symbol)
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
    if(l5_gate_status != "pass")
-      return AC_Layer8DossierSection(symbol);
+      return AC_RILayerBlockedSection("LAYER 8 - MOVEMENT / RANGE RANKING", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Movement Score", "Movement Bucket", "Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set", "Movement Policy: ranking only; no direction, entry, selection, permission, or execution");
 
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
@@ -198,7 +223,7 @@ string AC_Layer9DossierSection_RenderIndex(const string symbol)
    if(l5_index >= 0)
       l5_gate_status = AC_L5_SYMBOLS[l5_index].pass ? "pass" : "not_pass";
    if(l5_gate_status != "pass")
-      return AC_Layer9DossierSection(symbol);
+      return AC_RILayerBlockedSection("LAYER 9 - STRUCTURE / LOCATION GEOMETRY", "Runtime 4 - Surface Scoring Owner", l5_gate_status, "current Layer 5 gate is not pass", "Structure Watchlist Score", "Structure Bucket", "Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set", "Structure Policy: watchlist only; no direction, entry, selection, permission, or execution");
 
    AC_RenderIndexRow row;
    AC_OhlcReadinessIndexRow ohlc;
