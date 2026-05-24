@@ -94,6 +94,7 @@ string AC_L1SymbolSummaryTable()
 {
    string text = "Symbol Performance\r\n";
    text += "----------------------------------------\r\n";
+   text += "section_id:             L1_SYMBOL_PERFORMANCE_BASE\r\n";
    text += AC_L1PadRight("Symbol", 14) + AC_L1PadLeft("Trades", 8) + AC_L1PadLeft("Wins", 7) + AC_L1PadLeft("Losses", 8) + AC_L1PadLeft("Win %", 8) + AC_L1PadLeft("Net", 12) + "\r\n";
    for(int i = 0; i < ArraySize(AC_L1_SYMBOL_STATS); i++)
    {
@@ -115,6 +116,7 @@ string AC_L1DaySummaryTable()
 {
    string text = "Daily Performance\r\n";
    text += "----------------------------------------\r\n";
+   text += "section_id:             L1_DAILY_PERFORMANCE_BASE\r\n";
    text += AC_L1PadRight("Day", 14) + AC_L1PadLeft("Trades", 8) + AC_L1PadLeft("Net", 12) + "\r\n";
    for(int i = 0; i < ArraySize(AC_L1_DAY_STATS); i++)
    {
@@ -397,6 +399,7 @@ void AC_BuildLayer1Texts()
 
    AC_L1_ACCOUNT_STATUS_TEXT = "AURORA CORE - ACCOUNT STATUS\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_ACCOUNT_STATUS_HEADER\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Build: " + AC_BUILD_VERSION + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Upgrade: " + AC_UPGRADE_ID + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "History Window Policy: show all closed trades inside last 90 days; if fewer than 100 exist, fill with older closed trades up to 100 when available.\r\n";
@@ -404,11 +407,13 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Account Status Cutoff: " + account_status_cutoff_text + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nACCOUNT SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_ACCOUNT_SUMMARY\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Account: " + IntegerToString((int)AC_L1_LOGIN) + " | Server: " + AC_L1_SERVER + " | Mode: " + AC_L1_TRADE_MODE + " | Currency: " + AC_L1_CURRENCY + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Balance: " + AC_L1MoneyText(AC_L1_BALANCE) + " | Equity: " + AC_L1MoneyText(AC_L1_EQUITY) + " | Floating P/L: " + AC_L1MoneyText(AC_L1_FLOATING_PL) + " | Free Margin: " + AC_L1MoneyText(AC_L1_FREE_MARGIN) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Current Drawdown: " + AC_L1MoneyText(current_dd_money) + " (" + AC_L1PercentText(current_dd_pct) + ") | Equity Cushion: " + AC_L1MoneyText(equity_cushion_money) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nRESULTS\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_RESULTS\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Total Net Profit: " + AC_L1MoneyText(AC_L1_NET_PROFIT) + " | Gross Profit: " + AC_L1MoneyText(AC_L1_GROSS_PROFIT) + " | Gross Loss: " + AC_L1MoneyText(AC_L1_GROSS_LOSS) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Profit Factor: " + DoubleToString(profit_factor, 2) + " | Expected Payoff: " + AC_L1MoneyText(expected_payoff) + " | Total Trades: " + IntegerToString(closed_count) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Profit Trades: " + IntegerToString(win_count) + " (" + AC_L1PercentText(win_rate) + ") | Loss Trades: " + IntegerToString(loss_count) + " (" + AC_L1PercentText(loss_rate) + ")\r\n";
@@ -421,14 +426,20 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "Best Symbol: " + AC_L1_BEST_SYMBOL + " " + AC_L1MoneyText(AC_L1_BEST_SYMBOL_NET) + " | Worst Symbol: " + AC_L1_WORST_SYMBOL + " " + AC_L1MoneyText(AC_L1_WORST_SYMBOL_NET) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Best Day: " + AC_L1_BEST_DAY + " " + AC_L1MoneyText(AC_L1_BEST_DAY_NET) + " | Worst Day: " + AC_L1_WORST_DAY + " " + AC_L1MoneyText(AC_L1_WORST_DAY_NET) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nOpen Positions - Full\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_OPEN_POSITIONS_FULL\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Side      Vol       Entry          SL          TP       P/L\r\n";
    for(int fp = 0; fp < ArraySize(AC_L1_POSITIONS); fp++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PositionLine(AC_L1_POSITIONS[fp]) + "\r\n";
    if(ArraySize(AC_L1_POSITIONS) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nPending Orders - Full\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_PENDING_ORDERS_FULL\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type             Vol       Price          SL          TP\r\n";
    for(int fo = 0; fo < ArraySize(AC_L1_PENDING); fo++) AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PendingLine(AC_L1_PENDING[fo]) + "\r\n";
    if(ArraySize(AC_L1_PENDING) <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nClosed Trade History - Selected Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_CLOSED_TRADE_HISTORY_SELECTED_DETAIL\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Rule: all rows inside last 90 days, or older rows only until the 100-row minimum is filled when available.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol      Side      Vol      Entry      Close       Net Duration  Result | Costs and Protection\r\n";
    int closed_shown = 0;
@@ -441,6 +452,8 @@ void AC_BuildLayer1Texts()
    if(closed_shown <= 0) AC_L1_ACCOUNT_STATUS_TEXT += "none\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Closed Detail Rows Shown: " + IntegerToString(closed_shown) + " / " + IntegerToString(ArraySize(AC_L1_CLOSED)) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\nCanceled / Rejected / Expired Orders - Selected Detail\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_CANCELED_ORDER_EVENTS_SELECTED_DETAIL\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Rule: selected recent cancel-like order evidence from Layer 1 scan.\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Time             Symbol        Type           State        Vol       Price\r\n";
    int cancels_shown = 0;
@@ -455,6 +468,7 @@ void AC_BuildLayer1Texts()
    AC_L1_ACCOUNT_STATUS_TEXT += "\r\n" + AC_L1SymbolSummaryTable() + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DaySummaryTable() + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Direction Summary\r\n----------------------------------------\r\n";
+   AC_L1_ACCOUNT_STATUS_TEXT += "section_id:             L1_DIRECTION_SUMMARY_BASE\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Buy Trades: " + IntegerToString(AC_L1_BUY_COUNT) + " | Net: " + AC_L1MoneyText(AC_L1_BUY_NET) + "\r\n";
    AC_L1_ACCOUNT_STATUS_TEXT += "Sell Trades: " + IntegerToString(AC_L1_SELL_COUNT) + " | Net: " + AC_L1MoneyText(AC_L1_SELL_NET) + "\r\n";
 }
