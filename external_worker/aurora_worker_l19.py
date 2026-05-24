@@ -1,0 +1,594 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Sequence, Tuple
+import math
+import re
+
+from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, unix_time, utc_stamp
+
+SELECTION_DEEP_START = "========== SELECTION-ONLY DEEP EVIDENCE START =========="
+SELECTION_DEEP_END = "========== SELECTION-ONLY DEEP EVIDENCE END =========="
+L19_START = "----- L19 CANDLE GEOMETRY AND STRUCTURE START -----"
+L19_END = "----- L19 CANDLE GEOMETRY AND STRUCTURE END -----"
+
+DISPLAY_BARS: Dict[str, int] = {"M5": 5, "M15": 5, "H1": 5, "H4": 5, "D1": 5}
+RANKED_DOSSIER_RE = re.compile(r"^\d{2}_(.+)\.txt$")
+
+DOJI_BODY_MAX_PCT = 5.0
+SMALL_BODY_MAX_PCT = 20.0
+LARGE_BODY_MIN_PCT = 60.0
+LONG_WICK_MIN_PCT = 50.0
+MARUBOZU_BODY_MIN_PCT = 85.0
+MARUBOZU_MAX_WICK_EACH_PCT = 7.5
+DRAGONFLY_GRAVESTONE_WICK_MIN_PCT = 60.0
+DRAGONFLY_GRAVESTONE_OPPOSITE_WICK_MAX_PCT = 10.0
+CLOSE_LOW_MAX_PCT = 20.0
+CLOSE_HIGH_MIN_PCT = 80.0
+
+
+@dataclass(frozen=True)
+class CandleGeometry:
+    index: int
+    bar_time: str
+    bar_state: str
+    open_price: str
+    high_price: str
+    low_price: str
+    close_price: str
+    range_text: str
+    body_pct: str
+    upper_wick_pct: str
+    lower_wick_pct: str
+    close_position_pct: str
+    close_vs_open: str
+    structure: str
+    valid: bool
+    zero_range: bool
+    invalid_reason: str = ""
+
+
+@dataclass(frozen=True)
+class TimeframeGeometrySummary:
+    timeframe: str
+    status: str
+    rows_requested: int
+    rows_available: int
+    rows_valid: int
+    zero_range_rows: int
+    invalid_rows: int
+    latest_time: str
+    latest_structure: str
+    rendered_rows: Tuple[CandleGeometry, ...]
+
+
+@dataclass(frozen=True)
+class L19PublishSummary:
+    status: str
+    reason: str
+    selected_dossiers_seen: int = 0
+    selected_dossiers_decorated: int = 0
+    selected_dossiers_missing_symbol: int = 0
+    source_files_expected: int = 0
+    source_files_found: int = 0
+    source_files_missing: int = 0
+    source_files_partial: int = 0
+    source_decode_errors: int = 0
+    rows_rendered_to_dossiers: int = 0
+    valid_geometry_rows: int = 0
+    zero_range_rows: int = 0
+    invalid_geometry_rows: int = 0
+    write_failed_count: int = 0
+    m5_completed_symbols: int = 0
+    m5_partial_symbols: int = 0
+    m5_missing_symbols: int = 0
+    m15_completed_symbols: int = 0
+    m15_partial_symbols: int = 0
+    m15_missing_symbols: int = 0
+    h1_completed_symbols: int = 0
+    h1_partial_symbols: int = 0
+    h1_missing_symbols: int = 0
+    h4_completed_symbols: int = 0
+    h4_partial_symbols: int = 0
+    h4_missing_symbols: int = 0
+    d1_completed_symbols: int = 0
+    d1_partial_symbols: int = 0
+    d1_missing_symbols: int = 0
+    status_path: str = "not_available"
+    board_path: str = "not_available"
+    layer_folder: str = "not_available"
+
+
+EMPTY_L19_SUMMARY = L19PublishSummary("pending", "l19_not_run")
+
+
+def _account_root(root: Path) -> Path:
+    return WorkerPaths.from_root(root).outbox.parents[2]
+
+
+def _selection_desk(root: Path) -> Path:
+    return _account_root(root) / "Selection Desk"
+
+
+def _shared_ohlc_symbols(root: Path) -> Path:
+    return _account_root(root).parent / "Shared Market Data" / "OHLC Store" / "Symbols"
+
+
+def _layer_folder(root: Path) -> Path:
+    return WorkerPaths.from_root(root).outbox / "Layers" / "Layer_19_Candle_Geometry_And_Structure"
+
+
+def _write(path: Path, text: str, failed: List[Path]) -> bool:
+    ok = atomic_write_text(path, text)
+    if not ok:
+        failed.append(path)
+    return ok
+
+
+def _selected_dossier_paths(root: Path) -> List[Path]:
+    desk = _selection_desk(root)
+    candidates: List[Path] = []
+    candidates.extend((desk / "01_Global" / "Top_10").glob("*.txt"))
+    candidates.extend((desk / "02_Asset_Classes").glob("*/01_Top_5_All_*/*.txt"))
+    candidates.extend((desk / "02_Asset_Classes").glob("*/02_Groups/*/*.txt"))
+    unique: List[Path] = []
+    seen = set()
+    for path in candidates:
+        if path.name.startswith("00_") or not RANKED_DOSSIER_RE.match(path.name):
+            continue
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return sorted(unique)
+
+
+def _symbol_from_dossier(path: Path) -> str:
+    match = RANKED_DOSSIER_RE.match(path.name)
+    return match.group(1) if match else ""
+
+
+def _ohlc_path(root: Path, symbol: str, timeframe: str) -> Path:
+    return _shared_ohlc_symbols(root) / symbol / f"{timeframe}.seed.csv"
+
+
+def _parse_header_and_rows(text: str) -> Tuple[Dict[str, str], List[List[str]]]:
+    meta: Dict[str, str] = {}
+    rows: List[List[str]] = []
+    for raw in text.replace("\r\n", "\n").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            payload = line[1:]
+            if "=" in payload:
+                key, value = payload.split("=", 1)
+                meta[key.strip()] = value.strip()
+            continue
+        if line.startswith("bar_time,"):
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) >= 8:
+            rows.append(parts[:8])
+    return meta, rows
+
+
+def _format_price(value_i: int, point: float | None, digits: int | None) -> str:
+    if point is None or point <= 0:
+        return str(value_i)
+    price = value_i * point
+    if digits is not None and digits >= 0:
+        return f"{price:.{digits}f}"
+    return f"{price:.8f}".rstrip("0").rstrip(".")
+
+
+def _format_number(value: float, digits: int | None) -> str:
+    if not math.isfinite(value):
+        return "n/a"
+    precision = digits if digits is not None and 0 <= digits <= 8 else 8
+    return f"{value:.{precision}f}".rstrip("0").rstrip(".")
+
+
+def _pct(value: float) -> str:
+    if not math.isfinite(value):
+        return "n/a"
+    return f"{value:.1f}%"
+
+
+def _classify_structure(body_pct: float, upper_pct: float, lower_pct: float, close_pos: float) -> str:
+    structures: List[str] = []
+    if body_pct <= DOJI_BODY_MAX_PCT:
+        if lower_pct >= DRAGONFLY_GRAVESTONE_WICK_MIN_PCT and upper_pct <= DRAGONFLY_GRAVESTONE_OPPOSITE_WICK_MAX_PCT and close_pos >= CLOSE_HIGH_MIN_PCT:
+            structures.append("Dragonfly Doji")
+        elif upper_pct >= DRAGONFLY_GRAVESTONE_WICK_MIN_PCT and lower_pct <= DRAGONFLY_GRAVESTONE_OPPOSITE_WICK_MAX_PCT and close_pos <= CLOSE_LOW_MAX_PCT:
+            structures.append("Gravestone Doji")
+        elif upper_pct >= 30.0 and lower_pct >= 30.0:
+            structures.append("Long-Legged Doji")
+        else:
+            structures.append("Doji")
+    if body_pct >= MARUBOZU_BODY_MIN_PCT and upper_pct <= MARUBOZU_MAX_WICK_EACH_PCT and lower_pct <= MARUBOZU_MAX_WICK_EACH_PCT:
+        structures.append("Marubozu")
+    if upper_pct >= LONG_WICK_MIN_PCT:
+        structures.append("Long Upper Wick")
+    if lower_pct >= LONG_WICK_MIN_PCT:
+        structures.append("Long Lower Wick")
+    if body_pct >= LARGE_BODY_MIN_PCT:
+        structures.append("Large Body")
+    elif body_pct <= SMALL_BODY_MAX_PCT and not any("Doji" in s for s in structures):
+        structures.append("Small Body")
+    return ", ".join(structures) if structures else "None"
+
+
+def _build_geometry(idx: int, row: Sequence[str], point: float | None, digits: int | None) -> CandleGeometry:
+    try:
+        bar_time, open_raw, high_raw, low_raw, close_raw, _tick_volume, _spread, _real_volume = row[:8]
+        open_i = int(float(open_raw))
+        high_i = int(float(high_raw))
+        low_i = int(float(low_raw))
+        close_i = int(float(close_raw))
+    except Exception as exc:
+        return CandleGeometry(idx, "decode_error", "Unknown", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, f"decode error {type(exc).__name__}")
+
+    bar_state = "Current Possible" if idx == 0 else "Closed Assumed"
+    open_text = _format_price(open_i, point, digits)
+    high_text = _format_price(high_i, point, digits)
+    low_text = _format_price(low_i, point, digits)
+    close_text = _format_price(close_i, point, digits)
+
+    if not bar_time or bar_time == "0":
+        return CandleGeometry(idx, bar_time or "missing", bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "missing bar time")
+    if high_i < low_i:
+        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "high below low")
+    if open_i < low_i or open_i > high_i:
+        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "open outside high low range")
+    if close_i < low_i or close_i > high_i:
+        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "close outside high low range")
+
+    range_i = high_i - low_i
+    if range_i == 0:
+        close_vs_open = "Flat" if close_i == open_i else "Invalid"
+        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "0", "n/a", "n/a", "n/a", "n/a", close_vs_open, "Zero Range", False, True, "zero range")
+
+    body_i = abs(close_i - open_i)
+    upper_i = high_i - max(open_i, close_i)
+    lower_i = min(open_i, close_i) - low_i
+    body_pct = body_i / range_i * 100.0
+    upper_pct = upper_i / range_i * 100.0
+    lower_pct = lower_i / range_i * 100.0
+    close_pos = (close_i - low_i) / range_i * 100.0
+
+    if close_i > open_i:
+        close_vs_open = "Up"
+    elif close_i < open_i:
+        close_vs_open = "Down"
+    else:
+        close_vs_open = "Flat"
+
+    scale = point if point is not None and point > 0 else 1.0
+    range_text = _format_number(range_i * scale, digits)
+    return CandleGeometry(
+        idx,
+        bar_time,
+        bar_state,
+        open_text,
+        high_text,
+        low_text,
+        close_text,
+        range_text,
+        _pct(body_pct),
+        _pct(upper_pct),
+        _pct(lower_pct),
+        _pct(close_pos),
+        close_vs_open,
+        _classify_structure(body_pct, upper_pct, lower_pct, close_pos),
+        True,
+        False,
+        "",
+    )
+
+
+def _render_timeframe(root: Path, symbol: str, timeframe: str, requested: int) -> Tuple[TimeframeGeometrySummary, str, bool]:
+    path = _ohlc_path(root, symbol, timeframe)
+    if not path.exists():
+        summary = TimeframeGeometrySummary(timeframe, "missing", requested, 0, 0, 0, 0, "not_available", "None", tuple())
+        return summary, f"[{timeframe}] source_status=missing path={path}\n", False
+    try:
+        meta, rows = _parse_header_and_rows(read_text(path))
+        point_raw = meta.get("point", "")
+        digits_raw = meta.get("digits", "")
+        point = float(point_raw) if point_raw else None
+        digits = int(float(digits_raw)) if digits_raw else None
+        selected = rows[-requested:] if len(rows) > requested else rows
+        selected = list(reversed(selected))
+        geometries = tuple(_build_geometry(idx, row, point, digits) for idx, row in enumerate(selected))
+        valid_rows = sum(1 for geo in geometries if geo.valid)
+        zero_rows = sum(1 for geo in geometries if geo.zero_range)
+        invalid_rows = sum(1 for geo in geometries if not geo.valid and not geo.zero_range)
+        status = "complete" if len(geometries) >= requested and invalid_rows == 0 else "partial"
+        latest_time = geometries[0].bar_time if geometries else "not_available"
+        latest_structure = geometries[0].structure if geometries else "None"
+        lines = [
+            f"[{timeframe}] source_status={status} rows_shown={len(geometries)} requested_display_bars={requested} source_rows_available={len(rows)} source_path={path}",
+            "# | State | Time | O | H | L | C | Range | Body % | Upper Wick % | Lower Wick % | Close Position % | Close vs Open | Candle Structure",
+        ]
+        for geo in geometries:
+            if geo.valid or geo.zero_range:
+                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | {geo.range_text} | {geo.body_pct} | {geo.upper_wick_pct} | {geo.lower_wick_pct} | {geo.close_position_pct} | {geo.close_vs_open} | {geo.structure}")
+            else:
+                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | n/a | n/a | n/a | n/a | n/a | Unknown | Invalid: {geo.invalid_reason}")
+        lines.append("")
+        summary = TimeframeGeometrySummary(timeframe, status, requested, len(geometries), valid_rows, zero_rows, invalid_rows, latest_time, latest_structure, geometries)
+        return summary, "\n".join(lines), invalid_rows > 0
+    except Exception as exc:
+        safe_error = str(exc).replace(chr(10), " ").replace(chr(13), " ")
+        summary = TimeframeGeometrySummary(timeframe, "decode_error", requested, 0, 0, 0, 1, "not_available", "None", tuple())
+        return summary, f"[{timeframe}] source_status=decode_error error={type(exc).__name__}:{safe_error} path={path}\n", True
+
+
+def _extract_block(text: str, start_marker: str, end_marker: str) -> str:
+    normalized = (text or "").replace("\r\n", "\n")
+    start = normalized.find(start_marker)
+    if start < 0:
+        return ""
+    end = normalized.find(end_marker, start)
+    if end < 0:
+        return ""
+    end += len(end_marker)
+    return normalized[start:end].strip() + "\n"
+
+
+def _replace_l19_in_deep_section(existing_text: str, l19_block: str) -> str:
+    normalized = (existing_text or "").replace("\r\n", "\n").rstrip()
+    deep = _extract_block(normalized, SELECTION_DEEP_START, SELECTION_DEEP_END)
+    if not deep:
+        deep = "\n".join([SELECTION_DEEP_START, SELECTION_DEEP_END]) + "\n"
+        base = normalized
+    else:
+        base = normalized.replace(deep.strip(), "").rstrip()
+    old_l19 = _extract_block(deep, L19_START, L19_END)
+    if old_l19:
+        deep = deep.replace(old_l19.strip(), l19_block.strip())
+    else:
+        deep = deep.replace(SELECTION_DEEP_END, l19_block.strip() + "\n\n" + SELECTION_DEEP_END)
+    return base.rstrip() + "\n\n" + deep.strip() + "\n"
+
+
+def _empty_tf_counts() -> Dict[str, Dict[str, int]]:
+    return {tf: {"complete": 0, "partial": 0, "missing": 0, "decode_error": 0} for tf in DISPLAY_BARS}
+
+
+def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries: Dict[str, TimeframeGeometrySummary]) -> str:
+    rows_total = sum(summary.rows_available for summary in tf_summaries.values())
+    valid_total = sum(summary.rows_valid for summary in tf_summaries.values())
+    zero_total = sum(summary.zero_range_rows for summary in tf_summaries.values())
+    invalid_total = sum(summary.invalid_rows for summary in tf_summaries.values())
+    lines = [
+        L19_START,
+        "Layer:                  L19 Candle Geometry and Structure",
+        "Scope:                  Selection copied dossier only",
+        "Source Contract:        L18 selected raw OHLC scope using existing Shared OHLC seed files",
+        "Rows Shown Per TF:      5",
+        "Structure Wave:         Wave 1 single candle structures only",
+        "CopyRates By L19:       false",
+        "Private OHLC Cache:     false",
+        "Raw OHLC Store Writes:  false",
+        "Trade Permission:       false",
+        "Entry Signal:           false",
+        "Execution:              false",
+        f"Symbol:                 {symbol}",
+        f"Rows Rendered:          {rows_total}",
+        f"Valid Geometry Rows:    {valid_total}",
+        f"Zero Range Rows:        {zero_total}",
+        f"Invalid Rows:           {invalid_total}",
+        "Meaning:                candle structure only, not signal or trade permission",
+        "",
+        "Mini Overview",
+        "TF | Rows | Valid | Zero Range | Invalid | Latest Time | Latest Structure",
+    ]
+    for tf in DISPLAY_BARS:
+        summary = tf_summaries.get(tf, TimeframeGeometrySummary(tf, "missing", DISPLAY_BARS[tf], 0, 0, 0, 0, "not_available", "None", tuple()))
+        lines.append(f"{tf} | {summary.rows_available} | {summary.rows_valid} | {summary.zero_range_rows} | {summary.invalid_rows} | {summary.latest_time} | {summary.latest_structure}")
+    lines.extend(["", "LATEST CANDLE GEOMETRY AND STRUCTURE"])
+    lines.extend(rendered_sections)
+    lines.append(L19_END)
+    return "\n".join(lines) + "\n"
+
+
+def _board_text(summary: L19PublishSummary) -> str:
+    return "\n".join([
+        "L19 — CANDLE GEOMETRY AND STRUCTURE",
+        "--------------------------------------------------",
+        "Purpose:                Calculate candle geometry and Wave 1 candle structures from selected raw OHLC",
+        "Scope:                  Canonical Selection Desk copied dossiers only",
+        "Rows Shown Per TF:      5",
+        "Structure Wave:         Wave 1 single candle structures only",
+        "Source Contract:        L18 selected raw OHLC scope using existing Shared OHLC seed files",
+        "CopyRates By L19:       FALSE",
+        "Private OHLC Cache:     FALSE",
+        "Raw OHLC Store Writes:  FALSE",
+        "Trade Permission:       FALSE",
+        "Entry Signal:           FALSE",
+        "Execution:              FALSE",
+        "",
+        "Selection Coverage",
+        f"Selected Dossiers Seen:       {summary.selected_dossiers_seen}",
+        f"Selected Dossiers Decorated:  {summary.selected_dossiers_decorated}",
+        f"Selected Missing Symbol:      {summary.selected_dossiers_missing_symbol}",
+        "",
+        "Geometry Coverage",
+        f"M5:   completed_symbols={summary.m5_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
+        f"M15:  completed_symbols={summary.m15_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m15_partial_symbols} missing_symbols={summary.m15_missing_symbols}",
+        f"H1:   completed_symbols={summary.h1_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.h1_partial_symbols} missing_symbols={summary.h1_missing_symbols}",
+        f"H4:   completed_symbols={summary.h4_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.h4_partial_symbols} missing_symbols={summary.h4_missing_symbols}",
+        f"D1:   completed_symbols={summary.d1_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.d1_partial_symbols} missing_symbols={summary.d1_missing_symbols}",
+        "",
+        "Latest L19 Update",
+        f"Status:                       {summary.status}",
+        f"Reason:                       {summary.reason}",
+        f"Source Files Found:           {summary.source_files_found} / {summary.source_files_expected}",
+        f"Source Files Missing:         {summary.source_files_missing}",
+        f"Source Files Partial:         {summary.source_files_partial}",
+        f"Source Decode Errors:         {summary.source_decode_errors}",
+        f"Rows Rendered To Dossiers:    {summary.rows_rendered_to_dossiers}",
+        f"Valid Geometry Rows:          {summary.valid_geometry_rows}",
+        f"Zero Range Rows:              {summary.zero_range_rows}",
+        f"Invalid Geometry Rows:        {summary.invalid_geometry_rows}",
+        f"Write Failed Count:           {summary.write_failed_count}",
+        f"Generated UTC:                {utc_stamp()}",
+        "",
+    ])
+
+
+def _status_text(summary: L19PublishSummary) -> str:
+    return "\n".join([
+        "schema_name=l19_candle_geometry_and_structure_status",
+        "schema_version=1",
+        f"status={summary.status}",
+        f"reason={summary.reason}",
+        "scope=canonical_selection_shortcut_dossiers_only",
+        "source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
+        "rows_shown_per_tf=5",
+        "structure_wave=wave_1_single_candle_structures_only",
+        "copyrates_by_l19=false",
+        "private_ohlc_cache=false",
+        "raw_ohlc_store_writes=false",
+        f"selected_dossiers_seen={summary.selected_dossiers_seen}",
+        f"selected_dossiers_decorated={summary.selected_dossiers_decorated}",
+        f"selected_dossiers_missing_symbol={summary.selected_dossiers_missing_symbol}",
+        f"source_files_expected={summary.source_files_expected}",
+        f"source_files_found={summary.source_files_found}",
+        f"source_files_missing={summary.source_files_missing}",
+        f"source_files_partial={summary.source_files_partial}",
+        f"source_decode_errors={summary.source_decode_errors}",
+        f"rows_rendered_to_dossiers={summary.rows_rendered_to_dossiers}",
+        f"valid_geometry_rows={summary.valid_geometry_rows}",
+        f"zero_range_rows={summary.zero_range_rows}",
+        f"invalid_geometry_rows={summary.invalid_geometry_rows}",
+        f"write_failed_count={summary.write_failed_count}",
+        f"m5_completed_symbols={summary.m5_completed_symbols}",
+        f"m5_partial_symbols={summary.m5_partial_symbols}",
+        f"m5_missing_symbols={summary.m5_missing_symbols}",
+        f"m15_completed_symbols={summary.m15_completed_symbols}",
+        f"m15_partial_symbols={summary.m15_partial_symbols}",
+        f"m15_missing_symbols={summary.m15_missing_symbols}",
+        f"h1_completed_symbols={summary.h1_completed_symbols}",
+        f"h1_partial_symbols={summary.h1_partial_symbols}",
+        f"h1_missing_symbols={summary.h1_missing_symbols}",
+        f"h4_completed_symbols={summary.h4_completed_symbols}",
+        f"h4_partial_symbols={summary.h4_partial_symbols}",
+        f"h4_missing_symbols={summary.h4_missing_symbols}",
+        f"d1_completed_symbols={summary.d1_completed_symbols}",
+        f"d1_partial_symbols={summary.d1_partial_symbols}",
+        f"d1_missing_symbols={summary.d1_missing_symbols}",
+        f"status_path={summary.status_path}",
+        f"board_path={summary.board_path}",
+        "trade_permission=false",
+        "entry_signal=false",
+        "execution=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "",
+    ])
+
+
+def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
+    failed: List[Path] = []
+    layer_dir = _layer_folder(root)
+    layer_dir.mkdir(parents=True, exist_ok=True)
+    status_path = layer_dir / "l19_status.txt"
+    board_path = _selection_desk(root) / "91_Layer_Summaries" / "L19_Candle_Geometry_And_Structure" / "00_L19_Board_Overview.txt"
+
+    dossiers = _selected_dossier_paths(root)
+    tf_counts = _empty_tf_counts()
+    decorated = 0
+    missing_symbol = 0
+    source_expected = len(dossiers) * len(DISPLAY_BARS)
+    source_found = 0
+    source_missing = 0
+    source_partial = 0
+    decode_errors = 0
+    rows_total = 0
+    valid_total = 0
+    zero_total = 0
+    invalid_total = 0
+
+    for dossier in dossiers:
+        symbol = _symbol_from_dossier(dossier)
+        if not symbol:
+            missing_symbol += 1
+            continue
+        rendered: List[str] = []
+        tf_summaries: Dict[str, TimeframeGeometrySummary] = {}
+        for tf, requested in DISPLAY_BARS.items():
+            summary, section, had_decode_or_invalid = _render_timeframe(root, symbol, tf, requested)
+            rendered.append(section)
+            tf_summaries[tf] = summary
+            rows_total += summary.rows_available
+            valid_total += summary.rows_valid
+            zero_total += summary.zero_range_rows
+            invalid_total += summary.invalid_rows
+            if summary.status == "missing":
+                source_missing += 1
+                tf_counts[tf]["missing"] += 1
+            else:
+                source_found += 1
+                if summary.status == "complete":
+                    tf_counts[tf]["complete"] += 1
+                elif summary.status == "partial":
+                    source_partial += 1
+                    tf_counts[tf]["partial"] += 1
+                else:
+                    tf_counts[tf]["decode_error"] += 1
+            if summary.status == "decode_error" or had_decode_or_invalid:
+                decode_errors += 1
+        try:
+            existing = read_text(dossier)
+            updated = _replace_l19_in_deep_section(existing, _build_l19_block(symbol, rendered, tf_summaries))
+            if _write(dossier, updated, failed):
+                decorated += 1
+        except Exception:
+            failed.append(dossier)
+
+    status = "accepted" if dossiers and not failed and source_missing == 0 and decode_errors == 0 else ("partial" if dossiers else "pending")
+    reason = "l19_candle_geometry_dossiers_decorated" if status == "accepted" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_l19_sources_missing_partial_invalid_or_write_failed")
+
+    summary = L19PublishSummary(
+        status=status,
+        reason=reason,
+        selected_dossiers_seen=len(dossiers),
+        selected_dossiers_decorated=decorated,
+        selected_dossiers_missing_symbol=missing_symbol,
+        source_files_expected=source_expected,
+        source_files_found=source_found,
+        source_files_missing=source_missing,
+        source_files_partial=source_partial,
+        source_decode_errors=decode_errors,
+        rows_rendered_to_dossiers=rows_total,
+        valid_geometry_rows=valid_total,
+        zero_range_rows=zero_total,
+        invalid_geometry_rows=invalid_total,
+        write_failed_count=len(failed),
+        m5_completed_symbols=tf_counts["M5"]["complete"],
+        m5_partial_symbols=tf_counts["M5"]["partial"] + tf_counts["M5"]["decode_error"],
+        m5_missing_symbols=tf_counts["M5"]["missing"],
+        m15_completed_symbols=tf_counts["M15"]["complete"],
+        m15_partial_symbols=tf_counts["M15"]["partial"] + tf_counts["M15"]["decode_error"],
+        m15_missing_symbols=tf_counts["M15"]["missing"],
+        h1_completed_symbols=tf_counts["H1"]["complete"],
+        h1_partial_symbols=tf_counts["H1"]["partial"] + tf_counts["H1"]["decode_error"],
+        h1_missing_symbols=tf_counts["H1"]["missing"],
+        h4_completed_symbols=tf_counts["H4"]["complete"],
+        h4_partial_symbols=tf_counts["H4"]["partial"] + tf_counts["H4"]["decode_error"],
+        h4_missing_symbols=tf_counts["H4"]["missing"],
+        d1_completed_symbols=tf_counts["D1"]["complete"],
+        d1_partial_symbols=tf_counts["D1"]["partial"] + tf_counts["D1"]["decode_error"],
+        d1_missing_symbols=tf_counts["D1"]["missing"],
+        status_path=str(status_path),
+        board_path=str(board_path),
+        layer_folder=str(layer_dir),
+    )
+    _write(status_path, _status_text(summary), failed)
+    _write(board_path, _board_text(summary), failed)
+    return summary
