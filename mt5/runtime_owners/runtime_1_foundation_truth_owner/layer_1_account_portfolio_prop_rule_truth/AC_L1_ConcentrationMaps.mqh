@@ -157,6 +157,7 @@ string AC_L1PortfolioConcentrationMap()
    double sell_share = (total_rows > 0 ? (100.0 * sell_rows / total_rows) : 0.0);
 
    string text = AC_L1MapHeader("PORTFOLIO CONCENTRATION MAP");
+   text += "section_id:             L1_PORTFOLIO_CONCENTRATION\r\n";
    text += "Scope:                  selected closed history only\r\n";
    text += "Purpose:                show where sample exposure is clustered by count, not edge proof\r\n";
    text += "Top Symbol:             " + top_symbol + " | Rows " + IntegerToString(top_symbol_rows) + " | Share " + AC_PercentText(top_symbol_rows, total_rows) + " | Net " + AC_L1MoneyText(top_symbol_net) + " | " + AC_L1ConcentrationLevel(top_symbol_share) + "\r\n";
