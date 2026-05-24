@@ -22,7 +22,9 @@ string AC_BoardTraderChatExportGuideSection()
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
                                const AC_Layer0StatusPacket &status)
 {
-   return AC_BuildTraderBoardText_Base(snapshot, status) + AC_BoardTraderChatExportGuideSection();
+   return AC_BuildTraderBoardText_Base(snapshot, status)
+      + AC_Layer17BoardSection()
+      + AC_BoardTraderChatExportGuideSection();
 }
 
 #endif
