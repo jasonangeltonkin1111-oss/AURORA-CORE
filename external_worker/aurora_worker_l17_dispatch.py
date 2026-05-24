@@ -5,9 +5,10 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l17 import L17PublishSummary, publish_l17_deep_evidence_selection_split
+from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
 
 
-def l17_result_lines(summary: L17PublishSummary, duration_ms: int) -> str:
+def l17_result_lines(summary: L17PublishSummary, duration_ms: int, cleanup: SelectionSurfaceCleanupSummary = EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY) -> str:
     return "\n".join([
         f"l17_deep_evidence_selection_status={summary.status}",
         f"l17_deep_evidence_selection_reason={summary.reason}",
@@ -32,6 +33,12 @@ def l17_result_lines(summary: L17PublishSummary, duration_ms: int) -> str:
         f"l17_rejected_path={summary.rejected_path}",
         f"l17_summary_path={summary.summary_path}",
         f"l17_selection_desk_path={summary.selection_desk_path}",
+        f"l17_legacy_cleanup_status={cleanup.status}",
+        f"l17_legacy_cleanup_reason={cleanup.reason}",
+        f"l17_legacy_groups_removed={cleanup.legacy_groups_removed}",
+        f"l17_legacy_global_removed={cleanup.legacy_global_removed}",
+        f"l17_legacy_deep_evidence_files_preserved={cleanup.deep_evidence_files_preserved}",
+        f"l17_legacy_cleanup_status_path={cleanup.status_path}",
         "l17_max_deep_selected=5",
         "l17_collects_ohlc=false",
         "l17_collects_ticks=false",
@@ -69,17 +76,20 @@ def run_l17_after_l16(root: Path) -> L17PublishSummary:
     paths.ensure()
     start_ns = time.perf_counter_ns()
     summary = publish_l17_deep_evidence_selection_split(paths.outbox)
+    cleanup_summary = cleanup_legacy_selection_surface_paths(root)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l17_block(text, l17_result_lines(summary, duration_ms))
+        updated = _replace_or_append_l17_block(text, l17_result_lines(summary, duration_ms, cleanup_summary))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=14",
+            "schema_version=15",
             "worker_l17_append_status=appended_by_l17_dispatch",
+            f"l17_legacy_cleanup_status={cleanup_summary.status}",
+            f"l17_legacy_cleanup_status_path={cleanup_summary.status_path}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
