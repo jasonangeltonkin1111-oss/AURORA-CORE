@@ -113,6 +113,7 @@ string AC_L1HoldingTimeRiskMapV2()
    }
 
    string text = AC_L1MapHeader("HOLDING TIME RISK MAP V2");
+   text += "section_id:             L1_HOLDING_TIME_RISK_V2\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Bucket Basis:           entry time to close time duration\r\n";
