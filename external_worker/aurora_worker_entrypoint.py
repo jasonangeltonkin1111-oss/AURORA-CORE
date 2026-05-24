@@ -8,6 +8,7 @@ import time
 
 import aurora_worker as core
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, unix_time, utc_stamp
+from aurora_worker_l11_dispatch import run_l11_after_core
 
 SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
 CALCULATION_CYCLE_SECONDS = 30
@@ -81,6 +82,8 @@ def _build_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
         "authority=calculation_support_only",
         "trade_permission=false",
         "selection_runtime=false",
+        "entry_signal=false",
+        "execution=false",
         "",
     ])
 
@@ -96,12 +99,14 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
     l7_status = latest.get("l7_rank_status", "missing")
     l8_status = latest.get("l8_rank_status", "missing")
     l9_status = latest.get("l9_rank_status", "missing")
+    l11_status = latest.get("l11_symbol_ranking_status", "missing")
     all_complete = (
         result.ok
         and l6_status == "complete"
         and l7_status == "complete"
         and l8_status == "complete"
         and l9_status == "complete"
+        and l11_status in {"accepted", "write_degraded"}
     )
     if not all_complete:
         return False
@@ -113,10 +118,11 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         l7_status,
         l8_status,
         l9_status,
+        l11_status,
     ])
     text = "\n".join([
         "schema_name=aurora_gateway_surface_accepted_epoch",
-        "schema_version=1",
+        "schema_version=2",
         f"worker_version={core.WORKER_VERSION}",
         "status=accepted",
         "epoch_status=accepted",
@@ -134,10 +140,13 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
         f"l7_status={l7_status}",
         f"l8_status={l8_status}",
         f"l9_status={l9_status}",
+        f"l11_symbol_ranking_status={l11_status}",
         f"result_latest_path={latest_path}",
         "authority=calculation_support_only",
         "trade_permission=false",
         "selection_runtime=false",
+        "entry_signal=false",
+        "execution=false",
         "",
     ])
     return atomic_write_text(_surface_epoch_manifest_path(root), text)
@@ -145,6 +154,17 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult) 
 
 def _poll_snapshot(root: Path) -> Tuple[core.ValidationResult, Dict[str, str], List[str]]:
     return core.validate_snapshot(WorkerPaths.from_root(root))
+
+
+def _run_core_once_with_l11(root: Path, worker_mode: str) -> Tuple[int, core.ValidationResult]:
+    start_ns = time.perf_counter_ns()
+    code, res = core.run_once(root, worker_mode)
+    duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
+    try:
+        run_l11_after_core(root, duration_ms)
+    except Exception as exc:
+        core.gateway_record_exception(root, "l11_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
+    return code, res
 
 
 def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float) -> int:
@@ -171,7 +191,7 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
                 cycle_due = state.last_calculation_unix <= 0 or (now - state.last_calculation_unix) >= CALCULATION_CYCLE_SECONDS
                 snapshot_stable = polled_result.ok and stable_age >= SNAPSHOT_STABLE_REQUIRED_SECONDS
                 if snapshot_stable and cycle_due:
-                    code, res = core.run_once(root, "shared_validator_daemon_cycle_controlled")
+                    code, res = _run_core_once_with_l11(root, "shared_validator_daemon_cycle_controlled")
                     state.last_calculation_unix = now
                     state.last_exit_code = code
                     state.last_result = res
@@ -216,8 +236,25 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--watchdog", action="store_true")
     parser.add_argument("--install-global", action="store_true")
     args, _unknown = parser.parse_known_args(argv)
-    if args.mode == "shared-daemon" and args.shared_root and not args.status and not args.repair and not args.watchdog and not args.install_global:
+    if args.install_global or args.watchdog or args.repair or args.status:
+        return core.main(argv)
+    if args.mode == "shared-daemon" and args.shared_root:
         return run_shared_daemon_with_cycle_control(Path(args.shared_root), args.poll_seconds)
+    if args.root and args.mode == "once":
+        root = Path(args.root)
+        code, res = _run_core_once_with_l11(root, "validator_daemon_capable")
+        process_ok = core.write_process_status(root, "once", 1, code, res)
+        return code if process_ok else 3
+    if args.root and args.mode == "daemon":
+        root = Path(args.root)
+        loop = 0
+        while True:
+            loop += 1
+            code, res = _run_core_once_with_l11(root, "validator_daemon_capable")
+            process_ok = core.write_process_status(root, "daemon", loop, code, res)
+            if not process_ok:
+                code = 3
+            time.sleep(max(0.25, args.poll_seconds))
     return core.main(argv)
 
 
