@@ -12,6 +12,7 @@ from aurora_worker_l10_path_planner import L10SymbolPathPlan, l10_symbol_path_in
 from aurora_worker_l10_quality import L10QualitySummary, L10ResolvedTaxonomy, l10_quality_summary, l10_rows_for_state
 from aurora_worker_l10_schema import (
     L10_AUTHORITY,
+    L10_BLOCKED_SYMBOLS_NAME,
     L10_CONFLICT_SYMBOLS_NAME,
     L10_GROUPS_FOLDER,
     L10_INVALID_UNIVERSE_ROWS_NAME,
@@ -211,6 +212,7 @@ def publish_l10_taxonomy_outputs(
     review_csv = _csv_text(l10_rows_for_state(symbols, "REVIEW_REQUIRED"), L10_TAXONOMY_SYMBOL_FIELDS)
     conflict_csv = _csv_text(l10_rows_for_state(symbols, "CONFLICT"), L10_TAXONOMY_SYMBOL_FIELDS)
     omitted_csv = _csv_text(l10_rows_for_state(symbols, "OMITTED"), L10_TAXONOMY_SYMBOL_FIELDS)
+    blocked_csv = _csv_text(l10_rows_for_state(symbols, "BLOCKED"), L10_TAXONOMY_SYMBOL_FIELDS)
     missing_dossier_csv = _csv_text(l10_rows_for_state(symbols, "MISSING_DOSSIER_SOURCE"), L10_TAXONOMY_SYMBOL_FIELDS)
     invalid_csv = _csv_text(l10_invalid_rows_as_dicts(invalid_rows), ("row_index", "reason", "field_count", "raw_row"))
 
@@ -225,6 +227,7 @@ def publish_l10_taxonomy_outputs(
     _write(layer_dir / L10_REVIEW_REQUIRED_SYMBOLS_NAME, review_csv, failed_paths)
     _write(layer_dir / L10_CONFLICT_SYMBOLS_NAME, conflict_csv, failed_paths)
     _write(layer_dir / L10_OMITTED_SYMBOLS_NAME, omitted_csv, failed_paths)
+    _write(layer_dir / L10_BLOCKED_SYMBOLS_NAME, blocked_csv, failed_paths)
     _write(layer_dir / L10_MISSING_DOSSIER_SOURCE_NAME, missing_dossier_csv, failed_paths)
     _write(layer_dir / L10_INVALID_UNIVERSE_ROWS_NAME, invalid_csv, failed_paths)
 
