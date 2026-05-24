@@ -5,6 +5,7 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l17 import L17PublishSummary, publish_l17_deep_evidence_selection_split
+from aurora_worker_l18_dispatch import run_l18_after_l17
 from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
 from aurora_worker_selection_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_root_index
 
@@ -44,6 +45,7 @@ def l17_result_lines(summary: L17PublishSummary, duration_ms: int, cleanup: Sele
         f"l17_root_index_reason={root_index.reason}",
         f"l17_root_index_path={root_index.root_index_path}",
         f"l17_root_readme_path={root_index.readme_path}",
+        "l17_l18_dispatch_policy=run_l18_after_l17_deep_split",
         "l17_max_deep_selected=5",
         "l17_collects_ohlc=false",
         "l17_collects_ticks=false",
@@ -92,8 +94,9 @@ def run_l17_after_l16(root: Path) -> L17PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=16",
+            "schema_version=17",
             "worker_l17_append_status=appended_by_l17_dispatch",
+            "worker_l18_dispatch_policy=run_after_l17_when_l17_dispatch_completes",
             f"l17_legacy_cleanup_status={cleanup_summary.status}",
             f"l17_legacy_cleanup_status_path={cleanup_summary.status_path}",
             f"l17_root_index_status={root_index_summary.status}",
@@ -112,4 +115,5 @@ def run_l17_after_l16(root: Path) -> L17PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
+    run_l18_after_l17(root)
     return summary
