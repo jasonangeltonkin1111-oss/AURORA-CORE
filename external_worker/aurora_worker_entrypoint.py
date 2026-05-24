@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,12 +17,9 @@ SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
 CALCULATION_CYCLE_SECONDS = 30
 ACCEPTED_EPOCH_TTL_SECONDS = 120
 ENABLE_L13_RUNTIME = True
-<<<<<<< Updated upstream
 ENABLE_L14_RUNTIME = True
 
 
-=======
->>>>>>> Stashed changes
 @dataclass
 class SnapshotCycleState:
     identity: str = "not_available"
@@ -279,4 +276,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
