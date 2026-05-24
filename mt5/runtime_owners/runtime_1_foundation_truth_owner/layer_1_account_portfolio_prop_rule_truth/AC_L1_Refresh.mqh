@@ -2,6 +2,7 @@
 #define AC_L1_REFRESH_MQH
 void AC_L1AppendPortfolioMaps()
 {
+   AC_L1_ACCOUNT_STATUS_TEXT = AC_L1OverseerBriefPack() + AC_L1_ACCOUNT_STATUS_TEXT;
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingLiveMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingRiskReadinessMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingSymbolExposureMap();
@@ -22,6 +23,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RMultipleMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RiskEfficiencyMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RReadinessMap();
+   AC_L1_WORKBENCH_SECTION += "overseer_brief=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure=enabled_board_and_account_status\r\n";
    AC_L1_WORKBENCH_SECTION += "live_risk_at_sl=enabled_estimated_account_status_and_board_summary\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure_maps=enabled_account_status_symbol_and_asset\r\n";
