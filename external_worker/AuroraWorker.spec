@@ -1,4 +1,4 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
     ['aurora_worker_entrypoint.py'],
@@ -25,6 +25,8 @@ a = Analysis(
         'aurora_worker_l13_dispatch',
         'aurora_worker_l14_dispatch',
         'aurora_worker_l14',
+        'aurora_worker_l15',
+        'aurora_worker_l15_dispatch',
     ],
     hookspath=[],
     hooksconfig={},
@@ -61,5 +63,3 @@ coll = COLLECT(
     upx_exclude=[],
     name='AuroraWorker',
 )
-
-
