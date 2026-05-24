@@ -3,10 +3,13 @@
 
 string AC_BoardHealthTag(const string status)
 {
-   if(StringFind(status, "Accepted") >= 0 || StringFind(status, "accepted") >= 0 ||
-      StringFind(status, "Complete") >= 0 || StringFind(status, "complete") >= 0 ||
-      StringFind(status, "Ready") >= 0 || StringFind(status, "ready") >= 0)
-      return "OK";
+   if(StringFind(status, "Incremental") >= 0 || StringFind(status, "incremental") >= 0 ||
+      StringFind(status, "Updating") >= 0 || StringFind(status, "updating") >= 0 ||
+      StringFind(status, "bounded") >= 0 || StringFind(status, "Bounded") >= 0)
+      return "UPDATING";
+   if(StringFind(status, "Review") >= 0 || StringFind(status, "review") >= 0 ||
+      StringFind(status, "warning") >= 0 || StringFind(status, "Warning") >= 0)
+      return "REVIEW";
    if(StringFind(status, "Drift") >= 0 || StringFind(status, "drift") >= 0)
       return "DRIFT";
    if(StringFind(status, "Degraded") >= 0 || StringFind(status, "degraded") >= 0 ||
@@ -14,22 +17,30 @@ string AC_BoardHealthTag(const string status)
       return "DEGRADED";
    if(StringFind(status, "Pending") >= 0 || StringFind(status, "pending") >= 0)
       return "PENDING";
-   if(StringFind(status, "Review") >= 0 || StringFind(status, "review") >= 0 ||
-      StringFind(status, "warning") >= 0 || StringFind(status, "Warning") >= 0)
-      return "REVIEW";
    if(StringFind(status, "seed") >= 0 || StringFind(status, "Seed") >= 0)
       return "SEEDING";
+   if(StringFind(status, "Accepted") >= 0 || StringFind(status, "accepted") >= 0 ||
+      StringFind(status, "Complete") >= 0 || StringFind(status, "complete") >= 0 ||
+      StringFind(status, "Ready") >= 0 || StringFind(status, "ready") >= 0)
+      return "OK";
    return "CHECK";
+}
+
+bool AC_BoardStatusNeedsWarning(const string status)
+{
+   string tag = AC_BoardHealthTag(status);
+   return !(tag == "OK" || tag == "UPDATING" || tag == "SEEDING");
 }
 
 string AC_BoardWarningText()
 {
    string text = "";
-   if(AC_L6_STATUS != "Accepted") text += "L6=" + AC_L6_STATUS + "; ";
-   if(AC_L7_STATUS != "Accepted") text += "L7=" + AC_L7_STATUS + "; ";
-   if(AC_L8_STATUS != "Accepted") text += "L8=" + AC_L8_STATUS + "; ";
-   if(AC_L9_STATUS != "Accepted") text += "L9=" + AC_L9_STATUS + "; ";
-   if(AC_L15_STATUS != "Accepted") text += "L15=" + AC_L15_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L6_STATUS)) text += "L6=" + AC_L6_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L7_STATUS)) text += "L7=" + AC_L7_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L8_STATUS)) text += "L8=" + AC_L8_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L9_STATUS)) text += "L9=" + AC_L9_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L10_STATUS)) text += "L10=" + AC_L10_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L15_STATUS)) text += "L15=" + AC_L15_STATUS + "; ";
    if(text == "") return "none";
    return text;
 }
