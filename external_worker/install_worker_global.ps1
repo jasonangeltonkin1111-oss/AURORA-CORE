@@ -79,7 +79,7 @@ $autoStartConfigured = if($daemonRegistered -and $watchRegistered -and $Packaged
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
 schema_name=aurora_gateway_install_status
-schema_version=7
+schema_version=8
 installed=$((($PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_gateway_plus_daemon_and_watchdog_tasks
 worker_version=$WorkerVersion
@@ -113,14 +113,15 @@ scheduled_task_state=$daemonState
 scheduled_task_error=$daemonError
 daemon_start_attempted=$($daemonStartAttempted.ToString().ToLowerInvariant())
 daemon_start_error=$daemonStartError
-watchdog_install_method=windows_scheduled_task_repair_lane_packaged_exe
+watchdog_install_method=windows_scheduled_task_lightweight_repair_lane_packaged_exe
 watchdog_task_name=$WatchdogTaskName
 watchdog_task_registered=$($watchRegistered.ToString().ToLowerInvariant())
 watchdog_task_state=$watchState
 watchdog_task_error=$watchError
-watchdog_default_enabled=false
-watchdog_disabled_to_prevent_popup_loop=true
-watchdog_proof_scope=registration_only_not_recovery_proof
+watchdog_default_enabled=$($watchRegistered.ToString().ToLowerInvariant())
+watchdog_disabled_to_prevent_popup_loop=false
+watchdog_expected_runtime_mode=lightweight_probe_no_layer_dispatch
+watchdog_proof_scope=registration_only_plus_expected_lightweight_probe_runtime_not_recovery_proof
 auto_start_configured=$autoStartConfigured
 operator_cmd_required=$operatorCmdRequired
 generated_unix=$($Now.ToUnixTimeSeconds())
@@ -133,6 +134,6 @@ Write-Host "Installed Gateway and task proofs at $SharedInstallStatusPath"
 Write-Host "Worker version source=$WorkerVersion expected=$ExpectedWorkerVersion"
 Write-Host "Runtime folder authority=$SharedWorkerRoot"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
-Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
+Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired lightweight_expected=true"
 
 
