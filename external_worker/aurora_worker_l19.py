@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 import math
 import re
+import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, unix_time, utc_stamp
 
@@ -32,6 +33,7 @@ CLOSE_HIGH_MIN_PCT = 80.0
 class CandleGeometry:
     index: int
     bar_time: str
+    bar_time_readable: str
     bar_state: str
     open_price: str
     high_price: str
@@ -47,6 +49,10 @@ class CandleGeometry:
     valid: bool
     zero_range: bool
     invalid_reason: str = ""
+    open_i: int = 0
+    high_i: int = 0
+    low_i: int = 0
+    close_i: int = 0
 
 
 @dataclass(frozen=True)
@@ -79,6 +85,8 @@ class L19PublishSummary:
     valid_geometry_rows: int = 0
     zero_range_rows: int = 0
     invalid_geometry_rows: int = 0
+    wave2_rows_tagged: int = 0
+    topview_cleanup_count: int = 0
     write_failed_count: int = 0
     m5_completed_symbols: int = 0
     m5_partial_symbols: int = 0
@@ -191,10 +199,31 @@ def _format_number(value: float, digits: int | None) -> str:
     return f"{value:.{precision}f}".rstrip("0").rstrip(".")
 
 
+def _format_bar_time(raw_value: str) -> str:
+    try:
+        ts = int(float(raw_value))
+        if ts <= 0:
+            return "not_available"
+        return time.strftime("%Y.%m.%d %H:%M:%S", time.gmtime(ts))
+    except Exception:
+        return "not_available"
+
+
 def _pct(value: float) -> str:
     if not math.isfinite(value):
         return "n/a"
     return f"{value:.1f}%"
+
+
+def _append_structure(existing: str, addition: str) -> str:
+    if not addition:
+        return existing
+    if existing == "None" or existing.strip() == "":
+        return addition
+    parts = [p.strip() for p in existing.split(",") if p.strip()]
+    if addition not in parts:
+        parts.append(addition)
+    return ", ".join(parts) if parts else addition
 
 
 def _classify_structure(body_pct: float, upper_pct: float, lower_pct: float, close_pos: float) -> str:
@@ -229,27 +258,28 @@ def _build_geometry(idx: int, row: Sequence[str], point: float | None, digits: i
         low_i = int(float(low_raw))
         close_i = int(float(close_raw))
     except Exception as exc:
-        return CandleGeometry(idx, "decode_error", "Unknown", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, f"decode error {type(exc).__name__}")
+        return CandleGeometry(idx, "decode_error", "not_available", "Unknown", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, f"decode error {type(exc).__name__}")
 
     bar_state = "Current Possible" if idx == 0 else "Closed Assumed"
+    bar_time_readable = _format_bar_time(bar_time)
     open_text = _format_price(open_i, point, digits)
     high_text = _format_price(high_i, point, digits)
     low_text = _format_price(low_i, point, digits)
     close_text = _format_price(close_i, point, digits)
 
     if not bar_time or bar_time == "0":
-        return CandleGeometry(idx, bar_time or "missing", bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "missing bar time")
+        return CandleGeometry(idx, bar_time or "missing", bar_time_readable, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "missing bar time", open_i, high_i, low_i, close_i)
     if high_i < low_i:
-        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "high below low")
+        return CandleGeometry(idx, bar_time, bar_time_readable, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "high below low", open_i, high_i, low_i, close_i)
     if open_i < low_i or open_i > high_i:
-        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "open outside high low range")
+        return CandleGeometry(idx, bar_time, bar_time_readable, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "open outside high low range", open_i, high_i, low_i, close_i)
     if close_i < low_i or close_i > high_i:
-        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "close outside high low range")
+        return CandleGeometry(idx, bar_time, bar_time_readable, bar_state, open_text, high_text, low_text, close_text, "n/a", "n/a", "n/a", "n/a", "n/a", "Unknown", "None", False, False, "close outside high low range", open_i, high_i, low_i, close_i)
 
     range_i = high_i - low_i
     if range_i == 0:
         close_vs_open = "Flat" if close_i == open_i else "Invalid"
-        return CandleGeometry(idx, bar_time, bar_state, open_text, high_text, low_text, close_text, "0", "n/a", "n/a", "n/a", "n/a", close_vs_open, "Zero Range", False, True, "zero range")
+        return CandleGeometry(idx, bar_time, bar_time_readable, bar_state, open_text, high_text, low_text, close_text, "0", "n/a", "n/a", "n/a", "n/a", close_vs_open, "Zero Range", False, True, "zero range", open_i, high_i, low_i, close_i)
 
     body_i = abs(close_i - open_i)
     upper_i = high_i - max(open_i, close_i)
@@ -271,6 +301,7 @@ def _build_geometry(idx: int, row: Sequence[str], point: float | None, digits: i
     return CandleGeometry(
         idx,
         bar_time,
+        bar_time_readable,
         bar_state,
         open_text,
         high_text,
@@ -286,14 +317,50 @@ def _build_geometry(idx: int, row: Sequence[str], point: float | None, digits: i
         True,
         False,
         "",
+        open_i,
+        high_i,
+        low_i,
+        close_i,
     )
 
 
-def _render_timeframe(root: Path, symbol: str, timeframe: str, requested: int) -> Tuple[TimeframeGeometrySummary, str, bool]:
+def _wave2_structure(current: CandleGeometry, previous: CandleGeometry) -> str:
+    if not current.valid or not previous.valid:
+        return ""
+    if current.index <= 0:
+        return ""
+    additions: List[str] = []
+    if current.high_i <= previous.high_i and current.low_i >= previous.low_i:
+        additions.append("Inside Bar")
+    if current.high_i >= previous.high_i and current.low_i <= previous.low_i:
+        additions.append("Outside Bar")
+    previous_down = previous.close_i < previous.open_i
+    previous_up = previous.close_i > previous.open_i
+    current_up = current.close_i > current.open_i
+    current_down = current.close_i < current.open_i
+    if previous_down and current_up and current.open_i <= previous.close_i and current.close_i >= previous.open_i:
+        additions.append("Bullish Engulfing")
+    if previous_up and current_down and current.open_i >= previous.close_i and current.close_i <= previous.open_i:
+        additions.append("Bearish Engulfing")
+    return ", ".join(additions)
+
+
+def _apply_wave2_structures(geometries: Tuple[CandleGeometry, ...]) -> Tuple[Tuple[CandleGeometry, ...], int]:
+    updated: List[CandleGeometry] = list(geometries)
+    tagged = 0
+    for idx in range(1, len(updated) - 1):
+        addition = _wave2_structure(updated[idx], updated[idx + 1])
+        if addition:
+            updated[idx] = replace(updated[idx], structure=_append_structure(updated[idx].structure, addition))
+            tagged += 1
+    return tuple(updated), tagged
+
+
+def _render_timeframe(root: Path, symbol: str, timeframe: str, requested: int) -> Tuple[TimeframeGeometrySummary, str, bool, int]:
     path = _ohlc_path(root, symbol, timeframe)
     if not path.exists():
         summary = TimeframeGeometrySummary(timeframe, "missing", requested, 0, 0, 0, 0, "not_available", "None", tuple())
-        return summary, f"[{timeframe}] source_status=missing path={path}\n", False
+        return summary, f"[{timeframe}] source_status=missing path={path}\n", False, 0
     try:
         meta, rows = _parse_header_and_rows(read_text(path))
         point_raw = meta.get("point", "")
@@ -303,28 +370,47 @@ def _render_timeframe(root: Path, symbol: str, timeframe: str, requested: int) -
         selected = rows[-requested:] if len(rows) > requested else rows
         selected = list(reversed(selected))
         geometries = tuple(_build_geometry(idx, row, point, digits) for idx, row in enumerate(selected))
+        geometries, wave2_tagged = _apply_wave2_structures(geometries)
         valid_rows = sum(1 for geo in geometries if geo.valid)
         zero_rows = sum(1 for geo in geometries if geo.zero_range)
         invalid_rows = sum(1 for geo in geometries if not geo.valid and not geo.zero_range)
         status = "complete" if len(geometries) >= requested and invalid_rows == 0 else "partial"
-        latest_time = geometries[0].bar_time if geometries else "not_available"
+        latest_time = geometries[0].bar_time_readable if geometries else "not_available"
         latest_structure = geometries[0].structure if geometries else "None"
         lines = [
-            f"[{timeframe}] source_status={status} rows_shown={len(geometries)} requested_display_bars={requested} source_rows_available={len(rows)} source_path={path}",
-            "# | State | Time | O | H | L | C | Range | Body % | Upper Wick % | Lower Wick % | Close Position % | Close vs Open | Candle Structure",
+            f"[{timeframe}] source_status={status} rows_shown={len(geometries)} requested_display_bars={requested} source_rows_available={len(rows)} time_basis=OHLC_Store_Unix_Time source_path={path}",
+            "# | State | Time | Time Unix | O | H | L | C | Range | Body % | Upper Wick % | Lower Wick % | Close Position % | Close vs Open | Candle Structure",
         ]
         for geo in geometries:
             if geo.valid or geo.zero_range:
-                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | {geo.range_text} | {geo.body_pct} | {geo.upper_wick_pct} | {geo.lower_wick_pct} | {geo.close_position_pct} | {geo.close_vs_open} | {geo.structure}")
+                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time_readable} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | {geo.range_text} | {geo.body_pct} | {geo.upper_wick_pct} | {geo.lower_wick_pct} | {geo.close_position_pct} | {geo.close_vs_open} | {geo.structure}")
             else:
-                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | n/a | n/a | n/a | n/a | n/a | Unknown | Invalid: {geo.invalid_reason}")
+                lines.append(f"{geo.index} | {geo.bar_state} | {geo.bar_time_readable} | {geo.bar_time} | {geo.open_price} | {geo.high_price} | {geo.low_price} | {geo.close_price} | n/a | n/a | n/a | n/a | n/a | Unknown | Invalid: {geo.invalid_reason}")
         lines.append("")
         summary = TimeframeGeometrySummary(timeframe, status, requested, len(geometries), valid_rows, zero_rows, invalid_rows, latest_time, latest_structure, geometries)
-        return summary, "\n".join(lines), invalid_rows > 0
+        return summary, "\n".join(lines), invalid_rows > 0, wave2_tagged
     except Exception as exc:
         safe_error = str(exc).replace(chr(10), " ").replace(chr(13), " ")
         summary = TimeframeGeometrySummary(timeframe, "decode_error", requested, 0, 0, 0, 1, "not_available", "None", tuple())
-        return summary, f"[{timeframe}] source_status=decode_error error={type(exc).__name__}:{safe_error} path={path}\n", True
+        return summary, f"[{timeframe}] source_status=decode_error error={type(exc).__name__}:{safe_error} path={path}\n", True, 0
+
+
+def _cleanup_selected_dossier_topview(existing_text: str) -> Tuple[str, int]:
+    replacements = {
+        "dossier_topview_v2_l15": "dossier_topview_v3_l19_selected_evidence",
+        "Pipeline Position:   L15 correlation/diversity scored": "Pipeline Position:   L19 candle geometry available on selected copied dossier",
+        "L16 Global Top 10:            not_built_or_not_active_here": "L16 Global Top 10:            selected copied dossier when present in Selection Desk output",
+        "Selection Active: L15 scoring only; no Global Top 10 or trade permission": "Selection Active: L16-L19 selected inspection evidence; no trade permission",
+        "Next step: Layer 16 Global Top 10 builder after L15 correlation/diversity output is accepted.": "Next step: Layer 20 rolling tick pack after L19 candle geometry is accepted.",
+        "Layer 11-15 are inspection/selection-scoring surfaces only; no Global Top 10, alert, or trade permission exists here.": "Layer 11-19 are inspection/evidence surfaces only; no setup alert or trade permission exists here.",
+    }
+    updated = existing_text
+    count = 0
+    for old, new in replacements.items():
+        if old in updated:
+            count += updated.count(old)
+            updated = updated.replace(old, new)
+    return updated, count
 
 
 def _extract_block(text: str, start_marker: str, end_marker: str) -> str:
@@ -341,6 +427,7 @@ def _extract_block(text: str, start_marker: str, end_marker: str) -> str:
 
 def _replace_l19_in_deep_section(existing_text: str, l19_block: str) -> str:
     normalized = (existing_text or "").replace("\r\n", "\n").rstrip()
+    normalized, _count = _cleanup_selected_dossier_topview(normalized)
     deep = _extract_block(normalized, SELECTION_DEEP_START, SELECTION_DEEP_END)
     if not deep:
         deep = "\n".join([SELECTION_DEEP_START, SELECTION_DEEP_END]) + "\n"
@@ -359,7 +446,7 @@ def _empty_tf_counts() -> Dict[str, Dict[str, int]]:
     return {tf: {"complete": 0, "partial": 0, "missing": 0, "decode_error": 0} for tf in DISPLAY_BARS}
 
 
-def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries: Dict[str, TimeframeGeometrySummary]) -> str:
+def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries: Dict[str, TimeframeGeometrySummary], wave2_tagged: int) -> str:
     rows_total = sum(summary.rows_available for summary in tf_summaries.values())
     valid_total = sum(summary.rows_valid for summary in tf_summaries.values())
     zero_total = sum(summary.zero_range_rows for summary in tf_summaries.values())
@@ -370,7 +457,9 @@ def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries
         "Scope:                  Selection copied dossier only",
         "Source Contract:        L18 selected raw OHLC scope using existing Shared OHLC seed files",
         "Rows Shown Per TF:      5",
-        "Structure Wave:         Wave 1 single candle structures only",
+        "Structure Wave:         Wave 1 single candle + Wave 2 closed-assumed two candle structures",
+        "Wave 2 Policy:          current possible row is not used as confirmed two-candle structure",
+        "Time Basis:             OHLC Store Unix time rendered as readable store time plus raw Unix",
         "CopyRates By L19:       false",
         "Private OHLC Cache:     false",
         "Raw OHLC Store Writes:  false",
@@ -382,6 +471,7 @@ def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries
         f"Valid Geometry Rows:    {valid_total}",
         f"Zero Range Rows:        {zero_total}",
         f"Invalid Rows:           {invalid_total}",
+        f"Wave 2 Rows Tagged:     {wave2_tagged}",
         "Meaning:                candle structure only, not signal or trade permission",
         "",
         "Mini Overview",
@@ -400,10 +490,12 @@ def _board_text(summary: L19PublishSummary) -> str:
     return "\n".join([
         "L19 — CANDLE GEOMETRY AND STRUCTURE",
         "--------------------------------------------------",
-        "Purpose:                Calculate candle geometry and Wave 1 candle structures from selected raw OHLC",
+        "Purpose:                Calculate candle geometry plus Wave 1/2 candle structures from selected raw OHLC",
         "Scope:                  Canonical Selection Desk copied dossiers only",
         "Rows Shown Per TF:      5",
-        "Structure Wave:         Wave 1 single candle structures only",
+        "Structure Wave:         Wave 1 single candle + Wave 2 closed-assumed two candle structures",
+        "Wave 2 Policy:          current possible row is not used as confirmed two-candle structure",
+        "Time Basis:             OHLC Store Unix time rendered as readable store time plus raw Unix",
         "Source Contract:        L18 selected raw OHLC scope using existing Shared OHLC seed files",
         "CopyRates By L19:       FALSE",
         "Private OHLC Cache:     FALSE",
@@ -416,6 +508,7 @@ def _board_text(summary: L19PublishSummary) -> str:
         f"Selected Dossiers Seen:       {summary.selected_dossiers_seen}",
         f"Selected Dossiers Decorated:  {summary.selected_dossiers_decorated}",
         f"Selected Missing Symbol:      {summary.selected_dossiers_missing_symbol}",
+        f"Top View Cleanup Replacements:{summary.topview_cleanup_count}",
         "",
         "Geometry Coverage",
         f"M5:   completed_symbols={summary.m5_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
@@ -435,6 +528,7 @@ def _board_text(summary: L19PublishSummary) -> str:
         f"Valid Geometry Rows:          {summary.valid_geometry_rows}",
         f"Zero Range Rows:              {summary.zero_range_rows}",
         f"Invalid Geometry Rows:        {summary.invalid_geometry_rows}",
+        f"Wave 2 Rows Tagged:           {summary.wave2_rows_tagged}",
         f"Write Failed Count:           {summary.write_failed_count}",
         f"Generated UTC:                {utc_stamp()}",
         "",
@@ -444,13 +538,15 @@ def _board_text(summary: L19PublishSummary) -> str:
 def _status_text(summary: L19PublishSummary) -> str:
     return "\n".join([
         "schema_name=l19_candle_geometry_and_structure_status",
-        "schema_version=1",
+        "schema_version=2",
         f"status={summary.status}",
         f"reason={summary.reason}",
         "scope=canonical_selection_shortcut_dossiers_only",
         "source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
         "rows_shown_per_tf=5",
-        "structure_wave=wave_1_single_candle_structures_only",
+        "structure_wave=wave_1_single_candle_plus_wave_2_closed_assumed_two_candle_structures",
+        "wave2_current_possible_confirmed=false",
+        "time_basis=OHLC_Store_Unix_Time",
         "copyrates_by_l19=false",
         "private_ohlc_cache=false",
         "raw_ohlc_store_writes=false",
@@ -466,6 +562,8 @@ def _status_text(summary: L19PublishSummary) -> str:
         f"valid_geometry_rows={summary.valid_geometry_rows}",
         f"zero_range_rows={summary.zero_range_rows}",
         f"invalid_geometry_rows={summary.invalid_geometry_rows}",
+        f"wave2_rows_tagged={summary.wave2_rows_tagged}",
+        f"topview_cleanup_count={summary.topview_cleanup_count}",
         f"write_failed_count={summary.write_failed_count}",
         f"m5_completed_symbols={summary.m5_completed_symbols}",
         f"m5_partial_symbols={summary.m5_partial_symbols}",
@@ -513,6 +611,8 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     valid_total = 0
     zero_total = 0
     invalid_total = 0
+    wave2_total = 0
+    topview_cleanup_total = 0
 
     for dossier in dossiers:
         symbol = _symbol_from_dossier(dossier)
@@ -521,10 +621,12 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
             continue
         rendered: List[str] = []
         tf_summaries: Dict[str, TimeframeGeometrySummary] = {}
+        dossier_wave2 = 0
         for tf, requested in DISPLAY_BARS.items():
-            summary, section, had_decode_or_invalid = _render_timeframe(root, symbol, tf, requested)
+            summary, section, had_decode_or_invalid, wave2_tagged = _render_timeframe(root, symbol, tf, requested)
             rendered.append(section)
             tf_summaries[tf] = summary
+            dossier_wave2 += wave2_tagged
             rows_total += summary.rows_available
             valid_total += summary.rows_valid
             zero_total += summary.zero_range_rows
@@ -545,9 +647,12 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
                 decode_errors += 1
         try:
             existing = read_text(dossier)
-            updated = _replace_l19_in_deep_section(existing, _build_l19_block(symbol, rendered, tf_summaries))
+            _cleaned, cleanup_count = _cleanup_selected_dossier_topview(existing)
+            topview_cleanup_total += cleanup_count
+            updated = _replace_l19_in_deep_section(existing, _build_l19_block(symbol, rendered, tf_summaries, dossier_wave2))
             if _write(dossier, updated, failed):
                 decorated += 1
+                wave2_total += dossier_wave2
         except Exception:
             failed.append(dossier)
 
@@ -569,6 +674,8 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         valid_geometry_rows=valid_total,
         zero_range_rows=zero_total,
         invalid_geometry_rows=invalid_total,
+        wave2_rows_tagged=wave2_total,
+        topview_cleanup_count=topview_cleanup_total,
         write_failed_count=len(failed),
         m5_completed_symbols=tf_counts["M5"]["complete"],
         m5_partial_symbols=tf_counts["M5"]["partial"] + tf_counts["M5"]["decode_error"],
