@@ -86,7 +86,7 @@ string AC_Layer1BoardSection()
 
 string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
 {
-   return AC_AccountTruthStatusRow_Base(account_write) + "|portfolio_maps=enabled|portfolio_map_scope=summary_board_full_account_status|portfolio_concentration=enabled|asset_risk_heat_maps=enabled|direction_risk_maps=enabled|time_window_risk_maps=enabled|holding_time_risk_maps=enabled|currency_risk_maps=enabled|recovery_damage_maps=enabled|cluster_v2_maps=enabled|r_readiness=enabled|money_risk_readiness=enabled|r_multiple_maps=enabled|risk_efficiency_maps=enabled|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled|equity_drawdown_map=enabled|board_layer1_compact=true";
+   return AC_AccountTruthStatusRow_Base(account_write) + "|portfolio_maps=enabled|portfolio_map_scope=summary_board_full_account_status|portfolio_concentration=enabled|asset_risk_heat_maps=enabled|direction_risk_maps=enabled|time_window_risk_maps=enabled|holding_time_risk_maps=enabled|currency_risk_maps=enabled|recovery_damage_maps=enabled|cluster_v2_maps=enabled|setup_tag_readiness=enabled|r_readiness=enabled|money_risk_readiness=enabled|r_multiple_maps=enabled|risk_efficiency_maps=enabled|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled|equity_drawdown_map=enabled|board_layer1_compact=true";
 }
 
 #endif
