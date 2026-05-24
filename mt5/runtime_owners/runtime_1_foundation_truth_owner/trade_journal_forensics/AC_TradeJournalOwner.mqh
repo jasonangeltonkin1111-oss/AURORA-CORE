@@ -32,7 +32,7 @@ struct AC_TradeJournalStatusPacket
    bool   trade_permission;
    bool   execution_permission;
    bool   prop_firm_safety;
-   int    historical_files_written_total;
+   int    historical_files_written_this_pass;
    int    packets_seen_total;
    int    packets_rejected_total;
    int    packets_orphaned_total;
@@ -129,7 +129,7 @@ void AC_TradeJournalResetStatus()
    AC_TRADE_JOURNAL_STATUS.trade_permission = false;
    AC_TRADE_JOURNAL_STATUS.execution_permission = false;
    AC_TRADE_JOURNAL_STATUS.prop_firm_safety = false;
-   AC_TRADE_JOURNAL_STATUS.historical_files_written_total = 0;
+   AC_TRADE_JOURNAL_STATUS.historical_files_written_this_pass = 0;
    AC_TRADE_JOURNAL_STATUS.packets_seen_total = 0;
    AC_TRADE_JOURNAL_STATUS.packets_rejected_total = 0;
    AC_TRADE_JOURNAL_STATUS.packets_orphaned_total = 0;
@@ -328,7 +328,7 @@ bool AC_TradeJournalPublishOneHistoricalTrade()
       }
 
       written++;
-      AC_TRADE_JOURNAL_STATUS.historical_files_written_total++;
+      AC_TRADE_JOURNAL_STATUS.historical_files_written_this_pass++;
    }
 
    if(written > 0)
@@ -352,7 +352,7 @@ string AC_TradeJournalStatusRow(const AC_TradeJournalStatusPacket &status)
    row += "|live_capture=" + status.live_capture_status;
    row += "|packet_import=" + status.packet_import_status;
    row += "|packet_matching=" + status.packet_matching_status;
-   row += "|historical_files_written_total=" + IntegerToString(status.historical_files_written_total);
+   row += "|historical_files_written_this_pass=" + IntegerToString(status.historical_files_written_this_pass);
    row += "|packets_seen_total=" + IntegerToString(status.packets_seen_total);
    row += "|packets_rejected_total=" + IntegerToString(status.packets_rejected_total);
    row += "|packets_orphaned_total=" + IntegerToString(status.packets_orphaned_total);
@@ -378,7 +378,7 @@ string AC_TradeJournalWorkbenchSection(const AC_TradeJournalStatusPacket &status
    text += "Live Capture: " + status.live_capture_status + "\r\n";
    text += "Packet Import: " + status.packet_import_status + "\r\n";
    text += "Packet Matching: " + status.packet_matching_status + "\r\n";
-   text += "Historical Files Written This Pass: " + IntegerToString(status.historical_files_written_total) + "\r\n";
+   text += "Historical Files Written This Pass: " + IntegerToString(status.historical_files_written_this_pass) + "\r\n";
    text += "Packets Seen / Rejected / Orphaned / Matched: "
       + IntegerToString(status.packets_seen_total) + " / "
       + IntegerToString(status.packets_rejected_total) + " / "
