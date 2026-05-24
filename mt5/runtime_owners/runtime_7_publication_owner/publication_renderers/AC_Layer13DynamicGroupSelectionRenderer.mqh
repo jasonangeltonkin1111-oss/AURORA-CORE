@@ -105,7 +105,7 @@ void AC_L13RefreshSummary()
    string execution = AC_L13KvValue(summary, "execution", "not_available");
    AC_L13_VALID_GROUP_COUNT = AC_L13KvInt(summary, "valid_group_count", 0);
    AC_L13_SELECTED_GROUP_COUNT = AC_L13KvInt(summary, "selected_ranking_group_count", 0);
-   AC_L13_REJECTED_GROUP_COUNT = AC_L13KvInt(summary, "rejected_group_count", 0);
+   AC_L13_REJECTED_GROUP_COUNT = AC_L13KvInt(summary, "rejected_ranking_group_count", 0);
    AC_L13_WRITE_FAILED_COUNT = AC_L13KvInt(summary, "write_failed_count", 0);
    AC_L13_FALLBACK_USED = AC_L13KvValue(summary, "fallback_used", "false");
    AC_L13_FALLBACK_REASON = AC_L13KvValue(summary, "fallback_reason", "not_required");
@@ -274,7 +274,7 @@ string AC_Layer13WorkbenchSection()
    text += "validation_reason=" + AC_L13_VALIDATION_REASON + "\r\n";
    text += "valid_group_count=" + IntegerToString(AC_L13_VALID_GROUP_COUNT) + "\r\n";
    text += "selected_ranking_group_count=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + "\r\n";
-   text += "rejected_group_count=" + IntegerToString(AC_L13_REJECTED_GROUP_COUNT) + "\r\n";
+   text += "rejected_ranking_group_count=" + IntegerToString(AC_L13_REJECTED_GROUP_COUNT) + "\r\n";
    text += "fallback_used=" + AC_L13_FALLBACK_USED + "\r\n";
    text += "fallback_reason=" + AC_L13_FALLBACK_REASON + "\r\n";
    text += "selection_quality_tier=" + AC_L13_SELECTION_QUALITY_TIER + "\r\n";
