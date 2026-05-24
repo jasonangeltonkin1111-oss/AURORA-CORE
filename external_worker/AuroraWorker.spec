@@ -17,6 +17,8 @@ a = Analysis(
         'aurora_worker_l11_dispatch',
         'aurora_worker_l11_dossier_copy',
         'aurora_worker_l11_tree',
+        'aurora_worker_recorder',
+        'aurora_worker_surface_overseer',
         'aurora_worker_l12',
         'aurora_worker_l12_dispatch',
     ],
