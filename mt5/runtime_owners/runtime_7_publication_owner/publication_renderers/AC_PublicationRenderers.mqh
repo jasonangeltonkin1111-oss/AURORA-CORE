@@ -33,9 +33,11 @@ string AC_DossierL16L17PipelineCorrectionSection(const string symbol)
    string l16_row = AC_L16CsvLineForSymbol(symbol);
    string l17_row = AC_L17CsvLineForSymbol(symbol);
    string text = "";
-   text += "\r\nL16/L17 CURRENT SELECTION TRUTH\r\n";
+   text += "\r\nCURRENT SELECTION TRUTH\r\n";
    text += "----------------------------------------\r\n";
-   text += "Purpose: compact current L16 inspection-basket and L17 deep-evidence split truth before full selection detail sections.\r\n";
+   text += "Purpose: compact current upstream selection truth before full selection detail sections.\r\n";
+   text += "Authority: this section supersedes older top-shell pipeline, selection-active, or NEXT REQUIRED wording if those lower sections still mention an earlier layer.\r\n";
+   text += "Current Selection Surface: latest accepted L16/L17 source truth available to the renderer.\r\n";
    text += "L16 Status: " + AC_L16_STATUS + "\r\n";
    text += "L16 Selected Count: " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
    text += "L16 Unfilled Slots: " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
@@ -72,8 +74,8 @@ string AC_DossierL16L17PipelineCorrectionSection(const string symbol)
       text += "This Symbol L17 Budget Class: " + AC_L17CsvField(l17_row, 25) + "\r\n";
       text += "This Symbol L17 Selection Reason: " + AC_L17CsvField(l17_row, 30) + "\r\n";
    }
-   text += "Selection Meaning: L16/L17 are inspection and evidence-budget surfaces only; no setup alert, no trade permission, no execution.\r\n";
-   text += "Next Required: inspect L17 selected symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n";
+   text += "Selection Meaning: current selection surfaces are inspection and evidence-budget surfaces only; no setup alert, no trade permission, no execution.\r\n";
+   text += "Current Next Required: inspect currently selected evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n";
    return text;
 }
 
@@ -94,9 +96,9 @@ string AC_Layer11L12L13L14L15L16L17AndSharedOhlcRenderDossierSection(const strin
 
 // Surgical render-composition bridge:
 // AC_Layer0DossierPublication.mqh already appends AC_SharedOhlcRenderDossierSection(symbol)
-// after L10. The macro below routes that single existing append through the L16/L17 correction + L11+L12+L13+L14+L15+L16+L17+OHLC wrapper
-// so the Dossier receives current L16 inspection-basket and L17 deep-evidence split truth without a broad rewrite of the active Dossier owner.
-// L16/L17 are render-only here. The worker owns calculation-support outputs.
+// after L10. The macro below routes that single existing append through the current selection truth + L11+L12+L13+L14+L15+L16+L17+OHLC wrapper
+// so the Dossier receives current selection and evidence-budget truth without a broad rewrite of the active Dossier owner.
+// Later selection surfaces are render-only here. The worker owns calculation-support outputs.
 #define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15L16L17AndSharedOhlcRenderDossierSection
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
