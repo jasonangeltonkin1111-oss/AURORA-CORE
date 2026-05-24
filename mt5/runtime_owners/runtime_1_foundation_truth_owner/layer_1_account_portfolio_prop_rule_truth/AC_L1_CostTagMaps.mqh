@@ -11,6 +11,109 @@ string AC_L1TagKey(const long magic,
    return "magic=" + IntegerToString((int)magic) + ";comment=" + comment;
 }
 
+bool AC_L1CommentHasStructuredToken(string comment,
+                                    const string token)
+{
+   StringToLower(comment);
+   string t = token;
+   StringToLower(t);
+   return (StringFind(comment, t) >= 0);
+}
+
+string AC_L1SetupTagQuality(const int rows,
+                            const int structured_rows,
+                            const int magic_rows,
+                            const int comment_rows)
+{
+   if(rows <= 0) return "no selected rows";
+   double structured_pct = ((double)structured_rows * 100.0) / rows;
+   double magic_pct = ((double)magic_rows * 100.0) / rows;
+   double comment_pct = ((double)comment_rows * 100.0) / rows;
+   if(structured_pct >= 80.0 && magic_pct >= 80.0) return "strong setup tagging";
+   if(structured_pct >= 50.0 || (magic_pct >= 50.0 && comment_pct >= 50.0)) return "partial setup tagging";
+   if(comment_pct > 0.0 || magic_pct > 0.0) return "weak setup tagging";
+   return "tag source mostly missing";
+}
+
+string AC_L1SetupTagReadinessMap()
+{
+   int rows = ArraySize(AC_L1_CLOSED);
+   int rows_with_magic = 0;
+   int rows_magic_zero = 0;
+   int rows_with_comment = 0;
+   int rows_missing_comment = 0;
+   int rows_with_structured_setup = 0;
+   int rows_with_strategy_id = 0;
+   int rows_with_entry_reason = 0;
+   int rows_with_exit_reason = 0;
+   int rows_with_risk_tag = 0;
+   int distinct_magic = 0;
+   int distinct_comment = 0;
+   string magic_seen = "|";
+   string comment_seen = "|";
+
+   for(int i = 0; i < rows; i++)
+   {
+      long magic = AC_L1_CLOSED[i].magic;
+      string magic_key = IntegerToString((int)magic);
+      string comment = AC_L1_CLOSED[i].comment;
+      StringTrimLeft(comment);
+      StringTrimRight(comment);
+
+      if(magic != 0) rows_with_magic++; else rows_magic_zero++;
+      if(StringFind(magic_seen, "|" + magic_key + "|") < 0)
+      {
+         magic_seen += magic_key + "|";
+         distinct_magic++;
+      }
+
+      if(comment != "") rows_with_comment++; else rows_missing_comment++;
+      string comment_key = comment;
+      if(comment_key == "") comment_key = "no_comment";
+      if(StringLen(comment_key) > 40) comment_key = StringSubstr(comment_key, 0, 40);
+      if(StringFind(comment_seen, "|" + comment_key + "|") < 0)
+      {
+         comment_seen += comment_key + "|";
+         distinct_comment++;
+      }
+
+      bool has_strategy = AC_L1CommentHasStructuredToken(comment, "strategy=") || AC_L1CommentHasStructuredToken(comment, "strategy:") || AC_L1CommentHasStructuredToken(comment, "sid=") || AC_L1CommentHasStructuredToken(comment, "setup=");
+      bool has_entry = AC_L1CommentHasStructuredToken(comment, "entry=") || AC_L1CommentHasStructuredToken(comment, "entry:") || AC_L1CommentHasStructuredToken(comment, "reason=");
+      bool has_exit = AC_L1CommentHasStructuredToken(comment, "exit=") || AC_L1CommentHasStructuredToken(comment, "exit:") || AC_L1CommentHasStructuredToken(comment, "close=");
+      bool has_risk = AC_L1CommentHasStructuredToken(comment, "risk=") || AC_L1CommentHasStructuredToken(comment, "risk:") || AC_L1CommentHasStructuredToken(comment, "r=");
+      if(has_strategy) rows_with_strategy_id++;
+      if(has_entry) rows_with_entry_reason++;
+      if(has_exit) rows_with_exit_reason++;
+      if(has_risk) rows_with_risk_tag++;
+      if(has_strategy || has_entry || has_exit || has_risk) rows_with_structured_setup++;
+   }
+
+   double magic_pct = (rows > 0 ? ((double)rows_with_magic * 100.0) / rows : 0.0);
+   double comment_pct = (rows > 0 ? ((double)rows_with_comment * 100.0) / rows : 0.0);
+   double structured_pct = (rows > 0 ? ((double)rows_with_structured_setup * 100.0) / rows : 0.0);
+   string quality = AC_L1SetupTagQuality(rows, rows_with_structured_setup, rows_with_magic, rows_with_comment);
+
+   string text = AC_L1MapHeader("SETUP TAG READINESS MAP");
+   text += "Scope:                  selected closed history tag quality only\r\n";
+   text += "Purpose:                prove whether future setup performance maps can trust magic/comment identity\r\n";
+   text += "Selected Closed Rows:   " + IntegerToString(rows) + "\r\n";
+   text += "Rows With Magic:        " + IntegerToString(rows_with_magic) + " / " + IntegerToString(rows) + " (" + AC_L1PercentText(magic_pct) + ")\r\n";
+   text += "Rows Magic Zero:        " + IntegerToString(rows_magic_zero) + "\r\n";
+   text += "Rows With Comment:      " + IntegerToString(rows_with_comment) + " / " + IntegerToString(rows) + " (" + AC_L1PercentText(comment_pct) + ")\r\n";
+   text += "Rows Missing Comment:   " + IntegerToString(rows_missing_comment) + "\r\n";
+   text += "Structured Setup Rows:  " + IntegerToString(rows_with_structured_setup) + " / " + IntegerToString(rows) + " (" + AC_L1PercentText(structured_pct) + ")\r\n";
+   text += "Strategy ID Rows:       " + IntegerToString(rows_with_strategy_id) + "\r\n";
+   text += "Entry Reason Rows:      " + IntegerToString(rows_with_entry_reason) + "\r\n";
+   text += "Exit Reason Rows:       " + IntegerToString(rows_with_exit_reason) + "\r\n";
+   text += "Risk Tag Rows:          " + IntegerToString(rows_with_risk_tag) + "\r\n";
+   text += "Distinct Magic Values:  " + IntegerToString(distinct_magic) + "\r\n";
+   text += "Distinct Comment Tags:  " + IntegerToString(distinct_comment) + "\r\n";
+   text += "Tag Quality:            " + quality + "\r\n";
+   text += "Setup Map Status:       performance-by-setup blocked until structured tags exist\r\n";
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
 string AC_L1CostDragMap()
 {
    int rows = ArraySize(AC_L1_CLOSED);
@@ -190,6 +293,7 @@ string AC_L1CostAndTagMapsFull()
    string text = "";
    text += AC_L1CostDragMap();
    text += AC_L1CostDragBySymbolMap(10);
+   text += AC_L1SetupTagReadinessMap();
    text += AC_L1MagicCommentTagMap(12);
    return text;
 }
