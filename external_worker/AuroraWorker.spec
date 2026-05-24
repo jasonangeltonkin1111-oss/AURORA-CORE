@@ -3,10 +3,7 @@
 a = Analysis(
     ['aurora_worker_entrypoint.py'],
     pathex=[],
-    binaries=[
-        (r'C:\Users\Jason\AppData\Local\Programs\Python\Python312\DLLs\_ctypes.pyd', '.'),
-        (r'C:\Users\Jason\AppData\Local\Programs\Python\Python312\DLLs\libffi-8.dll', '.'),
-    ],
+    binaries=[],
     datas=[],
     hiddenimports=[
         '_ctypes',
@@ -32,6 +29,10 @@ a = Analysis(
         'aurora_worker_l16_dispatch',
         'aurora_worker_l17',
         'aurora_worker_l17_dispatch',
+        'aurora_worker_l18',
+        'aurora_worker_l18_dispatch',
+        'aurora_worker_l19',
+        'aurora_worker_l19_dispatch',
     ],
     hookspath=[],
     hooksconfig={},
