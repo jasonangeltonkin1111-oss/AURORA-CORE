@@ -40,6 +40,9 @@ check_has l11_fn_workbench "${REQ[4]}" "AC_Layer11WorkbenchSection\\("
 check_has marketboard_calls_l11 "${REQ[5]}" "AC_Layer11BoardSection\\("
 check_has workbench_calls_l11 "${REQ[5]}" "AC_Layer11WorkbenchSection\\("
 check_has publication_includes_l11 "${REQ[7]}" "AC_Layer11SelectionGroupsRenderer.mqh"
+check_has dossier_composition_wrapper "${REQ[7]}" "AC_Layer11AndSharedOhlcRenderDossierSection"
+check_has dossier_wrapper_appends_l11 "${REQ[7]}" "AC_Layer11DossierSection\\(symbol\\)"
+check_has dossier_macro_bridge "${REQ[7]}" "#define AC_SharedOhlcRenderDossierSection AC_Layer11AndSharedOhlcRenderDossierSection"
 
 for f in external_worker/aurora_worker_l11.py external_worker/aurora_worker_l11_dispatch.py mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer11SelectionGroupsRenderer.mqh; do
   check_has false_selection_runtime "$f" "selection_runtime=false"
