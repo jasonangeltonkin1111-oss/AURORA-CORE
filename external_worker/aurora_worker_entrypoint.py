@@ -252,6 +252,70 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
         time.sleep(poll_seconds)
 
 
+def run_status_probe_with_l15(shared_root: Path) -> int:
+    roots = core.discover_roots(shared_root)
+    results: List[Tuple[Path, int, core.ValidationResult]] = []
+    write_failed = False
+    for idx, root in enumerate(roots):
+        code, res = _run_core_once_with_l11_l12_l13_l14_l15(root, "shared_status_probe")
+        process_ok = core.write_process_status(root, "shared-status-probe", 1, code, res, len(roots), idx)
+        if not process_ok:
+            res = core.mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
+            code = 3
+            write_failed = True
+        results.append((root, code, res))
+    ok = core.write_shared_status(shared_root, 1, roots, results, status_mode="shared_status_probe")
+    return 0 if ok and not write_failed else 3
+
+
+def run_repair_with_l15(shared_root: Path, watchdog_mode: bool) -> int:
+    roots = core.discover_roots(shared_root)
+    results: List[Tuple[Path, int, core.ValidationResult]] = []
+    write_failed = False
+    for idx, root in enumerate(roots):
+        mode = "watchdog_probe" if watchdog_mode else "repair_probe"
+        code, res = _run_core_once_with_l11_l12_l13_l14_l15(root, mode)
+        process_ok = core.write_process_status(root, mode, 1, code, res, len(roots), idx)
+        if not process_ok:
+            res = core.mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
+            code = 3
+            write_failed = True
+        results.append((root, code, res))
+    daemon_registered, daemon_state = core._get_task_state(core.DAEMON_TASK_NAME)
+    status_present, age = core._status_age(shared_root)
+    worker_processes = core._proc_count("AuroraWorker")
+    stale = (not status_present) or age < 0 or age > core.STATUS_MAX_AGE_SECONDS
+    process_missing = worker_processes == "0"
+    should_start = daemon_registered == "true" and (stale or process_missing or daemon_state.lower() != "running")
+    reason_bits: List[str] = []
+    if daemon_registered != "true": reason_bits.append("daemon_task_missing")
+    if stale: reason_bits.append("shared_gateway_status_missing_or_stale")
+    if process_missing: reason_bits.append("aurora_worker_process_missing")
+    if daemon_state.lower() != "running": reason_bits.append("daemon_task_state_not_running")
+    if write_failed: reason_bits.append("account_lifecycle_process_status_write_failed")
+    if not reason_bits: reason_bits.append("daemon_status_fresh")
+    attempted = "false"
+    restart_result = "not_needed"
+    action = "checked_no_restart_needed"
+    repair_success = False
+    if should_start:
+        attempted = "true"
+        ok, out = core._start_task(core.DAEMON_TASK_NAME)
+        action = "start_daemon_task"
+        restart_result = ("started_" + out) if ok else ("failed_" + out)
+        time.sleep(3)
+        status_present_after, age_after = core._status_age(shared_root)
+        process_count_after = core._proc_count("AuroraWorker")
+        repair_success = ok and (status_present_after and age_after >= 0 and age_after <= core.STATUS_MAX_AGE_SECONDS or process_count_after != "0")
+    elif daemon_registered != "true":
+        action = "cannot_repair_missing_daemon_task"
+        restart_result = "failed_daemon_task_missing"
+    proof = core.WatchdogProof(utc_stamp(), action, ";".join(reason_bits), attempted, restart_result)
+    probe_mode = "watchdog_probe" if watchdog_mode else "repair_probe"
+    probe_ok = core.write_probe_status(shared_root, 1, roots, results, proof, repair_success, probe_mode)
+    return 0 if probe_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Aurora Gateway validator entrypoint")
     parser.add_argument("--root")
@@ -263,8 +327,16 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--watchdog", action="store_true")
     parser.add_argument("--install-global", action="store_true")
     args, _unknown = parser.parse_known_args(argv)
-    if args.install_global or args.watchdog or args.repair or args.status:
+    if args.install_global:
         return core.main(argv)
+    if args.watchdog or args.repair:
+        if not args.shared_root:
+            raise SystemExit("--shared-root is required for watchdog/repair mode")
+        return run_repair_with_l15(Path(args.shared_root), args.watchdog)
+    if args.status:
+        if not args.shared_root:
+            raise SystemExit("--shared-root is required for --status")
+        return run_status_probe_with_l15(Path(args.shared_root))
     if args.mode == "shared-daemon" and args.shared_root:
         return run_shared_daemon_with_cycle_control(Path(args.shared_root), args.poll_seconds)
     if args.root and args.mode == "once":
