@@ -7,11 +7,12 @@ from aurora_worker_l11 import L11PublishSummary, publish_l11_symbol_ranking_insi
 from aurora_worker_l11_cleanup import cleanup_l11_stale_symbol_rank_sidecars
 from aurora_worker_l11_dossier_copy import EMPTY_L11_DOSSIER_COPY_SUMMARY, L11DossierCopySummary, copy_l11_tree_rank_files_from_dossiers
 from aurora_worker_l11_tree import L11TreeSummary, publish_l11_selection_desk_taxonomy_tree
+from aurora_worker_selection_surface_shortcuts import EMPTY_SELECTION_SHORTCUT_SUMMARY, SelectionShortcutSummary, publish_l11_asset_class_shortcuts
 
 EMPTY_TREE_SUMMARY = L11TreeSummary("pending", "l11_taxonomy_tree_not_run")
 
 
-def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecars_removed: int = 0, tree: L11TreeSummary = EMPTY_TREE_SUMMARY, dossier_copy: L11DossierCopySummary = EMPTY_L11_DOSSIER_COPY_SUMMARY) -> str:
+def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecars_removed: int = 0, tree: L11TreeSummary = EMPTY_TREE_SUMMARY, dossier_copy: L11DossierCopySummary = EMPTY_L11_DOSSIER_COPY_SUMMARY, asset_shortcuts: SelectionShortcutSummary = EMPTY_SELECTION_SHORTCUT_SUMMARY) -> str:
     return "\n".join([
         f"l11_symbol_ranking_status={summary.status}",
         f"l11_symbol_ranking_reason={summary.reason}",
@@ -55,7 +56,16 @@ def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecar
         f"l11_dossier_stale_rank_files_removed={dossier_copy.stale_dossier_rank_files_removed}",
         f"l11_dossier_copy_write_failed_count={dossier_copy.write_failed_count}",
         f"l11_dossier_copy_status_path={dossier_copy.status_path}",
+        f"l11_asset_class_shortcut_status={asset_shortcuts.status}",
+        f"l11_asset_class_shortcut_reason={asset_shortcuts.reason}",
+        f"l11_asset_class_shortcut_files_written={asset_shortcuts.files_written}",
+        f"l11_asset_class_shortcut_files_expected={asset_shortcuts.files_expected}",
+        f"l11_asset_class_shortcut_dossier_copies_written={asset_shortcuts.dossier_copies_written}",
+        f"l11_asset_class_shortcut_dossier_copies_expected={asset_shortcuts.dossier_copies_expected}",
+        f"l11_asset_class_shortcut_sources_missing={asset_shortcuts.dossier_sources_missing}",
+        f"l11_asset_class_shortcut_status_path={asset_shortcuts.status_path}",
         "l11_meaning=intra_group_inspection_priority_only",
+        "l11_asset_class_shortcut_meaning=asset_class_review_shortcuts_only_existing_l11_score",
         "l11_directional_validity=false",
         "l11_expectancy_validated=false",
         "l11_selection_runtime=false",
@@ -92,15 +102,16 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
             summary = publish_l11_symbol_ranking_inside_group(paths.outbox)
     tree_summary = publish_l11_selection_desk_taxonomy_tree(root)
     dossier_copy_summary = copy_l11_tree_rank_files_from_dossiers(root)
+    asset_shortcuts_summary = publish_l11_asset_class_shortcuts(root)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, duration_ms, stale_sidecars_removed, tree_summary, dossier_copy_summary))
+        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, duration_ms, stale_sidecars_removed, tree_summary, dossier_copy_summary, asset_shortcuts_summary))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=11",
+            "schema_version=12",
             "worker_l11_append_status=appended_by_l11_dispatch",
             f"l11_stale_symbol_rank_sidecars_removed={stale_sidecars_removed}",
             f"l11_taxonomy_tree_status={tree_summary.status}",
@@ -110,6 +121,10 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
             f"l11_dossier_copies_written={dossier_copy_summary.dossier_copies_written}",
             f"l11_dossier_copies_expected={dossier_copy_summary.dossier_copies_expected}",
             f"l11_dossier_copy_status_path={dossier_copy_summary.status_path}",
+            f"l11_asset_class_shortcut_status={asset_shortcuts_summary.status}",
+            f"l11_asset_class_shortcut_files_written={asset_shortcuts_summary.files_written}",
+            f"l11_asset_class_shortcut_files_expected={asset_shortcuts_summary.files_expected}",
+            f"l11_asset_class_shortcut_status_path={asset_shortcuts_summary.status_path}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
