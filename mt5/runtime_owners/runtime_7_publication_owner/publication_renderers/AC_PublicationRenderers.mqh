@@ -22,23 +22,31 @@
 #include "AC_Layer14CandidatePoolRenderer.mqh"
 #include "AC_Layer15CorrelationDiversityRenderer.mqh"
 #include "AC_Layer16GlobalTop10Renderer.mqh"
+#include "AC_Layer17DeepEvidenceRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 
-string AC_DossierL16PipelineCorrectionSection(const string symbol)
+string AC_DossierL16L17PipelineCorrectionSection(const string symbol)
 {
    AC_L16RefreshSummary();
+   AC_L17RefreshSummary();
    string l16_row = AC_L16CsvLineForSymbol(symbol);
+   string l17_row = AC_L17CsvLineForSymbol(symbol);
    string text = "";
-   text += "\r\nL16 CURRENT SELECTION TRUTH\r\n";
+   text += "\r\nL16/L17 CURRENT SELECTION TRUTH\r\n";
    text += "----------------------------------------\r\n";
-   text += "Purpose: compact current L16 inspection-basket truth before the full selection detail sections.\r\n";
+   text += "Purpose: compact current L16 inspection-basket and L17 deep-evidence split truth before full selection detail sections.\r\n";
    text += "L16 Status: " + AC_L16_STATUS + "\r\n";
    text += "L16 Selected Count: " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
    text += "L16 Unfilled Slots: " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
    text += "L16 Correlation Rejects: " + IntegerToString(AC_L16_CORRELATION_REJECT_COUNT) + "\r\n";
    text += "L16 Group Cap Rejects: " + IntegerToString(AC_L16_GROUP_CAP_REJECT_COUNT) + "\r\n";
    text += "L16 Top Symbol: " + AC_L16_TOP_SYMBOL + "\r\n";
+   text += "L17 Status: " + AC_L17_STATUS + "\r\n";
+   text += "L17 Deep Selected: " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
+   text += "L17 Clean Selected: " + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
+   text += "L17 Fallback Selected: " + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
+   text += "L17 Top Deep Symbol: " + AC_L17_TOP_SYMBOL + "\r\n";
    if(l16_row == "")
    {
       text += "This Symbol L16 Member: FALSE\r\n";
@@ -51,31 +59,45 @@ string AC_DossierL16PipelineCorrectionSection(const string symbol)
       text += "This Symbol L16 Primary Score: " + AC_L16CsvField(l16_row, 7) + "\r\n";
       text += "This Symbol Selection Reason: " + AC_L16CsvField(l16_row, 22) + "\r\n";
    }
-   text += "Selection Meaning: L16 is an inspection basket only; no setup alert, no trade permission, no execution.\r\n";
-   text += "Next Required: inspect L16 members first; non-members remain supporting evidence unless later source truth changes.\r\n";
+   if(l17_row == "")
+   {
+      text += "This Symbol L17 Deep Selected: FALSE\r\n";
+      text += "This Symbol L17 Meaning: visible evidence only unless later L17 source truth selects it.\r\n";
+   }
+   else
+   {
+      text += "This Symbol L17 Deep Selected: TRUE\r\n";
+      text += "This Symbol L17 Rank: #" + AC_L17CsvField(l17_row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
+      text += "This Symbol L17 Depth Assignment: " + AC_L17CsvField(l17_row, 24) + "\r\n";
+      text += "This Symbol L17 Budget Class: " + AC_L17CsvField(l17_row, 25) + "\r\n";
+      text += "This Symbol L17 Selection Reason: " + AC_L17CsvField(l17_row, 30) + "\r\n";
+   }
+   text += "Selection Meaning: L16/L17 are inspection and evidence-budget surfaces only; no setup alert, no trade permission, no execution.\r\n";
+   text += "Next Required: inspect L17 selected symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n";
    return text;
 }
 
-string AC_Layer11L12L13L14L15L16AndSharedOhlcRenderDossierSection(const string symbol)
+string AC_Layer11L12L13L14L15L16L17AndSharedOhlcRenderDossierSection(const string symbol)
 {
    string text = "";
-   text += AC_DossierL16PipelineCorrectionSection(symbol);
+   text += AC_DossierL16L17PipelineCorrectionSection(symbol);
    text += AC_Layer11DossierSection(symbol);
    text += AC_Layer12DossierSection(symbol);
    text += AC_Layer13DossierSection(symbol);
    text += AC_Layer14DossierSection(symbol);
    text += AC_Layer15DossierSection(symbol);
    text += AC_Layer16DossierSection(symbol);
+   text += AC_Layer17DossierSection(symbol);
    text += AC_SharedOhlcRenderDossierSection(symbol);
    return text;
 }
 
 // Surgical render-composition bridge:
 // AC_Layer0DossierPublication.mqh already appends AC_SharedOhlcRenderDossierSection(symbol)
-// after L10. The macro below routes that single existing append through the L16 correction + L11+L12+L13+L14+L15+L16+OHLC wrapper
-// so the Dossier receives current L16 inspection-basket truth without a broad rewrite of the active Dossier owner.
-// L16 is render-only here. The worker owns Global Top 10 calculation support.
-#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15L16AndSharedOhlcRenderDossierSection
+// after L10. The macro below routes that single existing append through the L16/L17 correction + L11+L12+L13+L14+L15+L16+L17+OHLC wrapper
+// so the Dossier receives current L16 inspection-basket and L17 deep-evidence split truth without a broad rewrite of the active Dossier owner.
+// L16/L17 are render-only here. The worker owns calculation-support outputs.
+#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15L16L17AndSharedOhlcRenderDossierSection
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
 
