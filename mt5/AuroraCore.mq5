@@ -15,6 +15,7 @@
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_BrokerSpecsTruth.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_4_market_watch_truth/AC_MarketWatchTruth.mqh"
 #include "runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh"
+#include "runtime_owners/runtime_1_foundation_truth_owner/trade_journal_forensics/AC_TradeJournalOwner.mqh"
 #include "runtime_owners/runtime_3_external_calculation_worker_owner/AC_ExternalWorkerOwner.mqh"
 #include "runtime_owners/runtime_7_publication_owner/publication_renderers/AC_PublicationRenderers.mqh"
 
@@ -92,9 +93,11 @@ string AC_BuildWorkbenchStatusText(const AC_WriteResult &account_write,
       + AC_Layer3StatusRow() + "\r\n"
       + AC_Layer4StatusRow() + "\r\n"
       + AC_Layer5StatusRow() + "\r\n"
+      + AC_TradeJournalStatusRow(AC_TRADE_JOURNAL_STATUS) + "\r\n"
       + AC_ExternalWorkerStatusRow() + "\r\n"
       + AC_UniverseStatusRow() + "\r\n\r\n"
       + AC_Layer0WorkbenchText(layer0_status)
+      + AC_TradeJournalWorkbenchSection(AC_TRADE_JOURNAL_STATUS)
       + AC_ExternalWorkerWorkbenchSection();
 }
 
@@ -230,6 +233,15 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_AddMicroLog("ensure_runtime_folders", phase_start, AC_SNAPSHOT.folder_create_status);
 
    phase_start = GetTickCount();
+   bool trade_journal_ok = AC_TradeJournalInit();
+   if(!trade_journal_ok)
+   {
+      AC_SNAPSHOT.file_publication_blocked = true;
+      AC_AppendReason("trade_journal=" + AC_TRADE_JOURNAL_STATUS.route_status);
+   }
+   AC_AddMicroLog("trade_journal_skeleton_init", phase_start, AC_TRADE_JOURNAL_STATUS.status);
+
+   phase_start = GetTickCount();
    AC_SNAPSHOT.placeholder_status = AC_CleanupLegacyPlaceholderFiles();
    AC_AddMicroLog("cleanup_legacy_placeholder_files", phase_start, AC_SNAPSHOT.placeholder_status);
 
@@ -297,6 +309,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "foundation_truth_owner=" + AC_RUNTIME1_OWNER + "\r\n";
    diagnostics += "gateway_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
+   diagnostics += "trade_journal_owner=" + AC_TRADE_JOURNAL_OWNER_NAME + "\r\n";
    diagnostics += "timer_setup_status=" + AC_SNAPSHOT.timer_setup_status + "\r\n";
    diagnostics += "timer_setup_error=" + IntegerToString(AC_SNAPSHOT.timer_setup_error) + "\r\n";
    diagnostics += "timer_busy_guard=" + (AC_TIMER_BUSY ? "active" : "idle") + "\r\n";
@@ -318,6 +331,8 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "gateway_authority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\n";
    diagnostics += "gateway_popup_alerts=false\r\n";
    diagnostics += "gateway_core_blocking=false\r\n";
+   diagnostics += AC_TradeJournalStatusText();
+   diagnostics += "trade_journal_owner_contract=bookkeeping_forensics_only_no_history_generator_no_packet_import_no_matching_no_live_capture_no_permission_no_execution\r\n";
    diagnostics += "layer1_scan_status=" + AC_L1_SCAN_STATUS + "\r\n";
    diagnostics += "layer1_scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS) + "\r\n";
    diagnostics += "layer2_scan_status=" + AC_L2_SCAN_STATUS + "\r\n";
@@ -369,6 +384,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "layer4_owner_contract=runtime1_foundation_truth_symbolinfotick_marketwatch_only_no_history_no_dom_no_indicators_no_ranking_no_permission\r\n";
    diagnostics += "layer5_owner_contract=runtime1_basic_system_gate_consumes_l2_l3_l4_owner_packets_no_gateway_no_calculation_no_ranking_no_selection_no_permission\r\n";
+   diagnostics += "trade_journal_contract=runtime1_support_bookkeeping_only_one_file_per_trade_later_no_permission_no_execution\r\n";
    diagnostics += "gateway_contract=runtime3_global_daemon_watchdog_job_bus_result_acceptance_no_popup_no_board_dossier_authority_no_permission\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_meta_non_trading_proof_not_trader_bloat\r\n";
@@ -386,7 +402,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_basic_system_gate_plus_runtime3_gateway_foundation_no_history_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_basic_system_gate_plus_trade_journal_skeleton_status_only_plus_runtime3_gateway_foundation_no_history_generator_no_packet_matching_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
@@ -502,6 +518,8 @@ void OnDeinit(const int reason)
    diagnostics += "publication_service_owner=" + AC_PUBLICATION_SERVICE_OWNER + "\r\n";
    diagnostics += "gateway_owner=" + AC_RUNTIME3_OWNER + "\r\n";
    diagnostics += "layer5_owner=" + AC_RUNTIME1_OWNER + "\r\n";
+   diagnostics += "trade_journal_owner=" + AC_TRADE_JOURNAL_OWNER_NAME + "\r\n";
+   diagnostics += "trade_journal_status=" + AC_TRADE_JOURNAL_STATUS.status + "\r\n";
    diagnostics += "timer_busy_skip_count=" + IntegerToString(AC_TIMER_BUSY_SKIP_COUNT) + "\r\n";
    diagnostics += "last_timer_duration_ms=" + IntegerToString((int)AC_LAST_TIMER_DURATION_MS) + "\r\n";
    diagnostics += "deinit_reason=" + IntegerToString(reason) + "\r\n";
