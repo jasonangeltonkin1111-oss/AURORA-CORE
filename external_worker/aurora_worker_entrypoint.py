@@ -12,12 +12,16 @@ from aurora_worker_l11_dispatch import run_l11_after_core
 from aurora_worker_l12_dispatch import run_l12_after_l11
 from aurora_worker_l13_dispatch import run_l13_after_l12
 from aurora_worker_l14_dispatch import run_l14_after_l13
+from aurora_worker_l15_dispatch import run_l15_after_l14
 
 SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
 CALCULATION_CYCLE_SECONDS = 30
 ACCEPTED_EPOCH_TTL_SECONDS = 120
 ENABLE_L13_RUNTIME = True
 ENABLE_L14_RUNTIME = True
+ENABLE_L15_RUNTIME = True
+
+
 @dataclass
 class SnapshotCycleState:
     identity: str = "not_available"
@@ -88,7 +92,7 @@ def _write_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
     return atomic_write_text(_cycle_status_path(root), _build_cycle_status(root, loop, state, result, action, reason))
 
 
-def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, enable_l13_runtime: bool, enable_l14_runtime: bool) -> bool:
+def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, enable_l13_runtime: bool, enable_l14_runtime: bool, enable_l15_runtime: bool) -> bool:
     latest_path = _result_latest_path(root)
     latest = read_kv(latest_path) if latest_path.exists() else {}
     l6_status = latest.get("l6_rank_status", "missing")
@@ -99,6 +103,7 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
     l12_status = latest.get("l12_group_heat_quality_status", "missing")
     l13_status = latest.get("l13_dynamic_group_selection_status", "missing") if enable_l13_runtime else "disabled"
     l14_status = latest.get("l14_candidate_pool_status", "missing") if enable_l14_runtime else "disabled"
+    l15_status = latest.get("l15_correlation_diversity_status", "missing") if enable_l15_runtime else "disabled"
     all_complete = (
         result.ok
         and l6_status == "complete"
@@ -109,14 +114,15 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         and l12_status in {"accepted", "write_degraded"}
         and ((l13_status in {"accepted", "write_degraded"}) if enable_l13_runtime else True)
         and ((l14_status in {"accepted", "write_degraded"}) if enable_l14_runtime else True)
+        and ((l15_status in {"accepted", "degraded", "write_degraded"}) if enable_l15_runtime else True)
     )
     if not all_complete:
         return False
     accepted_unix = unix_time()
-    epoch_id = "|".join([result.snapshot_id, result.payload_checksum, l6_status, l7_status, l8_status, l9_status, l11_status, l12_status, l13_status, l14_status])
+    epoch_id = "|".join([result.snapshot_id, result.payload_checksum, l6_status, l7_status, l8_status, l9_status, l11_status, l12_status, l13_status, l14_status, l15_status])
     text = "\n".join([
         "schema_name=aurora_gateway_surface_accepted_epoch",
-        "schema_version=5",
+        "schema_version=6",
         f"worker_version={core.WORKER_VERSION}",
         "status=accepted",
         "epoch_status=accepted",
@@ -138,8 +144,10 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         f"l12_group_heat_quality_status={l12_status}",
         f"l13_dynamic_group_selection_status={l13_status}",
         f"l14_candidate_pool_status={l14_status}",
+        f"l15_correlation_diversity_status={l15_status}",
         f"l13_runtime_enabled={'true' if enable_l13_runtime else 'false'}",
         f"l14_runtime_enabled={'true' if enable_l14_runtime else 'false'}",
+        f"l15_runtime_enabled={'true' if enable_l15_runtime else 'false'}",
         f"result_latest_path={latest_path}",
         "authority=calculation_support_only",
         "candidate_pool_runtime=false",
@@ -156,7 +164,7 @@ def _poll_snapshot(root: Path) -> Tuple[core.ValidationResult, Dict[str, str], L
     return core.validate_snapshot(WorkerPaths.from_root(root))
 
 
-def _run_core_once_with_l11_l12_l13_l14(root: Path, worker_mode: str, enable_l13_runtime: bool = ENABLE_L13_RUNTIME, enable_l14_runtime: bool = ENABLE_L14_RUNTIME) -> Tuple[int, core.ValidationResult]:
+def _run_core_once_with_l11_l12_l13_l14_l15(root: Path, worker_mode: str, enable_l13_runtime: bool = ENABLE_L13_RUNTIME, enable_l14_runtime: bool = ENABLE_L14_RUNTIME, enable_l15_runtime: bool = ENABLE_L15_RUNTIME) -> Tuple[int, core.ValidationResult]:
     start_ns = time.perf_counter_ns()
     code, res = core.run_once(root, worker_mode)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
@@ -178,6 +186,11 @@ def _run_core_once_with_l11_l12_l13_l14(root: Path, worker_mode: str, enable_l13
             run_l14_after_l13(root)
         except Exception as exc:
             core.gateway_record_exception(root, "l14_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
+    if enable_l13_runtime and enable_l14_runtime and enable_l15_runtime:
+        try:
+            run_l15_after_l14(root)
+        except Exception as exc:
+            core.gateway_record_exception(root, "l15_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
     return code, res
 
 
@@ -205,13 +218,13 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
                 cycle_due = state.last_calculation_unix <= 0 or (now - state.last_calculation_unix) >= CALCULATION_CYCLE_SECONDS
                 snapshot_stable = polled_result.ok and stable_age >= SNAPSHOT_STABLE_REQUIRED_SECONDS
                 if snapshot_stable and cycle_due:
-                    code, res = _run_core_once_with_l11_l12_l13_l14(root, "shared_validator_daemon_cycle_controlled")
+                    code, res = _run_core_once_with_l11_l12_l13_l14_l15(root, "shared_validator_daemon_cycle_controlled")
                     state.last_calculation_unix = now
                     state.last_exit_code = code
                     state.last_result = res
                     state.last_action = "calculation_cycle_ran"
                     state.last_reason = "snapshot_stable_and_cycle_due"
-                    _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME)
+                    _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME, ENABLE_L15_RUNTIME)
                 elif snapshot_stable:
                     code = state.last_exit_code if state.last_result is not None else 0
                     res = state.last_result if state.last_result is not None else polled_result
@@ -256,7 +269,7 @@ def main(argv: List[str] | None = None) -> int:
         return run_shared_daemon_with_cycle_control(Path(args.shared_root), args.poll_seconds)
     if args.root and args.mode == "once":
         root = Path(args.root)
-        code, res = _run_core_once_with_l11_l12_l13_l14(root, "validator_daemon_capable")
+        code, res = _run_core_once_with_l11_l12_l13_l14_l15(root, "validator_daemon_capable")
         process_ok = core.write_process_status(root, "once", 1, code, res)
         return code if process_ok else 3
     if args.root and args.mode == "daemon":
@@ -264,7 +277,7 @@ def main(argv: List[str] | None = None) -> int:
         loop = 0
         while True:
             loop += 1
-            code, res = _run_core_once_with_l11_l12_l13_l14(root, "validator_daemon_capable")
+            code, res = _run_core_once_with_l11_l12_l13_l14_l15(root, "validator_daemon_capable")
             process_ok = core.write_process_status(root, "daemon", loop, code, res)
             if not process_ok:
                 code = 3
