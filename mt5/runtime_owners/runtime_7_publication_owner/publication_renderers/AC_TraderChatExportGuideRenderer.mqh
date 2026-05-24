@@ -160,9 +160,12 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
          StringReplace(row, "\r", "");
          if(row == "") continue;
          if(AC_TCSCsvField(row, 0, "") != ranking_group) continue;
-         string symbol = AC_TCSCsvField(row, 7, "NA");
-         string group_symbol_rank = AC_TCSCsvField(row, 5, "NA");
-         string group_score_row = AC_TCSCsvField(row, 13, "NA");
+         // ranking_group_top5.csv schema:
+         // 0 ranking_group, 1 ranking_group_slug, 2 group_state, 3 rankable_count,
+         // 4 top_rank, 5 symbol, 6 l11_group_score, 7 rank_state, 8 leader_flag, 9 backup_flag, ...
+         string symbol = AC_TCSCsvField(row, 5, "NA");
+         string group_symbol_rank = AC_TCSCsvField(row, 4, "NA");
+         string group_score_row = AC_TCSCsvField(row, 6, "NA");
          string top10_text = AC_TCSTop10RankText(symbol);
          string l16_row = AC_L16CsvLineForSymbol(symbol);
          string corr_score = (l16_row == "" ? "NA" : AC_TCSCsvField(l16_row, 13, "NA"));
