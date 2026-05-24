@@ -156,14 +156,16 @@ string AC_L1PortfolioConcentrationMap()
    double buy_share = (total_rows > 0 ? (100.0 * buy_rows / total_rows) : 0.0);
    double sell_share = (total_rows > 0 ? (100.0 * sell_rows / total_rows) : 0.0);
 
-   string text = "";
-   text += "Portfolio Concentration Map\r\n";
-   text += "Top Symbol: " + top_symbol + " | Rows: " + IntegerToString(top_symbol_rows) + " | Share: " + AC_PercentText(top_symbol_rows, total_rows) + " | Net: " + AC_L1MoneyText(top_symbol_net) + " | Level: " + AC_L1ConcentrationLevel(top_symbol_share) + "\r\n";
-   text += "Top Asset Class: " + top_asset + " | Rows: " + IntegerToString(top_asset_rows) + " | Share: " + AC_PercentText(top_asset_rows, total_rows) + " | Net: " + AC_L1MoneyText(top_asset_net) + " | Level: " + AC_L1ConcentrationLevel(top_asset_share) + "\r\n";
-   text += "Direction Mix: Buy " + IntegerToString(buy_rows) + " (" + DoubleToString(buy_share, 1) + "%) Net " + AC_L1MoneyText(buy_net) + " | Sell " + IntegerToString(sell_rows) + " (" + DoubleToString(sell_share, 1) + "%) Net " + AC_L1MoneyText(sell_net) + "\r\n";
-   text += "Time Window Rows: 00-06=" + IntegerToString(time_rows[0]) + " | 06-10=" + IntegerToString(time_rows[1]) + " | 10-14=" + IntegerToString(time_rows[2]) + " | 14-18=" + IntegerToString(time_rows[3]) + " | 18-24=" + IntegerToString(time_rows[4]) + "\r\n";
-   text += "Hold Buckets: 0-5m=" + IntegerToString(hold_rows[0]) + " | 5-30m=" + IntegerToString(hold_rows[1]) + " | 30m-2h=" + IntegerToString(hold_rows[2]) + " | 2h-1d=" + IntegerToString(hold_rows[3]) + " | 1d+=" + IntegerToString(hold_rows[4]) + "\r\n";
-   text += "Concentration Policy: concentration is diagnostic only; it does not grant trade permission.\r\n";
+   string text = AC_L1MapHeader("PORTFOLIO CONCENTRATION MAP");
+   text += "Scope:                  selected closed history only\r\n";
+   text += "Purpose:                show where sample exposure is clustered by count, not edge proof\r\n";
+   text += "Top Symbol:             " + top_symbol + " | Rows " + IntegerToString(top_symbol_rows) + " | Share " + AC_PercentText(top_symbol_rows, total_rows) + " | Net " + AC_L1MoneyText(top_symbol_net) + " | " + AC_L1ConcentrationLevel(top_symbol_share) + "\r\n";
+   text += "Top Asset Class:        " + top_asset + " | Rows " + IntegerToString(top_asset_rows) + " | Share " + AC_PercentText(top_asset_rows, total_rows) + " | Net " + AC_L1MoneyText(top_asset_net) + " | " + AC_L1ConcentrationLevel(top_asset_share) + "\r\n";
+   text += "Direction Mix:          Buy " + IntegerToString(buy_rows) + " (" + DoubleToString(buy_share, 1) + "%) Net " + AC_L1MoneyText(buy_net) + " | Sell " + IntegerToString(sell_rows) + " (" + DoubleToString(sell_share, 1) + "%) Net " + AC_L1MoneyText(sell_net) + "\r\n";
+   text += "Time Window Rows:       00-06=" + IntegerToString(time_rows[0]) + " | 06-10=" + IntegerToString(time_rows[1]) + " | 10-14=" + IntegerToString(time_rows[2]) + " | 14-18=" + IntegerToString(time_rows[3]) + " | 18-24=" + IntegerToString(time_rows[4]) + "\r\n";
+   text += "Hold Buckets:           0-5m=" + IntegerToString(hold_rows[0]) + " | 5-30m=" + IntegerToString(hold_rows[1]) + " | 30m-2h=" + IntegerToString(hold_rows[2]) + " | 2h-1d=" + IntegerToString(hold_rows[3]) + " | 1d+=" + IntegerToString(hold_rows[4]) + "\r\n";
+   text += "Concentration Policy:   diagnostic only; does not grant trade permission\r\n";
+   text += "Trade Permission:       FALSE\r\n";
    return text;
 }
 
