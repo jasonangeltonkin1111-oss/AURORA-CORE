@@ -13,6 +13,7 @@ a = Analysis(
         'ctypes',
         'ctypes.util',
         'aurora_worker_l11',
+        'aurora_worker_l11_cleanup',
         'aurora_worker_l11_dispatch',
     ],
     hookspath=[],
