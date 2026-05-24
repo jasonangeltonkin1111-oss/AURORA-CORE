@@ -97,6 +97,7 @@ string AC_L1AssetRiskHeatMapV2()
    }
 
    string text = AC_L1MapHeader("ASSET RISK HEAT MAP V2");
+   text += "section_id:             L1_ASSET_RISK_HEAT_V2\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Policy Basis:           Jason numeric policy: 0.10% unit, 0.20% hard, 0.50% extreme\r\n";
