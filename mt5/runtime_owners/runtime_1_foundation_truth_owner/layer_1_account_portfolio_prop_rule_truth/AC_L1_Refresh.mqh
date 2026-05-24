@@ -40,6 +40,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "overseer_brief=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "next_decision_hints=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "section_index=enabled_account_status_prefix\r\n";
+   AC_L1_WORKBENCH_SECTION += "base_account_status_section_ids=enabled\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure=enabled_board_and_account_status\r\n";
    AC_L1_WORKBENCH_SECTION += "live_risk_at_sl=enabled_estimated_account_status_and_board_summary\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure_maps=enabled_account_status_symbol_and_asset\r\n";
@@ -74,6 +75,7 @@ void AC_RefreshLayer1AccountTruth()
    AC_L1_SCAN_DURATION_MS = GetTickCount() - AC_L1_SCAN_STARTED_MS;
    AC_L1_READY = true;
    AC_BuildLayer1Texts();
+   AC_L1NormalizeBaseAccountStatusSections();
    AC_L1AppendPortfolioMaps();
 }
 
