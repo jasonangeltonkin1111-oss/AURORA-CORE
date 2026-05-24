@@ -1,0 +1,45 @@
+schema_name=aurora_shared_gateway_status
+schema_version=6
+worker_version=0.6.10_render_index_l6_l9
+process_id=14832
+mode=shared-daemon
+shared_root=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core
+gateway_status_path=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Gateway\Status\shared_worker_status.txt
+process_start_utc=2026-05-23 23:17:12 UTC
+process_start_unix=1779578232
+last_loop_utc=2026-05-23 23:18:10 UTC
+last_loop_unix=1779578290
+loop_count=55
+discovered_root_count=1
+processed_root_count=1
+accepted_root_count=1
+degraded_root_count=0
+write_degraded_root_count=0
+daemon_task_registered=not_checked_by_daemon
+daemon_task_state=not_checked_by_daemon
+watchdog_task_registered=not_checked_by_daemon
+watchdog_task_state=not_checked_by_daemon
+watchdog_last_check_utc=2026-05-23 13:20:16 UTC
+watchdog_last_action=checked_no_restart_needed
+watchdog_last_reason=daemon_status_fresh
+watchdog_restart_attempted=false
+watchdog_restart_result=not_needed
+operator_cmd_required=not_available_in_daemon_status
+cpu_logical_count=8
+cpu_used_percent=not_available
+memory_total_mb=16304
+memory_available_mb=5460
+memory_used_percent=66
+memory_limit_percent=80
+cpu_limit_percent=80
+terminal_process_count=not_checked_by_daemon
+aurora_worker_process_count=not_checked_by_daemon
+registered_root_count=1
+resource_throttle_active=false
+resource_throttle_reason=none
+recommended_parallel_jobs=1
+authority=calculation_support_only
+trade_permission=false
+
+root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum
+C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503|0|accepted|R3 snapshot validation envelope accepted|18503_1779585443_289207078|18503_1779585443_289207078_R3_SNAPSHOT_VALIDATION_V1|R3_SNAPSHOT_VALIDATION_V1|1661054827

@@ -1,0 +1,432 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260524000924
+Username: DESKTOP-OPGDVN7\Jason
+RunAs User: DESKTOP-OPGDVN7\Jason
+Configuration Name: 
+Machine: DESKTOP-OPGDVN7 (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 32952
+PSVersion: 5.1.26100.8457
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.8457
+BuildVersion: 10.0.26100.8457
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS C:\Users\Jason> try {
+  Say "SOURCE AUDIT"
+
+  Write-Host "repo_root=$RepoRoot"
+  Write-Host "external_worker=$ExternalWorker"
+  Write-Host "common_root=$CommonRoot"
+  Write-Host "proof_dir=$ProofDir"
+
+  foreach ($p in @($RepoRoot,$ExternalWorker,$Worker,$Entry,$Spec,$RenderIndexPy)) {
+    if (!(Test-Path -LiteralPath $p)) { throw "Missing required source path: $p" }
+    Pass "source.path" $p
+  }
+
+  $SourceVersion = Get-WorkerVersion $Worker
+  Write-Host "source.worker_version=$SourceVersion"
+
+  if ($SourceVersion -ne "0.6.10_render_index_l6_l9") {
+    Warn "source.version_not_expected_latest" "actual=$SourceVersion expected=0.6.10_render_index_l6_l9"
+  } else {
+    Pass "source.version_latest_renderindex" $SourceVersion
+  }
+
+  $workerText = Get-Content -LiteralPath $Worker -Raw
+  $entryText = Get-Content -LiteralPath $Entry -Raw
+  $specText = Get-Content -LiteralPath $Spec -Raw
+  $riText = Get-Content -LiteralPath $RenderIndexPy -Raw
+
+  foreach ($needle in @(
+    "publish_l6_cost_friction_rankings",
+    "publish_l7_session_relevance_rankings",
+    "publish_l8_movement_range_rankings",
+    "publish_l9_structure_location_rankings",
+    "publish_render_index",
+    "render_index_status",
+    "render_index_l9_status",
+    "0.6.10_render_index_l6_l9"
+  )) {
+    if ($workerText -match [regex]::Escape($needle)) { Pass "worker.contains" $needle }
+    else { throw "worker missing required string: $needle" }
+  }
+
+  foreach ($needle in @(
+    'l9_status = latest.get("l9_rank_status", "missing")',
+    'and l9_status == "complete"',
+    'f"l9_status={l9_status}"'
+  )) {
+    if ($entryText -match [regex]::Escape($needle)) { Pass "entrypoint.l9_epoch" $needle }
+    else { throw "entrypoint missing L9 accepted epoch latch: $needle" }
+  }
+
+  foreach ($needle in @(
+    "aurora_worker_entrypoint.py",
+    "_ctypes.pyd",
+    "libffi-8.dll",
+    "'_ctypes'",
+    "'ctypes'",
+    "'ctypes.util'"
+  )) {
+    if ($specText -match [regex]::Escape($needle)) { Pass "spec.contains" $needle }
+    else { throw "spec missing packaging string: $needle" }
+  }
+
+  foreach ($needle in @(
+    "publish_render_index",
+    "RENDER_INDEX_FOLDER",
+    "render_index.manifest",
+    "l6",
+    "l7",
+    "l8",
+    "l9"
+  )) {
+    if ($riText -match [regex]::Escape($needle)) { Pass "renderindex.source_contains" $needle }
+    else { throw "render index source missing: $needle" }
+  }
+
+  Say "LOCAL GIT STATUS SNAPSHOT"
+  Push-Location $RepoRoot
+  $gitOk = $true
+  try {
+    git rev-parse --is-inside-work-tree | Tee-Object -FilePath (Join-Path $ProofDir "git_is_inside.txt")
+    git branch --show-current | Tee-Object -FilePath (Join-Path $ProofDir "git_branch.txt")
+    git rev-parse HEAD | Tee-Object -FilePath (Join-Path $ProofDir "git_head.txt")
+    git status --short | Tee-Object -FilePath (Join-Path $ProofDir "git_status_short.txt")
+  } catch {
+    $gitOk = $false
+    Warn "git.local_status" "git unavailable or repo not normal; continuing with source-file proof"
+  }
+  Pop-Location
+  if ($gitOk) { Pass "git.local_status_collected" "" }
+
+  Say "STOP OLD DAEMON / WATCHDOG / PROCESS"
+
+  Disable-ScheduledTask -TaskName $WatchdogTask -ErrorAction SilentlyContinue | Out-Null
+  Stop-ScheduledTask -TaskName $DaemonTask -ErrorAction SilentlyContinue
+  Get-Process AuroraWorker -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 3
+  Pass "old_runtime_stopped" "daemon/watchdog disabled_or_stopped, process killed"
+
+  Say "CLEAN PYINSTALLER REBUILD"
+
+  Push-Location $ExternalWorker
+  if (Test-Path -LiteralPath "build") { Remove-Item -LiteralPath "build" -Recurse -Force }
+  if (Test-Path -LiteralPath "dist") { Remove-Item -LiteralPath "dist" -Recurse -Force }
+
+  $buildOut = Join-Path $ProofDir "pyinstaller_stdout.txt"
+  $buildErr = Join-Path $ProofDir "pyinstaller_stderr.txt"
+
+  $py = Get-Command py -ErrorAction SilentlyContinue
+  if ($py) {
+    $cmd = "py"
+    $args = @("-3.12","-m","PyInstaller","--clean","AuroraWorker.spec")
+  } else {
+    $cmd = "python"
+    $args = @("-m","PyInstaller","--clean","AuroraWorker.spec")
+  }
+
+  $p = Start-Process -FilePath $cmd -ArgumentList $args -WorkingDirectory $ExternalWorker -NoNewWindow -Wait -PassThru -RedirectStandardOutput $buildOut -RedirectStandardError $buildErr
+  Pop-Location
+
+  Write-Host "pyinstaller_exit_code=$($p.ExitCode)"
+  if ($p.ExitCode -ne 0) {
+    Get-Content $buildOut -Tail 80 -ErrorAction SilentlyContinue
+    Get-Content $buildErr -Tail 160 -ErrorAction SilentlyContinue
+    throw "PyInstaller failed with exit code $($p.ExitCode)"
+  }
+
+  if (!(Test-Path -LiteralPath $BuildExe -PathType Leaf)) {
+    throw "Build EXE missing: $BuildExe"
+  }
+  $BuildItem = Get-Item -LiteralPath $BuildExe
+  Pass "build.exe" "$BuildExe|size=$($BuildItem.Length)|modified=$($BuildItem.LastWriteTime)"
+
+  Say "BUILD SMOKE TEST"
+
+  $smokeOut = Join-Path $ProofDir "build_smoke_stdout.txt"
+  $smokeErr = Join-Path $ProofDir "build_smoke_stderr.txt"
+  $p = Start-Process -FilePath $BuildExe -ArgumentList "--status","--shared-root","`"$CommonRoot`"" -WorkingDirectory $BuildDir -NoNewWindow -Wait -PassThru -RedirectStandardOutput $smokeOut -RedirectStandardError $smokeErr
+  Write-Host "build_smoke_exit_code=$($p.ExitCode)"
+  if ($p.ExitCode -notin @(0,2,3)) {
+    Get-Content $smokeOut -Tail 80 -ErrorAction SilentlyContinue
+    Get-Content $smokeErr -Tail 160 -ErrorAction SilentlyContinue
+    throw "Build smoke hard failed: $($p.ExitCode)"
+  }
+  Pass "build.smoke" "exit=$($p.ExitCode)"
+
+  Say "INSTALL RUNTIME"
+
+  if (Test-Path -LiteralPath $RuntimeDir -PathType Container) {
+    $BackupRuntime = Join-Path $GatewayRoot ("AuroraWorker.previous_" + $Stamp)
+    Rename-Item -LiteralPath $RuntimeDir -NewName (Split-Path -Leaf $BackupRuntime) -ErrorAction SilentlyContinue
+    Pass "runtime.previous_backup" $BackupRuntime
+  }
+
+  Copy-Item -LiteralPath $BuildDir -Destination $RuntimeDir -Recurse -Force
+
+  if (!(Test-Path -LiteralPath $RuntimeExe -PathType Leaf)) {
+    throw "Runtime EXE missing after install: $RuntimeExe"
+  }
+
+  $RuntimeItem = Get-Item -LiteralPath $RuntimeExe
+  Pass "runtime.exe" "$RuntimeExe|size=$($RuntimeItem.Length)|modified=$($RuntimeItem.LastWriteTime)"
+
+  if ($RuntimeItem.Length -ne $BuildItem.Length) {
+    throw "Runtime/build EXE size mismatch. runtime=$($RuntimeItem.Length) build=$($BuildItem.Length)"
+  }
+  Pass "runtime.size_matches_build" $RuntimeItem.Length
+
+  Say "REGISTER DAEMON AND WATCHDOG"
+
+  $daemonArgs = "--shared-root `"$CommonRoot`" --mode shared-daemon --poll-seconds 1"
+  $watchdogArgs = "--shared-root `"$CommonRoot`" --watchdog"
+
+  $daemonAction = New-ScheduledTaskAction -Execute $RuntimeExe -Argument $daemonArgs -WorkingDirectory $RuntimeDir
+  $daemonTrigger = New-ScheduledTaskTrigger -AtLogOn
+  $daemonSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 365)
+
+  Register-ScheduledTask -TaskName $DaemonTask -Action $daemonAction -Trigger $daemonTrigger -Settings $daemonSettings -Description "Aurora Core shared Gateway daemon" -Force | Out-Null
+  Pass "task.daemon_registered" $DaemonTask
+
+  $watchAction = New-ScheduledTaskAction -Execute $RuntimeExe -Argument $watchdogArgs -WorkingDirectory $RuntimeDir
+  $watchTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
+  $watchSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+
+  Register-ScheduledTask -TaskName $WatchdogTask -Action $watchAction -Trigger $watchTrigger -Settings $watchSettings -Description "Aurora Core shared Gateway watchdog" -Force | Out-Null
+  Enable-ScheduledTask -TaskName $WatchdogTask | Out-Null
+  Pass "task.watchdog_registered_enabled" $WatchdogTask
+
+  Start-ScheduledTask -TaskName $DaemonTask
+  Pass "task.daemon_start_requested" $DaemonTask
+
+  Say "WAIT FOR DAEMON CYCLES"
+  Start-Sleep -Seconds 45
+
+  Say "RUNTIME PROCESS / TASK PROOF"
+
+  $daemon = Get-ScheduledTask -TaskName $DaemonTask -ErrorAction SilentlyContinue
+  $watch = Get-ScheduledTask -TaskName $WatchdogTask -ErrorAction SilentlyContinue
+  if ($daemon) { Write-Host "task.daemon.state=$($daemon.State)" }
+  if ($watch) { Write-Host "task.watchdog.state=$($watch.State)" }
+
+  $taskInfo = Get-ScheduledTaskInfo -TaskName $DaemonTask -ErrorAction SilentlyContinue
+  if ($taskInfo) {
+    Write-Host "task.daemon.last_run_time=$($taskInfo.LastRunTime)"
+    Write-Host "task.daemon.last_task_result=$($taskInfo.LastTaskResult)"
+  }
+
+  $proc = @(Get-Process AuroraWorker -ErrorAction SilentlyContinue)
+  Write-Host "aurora_worker_process_count=$($proc.Count)"
+  foreach ($x in $proc) {
+    Write-Host "process.pid=$($x.Id)"
+    Write-Host "process.path=$($x.Path)"
+    Write-Host "process.start_time=$($x.StartTime)"
+  }
+  if ($proc.Count -lt 1) { throw "AuroraWorker process not running after daemon start" }
+
+  Say "GLOBAL SHARED STATUS PROOF"
+
+  $SharedPath = Join-Path $GatewayRoot "Status\shared_worker_status.txt"
+  $WatchdogPath = Join-Path $GatewayRoot "Status\watchdog_status.txt"
+  ShowFile "shared_worker_status" $SharedPath
+  ShowFile "watchdog_status" $WatchdogPath
+
+  $shared = Kv $SharedPath
+  Write-Host "shared.worker_version=$(F $shared 'worker_version')"
+  Write-Host "shared.mode=$(F $shared 'mode')"
+  Write-Host "shared.accepted_root_count=$(F $shared 'accepted_root_count')"
+  Write-Host "shared.degraded_root_count=$(F $shared 'degraded_root_count')"
+  Write-Host "shared.authority=$(F $shared 'authority')"
+  Write-Host "shared.trade_permission=$(F $shared 'trade_permission')"
+
+  if ((F $shared "worker_version") -ne $SourceVersion) {
+    throw "Runtime/source version mismatch. runtime=$(F $shared 'worker_version') source=$SourceVersion"
+  }
+  if ((F $shared "authority") -ne "calculation_support_only") { throw "Bad authority in shared status" }
+  if ((F $shared "trade_permission") -ne "false") { throw "Bad trade_permission in shared status" }
+  Pass "runtime.version_authority_permission" "ok"
+
+  Say "ACCOUNT OUTPUT PROOF"
+
+  $Accounts = Find-AccountRoots $CommonRoot
+  Write-Host "account_count=$($Accounts.Count)"
+  if ($Accounts.Count -lt 1) { throw "No account roots discovered" }
+
+  foreach ($acct in $Accounts) {
+    Write-Host "`n--- ACCOUNT: $acct ---"
+
+    $gw = Join-Path $acct "Workbench\Gateway"
+    $outbox = Join-Path $gw "Outbox"
+    $statusDir = Join-Path $gw "Status"
+    $layers = Join-Path $outbox "Layers"
+
+    $resultPath = Join-Path $outbox "result_latest.txt"
+    $resultManifestPath = Join-Path $outbox "result_latest.manifest"
+    $epochPath = Join-Path $outbox "surface_accepted_epoch.manifest"
+    $cyclePath = Join-Path $statusDir "gateway_cycle_status.txt"
+    $overPath = Join-Path $statusDir "surface_overseer_status.txt"
+
+    ShowFile "account.result_latest" $resultPath
+    ShowFile "account.result_manifest" $resultManifestPath
+    ShowFile "account.gateway_cycle_status" $cyclePath
+    ShowFile "account.surface_overseer" $overPath
+
+    $result = Kv $resultPath
+    $epoch = Kv $epochPath
+    $cycle = Kv $cyclePath
+    $over = Kv $overPath
+
+    Write-Host "result.worker_version=$(F $result 'worker_version')"
+    Write-Host "result.schema_version=$(F $result 'schema_version')"
+    Write-Host "result.status=$(F $result 'result_status')"
+    Write-Host "result.l6=$(F $result 'l6_rank_status') rows=$(F $result 'l6_rank_row_count')"
+    Write-Host "result.l7=$(F $result 'l7_rank_status') rows=$(F $result 'l7_rank_row_count')"
+    Write-Host "result.l8=$(F $result 'l8_rank_status') rows=$(F $result 'l8_rank_row_count')"
+    Write-Host "result.l9=$(F $result 'l9_rank_status') rows=$(F $result 'l9_rank_row_count')"
+    Write-Host "result.render_index_status=$(F $result 'render_index_status')"
+    Write-Host "result.render_index_reason=$(F $result 'render_index_reason')"
+    Write-Host "result.render_index_duration_ms=$(F $result 'render_index_duration_ms')"
+    Write-Host "result.render_index_l6_status=$(F $result 'render_index_l6_status') rows=$(F $result 'render_index_l6_row_count')"
+    Write-Host "result.render_index_l7_status=$(F $result 'render_index_l7_status') rows=$(F $result 'render_index_l7_row_count')"
+    Write-Host "result.render_index_l8_status=$(F $result 'render_index_l8_status') rows=$(F $result 'render_index_l8_row_count')"
+    Write-Host "result.render_index_l9_status=$(F $result 'render_index_l9_status') rows=$(F $result 'render_index_l9_row_count')"
+
+    Write-Host "cycle.last_action=$(F $cycle 'last_action')"
+    Write-Host "cycle.last_reason=$(F $cycle 'last_reason')"
+
+    Write-Host "epoch.status=$(F $epoch 'display_epoch_status')"
+    Write-Host "epoch.l6=$(F $epoch 'l6_status')"
+    Write-Host "epoch.l7=$(F $epoch 'l7_status')"
+    Write-Host "epoch.l8=$(F $epoch 'l8_status')"
+    Write-Host "epoch.l9=$(F $epoch 'l9_status')"
+
+    Write-Host "overseer.status=$(F $over 'status')"
+    Write-Host "overseer.layer_count=$(F $over 'layer_count')"
+    Write-Host "overseer.accepted_layer_count=$(F $over 'accepted_layer_count')"
+    Write-Host "overseer.pending_layer_count=$(F $over 'pending_layer_count')"
+    Write-Host "overseer.degraded_layer_count=$(F $over 'degraded_layer_count')"
+    Write-Host "overseer.mismatch_count=$(F $over 'mismatch_count')"
+
+    foreach ($layerFolder in @(
+      "Layer_6_Cost_Friction_Ranking",
+      "Layer_7_Session_Relevance_Ranking",
+      "Layer_8_Movement_Range_Ranking",
+      "Layer_9_Structure_Location_Geometry"
+    )) {
+      $lp = Join-Path $layers $layerFolder
+      Write-Host "`nLAYER_FOLDER=$layerFolder"
+      ShowFile "$layerFolder.ranked_manifest" (Join-Path $lp "ranked_symbols.manifest")
+      ShowFile "$layerFolder.ranked_csv" (Join-Path $lp "ranked_symbols.csv")
+      ShowFile "$layerFolder.top20" (Join-Path $lp "ranked_symbols_top20.txt")
+      $sr = Join-Path $lp "SymbolRanks"
+      if (Test-Path -LiteralPath $sr -PathType Container) {
+        $count = @(Get-ChildItem -LiteralPath $sr -File -Filter "*.txt" -ErrorAction SilentlyContinue).Count
+        Pass "$layerFolder.symbol_ranks_folder" "count=$count"
+      } else {
+        Warn "$layerFolder.symbol_ranks_folder" "missing"
+      }
+    }
+
+    $riRoot = Join-Path $outbox "RenderIndex"
+    Write-Host "`nRENDER_INDEX_ROOT=$riRoot"
+    foreach ($f in @(
+      "render_index.manifest",
+      "render_index_symbols.csv",
+      "render_index_ohlc.csv",
+      "layer_6_index.csv",
+      "layer_7_index.csv",
+      "layer_8_index.csv",
+      "layer_9_index.csv"
+    )) {
+      ShowFile "render_index.$f" (Join-Path $riRoot $f)
+    }
+
+    CopyIfExists $resultPath ("result_latest_" + ((Split-Path $acct -Leaf) -replace '[^\w.-]','_') + ".txt")
+    CopyIfExists $epochPath ("surface_accepted_epoch_" + ((Split-Path $acct -Leaf) -replace '[^\w.-]','_') + ".manifest")
+    CopyIfExists $overPath ("surface_overseer_" + ((Split-Path $acct -Leaf) -replace '[^\w.-]','_') + ".txt")
+  }
+
+  Say "MT5 SURFACE SAMPLE PROOF"
+
+  $boardFiles = Get-ChildItem -LiteralPath $CommonRoot -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ieq "Market Board.txt" } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 3
+
+  foreach ($b in $boardFiles) {
+    ShowFile "market_board" $b.FullName
+    CopyIfExists $b.FullName ("Market_Board_" + $b.LastWriteTime.ToString("yyyyMMdd_HHmmss") + ".txt")
+    Write-Host "market_board.tail_relevant=$($b.FullName)"
+    Get-Content -LiteralPath $b.FullName -Tail 160 -ErrorAction SilentlyContinue |
+      Where-Object { $_ -match "Layer 6|Layer 7|Layer 8|Layer 9|RenderIndex|Status:|Validation:|Gateway Result Accepted|Main Blocker|Structure Ranking|Movement Ranking|Session Ranking|Cost Ranking" } |
+      ForEach-Object { Write-Host "  $_" }
+  }
+
+  $dossierFiles = Get-ChildItem -LiteralPath $CommonRoot -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -match "\\Dossiers\\Open\\" -and $_.Extension -eq ".txt" } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 5
+
+  foreach ($d in $dossierFiles) {
+    ShowFile "open_dossier_sample" $d.FullName
+    CopyIfExists $d.FullName ("Dossier_Open_" + ($d.BaseName -replace '[^\w.-]','_') + ".txt")
+    Write-Host "dossier.tail_relevant=$($d.Name)"
+    Get-Content -LiteralPath $d.FullName -Tail 220 -ErrorAction SilentlyContinue |
+      Where-Object { $_ -match "LAYER 6|LAYER 7|LAYER 8|LAYER 9|RenderIndex|Status:|Validation:|Gateway Result Accepted|Rank Evidence|Rank Source|Rank State|Main Blocker" } |
+      ForEach-Object { Write-Host "  $_" }
+  }
+
+  Say "CREATE PROOF ZIP"
+  CopyIfExists $SharedPath "shared_worker_status.txt"
+  CopyIfExists $WatchdogPath "watchdog_status.txt"
+  CopyIfExists $Worker "source_aurora_worker.py"
+  CopyIfExists $Entry "source_aurora_worker_entrypoint.py"
+  CopyIfExists $Spec "source_AuroraWorker.spec"
+  CopyIfExists $RenderIndexPy "source_aurora_worker_render_index.py"
+
+  Stop-Transcript | Out-Null
+
+  if (Test-Path -LiteralPath $ProofZip) { Remove-Item -LiteralPath $ProofZip -Force }
+  Compress-Archive -LiteralPath (Join-Path $ProofDir "*") -DestinationPath $ProofZip -Force
+  Pass "proof_zip.created" $ProofZip
+
+  Say "DONE"
+  Write-Host "FINAL_DECISION_HINT=UPLOAD_PROOF_ZIP_AND_OUTPUT"
+}
+catch {
+  try { Stop-Transcript | Out-Null } catch {}
+  Fail "script.failed" $_.Exception.Message
+  Write-Host "proof_dir=$ProofDir"
+  throw
+}
+
+=== SOURCE AUDIT ===
+repo_root=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE
+external_worker=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker
+common_root=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core
+proof_dir=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\_FULL_REBUILD_PROOF_20260524_000924
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\aurora_worker.py
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\aurora_worker_entrypoint.py
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\AuroraWorker.spec
+PASS|source.path|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\aurora_worker_render_index.py
+source.worker_version=0.6.10_render_index_l6_l9
+PASS|source.version_latest_renderindex|0.6.10_render_index_l6_l9
+PASS|worker.contains|publish_l6_cost_friction_rankings
+PASS|worker.contains|publish_l7_session_relevance_rankings
+PASS|worker.contains|publish_l8_movement_range_rankings
+PASS|worker.contains|publish_l9_structure_location_rankings
+PASS|worker.contains|publish_render_index
+PASS|worker.contains|render_index_status
+**********************
+Windows PowerShell transcript end
+End time: 20260524000927
+**********************

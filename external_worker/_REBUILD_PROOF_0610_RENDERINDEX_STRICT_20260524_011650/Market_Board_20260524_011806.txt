@@ -1,0 +1,348 @@
+AURORA CORE - MARKET BOARD
+----------------------------------------
+State:            Incremental publishing
+Trust:            Dossiers Updating
+Trade Permission: FALSE
+Auto Trading:     FALSE
+
+DOSSIER COVERAGE
+----------------------------------------
+Broker Symbols Seen:        1199
+Current Generation Updated: 179 / 1199
+Current Generation Left:    1020
+Generation Progress:        14.9%
+Physical Missing:           not_reconciled_by_this_counter
+Counter Truth:              ready/left counts are current-generation refresh progress, not physical file count
+Failed Current Writes:      0
+Dossier Pass Duration:      859 ms
+
+CURRENT FOUNDATION + SURFACE SCORING
+----------------------------------------
+Layer 0: Publication + Dossier Foundation
+Layer 1: Account / Portfolio Truth
+Layer 2: Market Open / Closed Truth
+Layer 3: Broker Specs and Value Truth
+Layer 4: Live Quote and Spread Truth
+Layer 5: Basic System Gate
+Layer 6: Cost / Friction Ranking
+Layer 7: Session Relevance Ranking
+Layer 8: Movement / Range Ranking
+Layer 9: Structure / Location Geometry
+
+LAYER 1 - ACCOUNT AND PORTFOLIO
+----------------------------------------
+Account:               18503 / Upcomers-Server
+Mode / Currency:       real / USD
+Balance / Equity:      4908.76 / 4908.76
+Floating P/L:          0.00 (0.00%)
+Current Drawdown:      0.00 (0.00%)
+Open / Pending:        0 / 0
+Selected Closed Rows:  69
+Net Profit:            -91.24
+Profit Factor:         0.50
+Expected Payoff:       -1.32
+Best / Worst Symbol:   USDJPY 6.47 / XAUUSD -45.81
+Worst Day:             2026.02.19 -36.36
+Hard Risk 0.20%:       9.82
+Largest Loss Usage:    368.22%
+Health:                Defensive review
+Trade Permission:      FALSE
+Note: Account Status carries full trades, maps, cost, tag, quality, and drawdown detail.
+
+LAYER 1 - LIVE OPEN/PENDING SUMMARY
+----------------------------------------
+Open / Pending:       0 / 0
+Open Volume:          0.00
+Pending Volume:       0.00
+Floating P/L:         0.00
+Open Without SL/TP:   0 / 0
+Pending No SL/TP:     0 / 0
+Est Risk at SL:       0.00 (0.00% equity)
+Risk Rows Estimated:  0 open / 0 pending
+Refresh Source:       near-live snapshot scan
+Trade Permission:     FALSE
+
+LAYER 1 - PORTFOLIO MAP SUMMARY
+----------------------------------------
+Risk Unit 0.10%:       4.91
+Hard Risk 0.20%:       9.82
+Worst Symbol:          XAUUSD -45.81
+Best Symbol:           USDJPY 6.47
+Worst Day:             2026.02.19 -36.36
+Closed Rows:           69
+Map Mode:              numeric_read_only_no_trade_permission
+
+LAYER 2 - MARKET OPEN / CLOSED TRUTH
+----------------------------------------
+Status:              complete
+Broker Symbols:      1199
+Open:                37
+Closed:              1162
+Unknown:             0
+Known Completion:    100.0%
+Trade Sessions OK:   52
+Quote Sessions OK:   52
+API Failures:         Trade Sessions 0 | Symbol Info 0
+Route Write Attempts: Open 0 | Closed 0 | Unknown 0 | Failed 0
+Route Cleanup:        Removed Duplicates 0 | Failed 0
+Session Basis:        Server session time of day; session dates ignored by design
+Server Time Source:   TimeCurrent with broker / MarketWatch caveat
+Worst Blocker:        none
+Trade Permission:     FALSE
+Cutoff Rule:          Closed symbols stop deeper layer publication until the next recheck
+
+LAYER 3 - BROKER SPECS AND VALUE TRUTH
+----------------------------------------
+Status:                    Complete
+Eligible From Layer 2:      1199
+Scanned:                   1199 / 1199
+Closed Symbols Scanned:    1162
+Unknown Symbols Skipped:   0
+Layer 4 Cutoff:            Open symbols only; closed symbols stop after Layer 3
+
+Specification Readiness
+Specs Ready:               1199 / 1199
+Specs Partial:             0 / 1199
+Specs Unavailable:         0 / 1199
+Critical Missing Data:     0 / 1199
+
+Value and Margin Readiness
+Value Formula Ready:       1008 / 1199
+Value Formula Partial:     191 / 1199
+Value Formula Unavailable: 0 / 1199
+Margin Formula Ready:      1149 / 1199
+Margin Formula Partial:    50 / 1199
+Margin Formula Unavailable:0 / 1199
+Volume Grid Ready:         1199 / 1199
+
+Classification and Fundamental Links
+Taxonomy Ready:            1145 / 1199
+Taxonomy Fallback Used:    1145 / 1199
+Taxonomy Unknown:          54 / 1199
+Fundamental Links Ready:   1199 / 1199
+Fundamental Unsupported:   0 / 1199
+Identity Ambiguous:        0 / 1199
+
+Worst Blocker:             Layer 2 market is closed; Layer 3 specs still scanned. Layer 4 is the first cutoff layer. 
+Scan Duration:             1313 ms
+Trade Permission:          FALSE
+Next Layer:                Layer 4 quote, tick, and spread truth for ready open symbols
+
+LAYER 4 - LIVE QUOTE AND SPREAD TRUTH
+----------------------------------------
+Status:                     Complete with warnings
+Eligible Open Symbols:      37
+Scanned:                    37 / 37
+Fresh Quotes:               28
+Aging Quotes:               3
+Stale Quotes:               6
+Missing Tick Packets:       0
+Invalid Bid/Ask:            0
+Fresh Zero Spread:          0
+High Spread Warnings:       32
+Daily Change Available:     37 / 37
+Dossier Refresh:            Open symbols every 30 sec
+Top List Refresh Contract:  10 sec when ranking exists
+Scan Duration:              0 ms
+Worst Blocker:              None
+Trade Permission:           FALSE
+
+LAYER 5 - BASIC SYSTEM GATE
+----------------------------------------
+Status:                     Complete
+Trust:                      Gate Ready
+Scanned Symbols:            1199
+Gate Pass:                  27
+Gate Blocked:               1172
+Closed / Not Open:          1162
+Stale Quote:                6
+Missing Tick:               0
+Invalid Bid/Ask:            0
+Missing Specs:              0
+Trade Mode Blocked:         0
+Absurd Spread:              6
+Classification Review:      0
+Worst Blocker:              market_not_open
+Scan Duration:              0 ms
+Ranking Runtime:            FALSE
+Selection Runtime:          FALSE
+Trade Permission:           FALSE
+
+LAYER 6 - COST / FRICTION RANKING
+----------------------------------------
+Status:                     Ranked sidecar accepted - L5 drift
+Trust:                      Ranking Ready With Drift
+Validation:                 AcceptedWithDrift
+Owner:                      Runtime 4 - Surface Scoring Owner
+Gateway Required:           TRUE
+Gateway Result Accepted:    TRUE
+Input Source:               Layer 5 pass set only
+Current L5 Pass Symbols:    27
+L6 Export L5 Pass Symbols:  26
+Manifest Input Count:       26
+Ranked Symbols:             26
+Generation Counts OK:       TRUE
+L6 Snapshot Drift:          TRUE
+SymbolRank Files Actual:    26 / 26
+Top Ranked:                 1|BTCUSD.nx|88.00|good_friction|ranked|3.518162|0.270000|spread_bps_ge_2;effective_cost_source=ordercalcprofit;ok_Fresh;ok_Surface Usable;ok_Value Formula Ready;ok_Margin Formula Ready;commission_not_machine_verified_penalty_only;slippage_not_modelled_v1_penalty_only
+Main Blocker:               none_l6_snapshot_valid_current_l5_drift=true
+Gateway Job:                L6_COST_FRICTION_RANKING_V1
+Ranking Runtime:            TRUE
+Selection Runtime:          FALSE
+Trade Permission:           FALSE
+
+LAYER 7 - SESSION RELEVANCE RANKING
+----------------------------------------
+Status:                     Ranked sidecar degraded
+Summary:                    Gateway ranked sidecar count contract mismatch
+Gateway Result Accepted:    FALSE
+Input Source:               Layer 5 pass set only
+Current L5 Pass Symbols:    27
+L7 Export L5 Pass Symbols:  27
+Manifest Input Count:       27
+Ranked Symbols:             26
+Counts Contract:            CHECK
+Identity Contract:          CHECK
+Snapshot Drift:             NO
+Ranked Clean/Partial:       26
+Ranked Degraded:            0
+Not Rankable Quality:       0
+Session Buckets:            elite=0; strong=5; acceptable=18; weak=3; poor=0
+SymbolRank Files:           26 / 26 count_ok=TRUE
+Top Ranked Evidence:        1|BTCUSD.nx|71.92|strong_session_relevance|ranked_partial|Asia|ok_L5Pass;session=Asia;session_family=crypto;ok_Fresh;tick_age_usable;ok_Surface Usable;daily_change_nonzero;spread_bps_ge_2;time_basis_marketwatch_caveat;static_gateway_profile_v2_dead_time_caution_not_edge_proof
+Current Global Session:     Asia
+Session Basis:              broker_server_time_of_day_from_L4_refresh_time_marketwatch_caveat
+Session Definition Source:  pending_gateway_static_profile
+Session Policy:             static_gateway_profile_v2_dead_time_is_cautionary_not_trade_window
+Dead Time Meaning:          off-session caution; not a trade-time recommendation
+Diagnostics:                Workbench L7 section has full boolean blocker ledger
+Gateway Job:                L7_SESSION_RELEVANCE_RANKING_V1
+Ranking Runtime:            FALSE
+Selection Runtime:          FALSE
+Trade Permission:           FALSE
+
+LAYER 8 - MOVEMENT / RANGE RANKING
+----------------------------------------
+Status:                     Ranked sidecar degraded
+Trust:                      Ranking Degraded
+Validation:                 Degraded
+Owner:                      Runtime 4 - Surface Scoring Owner
+Gateway Required:           TRUE
+Gateway Result Accepted:    FALSE
+Input Source:               Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set
+Current L5 Pass Symbols:    27
+OHLC L8 Minimum Ready:      27 / 27
+M5 Windows Ready:           27 / 27
+M15 Windows Ready:          27 / 27
+H1 Windows Ready:           27 / 27
+H4 Context Ready:           27 / 27
+L8 Export L5 Pass Symbols:  27
+Manifest Input Count:       27
+Ranked Symbols:             26
+Input Counts OK:            TRUE
+Generation Counts OK:       FALSE
+Generation Identity OK:     FALSE
+L8 Snapshot Drift:          FALSE
+L8 Drift Delta:             0
+Ranked Clean:               1
+Ranked Partial:             0
+Risk Review:                25
+Not Rankable Quality:       0
+Elite Movement / Range:     10
+Strong Movement / Range:    15
+Acceptable Movement Range:  1
+Weak Movement / Range:      0
+Poor Movement / Range:      0
+SymbolRank Filename Mode:   sanitized_symbol__payload_checksum
+SymbolRank Files Written:   26
+SymbolRank Files Actual:    26
+SymbolRank File Count OK:   TRUE
+Top Ranked:                 not_available
+Movement Policy:            ranking_only_no_direction_no_entry_no_selection_no_execution
+Ranked CSV:                 Outbox\Layers\Layer_8_Movement_Range_Ranking\ranked_symbols.csv
+Manifest:                   Outbox\Layers\Layer_8_Movement_Range_Ranking\ranked_symbols.manifest
+Top20:                      Outbox\Layers\Layer_8_Movement_Range_Ranking\ranked_symbols_top20.txt
+Main Blocker:               input_ok=true;ohlc_ok=true;manifest_ok=true;counts_ok=false;identity_ok=false;authority_ok=true;permission_ok=true;files_ok=true
+Gateway Job:                L8_MOVEMENT_RANGE_RANKING_V1
+Ranking Runtime:            FALSE
+Selection Runtime:          FALSE
+Trade Permission:           FALSE
+
+LAYER 9 - STRUCTURE / LOCATION GEOMETRY
+----------------------------------------
+Status:                     Ranked sidecar degraded
+Trust:                      Geometry Degraded
+Validation:                 Degraded
+Owner:                      Runtime 4 - Surface Scoring Owner
+Gateway Required:           TRUE
+Gateway Result Accepted:    FALSE
+Input Source:               Runtime 1 OHLC Priority Windows + Layer 5 pass set
+Current L5 Pass Symbols:    27
+M15/H1/H4/D1 Ready:         27 / 27 / 27 / 0
+All Required Windows Ready: 0 / 27
+Manifest Input Count:       27
+Ranked Symbols:             26
+Ranked Clean:               0
+Ranked Partial:             26
+Risk Review:                0
+Not Rankable Quality:       0
+Elite Structure Watch:      0
+Strong Structure Watch:     0
+Near High Event Zones:      25
+Near Low Event Zones:       1
+Compression At Boundary:    0
+Top Ranked:                 #1 XMRUSD.nx | 58.76 | Acceptable Structure Watch | Ranked Partial | neutral location
+Geometry Policy:            watchlist_only_no_direction_no_entry_no_selection_no_execution
+Ranked CSV:                 Outbox\Layers\Layer_9_Structure_Location_Geometry\ranked_symbols.csv
+Main Blocker:               status_ok=true;counts_ok=false;files_ok=true
+Gateway Job:                L9_STRUCTURE_LOCATION_GEOMETRY_V1
+Ranking Runtime:            FALSE
+Selection Runtime:          FALSE
+Trade Permission:           FALSE
+
+SHARED OHLC RAW STORE
+----------------------------------------
+Status:                 seed_initial_pass_complete_topup_active
+Mode:                   topup_partial_then_append_priority_refresh
+Priority Speed:         P1 fastest, P2 active, P3 reserved, P4 standard, P5 slow background
+Window Storage:         integrated under Symbols/<symbol>/Priority Windows
+Last Priority:          P2_layer5_pass_symbols
+Route Root:             Aurora Core\Upcomers-Server\Shared Market Data\OHLC Store
+Route Status:           folder_create_ok
+Status File Write:      file_written_clean
+Manifest File Write:    file_written_clean
+Symbols Tracked:        1199
+Priority Windows:       148 ready / 148 total
+Attempted Symbol-TFs:   4355 / 7194
+Seeded/Partial/Error:   200 / 4154 / 1
+Topup Improved/Partial: 4 / 4044
+Pending Symbol-TFs:     2839
+Last Task:              XTZUSD.nx D1 topup_skip_already_1500
+Service Duration:       94 ms
+Service Throttle:       mode=P2_active tasks=3 interval_ms=500 budget_ms=160
+Raw Bars Printed:       FALSE
+Trade Permission:       FALSE
+
+TRADING READINESS
+----------------------------------------
+Market State Known: Partial or Complete
+Specs Known:        See Layer 3 readiness
+Quotes Known:       See Layer 4 readiness
+Cost Ranking:       Ranked sidecar accepted - L5 drift
+Session Ranking:    Ranked sidecar degraded
+Movement Ranking:   Ranked sidecar degraded
+Structure Ranking:  Ranked sidecar degraded
+OHLC Raw Store:     seed_initial_pass_complete_topup_active
+Selection Active:   No
+Permission Active:  No
+
+TRUST BLOCKER
+----------------------------------------
+Dossier universe bounded time-slice in progress to protect timer budget
+Layer 6-9 are ranking/scoring only; Layer 5 remains the only hard gate.
+Shared OHLC is raw storage only; no strategy, selection, or permission authority.
+
+ACTION
+----------------------------------------
+Board refresh is atomic and writes only when state text changes.
+No selection, alerts, or trade permission exists.

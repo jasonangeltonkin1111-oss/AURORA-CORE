@@ -1,0 +1,66 @@
+84 DEPRECATION: Running PyInstaller as admin is not necessary nor sensible. Run PyInstaller from a non-administrator terminal. PyInstaller 7.0 will block this.
+468 INFO: PyInstaller: 6.20.0, contrib hooks: 2026.5
+469 INFO: Python: 3.12.10
+496 INFO: Platform: Windows-11-10.0.26100-SP0
+496 INFO: Python environment: C:\Users\Jason\AppData\Local\Programs\Python\Python312
+500 INFO: Removing temporary files and cleaning cache in C:\Users\Jason\AppData\Local\pyinstaller
+502 INFO: Module search paths (PYTHONPATH):
+['C:\\Users\\Jason\\AppData\\Roaming\\MetaQuotes\\Terminal\\43C1572456A3A33910D4FE26B1396DC3\\MQL5\\Include\\AURORA-CORE\\external_worker',
+ 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\python312.zip',
+ 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\DLLs',
+ 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib',
+ 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312',
+ 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages',
+ 'C:\\Users\\Jason\\AppData\\Roaming\\MetaQuotes\\Terminal\\43C1572456A3A33910D4FE26B1396DC3\\MQL5\\Include\\AURORA-CORE\\external_worker']
+830 INFO: Appending 'binaries' from .spec
+831 INFO: checking Analysis
+831 INFO: Building Analysis because Analysis-00.toc is non existent
+831 INFO: Looking for Python shared library...
+831 INFO: Using Python shared library: C:\Users\Jason\AppData\Local\Programs\Python\Python312\python312.dll
+832 INFO: Running Analysis Analysis-00.toc
+832 INFO: Target bytecode optimization level: 0
+832 INFO: Initializing module dependency graph...
+834 INFO: Initializing module graph hook caches...
+877 INFO: Analyzing modules for base_library.zip ...
+1775 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+2446 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+4731 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+8313 INFO: Caching module dependency graph...
+8357 INFO: Analyzing C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\aurora_worker_entrypoint.py
+8449 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+9222 INFO: Analyzing hidden import 'ctypes.util'
+9263 INFO: Processing module hooks (post-graph stage)...
+9269 INFO: Performing binary vs. data reclassification (3 entries)
+9274 INFO: Looking for ctypes DLLs
+9291 INFO: Analyzing run-time hooks ...
+9292 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\Jason\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+9312 INFO: Creating base_library.zip...
+9337 INFO: Looking for dynamic libraries
+9501 INFO: Extra DLL search directories (AddDllDirectory): []
+9502 INFO: Extra DLL search directories (PATH): []
+9739 INFO: Warnings written to C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\build\AuroraWorker\warn-AuroraWorker.txt
+9756 INFO: Graph cross-reference written to C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\build\AuroraWorker\xref-AuroraWorker.html
+9823 INFO: checking PYZ
+9824 INFO: Building PYZ because PYZ-00.toc is non existent
+9824 INFO: Building PYZ (ZlibArchive) C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\build\AuroraWorker\PYZ-00.pyz
+9991 INFO: Building PYZ (ZlibArchive) C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\build\AuroraWorker\PYZ-00.pyz completed successfully.
+9999 INFO: checking PKG
+9999 INFO: Building PKG because PKG-00.toc is non existent
+9999 INFO: Building PKG (CArchive) AuroraWorker.pkg
+10032 INFO: Building PKG (CArchive) AuroraWorker.pkg completed successfully.
+10033 INFO: Bootloader C:\Users\Jason\AppData\Local\Programs\Python\Python312\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+10034 INFO: checking EXE
+10034 INFO: Building EXE because EXE-00.toc is non existent
+10034 INFO: Building EXE from EXE-00.toc
+10035 INFO: Copying bootloader EXE to C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\build\AuroraWorker\AuroraWorker.exe
+10125 INFO: Copying icon to EXE
+10187 INFO: Copying 0 resources to EXE
+10187 INFO: Embedding manifest in EXE
+10243 INFO: Appending PKG archive to EXE
+10303 INFO: Fixing EXE headers
+10679 INFO: Building EXE from EXE-00.toc completed successfully.
+10681 INFO: checking COLLECT
+10681 INFO: Building COLLECT because COLLECT-00.toc is non existent
+10681 INFO: Building COLLECT COLLECT-00.toc
+10899 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+10900 INFO: Build complete! The results are available in: C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\43C1572456A3A33910D4FE26B1396DC3\MQL5\Include\AURORA-CORE\external_worker\dist

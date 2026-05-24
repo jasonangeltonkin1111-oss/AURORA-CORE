@@ -1,0 +1,370 @@
+AURORA CORE - SYMBOL DOSSIER
+----------------------------------------
+Symbol: MELUSD.nx
+Broker Symbol: MELUSD.nx
+Market State: Open
+Dossier Route: Aurora Core\Upcomers-Server\18503\Dossiers\Open\MELUSD.nx.txt
+Server: Upcomers-Server
+Account: 18503
+Trade Permission: FALSE
+Auto Trading: FALSE
+
+FOUNDATION STATUS
+----------------------------------------
+Layer 0 Publication: Complete
+Layer 1 Account and Portfolio: Available
+Layer 2 Market State: complete
+Layer 3 Broker Specs and Value: Complete
+Layer 4 Live Quote and Spread: Complete with warnings
+Layer 5 Basic System Gate: Complete
+Layer 6 Cost / Friction Ranking: Ranked sidecar accepted - L5 drift
+Layer 7 Session Relevance Ranking: Ranked sidecar degraded
+Layer 8 Movement / Range Ranking: Ranked sidecar degraded
+Layer 9 Structure / Location Geometry: Ranked sidecar degraded
+Shared OHLC Raw Store: seed_initial_pass_complete_topup_active
+
+CURRENT LIMITS
+----------------------------------------
+Broker Symbol Exists: Yes
+Market State Known: Yes
+Broker Static Specs: Available / Scanned (see Layer 3)
+Live Quote Truth: Available / Scanned (see Layer 4)
+Cost / Friction Ranking: Ranked sidecar accepted - L5 drift
+Session Relevance Ranking: Ranked sidecar degraded
+Movement / Range Ranking: Ranked sidecar degraded
+Structure / Location Geometry: Ranked sidecar degraded
+Shared OHLC Raw Store: seed_initial_pass_complete_topup_active
+Selection Active: No
+Permission Active: No
+
+LAYER 1 - ACCOUNT AND PORTFOLIO CONTEXT
+----------------------------------------
+Account Balance: 4908.76
+Account Equity: 4908.76
+Floating P/L: 0.00
+Trade Permission: FALSE
+Symbol Account State: No account activity found
+
+LAYER 2 - MARKET OPEN / CLOSED TRUTH
+----------------------------------------
+Market State: Open
+Reason: inside trade session and trade mode allows open market
+Trade Mode: full
+Trade Session Available: Yes
+Quote Session Available: Yes
+Trade Sessions Today: 1
+Quote Sessions Today: 1
+Session Window Basis: Server session time of day
+Server Time Used: TimeCurrent
+Server Time Basis: broker server last known marketwatch quote time
+Server Day: Sunday
+Server Time Of Day: 01:18:06
+Active Trade Session: 00:00:00 - 23:59:59
+Next Trade Session: already active; next scheduled open in 22h 41m (00:00:00 - 23:59:59)
+Minutes Since Session Open: 78
+Minutes Until Session Close: 1361
+Minutes Until Next Open: 1361
+Symbol Synchronization Checked: Yes
+Symbol Synchronized: Yes
+Tick Support: not checked
+Source Quality: complete
+Next Recheck Due: 2026.05.24 23:59:06
+Deeper Layer Cutoff: No
+Cutoff Reason: Market session is open
+Trade Permission: FALSE
+
+LAYER 3 - BROKER SPECS AND VALUE TRUTH
+----------------------------------------
+Status: Scanned
+Broker Static Specs: Specs Ready
+Live Quote Truth: Pending Layer 4 quote/tick scan
+Value Formula: Value Formula Partial
+Margin Formula: Margin Formula Ready
+Volume Grid: Volume Grid Ready
+Layer 4 Status: Layer 4 quote, tick, and spread truth required next
+Trade Permission: FALSE
+
+Identity
+Description: Melania VS USD
+Path: CRYPTOS/FIAT\CRYPTO.nx\MELUSD.nx
+Sector: Crypto Currency
+Broker Metadata: Advisory only - broker metadata displayed when non-empty
+Metadata Truth: Broker advisory only; workbook/Runtime 2 taxonomy remains bucket authority
+
+Classification
+Asset Class: Crypto
+Market Group: All Crypto CFDs
+Market Segment: Meme Tokens
+Ranking Group: Crypto Currency / Meme Crypto
+Source: Runtime 2 taxonomy fallback
+Quality: Bucket Ready - Taxonomy Fallback
+
+Fundamental Links
+Supported Type: Crypto asset
+Identity Quality: Crypto symbol identity
+Yahoo Finance URL: https://www.google.com/search?q=Yahoo+Finance+MELUSD+crypto
+Google Finance URL: https://www.google.com/search?q=Google+Finance+MELUSD+crypto
+MarketWatch URL: https://www.google.com/search?q=MarketWatch+MELUSD+crypto
+SEC EDGAR URL: Not applicable - crypto asset
+Finviz URL: Not applicable - crypto asset
+Morningstar URL: https://www.google.com/search?q=Morningstar+MELUSD+crypto
+Link Truth: Literal lookup links - not verified market data
+
+Broker Contract
+Digits: 3
+Point: 0.00100000
+Tick Size: 0.00100000
+Tick Value: 0.001000
+Tick Value Profit: 0.001000
+Tick Value Loss: 0.001000
+Contract Size: 1.0000
+
+Volume Rules
+Minimum Volume: 0.0100
+Maximum Volume: 100000000000.0000
+Volume Step: 0.0100
+Volume Limit: 0.0000
+
+Execution Rules
+Trade Mode: Full access
+Execution Mode: 2
+Filling Mode: 1
+Order Mode: 127
+Expiration Mode: 15
+GTC Mode: 0
+Stops Level: 5 points
+Freeze Level: 0 points
+
+Spread Specification
+Floating Spread: true
+Spread Points: 3
+Note: Live bid, ask, tick freshness, and live spread belong to Layer 4
+
+Swap
+Swap Mode: 1
+Swap Long: -0.105611
+Swap Short: -0.105611
+Triple Swap Day: 5
+
+Value Formula Primitives
+Account Currency: USD
+Profit Currency: USD
+Margin Currency: USD
+Price Reference: SymbolInfoTick bid/ask reference available; freshness still belongs to Layer 4
+Reference Detail: buy_reference=ask; sell_reference=bid; Layer 3 uses it only for calculation diagnostics.
+Reference Buy Price: 0.09900000
+Reference Sell Price: 0.09600000
+Value Source: OrderCalcProfit using SymbolInfoTick bid reference
+Money Per Point Buy One Lot: 0.00
+Money Per Point Buy Status: OrderCalcProfit success
+Money Per Point Sell One Lot: 0.00
+Money Per Point Sell Status: OrderCalcProfit success
+Money Per Tick Buy One Lot: 0.00
+Money Per Tick Sell One Lot: 0.00
+Tick Value Fallback: Not checked
+Tick Value Crosscheck: Not available - broker tick value or calculated tick value was zero
+
+Margin Primitives
+Margin Buy One Lot: 0.03
+Margin Buy One Lot Status: OrderCalcMargin success
+Margin Sell One Lot: 0.03
+Margin Sell One Lot Status: OrderCalcMargin success
+Margin Buy Minimum Volume: 0.00
+Margin Buy Minimum Volume Status: OrderCalcMargin success
+Margin Sell Minimum Volume: 0.00
+Margin Sell Minimum Volume Status: OrderCalcMargin success
+Margin Rate Buy: 0.200000 / 0.200000
+Margin Rate Buy Status: SymbolInfoMarginRate success
+Margin Rate Sell: 0.200000 / 0.200000
+Margin Rate Sell Status: SymbolInfoMarginRate success
+
+Quality
+Required Fields Ready: 29
+Required Fields Missing: 0
+Missing Fields: Not available
+Failure Reason: Not available
+Next Needed: Layer 4 quote, tick, and spread truth required next
+
+LAYER 4 - LIVE QUOTE AND SPREAD TRUTH
+----------------------------------------
+Status: Scanned
+Quote Quality: Aging
+Surface Quality: Surface Warning
+Tick Source: SymbolInfoTick
+Tick Time: 2026.05.24 01:17:00 broker/server
+Tick Age: 37.0 sec
+Bid: 0.096
+Ask: 0.099
+Last: 0.000
+Spread: 3.0 points / 0.3 pips / 307.69 BPS
+Spread Score: Hostile
+Spread Source: Live bid/ask
+Broker Spread Spec: 3 points / Floating
+Spread Check: Live near broker spec
+Zero Spread State: Not Zero
+
+Daily Change
+----------------------------------------
+Daily Change: 0.00%
+Daily Open: 0.096
+Daily High Bid: 0.096
+Daily Low Bid: 0.095
+Daily High Ask: 0.099
+Daily Low Ask: 0.098
+Daily Range Position: 100.00%
+Daily Change Source: Broker Market Watch property
+
+Activity
+----------------------------------------
+Session Average Weighted Price: 0.000
+Session Volume: 0.00
+Session Turnover: 0.00
+Session Deals: 0
+Activity Status: Activity API Available - Zero Values
+
+Quality
+----------------------------------------
+Failure Reason: Not available
+Trade Permission: FALSE
+
+LAYER 5 - BASIC SYSTEM GATE
+----------------------------------------
+Status: Complete
+Trust: Gate Ready
+Gate Purpose: First all-symbol hard eligibility gate; blocks garbage symbols before scoring/ranking layers.
+Source Inputs: Layer 2 market state, Layer 3 specs/classification, Layer 4 quote/spread quality.
+Gate Status: blocked
+Gate Reason: absurd_spread_bps
+L2 Gate: open
+L3 Gate: Specs Ready
+L4 Gate: Aging
+Blocked Closed / Not Open: FALSE
+Blocked Stale Quote: FALSE
+Blocked Missing Tick: FALSE
+Blocked Invalid Bid/Ask: FALSE
+Blocked Missing Specs: FALSE
+Blocked Trade Mode: FALSE
+Blocked Absurd Spread: TRUE
+Blocked Classification Review: FALSE
+
+Boundary
+----------------------------------------
+Calculation Owner: none; basic gate only
+Gateway Required: FALSE
+Ranking Runtime: FALSE
+Selection Runtime: FALSE
+Trade Permission: FALSE
+Next Layer: Layer 6 Cost / Friction Ranking consumes L5 pass set only.
+
+LAYER 6 - COST / FRICTION RANKING
+----------------------------------------
+Status: not_ranked_l5_gate_failed
+Owner: Runtime 4 - Surface Scoring Owner
+Gateway Result Accepted: FALSE
+Validation: blocked_by_current_layer5_gate
+L5 Gate Status: blocked
+L5 Gate Reason: absurd_spread_bps
+Rank State: not_ranked_l5_gate_failed
+Friction Score: not_available
+Friction Bucket: not_available
+Rank Source: skipped_current_l5_gate_not_pass
+Cost Policy: ranking only; no selection, permission, or execution
+Boundary:
+Source Owner: Layer 5 pass set + Layer 3/4 packets + MT5 cost primitives
+Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support
+Layer Blocks Symbols: FALSE
+Selection Runtime: FALSE
+Trade Permission: FALSE
+Execution: FALSE
+
+LAYER 7 - SESSION RELEVANCE RANKING
+----------------------------------------
+Status: not_ranked_l5_gate_failed
+Owner: Runtime 4 - Surface Scoring Owner
+Gateway Result Accepted: FALSE
+Validation: blocked_by_current_layer5_gate
+L5 Gate Status: not_pass
+L5 Gate Reason: current Layer 5 gate is not pass
+Rank State: not_ranked_l5_gate_failed
+Session Score: not_available
+Session Bucket: not_available
+Rank Source: skipped_current_l5_gate_not_pass
+Session Policy: off-session caution only; not a trade-time recommendation
+Boundary:
+Source Owner: Layer 5 pass set + Layer 2/3/4 packets
+Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support
+Layer Blocks Symbols: FALSE
+Selection Runtime: FALSE
+Trade Permission: FALSE
+Execution: FALSE
+
+LAYER 8 - MOVEMENT / RANGE RANKING
+----------------------------------------
+Status: not_ranked_l5_gate_failed
+Owner: Runtime 4 - Surface Scoring Owner
+Gateway Result Accepted: FALSE
+Validation: blocked_by_current_layer5_gate
+L5 Gate Status: not_pass
+L5 Gate Reason: current Layer 5 gate is not pass
+Rank State: not_ranked_l5_gate_failed
+Movement Score: not_available
+Movement Bucket: not_available
+Rank Source: skipped_current_l5_gate_not_pass
+Movement Policy: ranking only; no direction, entry, selection, permission, or execution
+Boundary:
+Source Owner: Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set
+Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support
+Layer Blocks Symbols: FALSE
+Selection Runtime: FALSE
+Trade Permission: FALSE
+Execution: FALSE
+
+LAYER 9 - STRUCTURE / LOCATION GEOMETRY
+----------------------------------------
+Status: not_ranked_l5_gate_failed
+Owner: Runtime 4 - Surface Scoring Owner
+Gateway Result Accepted: FALSE
+Validation: blocked_by_current_layer5_gate
+L5 Gate Status: not_pass
+L5 Gate Reason: current Layer 5 gate is not pass
+Rank State: not_ranked_l5_gate_failed
+Structure Watchlist Score: not_available
+Structure Bucket: not_available
+Rank Source: skipped_current_l5_gate_not_pass
+Structure Policy: watchlist only; no direction, entry, selection, permission, or execution
+Boundary:
+Source Owner: Runtime 1 Shared OHLC Priority Windows + Layer 5 pass set
+Scoring Owner: Runtime 4 - Surface Scoring Owner via Runtime 3 Gateway support
+Layer Blocks Symbols: FALSE
+Selection Runtime: FALSE
+Trade Permission: FALSE
+Execution: FALSE
+
+SHARED OHLC RAW STORE OVERVIEW
+----------------------------------------
+Owner:                  Runtime 1 Shared OHLC Raw Storage Owner
+Symbol:                 MELUSD.nx
+Symbol Priority:        P4_other_open_symbols
+Store Status:           seed_initial_pass_complete_topup_active
+Store Mode:             topup_partial_then_append_priority_refresh
+Raw Store Route:        Aurora Core\Upcomers-Server\Shared Market Data\OHLC Store
+Symbol Store Route:     Aurora Core\Upcomers-Server\Shared Market Data\OHLC Store\Symbols\MELUSD.nx
+Priority Window Route:  Aurora Core\Upcomers-Server\Shared Market Data\OHLC Store\Symbols\MELUSD.nx\Priority Windows
+Window Minimum Ready:   TRUE
+Window M5/M15/H1/H4:    available / available / available / available
+Raw Bars Shown Here:    FALSE
+Calculation Policy:     no_calculations_in_mt5_raw_storage_owner
+
+NEXT REQUIRED
+----------------------------------------
+Next step: Layer 9 structure/location proof after OHLC priority windows and Gateway sidecars are accepted
+Open / Closed owner: Layer 2 only
+Layer 6-9 rank only Layer 5 pass symbols; they do not hard-block symbols.
+Shared OHLC is raw storage only; future layers must read it instead of calling CopyRates privately.
+
+NO GO
+----------------------------------------
+Tradable: No
+Selected: No
+Alert Active: No
+Permission: No

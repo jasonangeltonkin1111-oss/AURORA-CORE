@@ -1,0 +1,30 @@
+schema_name=aurora_gateway_watchdog_status
+schema_version=1
+worker_version=0.6.9_l9_structure_location_sidecar
+process_id=27072
+mode=watchdog_probe
+shared_root=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core
+daemon_status_path=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Gateway\Status\shared_worker_status.txt
+watchdog_status_path=C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Gateway\Status\watchdog_status.txt
+process_start_utc=2026-05-23 23:16:25 UTC
+process_start_unix=1779578185
+last_check_utc=2026-05-23 23:16:28 UTC
+last_check_unix=1779578188
+loop_count=1
+discovered_root_count=1
+processed_root_count=1
+accepted_root_count=1
+degraded_root_count=0
+write_degraded_root_count=0
+last_action=checked_no_restart_needed
+last_reason=daemon_status_fresh
+restart_attempted=false
+restart_result=not_needed
+repair_success=false
+daemon_truth_owner=shared_worker_status.txt
+probe_truth_owner=watchdog_status.txt_or_repair_status.txt
+authority=calculation_support_only
+trade_permission=false
+
+root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum
+C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503|0|accepted|R3 snapshot validation envelope accepted|18503_1779585374_289138843|18503_1779585374_289138843_R3_SNAPSHOT_VALIDATION_V1|R3_SNAPSHOT_VALIDATION_V1|1681164245

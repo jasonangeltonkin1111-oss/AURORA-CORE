@@ -1,0 +1,25 @@
+schema_name=aurora_gateway_surface_overseer_status
+schema_version=2
+status=accepted
+reason=all discovered Gateway layer ranked manifests are internally aligned
+layer_count=4
+accepted_layer_count=4
+pending_layer_count=0
+degraded_layer_count=0
+mismatch_count=0
+newest_manifest_unix=1779578265
+scope=layer_agnostic_gateway_sidecar_manifest_observer
+lifecycle_policy=ranked_outputs_must_align_input_manifests_input_only_layers_are_pending_not_mismatch
+surface_write_authority=false
+ea_publication_authority=true
+authority=calculation_support_only
+trade_permission=false
+selection_runtime=false
+generated_utc=2026-05-23 23:17:46 UTC
+generated_unix=1779578266
+
+folder_name|layer_id|manifest_role|lifecycle_state|status|accepted|pending|mismatch|row_count|input_count|symbol_rank_files_actual|payload_checksum|mismatch_reason|manifest_path
+Layer_6_Cost_Friction_Ranking|6|ranked_output|ranked_output_accepted|complete|true|false|false|26|26|26|2033028805|none|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503\Workbench\Gateway\Outbox\Layers\Layer_6_Cost_Friction_Ranking\ranked_symbols.manifest
+Layer_7_Session_Relevance_Ranking|7|ranked_output|ranked_output_accepted|complete|true|false|false|26|26|26|2064055483|none|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503\Workbench\Gateway\Outbox\Layers\Layer_7_Session_Relevance_Ranking\ranked_symbols.manifest
+Layer_8_Movement_Range_Ranking|8|ranked_output|ranked_output_accepted|complete|true|false|false|26|26|26|1422926078|none|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503\Workbench\Gateway\Outbox\Layers\Layer_8_Movement_Range_Ranking\ranked_symbols.manifest
+Layer_9_Structure_Location_Geometry|9|ranked_output|ranked_output_accepted|complete|true|false|false|26|26|26|271451823|none|C:\Users\Jason\AppData\Roaming\MetaQuotes\Terminal\Common\Files\Aurora Core\Upcomers-Server\18503\Workbench\Gateway\Outbox\Layers\Layer_9_Structure_Location_Geometry\ranked_symbols.manifest
