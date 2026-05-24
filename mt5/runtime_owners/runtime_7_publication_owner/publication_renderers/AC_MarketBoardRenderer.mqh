@@ -41,6 +41,7 @@ string AC_BoardWarningText()
    if(AC_BoardStatusNeedsWarning(AC_L9_STATUS)) text += "L9=" + AC_L9_STATUS + "; ";
    if(AC_BoardStatusNeedsWarning(AC_L10_STATUS)) text += "L10=" + AC_L10_STATUS + "; ";
    if(AC_BoardStatusNeedsWarning(AC_L15_STATUS)) text += "L15=" + AC_L15_STATUS + "; ";
+   if(AC_BoardStatusNeedsWarning(AC_L16_STATUS)) text += "L16=" + AC_L16_STATUS + "; ";
    if(text == "") return "none";
    return text;
 }
@@ -63,7 +64,7 @@ string AC_BoardSystemCockpitSection(const AC_Layer0StatusPacket &status)
    text += "\r\nSYSTEM COCKPIT\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Runtime Mode:        Publication + inspection ranking\r\n";
-   text += "Selection Stage:     L15 correlation/diversity scoring only\r\n";
+   text += "Selection Stage:     L16 Global Top 10 inspection basket only\r\n";
    text += "Permission Stage:    Not active\r\n";
    text += "Primary Warning:     " + AC_BoardWarningText() + "\r\n";
    text += "Main Blocker:        " + status.main_blocker + "\r\n";
@@ -77,8 +78,8 @@ string AC_BoardOperatorActionSection()
    text += "--------------------------------------------------\r\n";
    text += "Use For Trading:      NO\r\n";
    text += "Use For Inspection:   YES\r\n";
-   text += "Use For Selection:    L15 scoring only; no Global Top 10 yet\r\n";
-   text += "Best Current Use:     Review candidate quality, degradation, and L15 diversity constraints\r\n";
+   text += "Use For Selection:    L16 Global Top 10 inspection only; no trade permission\r\n";
+   text += "Best Current Use:     Review Global Top 10, rejected correlations, unfilled slots, and dossiers\r\n";
    text += "Do Not Do:            No trade, no alert, no execution, no prop-firm safety claim\r\n";
    return text;
 }
@@ -96,6 +97,8 @@ string AC_BoardUniverseSnapshotSection(const AC_Layer0StatusPacket &status)
    text += "L14 Top Candidate:         " + AC_L14_TOP_CANDIDATE + "\r\n";
    text += "L15 Candidates Scored:     " + IntegerToString(AC_L15_CANDIDATE_SCORED_COUNT) + "\r\n";
    text += "L15 Top Diversity:         " + AC_L15_TOP_DIVERSITY_CANDIDATE + "\r\n";
+   text += "L16 Selected:              " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
+   text += "L16 Top Symbol:            " + AC_L16_TOP_SYMBOL + "\r\n";
    return text;
 }
 
@@ -120,6 +123,7 @@ string AC_BoardLayerHealthMatrixSection(const AC_Layer0StatusPacket &status)
    text += "L13  Group Selection             " + AC_BoardHealthTag(AC_L13_STATUS) + "   " + AC_L13_STATUS + "\r\n";
    text += "L14  Candidate Pool              " + AC_BoardHealthTag(AC_L14_STATUS) + "   " + AC_L14_STATUS + "\r\n";
    text += "L15  Correlation / Diversity     " + AC_BoardHealthTag(AC_L15_STATUS) + "   " + AC_L15_STATUS + "\r\n";
+   text += "L16  Global Top 10 Basket        " + AC_BoardHealthTag(AC_L16_STATUS) + "   " + AC_L16_STATUS + "\r\n";
    text += "OHLC Shared Raw Store            " + AC_BoardHealthTag(AC_SHARED_OHLC_STATUS) + "   " + AC_SHARED_OHLC_STATUS + "\r\n";
    return text;
 }
@@ -148,9 +152,9 @@ string AC_BoardSelectionPipelineSnapshotSection()
    text += "L13 Group Selection:      " + AC_L13_STATUS + "\r\n";
    text += "L14 Candidate Pool:       " + AC_L14_STATUS + " | size=" + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) + "\r\n";
    text += "L15 Correlation Filter:   " + AC_L15_STATUS + " | scored=" + IntegerToString(AC_L15_CANDIDATE_SCORED_COUNT) + " | high_corr_pairs=" + IntegerToString(AC_L15_HIGH_CORR_PAIR_COUNT) + "\r\n";
-   text += "L16 Global Top 10:        not built / not active here\r\n";
+   text += "L16 Global Top 10:        " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | unfilled=" + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + " | corr_rejects=" + IntegerToString(AC_L16_CORRELATION_REJECT_COUNT) + "\r\n";
    text += "L23 Trade Permission:     false\r\n";
-   text += "Pipeline Meaning:         inspection candidates only; no Global Top 10, alert, or trade permission\r\n";
+   text += "Pipeline Meaning:         inspection candidates only; no alert, execution, or trade permission\r\n";
    return text;
 }
 
@@ -164,6 +168,8 @@ string AC_BoardDegradationSnapshotSection(const AC_Layer0StatusPacket &status)
    text += "Surface Warnings:          " + AC_BoardWarningText() + "\r\n";
    text += "L15 Threshold Status:      " + AC_L15_THRESHOLD_STATUS + "\r\n";
    text += "Max Pair Corr Abs:         " + AC_L15_MAX_PAIR_CORR_ABS + "\r\n";
+   text += "L16 Threshold Status:      " + AC_L16_THRESHOLD_STATUS + "\r\n";
+   text += "L16 Unfilled Slots:        " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
    text += "Safety Meaning:            publication and inspection may continue; trading remains blocked\r\n";
    return text;
 }
@@ -202,8 +208,9 @@ string AC_BoardTradingReadinessSection()
    text += "Group Selection:    " + AC_L13_STATUS + "\r\n";
    text += "Candidate Pool:     " + AC_L14_STATUS + "\r\n";
    text += "Correlation/Diversity: " + AC_L15_STATUS + "\r\n";
+   text += "Global Top 10:      " + AC_L16_STATUS + "\r\n";
    text += "OHLC Raw Store:     " + AC_SHARED_OHLC_STATUS + "\r\n";
-   text += "Selection Active:   L15 scoring only; no Global Top 10 or trade permission\r\n";
+   text += "Selection Active:   L16 inspection basket only; no trade permission\r\n";
    text += "Permission Active:  No\r\n";
    return text;
 }
@@ -214,7 +221,7 @@ string AC_BoardTrustBlockerSection(const AC_Layer0StatusPacket &status)
    text += "\r\nTRUST BLOCKER\r\n";
    text += "--------------------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 14 builds a raw candidate pool only; Layer 15 scores correlation/diversity only; Layer 5 remains the only hard gate.\r\n";
+   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 14 builds a raw candidate pool only; Layer 15 scores correlation/diversity only; Layer 16 builds an inspection basket only; Layer 5 remains the only hard gate.\r\n";
    text += "Shared OHLC is raw storage only; no strategy, selection, or permission authority.\r\n";
    return text;
 }
@@ -225,7 +232,7 @@ string AC_BoardActionSection()
    text += "\r\nACTION\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Board refresh is atomic and writes only when state text changes.\r\n";
-   text += "L15 may constrain later L16 inspection selection; no Global Top 10, alerts, or trade permission exists.\r\n";
+   text += "L16 may guide inspection order; no alerts, execution, or trade permission exists.\r\n";
    return text;
 }
 
@@ -249,6 +256,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    string l13 = AC_Layer13BoardSection();
    string l14 = AC_Layer14BoardSection();
    string l15 = AC_Layer15BoardSection();
+   string l16 = AC_Layer16BoardSection();
    string ohlc = AC_SharedOhlcRenderBoardSection();
 
    string text = "";
@@ -278,6 +286,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += l13;
    text += l14;
    text += l15;
+   text += l16;
    text += ohlc;
    text += AC_BoardTradingReadinessSection();
    text += AC_BoardTrustBlockerSection(status);
@@ -287,7 +296,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.17|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.18|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -323,11 +332,12 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l13_status=" + AC_L13_STATUS
       + "|cached_l14_status=" + AC_L14_STATUS
       + "|cached_l15_status=" + AC_L15_STATUS
+      + "|cached_l16_status=" + AC_L16_STATUS
       + "|shared_ohlc_status=" + AC_SHARED_OHLC_STATUS
       + "|shared_ohlc_mode=" + AC_SHARED_OHLC_MODE
       + "|shared_ohlc_seed_complete=" + (AC_SHARED_OHLC_BOOT_SEED_COMPLETE ? "true" : "false")
       + "|main_blocker=" + status.main_blocker
-      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED || AC_L10_ACCEPTED || AC_L11_ACCEPTED || AC_L12_ACCEPTED || AC_L13_ACCEPTED || AC_L14_ACCEPTED || AC_L15_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
+      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED || AC_L10_ACCEPTED || AC_L11_ACCEPTED || AC_L12_ACCEPTED || AC_L13_ACCEPTED || AC_L14_ACCEPTED || AC_L15_ACCEPTED || AC_L16_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
@@ -377,10 +387,11 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l13_status=" + AC_L13_STATUS + "\r\n";
    text += "cached_l14_status=" + AC_L14_STATUS + "\r\n";
    text += "cached_l15_status=" + AC_L15_STATUS + "\r\n";
+   text += "cached_l16_status=" + AC_L16_STATUS + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "gateway=used_for_L6_L7_L8_L9_L10_L11_L12_L13_L14_L15_surface_taxonomy_ranking_group_selection_candidate_pool_correlation_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
+   text += "gateway=used_for_L6_L7_L8_L9_L10_L11_L12_L13_L14_L15_L16_surface_taxonomy_ranking_group_selection_candidate_pool_correlation_top10_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
@@ -397,6 +408,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer13WorkbenchSection();
    text += AC_Layer14WorkbenchSection();
    text += AC_Layer15WorkbenchSection();
+   text += AC_Layer16WorkbenchSection();
    text += "\r\n" + AC_SharedOhlcRenderWorkbenchSection();
    return text;
 }
@@ -404,7 +416,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 string AC_Layer0FailureAddendumText()
 {
    string text = "";
-   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_L10_L11_L12_L13_L14_L15_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_L10_L11_L12_L13_L14_L15_L16_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
    text += "----------------------------------------\r\n";
    if(AC_L0_FAILURE_ADDENDUM == "") text += "none\r\n";
    else text += AC_L0_FAILURE_ADDENDUM;
