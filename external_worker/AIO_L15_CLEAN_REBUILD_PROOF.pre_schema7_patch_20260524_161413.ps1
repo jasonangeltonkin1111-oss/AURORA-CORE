@@ -177,7 +177,7 @@ $checks = @{
   "entrypoint_calls_l15" = Contains-Text $entrypoint "run_l15_after_l14(root)"
   "entrypoint_reads_l15_status" = Contains-Text $entrypoint "l15_correlation_diversity_status"
   "entrypoint_l15_runtime_enabled" = Contains-Text $entrypoint "l15_runtime_enabled"
-  "entrypoint_schema_v6_or_v7" = ((Contains-Text $entrypoint "schema_version=6") -or (Contains-Text $entrypoint "schema_version=7"))
+  "entrypoint_schema_v6" = Contains-Text $entrypoint "schema_version=6"
   "spec_has_l15_worker" = Contains-Text $spec "'aurora_worker_l15'"
   "spec_has_l15_dispatch" = Contains-Text $spec "'aurora_worker_l15_dispatch'"
   "install_expected_l15" = Contains-Text $installScript '$ExpectedWorkerVersion = "0.6.15_l15_correlation_diversity"'
@@ -452,4 +452,3 @@ if ($flags.Count -eq 0) {
   Write-Host "SYSTEM NOT UPDATED" -ForegroundColor Red
   Write-Host "DECISION: HOLD" -ForegroundColor Red
 }
-

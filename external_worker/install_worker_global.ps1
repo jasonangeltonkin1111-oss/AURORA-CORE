@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BuiltWorker = Join-Path $ScriptDir "dist\AuroraWorker"
 $WorkerSource = Join-Path $ScriptDir "aurora_worker.py"
@@ -12,7 +12,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$ExpectedWorkerVersion = "0.6.15_l15_correlation_diversity"
+$ExpectedWorkerVersion = "0.6.16_l16_global_top10_builder"
 $WorkerVersion = $ExpectedWorkerVersion
 
 if (Test-Path $WorkerSource) {
@@ -134,3 +134,4 @@ Write-Host "Worker version source=$WorkerVersion expected=$ExpectedWorkerVersion
 Write-Host "Runtime folder authority=$SharedWorkerRoot"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
 Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
+
