@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from aurora_worker_l19 import _build_geometry
+from aurora_worker_l19 import _apply_wave2_structures, _build_geometry
 
 
 def _row(bar_time: str, open_i: int, high_i: int, low_i: int, close_i: int) -> list[str]:
     return [bar_time, str(open_i), str(high_i), str(low_i), str(close_i), "10", "2", "0"]
+
+
+def _geo(index: int, bar_time: str, open_i: int, high_i: int, low_i: int, close_i: int):
+    return _build_geometry(index, _row(bar_time, open_i, high_i, low_i, close_i), 0.0001, 4)
 
 
 def _assert_equal(label: str, actual: str, expected: str) -> None:
@@ -63,7 +67,34 @@ def run_selftest() -> None:
     _assert_true("close outside range invalid", not invalid_close.valid)
     _assert_equal("close outside range reason", invalid_close.invalid_reason, "close outside high low range")
 
+    # Wave 2 policy: index 0 is current possible and must not receive confirmed two-candle tags.
+    previous_down = _geo(2, "2000", 10500, 10600, 9900, 10000)
+    bullish_engulfing = _geo(1, "2060", 9950, 10800, 9900, 10700)
+    current_possible = _geo(0, "2120", 10700, 10900, 10600, 10800)
+    wave2, tagged = _apply_wave2_structures((current_possible, bullish_engulfing, previous_down))
+    _assert_equal("wave2 tagged count bullish", str(tagged), "1")
+    _assert_true("current possible not wave2 tagged", "Bullish Engulfing" not in wave2[0].structure)
+    _assert_true("bullish engulfing tagged", "Bullish Engulfing" in wave2[1].structure)
+
+    previous_up = _geo(2, "3000", 10000, 10600, 9900, 10500)
+    bearish_engulfing = _geo(1, "3060", 10550, 10600, 9700, 9800)
+    wave2_bear, tagged_bear = _apply_wave2_structures((current_possible, bearish_engulfing, previous_up))
+    _assert_equal("wave2 tagged count bearish", str(tagged_bear), "1")
+    _assert_true("bearish engulfing tagged", "Bearish Engulfing" in wave2_bear[1].structure)
+
+    previous_range = _geo(2, "4000", 10000, 11000, 9000, 10500)
+    inside_bar = _geo(1, "4060", 10100, 10800, 9300, 10600)
+    wave2_inside, tagged_inside = _apply_wave2_structures((current_possible, inside_bar, previous_range))
+    _assert_equal("wave2 tagged count inside", str(tagged_inside), "1")
+    _assert_true("inside bar tagged", "Inside Bar" in wave2_inside[1].structure)
+
+    previous_small = _geo(2, "5000", 10000, 10500, 9500, 10200)
+    outside_bar = _geo(1, "5060", 10100, 10600, 9400, 10300)
+    wave2_outside, tagged_outside = _apply_wave2_structures((current_possible, outside_bar, previous_small))
+    _assert_equal("wave2 tagged count outside", str(tagged_outside), "1")
+    _assert_true("outside bar tagged", "Outside Bar" in wave2_outside[1].structure)
+
 
 if __name__ == "__main__":
     run_selftest()
-    print("L19 geometry self-test OK")
+    print("L19 geometry and wave 2 self-test OK")
