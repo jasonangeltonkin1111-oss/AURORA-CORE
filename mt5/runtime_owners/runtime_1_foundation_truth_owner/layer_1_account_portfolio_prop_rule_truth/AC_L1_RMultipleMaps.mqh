@@ -96,6 +96,7 @@ string AC_L1RMultipleMap()
    }
 
    string text = AC_L1MapHeader("R-MULTIPLE MAP - SELECTED HISTORY");
+   text += "section_id:             L1_R_MULTIPLE_SELECTED_HISTORY\r\n";
    text += "Purpose:                estimated R diagnostics from closed rows with money-risk readiness\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Proof Status:           estimated R, not edge proof, not broker equity curve, not trade permission\r\n";
@@ -117,6 +118,7 @@ string AC_L1RMultipleMap()
 string AC_L1RBySymbolMap(const int limit)
 {
    string text = AC_L1MapHeader("R BY SYMBOL MAP");
+   text += "section_id:             L1_R_BY_SYMBOL\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += AC_L1PadRight("Symbol", 14)
       + AC_L1PadLeft("Rows", 6)
