@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +16,6 @@ from aurora_worker_l15_dispatch import run_l15_after_l14
 from aurora_worker_l16_dispatch import run_l16_after_l15
 from aurora_worker_l17_dispatch import run_l17_after_l16
 from aurora_worker_l18_dispatch import run_l18_after_l17
-from aurora_worker_l19_dispatch import run_l19_after_l18
 
 SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
 CALCULATION_CYCLE_SECONDS = 30
@@ -182,11 +181,6 @@ def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root: Path, worker_mode:
             run_l18_after_l17(root)
         except Exception as exc:
             core.gateway_record_exception(root, "l18_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
-    if enable_l13_runtime and enable_l14_runtime and enable_l15_runtime and enable_l16_runtime and enable_l17_runtime and enable_l18_runtime and ENABLE_L19_RUNTIME:
-        try:
-            run_l19_after_l18(root)
-        except Exception as exc:
-            core.gateway_record_exception(root, "l19_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
     return code, res
 
 
