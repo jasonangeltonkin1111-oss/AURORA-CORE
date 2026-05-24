@@ -6,13 +6,24 @@ from typing import Dict, List, Tuple
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, unix_time, utc_stamp
 
-SURFACE_OVERSEER_SCHEMA_VERSION = "2"
+SURFACE_OVERSEER_SCHEMA_VERSION = "3"
 SURFACE_OVERSEER_STATUS_NAME = "surface_overseer_status.txt"
 EXPECTED_AUTHORITY = "calculation_support_only"
 
 RANKED_MANIFEST_NAME = "ranked_symbols.manifest"
+LAYER_RANKED_MANIFEST_NAMES = (
+    "ranked_symbols.manifest",
+    "ranked_symbols_by_group.manifest",
+    "l12_group_heat_quality.manifest",
+)
 INPUT_MANIFEST_SUFFIXES = ("_input_primitives.manifest", "input_primitives.manifest")
 L10_AUXILIARY_INPUT_MANIFESTS = {"l10_runtime2_universe_rows.manifest"}
+RANKED_OUTPUT_AUTHORITIES = {
+    "calculation_support_only",
+    "intra_group_inspection_priority_only",
+    "ranking_group_attention_quality_only",
+}
+RANKED_OUTPUT_ACCEPTED_STATUSES = {"complete", "accepted", "write_degraded", "not_available"}
 
 
 @dataclass
@@ -79,10 +90,14 @@ def _is_input_manifest(path: Path) -> bool:
     return any(name.endswith(suffix) for suffix in INPUT_MANIFEST_SUFFIXES) or name.endswith("_input.manifest")
 
 
+def _is_layer_ranked_manifest(path: Path) -> bool:
+    return path.name.lower() in LAYER_RANKED_MANIFEST_NAMES
+
+
 def _manifest_candidates(layer_dir: Path) -> List[Path]:
-    ranked = layer_dir / RANKED_MANIFEST_NAME
-    if ranked.exists():
-        return [ranked]
+    ranked = sorted(p for p in layer_dir.glob("*.manifest") if p.is_file() and _is_layer_ranked_manifest(p))
+    if ranked:
+        return ranked[:1]
     input_manifests = sorted(p for p in layer_dir.glob("*.manifest") if p.is_file() and _is_input_manifest(p))
     if input_manifests:
         return input_manifests[:1]
@@ -93,7 +108,7 @@ def _manifest_candidates(layer_dir: Path) -> List[Path]:
 def _manifest_role(path: Path) -> str:
     if path.name.lower() in L10_AUXILIARY_INPUT_MANIFESTS:
         return "input_source_manifest"
-    if path.name == RANKED_MANIFEST_NAME:
+    if _is_layer_ranked_manifest(path):
         return "ranked_output"
     if _is_input_manifest(path):
         return "input_primitives"
@@ -130,7 +145,7 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
     proof.ranking_runtime = data.get("ranking_runtime", "false" if role == "input_primitives" else "not_available")
 
     failures: List[str] = []
-    authority_ok = proof.authority == EXPECTED_AUTHORITY
+    authority_ok = proof.authority in RANKED_OUTPUT_AUTHORITIES if role == "ranked_output" else proof.authority == EXPECTED_AUTHORITY
     trade_ok = proof.trade_permission == "false"
     selection_ok = proof.selection_runtime in {"false", "not_available"}
     if not authority_ok:
@@ -153,8 +168,9 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
             proof.reason = "input primitives manifest present; ranked output manifest not published yet"
         return proof
 
-    status_ok = proof.status in {"complete", "input_degraded"}
+    status_ok = proof.status in RANKED_OUTPUT_ACCEPTED_STATUSES
     row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
+    checksum_ok = proof.payload_checksum != "not_available"
     files_ok = True
     if "symbol_rank_files_written" in data or "symbol_rank_files_actual" in data:
         files_ok = proof.symbol_rank_files_written == proof.row_count and proof.symbol_rank_files_actual == proof.row_count
@@ -163,6 +179,8 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
         failures.append(f"status={proof.status}")
     if not row_ok:
         failures.append(f"row_count={proof.row_count}/input_count={proof.input_count}")
+    if not checksum_ok:
+        failures.append("payload_checksum=not_available")
     if not files_ok:
         failures.append(f"symbol_rank_files_written={proof.symbol_rank_files_written}/actual={proof.symbol_rank_files_actual}/row_count={proof.row_count}")
 
