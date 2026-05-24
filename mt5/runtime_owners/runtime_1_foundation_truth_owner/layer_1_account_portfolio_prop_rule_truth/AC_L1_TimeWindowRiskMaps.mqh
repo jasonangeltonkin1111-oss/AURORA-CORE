@@ -113,6 +113,7 @@ string AC_L1TimeWindowRiskMapV2()
    }
 
    string text = AC_L1MapHeader("TIME WINDOW RISK MAP V2 - BROKER SERVER TIME");
+   text += "section_id:             L1_TIME_WINDOW_RISK_V2\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Time Basis:             broker server close time\r\n";
