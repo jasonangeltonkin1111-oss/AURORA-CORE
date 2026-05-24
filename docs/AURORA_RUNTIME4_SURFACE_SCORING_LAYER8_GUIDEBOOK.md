@@ -41,6 +41,40 @@ execution
 
 High movement score means inspect-worthy surface behavior. It does not mean profitable, validated, or tradeable.
 
+## Future liquidity-room support note
+
+Layer 8 movement/range output may later support deeper liquidity and risk-geometry layers by helping them judge whether a mapped liquidity level has enough movement room to matter.
+
+Allowed future support examples:
+
+```text
+current range expansion
+compression
+range stability
+recent movement quality
+```
+
+This future support remains descriptive context only. It must not become setup logic.
+
+Layer 8 may help later layers ask:
+
+```text
+Does this symbol currently have enough movement/range quality for a liquidity level to be worth inspecting?
+```
+
+Layer 8 must not answer:
+
+```text
+liquidity swept, sell now
+Asian high swept, buy/sell now
+breakout confirmed
+reversal confirmed
+continuation confirmed
+entry valid
+```
+
+Liquidity mapping, risk geometry, target room, invalidation distance, spread-to-stop ratio, and expected R after cost belong later to selected deep evidence / permission layers, not to Layer 8.
+
 ## Non-negotiable ranking law
 
 Layer 5 is the only broad all-symbol hard gate.
