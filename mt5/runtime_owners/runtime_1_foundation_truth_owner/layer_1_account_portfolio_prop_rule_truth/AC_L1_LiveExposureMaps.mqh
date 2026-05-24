@@ -28,6 +28,7 @@ bool AC_L1LiveSymbolSeen(const string seen,
 string AC_L1OpenPendingSymbolExposureMap()
 {
    string text = AC_L1MapHeader("OPEN / PENDING SYMBOL EXPOSURE MAP");
+   text += "section_id:             L1_OPEN_PENDING_SYMBOL_EXPOSURE\r\n";
    text += "Scope:                  live open positions and pending orders only\r\n";
    text += "Risk Source:            OrderCalcProfit estimate to SL when geometry is valid\r\n";
    text += AC_L1PadRight("Symbol", 14)
@@ -159,6 +160,7 @@ string AC_L1OpenPendingAssetExposureMap()
    }
 
    string text = AC_L1MapHeader("OPEN / PENDING ASSET EXPOSURE MAP");
+   text += "section_id:             L1_OPEN_PENDING_ASSET_EXPOSURE\r\n";
    text += "Scope:                  live open positions and pending orders only\r\n";
    text += "Classification Basis:   Layer 1 heuristic fallback; Layer 3 taxonomy link pending\r\n";
    text += AC_L1PadRight("Asset", 14)
