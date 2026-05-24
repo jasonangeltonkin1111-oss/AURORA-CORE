@@ -8,6 +8,9 @@
 // It must not hard-block symbols; Layer 5 remains the only broad all-symbol hard gate.
 // It must not become selected deep OHLC evidence; Layer 18 owns selected raw OHLC bar packs.
 // It must not claim trend direction, breakout confirmation, strategy edge, selection, trade permission, or execution.
+// Future L8 movement/range outputs may help later liquidity/risk layers judge whether liquidity levels have enough room to matter.
+// That future support must remain descriptive: range expansion, compression, range stability, and recent movement quality only.
+// It must not become liquidity-sweep, setup, entry, reversal, continuation, or buy/sell logic.
 // Runtime 3 may export bounded L8 history primitives for Gateway support.
 // Future active L8 Gateway scoring must live in external_worker calculation-support source.
 // Future active L8 Board/Dossier/Workbench rendering must live in Runtime 7 renderers.
