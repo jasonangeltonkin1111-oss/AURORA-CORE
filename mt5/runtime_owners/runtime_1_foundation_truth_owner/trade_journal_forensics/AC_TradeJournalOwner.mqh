@@ -44,6 +44,8 @@ AC_TradeJournalStatusPacket AC_TRADE_JOURNAL_STATUS;
 bool AC_TRADE_JOURNAL_READY = false;
 int  AC_TRADE_JOURNAL_NEXT_HISTORICAL_INDEX = 0;
 
+bool AC_TradeJournalPublishOneHistoricalTrade();
+
 string AC_TradeJournalBoolText(const bool value)
 {
    return value ? "true" : "false";
@@ -119,7 +121,7 @@ void AC_TradeJournalResetStatus()
    AC_TRADE_JOURNAL_STATUS.authority = AC_TRADE_JOURNAL_AUTHORITY;
    AC_TRADE_JOURNAL_STATUS.schema_version = AC_TRADE_JOURNAL_SCHEMA_VERSION;
    AC_TRADE_JOURNAL_STATUS.route_status = "route_scaffold_source_present_runtime_proof_required";
-   AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_available_not_run_this_pass";
+   AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_available_waiting_for_l1_ready";
    AC_TRADE_JOURNAL_STATUS.live_capture_status = "not_implemented";
    AC_TRADE_JOURNAL_STATUS.packet_import_status = "not_implemented";
    AC_TRADE_JOURNAL_STATUS.packet_matching_status = "not_implemented";
@@ -166,6 +168,10 @@ bool AC_TradeJournalInit()
    AC_TRADE_JOURNAL_STATUS.status = AC_TRADE_JOURNAL_READY ? "skeleton_ready_historical_mvp_available" : "skeleton_route_degraded";
    AC_TRADE_JOURNAL_STATUS.last_error = AC_TRADE_JOURNAL_READY ? "" : folder_detail;
    AC_TRADE_JOURNAL_STATUS.last_service_duration_ms = GetTickCount() - start_ms;
+
+   if(AC_TRADE_JOURNAL_READY && AC_L1_READY)
+      AC_TradeJournalPublishOneHistoricalTrade();
+
    return AC_TRADE_JOURNAL_READY;
 }
 
