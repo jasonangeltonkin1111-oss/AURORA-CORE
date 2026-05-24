@@ -7,6 +7,7 @@
 // It does not run its own all-time history scan.
 // It does not call CopyRates.
 // It may copy a bounded trade-duration OHLC slice from the existing Shared OHLC Raw Store files.
+// It may rewrite one existing historical journal per pass only when that file lacks the current OHLC context marker.
 // It does not parse setup packets yet.
 // It does not match packets to trades yet.
 // It does not use OnTradeTransaction yet.
@@ -19,6 +20,7 @@ static const string AC_TRADE_JOURNAL_STATUS_SKELETON = "skeleton_source_present_
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_WRITES_PER_PASS = 1;
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_ROWS_INSPECTED_PER_PASS = 12;
 static const int    AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS = 240;
+static const string AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER = "TRADE DURATION OHLC CONTEXT";
 
 struct AC_TradeJournalStatusPacket
 {
@@ -224,6 +226,31 @@ int AC_TradeJournalAppendSharedOhlcFileSlice(const string path,
    if(source_detail != "") source_detail += ";";
    source_detail += path + "=read_scanned_" + IntegerToString(scanned) + "_copied_" + IntegerToString(copied);
    return copied;
+}
+
+bool AC_TradeJournalExistingFileContainsMarker(const string path, const string marker)
+{
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(!FileIsExist(path, common_flag))
+      return false;
+
+   ResetLastError();
+   int handle = FileOpen(path, FILE_READ | FILE_TXT | FILE_ANSI | common_flag);
+   if(handle == INVALID_HANDLE)
+      return false;
+
+   bool found = false;
+   while(!FileIsEnding(handle))
+   {
+      string line = FileReadString(handle);
+      if(StringFind(line, marker) >= 0)
+      {
+         found = true;
+         break;
+      }
+   }
+   FileClose(handle);
+   return found;
 }
 
 string AC_TradeJournalSharedOhlcSliceText(const string symbol,
@@ -505,7 +532,7 @@ bool AC_TradeJournalPublishOneHistoricalTrade()
       }
 
       string final_path = AC_TradeJournalClosedTradePath(row);
-      if(FileIsExist(final_path, common_flag))
+      if(FileIsExist(final_path, common_flag) && AC_TradeJournalExistingFileContainsMarker(final_path, AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER))
          continue;
 
       string content = AC_TradeJournalRenderBeforeAuroraTrade(row);
@@ -522,9 +549,9 @@ bool AC_TradeJournalPublishOneHistoricalTrade()
    }
 
    if(written > 0)
-      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_wrote_before_aurora_file";
+      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_wrote_or_upgraded_before_aurora_file";
    else if(AC_TRADE_JOURNAL_STATUS.historical_generator_status == "waiting_for_layer1_selected_history")
-      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_no_new_file_this_pass";
+      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_no_new_or_upgrade_file_this_pass";
 
    AC_TRADE_JOURNAL_STATUS.status = "historical_mvp_active_bounded";
    AC_TRADE_JOURNAL_STATUS.last_service_duration_ms = GetTickCount() - start_ms;
