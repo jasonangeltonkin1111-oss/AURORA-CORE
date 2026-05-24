@@ -6,6 +6,7 @@
 // Runtime 3 external worker split:
 // - Shared worker binary/install payload lives under Aurora Core\External Worker so all terminals/accounts can use one package.
 // - Per-server/account worker IO, status, inbox, outbox, logs, and proof files remain under Aurora Core\<server>\<account>\Workbench\External Worker.
+// Trade Journal routes are bookkeeping/publication route support only. They do not grant trade permission or reconstruct motive by themselves.
 
 string AC_SanitizePathPart(string value)
 {
@@ -240,6 +241,46 @@ string AC_SelectionIndexPath()
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_INDEX_FILE;
 }
 
+string AC_TradeJournalImportFolder()
+{
+   return AC_RootFolder() + "\\" + AC_TRADE_JOURNAL_IMPORT_FOLDER;
+}
+
+string AC_TradeJournalInboxFolder()
+{
+   return AC_TradeJournalImportFolder() + "\\" + AC_TRADE_JOURNAL_INBOX_FOLDER;
+}
+
+string AC_TradeJournalAcceptedFolder()
+{
+   return AC_TradeJournalImportFolder() + "\\" + AC_TRADE_JOURNAL_ACCEPTED_FOLDER;
+}
+
+string AC_TradeJournalRejectedFolder()
+{
+   return AC_TradeJournalImportFolder() + "\\" + AC_TRADE_JOURNAL_REJECTED_FOLDER;
+}
+
+string AC_TradeJournalOrphanedFolder()
+{
+   return AC_TradeJournalImportFolder() + "\\" + AC_TRADE_JOURNAL_ORPHANED_FOLDER;
+}
+
+string AC_TradeHistoryFolder()
+{
+   return AC_RootFolder() + "\\" + AC_TRADE_HISTORY_FOLDER;
+}
+
+string AC_TradeHistoryBeforeAuroraFolder()
+{
+   return AC_TradeHistoryFolder() + "\\" + AC_TRADE_HISTORY_BEFORE_AURORA_FOLDER;
+}
+
+string AC_TradeHistoryAuroraCapturedFolder()
+{
+   return AC_TradeHistoryFolder() + "\\" + AC_TRADE_HISTORY_AURORA_CAPTURED_FOLDER;
+}
+
 string AC_MarketBoardPath()
 {
    return AC_RootFolder() + "\\" + AC_MARKET_BOARD_FILE;
@@ -367,6 +408,14 @@ bool AC_EnsureRuntimeFolders(string &detail)
    string selection_desk_detail = "";
    string selection_groups_detail = "";
    string selection_global_detail = "";
+   string trade_journal_import_detail = "";
+   string trade_journal_inbox_detail = "";
+   string trade_journal_accepted_detail = "";
+   string trade_journal_rejected_detail = "";
+   string trade_journal_orphaned_detail = "";
+   string trade_history_detail = "";
+   string trade_history_before_aurora_detail = "";
+   string trade_history_aurora_captured_detail = "";
 
    bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
    bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
@@ -387,6 +436,14 @@ bool AC_EnsureRuntimeFolders(string &detail)
    bool selection_desk_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), selection_desk_detail);
    bool selection_groups_ok = AC_EnsureFolderPath(AC_SelectionGroupsFolder(), selection_groups_detail);
    bool selection_global_ok = AC_EnsureFolderPath(AC_SelectionGlobalFolder(), selection_global_detail);
+   bool trade_journal_import_ok = AC_EnsureFolderPath(AC_TradeJournalImportFolder(), trade_journal_import_detail);
+   bool trade_journal_inbox_ok = AC_EnsureFolderPath(AC_TradeJournalInboxFolder(), trade_journal_inbox_detail);
+   bool trade_journal_accepted_ok = AC_EnsureFolderPath(AC_TradeJournalAcceptedFolder(), trade_journal_accepted_detail);
+   bool trade_journal_rejected_ok = AC_EnsureFolderPath(AC_TradeJournalRejectedFolder(), trade_journal_rejected_detail);
+   bool trade_journal_orphaned_ok = AC_EnsureFolderPath(AC_TradeJournalOrphanedFolder(), trade_journal_orphaned_detail);
+   bool trade_history_ok = AC_EnsureFolderPath(AC_TradeHistoryFolder(), trade_history_detail);
+   bool trade_history_before_aurora_ok = AC_EnsureFolderPath(AC_TradeHistoryBeforeAuroraFolder(), trade_history_before_aurora_detail);
+   bool trade_history_aurora_captured_ok = AC_EnsureFolderPath(AC_TradeHistoryAuroraCapturedFolder(), trade_history_aurora_captured_detail);
 
    detail = "root=" + root_detail
       + ";workbench=" + wb_detail
@@ -407,14 +464,25 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";selection_desk=" + selection_desk_detail
       + ";selection_groups=" + selection_groups_detail
       + ";selection_global=" + selection_global_detail
+      + ";trade_journal_import=" + trade_journal_import_detail
+      + ";trade_journal_inbox=" + trade_journal_inbox_detail
+      + ";trade_journal_accepted=" + trade_journal_accepted_detail
+      + ";trade_journal_rejected=" + trade_journal_rejected_detail
+      + ";trade_journal_orphaned=" + trade_journal_orphaned_detail
+      + ";trade_history=" + trade_history_detail
+      + ";trade_history_before_aurora=" + trade_history_before_aurora_detail
+      + ";trade_history_aurora_captured=" + trade_history_aurora_captured_detail
       + ";market_board_path=" + AC_MarketBoardPath()
       + ";external_worker_required_path=" + AC_ExternalWorkerRequiredPath()
       + ";shared_external_worker_exe_path=" + AC_ExternalWorkerPackagedExePath()
       + ";shared_worker_install_status_path=" + AC_SharedExternalWorkerInstallStatusPath()
       + ";shared_worker_status_path=" + AC_SharedExternalWorkerStatusPath()
-      + ";selection_index_path=" + AC_SelectionIndexPath();
+      + ";selection_index_path=" + AC_SelectionIndexPath()
+      + ";trade_journal_inbox_path=" + AC_TradeJournalInboxFolder()
+      + ";trade_history_before_aurora_path=" + AC_TradeHistoryBeforeAuroraFolder()
+      + ";trade_history_aurora_captured_path=" + AC_TradeHistoryAuroraCapturedFolder();
 
-   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok;
+   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok && trade_journal_import_ok && trade_journal_inbox_ok && trade_journal_accepted_ok && trade_journal_rejected_ok && trade_journal_orphaned_ok && trade_history_ok && trade_history_before_aurora_ok && trade_history_aurora_captured_ok;
 }
 
 #endif
