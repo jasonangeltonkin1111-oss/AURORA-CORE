@@ -1,26 +1,6 @@
 #ifndef AC_L1_TIME_WINDOW_RISK_MAPS_MQH
 #define AC_L1_TIME_WINDOW_RISK_MAPS_MQH
 
-int AC_L1TimeWindowIndex(const datetime t)
-{
-   int h = TimeHour(t);
-   if(h < 6) return 0;
-   if(h < 10) return 1;
-   if(h < 14) return 2;
-   if(h < 18) return 3;
-   return 4;
-}
-
-string AC_L1TimeWindowName(const int idx)
-{
-   if(idx == 0) return "00-06";
-   if(idx == 1) return "06-10";
-   if(idx == 2) return "10-14";
-   if(idx == 3) return "14-18";
-   if(idx == 4) return "18-24";
-   return "Other";
-}
-
 string AC_L1TimeWindowRiskLine(const string window,
                                const int rows,
                                const int wins,
@@ -84,6 +64,7 @@ string AC_L1TimeWindowRiskMapV2()
 
    int total_rows = ArraySize(AC_L1_CLOSED);
    int risk_rows = 0;
+   int time_unavailable_rows = 0;
    double unit_risk_money = AC_L1_EQUITY * 0.001;
    double hard_risk_money = AC_L1_EQUITY * 0.002;
    double extreme_risk_money = AC_L1_EQUITY * 0.005;
@@ -91,6 +72,12 @@ string AC_L1TimeWindowRiskMapV2()
    for(int r = 0; r < total_rows; r++)
    {
       int idx = AC_L1TimeWindowIndex(AC_L1_CLOSED[r].close_time);
+      if(idx < 0 || idx > 4)
+      {
+         time_unavailable_rows++;
+         continue;
+      }
+
       double row_risk = 0.0;
       if(!AC_L1EstimateClosedInitialRiskMoney(AC_L1_CLOSED[r], row_risk))
          continue;
@@ -132,7 +119,8 @@ string AC_L1TimeWindowRiskMapV2()
    text += "Policy Basis:           Jason numeric policy: 0.10% unit, 0.20% hard, 0.50% extreme\r\n";
    text += "Selected Closed Rows:   " + IntegerToString(total_rows) + "\r\n";
    text += "Risk Eligible Rows:     " + IntegerToString(risk_rows) + " / " + IntegerToString(total_rows) + "\r\n";
-   text += "Weakest Net/Risk Window:" + weakest_window + " " + DoubleToString(weakest_net_over_risk, 2) + "\r\n";
+   text += "Time Unavailable Rows:  " + IntegerToString(time_unavailable_rows) + "\r\n";
+   text += "Weakest Net/Risk Window: " + weakest_window + " " + DoubleToString(weakest_net_over_risk, 2) + "\r\n";
    text += AC_L1PadRight("Window", 9)
       + AC_L1PadLeft("Rows", 6)
       + AC_L1PadLeft("Win%", 9)
