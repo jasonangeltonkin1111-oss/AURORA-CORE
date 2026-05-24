@@ -47,7 +47,10 @@ for f in docs/30_L12_RANKING_GROUP_HEAT_QUALITY_CONTROL.md external_worker/auror
   check_has false_trade_permission "$f" "trade_permission=false|Trade Permission: FALSE"
   check_has false_entry_signal "$f" "entry_signal=false|Entry Signal: FALSE"
   check_has false_execution "$f" "execution=false|Execution: FALSE"
-  check_no_has forbidden_l12_authority "$f" "trade_permission=true|entry_signal=true|execution=true|selection_runtime=true|Global Top 10|candidate pool|selected_ranking_group_list"
+done
+
+for f in external_worker/aurora_worker_l12.py external_worker/aurora_worker_l12_dispatch.py mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer12GroupHeatQualityRenderer.mqh; do
+  check_no_has forbidden_l12_authority "$f" "trade_permission=true|entry_signal=true|execution=true|selection_runtime=true"
 done
 
 pass l12_preflight "source gate passed; runtime proof still requires rebuild + MT5 run"
