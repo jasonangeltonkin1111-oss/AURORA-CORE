@@ -29,7 +29,7 @@ from aurora_worker_l10 import EMPTY_L10_SUMMARY, publish_l10_taxonomy_classifica
 from aurora_worker_l10_source import l10_build_source_bundle
 from aurora_worker_render_index import publish_render_index
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
-WORKER_VERSION = "0.6.14_l14_candidate_pool"
+WORKER_VERSION = "0.6.15_l15_correlation_diversity"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -726,5 +726,6 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
