@@ -334,6 +334,7 @@ def _append_l10_lines(result_text: str, source_bundle, l10_summary, duration_ms:
     result_text += "l10_symbol_count=" + str(l10_summary.symbol_count) + "\n"
     result_text += "l10_ranking_group_count=" + str(l10_summary.ranking_group_count) + "\n"
     result_text += "l10_symbol_path_index_count=" + str(l10_summary.symbol_path_index_count) + "\n"
+    result_text += "l10_group_member_csv_count=" + str(l10_summary.group_member_csv_count) + "\n"
     result_text += "l10_accepted_strict_count=" + str(l10_summary.accepted_strict_count) + "\n"
     result_text += "l10_accepted_public_research_count=" + str(l10_summary.accepted_public_research_count) + "\n"
     result_text += "l10_review_required_count=" + str(l10_summary.review_required_count) + "\n"
