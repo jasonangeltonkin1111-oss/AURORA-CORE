@@ -239,6 +239,7 @@ string AC_Layer10DossierSection(const string symbol)
    string sidecar_path = AC_L10SymbolTaxonomyPath(symbol);
    string sidecar = AC_L10ReadSmallTextFile(sidecar_path, 16000);
    string text = "";
+   text += "\r\nLayer 10 Taxonomy / Ranking Group Map:\r\n";
    text += "\r\nLAYER 10 - TAXONOMY / RANKING GROUP MAP\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L10_STATUS + "\r\n";

@@ -12,6 +12,7 @@ EXPECTED_AUTHORITY = "calculation_support_only"
 
 RANKED_MANIFEST_NAME = "ranked_symbols.manifest"
 INPUT_MANIFEST_SUFFIXES = ("_input_primitives.manifest", "input_primitives.manifest")
+L10_AUXILIARY_INPUT_MANIFESTS = {"l10_runtime2_universe_rows.manifest"}
 
 
 @dataclass
@@ -90,6 +91,8 @@ def _manifest_candidates(layer_dir: Path) -> List[Path]:
 
 
 def _manifest_role(path: Path) -> str:
+    if path.name.lower() in L10_AUXILIARY_INPUT_MANIFESTS:
+        return "input_source_manifest"
     if path.name == RANKED_MANIFEST_NAME:
         return "ranked_output"
     if _is_input_manifest(path):
@@ -137,7 +140,7 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
     if not selection_ok:
         failures.append(f"selection_runtime={proof.selection_runtime}")
 
-    if role == "input_primitives":
+    if role in {"input_primitives", "input_source_manifest"}:
         row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
         if not row_ok:
             failures.append(f"input_row_count={proof.row_count}/input_count={proof.input_count}")
