@@ -21,6 +21,8 @@ a = Analysis(
         'aurora_worker_surface_overseer',
         'aurora_worker_l12',
         'aurora_worker_l12_dispatch',
+        'aurora_worker_l13',
+        'aurora_worker_l13_dispatch',
     ],
     hookspath=[],
     hooksconfig={},
