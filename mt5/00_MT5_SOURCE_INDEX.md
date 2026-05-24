@@ -4,14 +4,14 @@
 MT5 source index for active source-tree ownership and implementation-scope guardrails.
 
 ## Current status
-- MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 1 Layer 2 market open/closed truth, Runtime 1 Layer 3 broker specs/value truth, Runtime 1 Layer 4 live quote/spread truth, Runtime 1 Layer 5 Basic System Gate, Runtime 1 Shared OHLC Raw Storage source scaffold, Runtime 2 generated-row lookup-only source, Runtime 3 Calculation Gateway support surfaces including L6/L7/L8/L9/L10/L11/L12/L13/L14/L15/L16 worker-output readback surfaces, Runtime 4 Layer 7 Session Relevance contract stub, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
+- MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 1 Layer 2 market open/closed truth, Runtime 1 Layer 3 broker specs/value truth, Runtime 1 Layer 4 live quote/spread truth, Runtime 1 Layer 5 Basic System Gate, Runtime 1 Shared OHLC Raw Storage source scaffold, Runtime 2 generated-row lookup-only source, Runtime 3 Calculation Gateway support surfaces including L6/L7/L8/L9/L10/L11/L12/L13/L14/L15/L16/L17 worker-output readback surfaces, Runtime 4 Layer 7 Session Relevance contract stub, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
 - Layer 1 source is active as account/portfolio/prop-rule truth. It must stay bounded: account status/history surfaces should use a bounded recent operator window. Current rule: retain all selected closed-trade rows inside the last 90 days; if fewer than 100 closed rows exist in that window, extend older history only until 100 closed rows are available when possible. The output must label this selected-history rule honestly. Full all-time `HistorySelect(0, now)` scans are runtime-risky and must not be reintroduced as normal heartbeat behavior without explicit proof/budget.
 - Layer 3 source is active as broker/spec/value foundation. It scans Layer 2 known open and closed symbols, skips unknown symbols, and must render failed value or margin calculations as `Not available`, never fake `0.00`.
 - Layer 5 source is active only as Basic System Gate. It consumes L2/L3/L4 owner packets and outputs pass/blocked eligibility. It must not become friction scoring, ranking, selection, permission, execution, or Gateway calculation authority.
 - Shared OHLC Raw Storage source is present as Runtime 1 support service scaffold. It owns raw `CopyRates`/`MqlRates` storage contracts only and must not calculate range, wick/body geometry, ATR, trend, volatility, scoring, ranking, selection, permission, or execution. It is not scheduler-activated for full all-symbol 1500-bar seed until compile/runtime proof is captured.
 - Runtime 4 Layer 7 source is contract-only. It defines Session Relevance Ranking ownership and explicitly forbids duplicate market-open truth, hard gating, OHLC/session-range ownership, VWAP ownership, selection, permission, and execution.
-- Runtime 3 Gateway support is source-present, but Windows autonomy proof remains evidence-class separated: source wired, Python syntax, PowerShell parse, package rebuild, scheduled task registration, daemon running, watchdog recovery, and MT5 Workbench readback are not the same proof. Gateway may calculate from shared raw OHLC files for L15, but must not fetch broker history directly. L16 consumes L14/L15 worker outputs only and must not read raw OHLC or recompute correlation.
-- Runtime 7 render surfaces are source-present for L11-L16 worker readback. They render Board/Dossier/Workbench sections only and must not calculate scores, correlation, selection, permission, or execution.
+- Runtime 3 Gateway support is source-present, but Windows autonomy proof remains evidence-class separated: source wired, Python syntax, PowerShell parse, package rebuild, scheduled task registration, daemon running, watchdog recovery, and MT5 Workbench readback are not the same proof. Gateway may calculate from shared raw OHLC files for L15, but must not fetch broker history directly. L16 consumes L14/L15 worker outputs only and must not read raw OHLC or recompute correlation. L17 consumes L16 held visible display rows only and must not collect OHLC/ticks/indicators/liquidity.
+- Runtime 7 render surfaces are source-present for L11-L17 worker readback. They render Board/Dossier/Workbench-style sections only and must not calculate scores, correlation, selection, permission, execution, or deep evidence collection.
 - Publication/status/manifest truth repair is source-present, including late-write surfacing intent in final status publication.
 - Placeholder Selection Desk parent-route files are structure-only route shells unless populated by worker outputs. They are physical publication surfaces, not trading truth.
 - Dossiers are active publication packets, but they do not prove ranking, selection, strategy, execution, trade permission, or prop-firm readiness.
@@ -45,6 +45,7 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer14CandidatePoolRenderer.mqh`
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer15CorrelationDiversityRenderer.mqh`
 - `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer16GlobalTop10Renderer.mqh`
+- `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/AC_Layer17DeepEvidenceRenderer.mqh`
 - `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`
 - `mt5/00_RUNTIME0_GOVERNANCE_INTERNAL_CONTROL_SOURCE_PLAN_AND_TESTS.md`
 - `mt5/01_LAYER1_ACCOUNT_PORTFOLIO_PROP_RULE_TRUTH_SOURCE_PLAN_AND_TESTS.md`
@@ -73,11 +74,12 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - Gateway/EXE remains calculation support only and must consume shared raw OHLC files when OHLC-derived calculations are implemented.
 - L15 may calculate correlation/diversity from Shared OHLC Store and L14 candidate pool only. Missing OHLC must degrade visibly, not fake correlation.
 - L16 may build the Global Top 10 inspection basket from L14/L15 worker outputs only. It must not read raw OHLC, recompute correlation, permit, alert, or execute.
+- L17 may split L16 held visible display rows into selected/rejected future deep-evidence budget only. It must not collect OHLC, ticks, indicators, liquidity, poll brokers, permit, alert, or execute.
 
 ## Runtime 7 render surface boundary
 - Runtime 7 renderers may read worker summaries/CSVs and display Board/Dossier/Workbench sections.
-- Renderers must not calculate L11-L16 scores, re-rank symbols, build selected groups, build candidate pools, calculate correlation, create new basket authority, permit, alert, or execute.
-- L15 renderer is readback only. L16 renderer is readback only; worker L16 owns calculation-support Global Top 10 construction.
+- Renderers must not calculate L11-L17 scores, re-rank symbols, build selected groups, build candidate pools, calculate correlation, create new basket authority, collect evidence, permit, alert, or execute.
+- L15 renderer is readback only. L16 renderer is readback only; worker L16 owns calculation-support Global Top 10 construction. L17 renderer is readback only; worker L17 owns deep-evidence selection split output.
 
 ## Layer 7 contract boundary
 - Layer 7 is Session Relevance Ranking under Runtime 4 Surface Scoring Owner.
