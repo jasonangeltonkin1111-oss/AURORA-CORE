@@ -12,7 +12,9 @@ SELECTION_DEEP_END = "========== SELECTION-ONLY DEEP EVIDENCE END =========="
 L18_START = "----- L18 RAW OHLC BAR PACK START -----"
 L18_END = "----- L18 RAW OHLC BAR PACK END -----"
 
-DISPLAY_BARS: Dict[str, int] = {"M5": 64, "M15": 64, "H1": 64, "H4": 32, "D1": 20}
+# Enough for MA200-style future reference without dumping 350-750 rows per TF.
+# L18 still reads existing Shared OHLC Store seed files only; these are display caps.
+DISPLAY_BARS: Dict[str, int] = {"M5": 220, "M15": 220, "H1": 220, "H4": 200, "D1": 200}
 RANKED_DOSSIER_RE = re.compile(r"^\d{2}_(.+)\.txt$")
 
 
@@ -208,6 +210,7 @@ def _build_l18_block(symbol: str, rendered_sections: Sequence[str], tf_statuses:
         "Scope:                  Selection copied dossier only",
         "Source Owner:           Runtime 1 Shared OHLC Raw Storage Owner",
         "Source Policy:          read_existing_shared_ohlc_seed_files_only",
+        "Display Profile:        MA200_support_caps_M5_220_M15_220_H1_220_H4_200_D1_200",
         "Price Policy:           decoded when point metadata exists; otherwise raw integer points",
         "CopyRates By L18:       false",
         "Private OHLC Cache:     false",
@@ -234,6 +237,7 @@ def _board_text(summary: L18PublishSummary) -> str:
         "--------------------------------------------------",
         "Purpose:                Copy selected raw OHLC from Shared OHLC Store into selected dossiers",
         "Scope:                  Canonical Selection Desk copied dossiers only",
+        "Display Profile:        M5=220, M15=220, H1=220, H4=200, D1=200",
         "Source Owner:           Runtime 1 Shared OHLC Raw Storage Owner",
         "CopyRates By L18:       FALSE",
         "Private OHLC Cache:     FALSE",
@@ -271,12 +275,13 @@ def _board_text(summary: L18PublishSummary) -> str:
 def _status_text(summary: L18PublishSummary) -> str:
     return "\n".join([
         "schema_name=l18_selected_raw_ohlc_bar_pack_status",
-        "schema_version=1",
+        "schema_version=2",
         f"status={summary.status}",
         f"reason={summary.reason}",
         "scope=canonical_selection_shortcut_dossiers_only",
         "source_owner=Runtime 1 Shared OHLC Raw Storage Owner",
         "source_policy=read_existing_shared_ohlc_seed_files_only",
+        "display_profile=M5=220,M15=220,H1=220,H4=200,D1=200",
         "copyrates_by_l18=false",
         "private_ohlc_cache=false",
         "base_dossiers_touched=false",
