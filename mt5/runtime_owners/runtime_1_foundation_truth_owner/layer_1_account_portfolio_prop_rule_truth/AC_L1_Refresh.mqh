@@ -33,6 +33,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "cluster_v2_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "currency_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "recovery_damage_maps=enabled_account_status_only\r\n";
+   AC_L1_WORKBENCH_SECTION += "setup_tag_readiness=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "cost_tag_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "data_quality_ledger=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "equity_drawdown_map=enabled_account_status_only\r\n";
