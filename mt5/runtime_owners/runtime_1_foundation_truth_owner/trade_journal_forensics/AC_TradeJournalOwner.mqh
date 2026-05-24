@@ -14,7 +14,7 @@
 // It grants no trade permission, no execution permission, no setup permission, and no prop-firm safety approval.
 
 static const string AC_TRADE_JOURNAL_OWNER_NAME = "Runtime 1 - Trade Journal / Trade Forensics Support Owner";
-static const string AC_TRADE_JOURNAL_SCHEMA_VERSION = "trade_journal_status_v1.070_shared_ohlc_slice";
+static const string AC_TRADE_JOURNAL_SCHEMA_VERSION = "trade_journal_status_v1.071_shared_ohlc_fallback_ladder";
 static const string AC_TRADE_JOURNAL_AUTHORITY = "bookkeeping_forensics_status_only_no_permission_no_execution";
 static const string AC_TRADE_JOURNAL_STATUS_SKELETON = "skeleton_source_present_historical_mvp_available";
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_WRITES_PER_PASS = 1;
@@ -228,6 +228,24 @@ int AC_TradeJournalAppendSharedOhlcFileSlice(const string path,
    return copied;
 }
 
+int AC_TradeJournalTrySharedOhlcTimeframe(const string symbol,
+                                          const datetime entry_time,
+                                          const datetime close_time,
+                                          const string timeframe_label,
+                                          string &rows_text,
+                                          string &source_detail)
+{
+   int remaining_rows = AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS;
+   rows_text = "";
+   if(source_detail != "") source_detail += ";";
+   source_detail += "try_" + timeframe_label;
+
+   int copied = 0;
+   copied += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcSeedPath(symbol, timeframe_label), entry_time, close_time, timeframe_label, remaining_rows, rows_text, source_detail);
+   copied += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcAppendPath(symbol, timeframe_label), entry_time, close_time, timeframe_label, remaining_rows, rows_text, source_detail);
+   return copied;
+}
+
 bool AC_TradeJournalExistingFileContainsMarker(const string path, const string marker)
 {
    int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
@@ -264,7 +282,7 @@ string AC_TradeJournalSharedOhlcSliceText(const string symbol,
    text += "source_policy=read_existing_shared_ohlc_files_only_no_copyrates\r\n";
    text += "copyrates_used=false\r\n";
    text += "preferred_timeframe=M1\r\n";
-   text += "fallback_timeframe=M5\r\n";
+   text += "fallback_timeframes=M5,M15,M30,H1\r\n";
    text += "entry_time_broker=" + AC_TradeJournalDateText(entry_time) + "\r\n";
    text += "close_time_broker=" + AC_TradeJournalDateText(close_time) + "\r\n";
    text += "price_encoding=integer_points_as_stored_by_shared_ohlc_owner\r\n";
@@ -288,28 +306,32 @@ string AC_TradeJournalSharedOhlcSliceText(const string symbol,
 
    string rows_text = "";
    string source_detail = "";
-   int remaining_rows = AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS;
-   int copied_m1 = 0;
-   int copied_m5 = 0;
-
-   copied_m1 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcSeedPath(symbol, "M1"), entry_time, effective_close, "M1", remaining_rows, rows_text, source_detail);
-   copied_m1 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcAppendPath(symbol, "M1"), entry_time, effective_close, "M1", remaining_rows, rows_text, source_detail);
-
    string timeframe_used = "M1";
-   int copied_total = copied_m1;
+   int copied_total = AC_TradeJournalTrySharedOhlcTimeframe(symbol, entry_time, effective_close, "M1", rows_text, source_detail);
+
    if(copied_total <= 0)
    {
-      remaining_rows = AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS;
-      rows_text = "";
-      source_detail += ";fallback_to_M5";
-      copied_m5 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcSeedPath(symbol, "M5"), entry_time, effective_close, "M5", remaining_rows, rows_text, source_detail);
-      copied_m5 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcAppendPath(symbol, "M5"), entry_time, effective_close, "M5", remaining_rows, rows_text, source_detail);
       timeframe_used = "M5";
-      copied_total = copied_m5;
+      copied_total = AC_TradeJournalTrySharedOhlcTimeframe(symbol, entry_time, effective_close, "M5", rows_text, source_detail);
+   }
+   if(copied_total <= 0)
+   {
+      timeframe_used = "M15";
+      copied_total = AC_TradeJournalTrySharedOhlcTimeframe(symbol, entry_time, effective_close, "M15", rows_text, source_detail);
+   }
+   if(copied_total <= 0)
+   {
+      timeframe_used = "M30";
+      copied_total = AC_TradeJournalTrySharedOhlcTimeframe(symbol, entry_time, effective_close, "M30", rows_text, source_detail);
+   }
+   if(copied_total <= 0)
+   {
+      timeframe_used = "H1";
+      copied_total = AC_TradeJournalTrySharedOhlcTimeframe(symbol, entry_time, effective_close, "H1", rows_text, source_detail);
    }
 
    string slice_status = "";
-   if(copied_total > 0 && remaining_rows <= 0)
+   if(copied_total > 0 && copied_total >= AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS)
       slice_status = "copied_from_shared_store_truncated_row_cap";
    else if(copied_total > 0)
       slice_status = "copied_from_shared_store";
