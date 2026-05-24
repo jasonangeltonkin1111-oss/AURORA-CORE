@@ -3,7 +3,7 @@
 
 // Compact Board guide for trader-chat export discipline.
 // This is renderer text only. It does not create trade permission, setup permission, packet import, packet matching, or execution authority.
-// L17 is rendered natively inside AC_MarketBoardRenderer.mqh; this wrapper appends render-only trader overview and export guide sections.
+// L17 is rendered natively inside AC_MarketBoardRenderer.mqh; this wrapper defines the trader overview and appends only the export guide.
 // Trader overview reads existing layer-owner outputs only. It must not calculate new scores, create routes, write files, permit, alert, or execute.
 
 string AC_TCSValueOrNA(string value)
@@ -41,22 +41,6 @@ string AC_TCSL6CsvLineForSymbol(const string symbol)
       if(AC_TCSCsvField(line, 1, "") == symbol) return line;
    }
    return "";
-}
-
-bool AC_TCSIsSelectedRankingGroup(const string ranking_group)
-{
-   string csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
-   if(csv == "") return false;
-   string lines[];
-   ushort separator = StringGetCharacter("\n", 0);
-   int count = StringSplit(csv, separator, lines);
-   for(int i = 1; i < count; i++)
-   {
-      string line = lines[i];
-      StringReplace(line, "\r", "");
-      if(AC_TCSCsvField(line, 1, "") == ranking_group) return true;
-   }
-   return false;
 }
 
 string AC_TCSTop10RankText(const string symbol)
@@ -224,7 +208,7 @@ string AC_BoardTraderChatExportGuideSection()
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
                                const AC_Layer0StatusPacket &status)
 {
-   return AC_BuildTraderBoardText_Base(snapshot, status) + AC_BoardTraderSelectionOverviewSection() + AC_BoardTraderChatExportGuideSection();
+   return AC_BuildTraderBoardText_Base(snapshot, status) + AC_BoardTraderChatExportGuideSection();
 }
 
 #endif
