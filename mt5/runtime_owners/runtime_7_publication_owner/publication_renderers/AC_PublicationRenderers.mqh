@@ -19,24 +19,26 @@
 #include "AC_Layer11SelectionGroupsRenderer.mqh"
 #include "AC_Layer12GroupHeatQualityRenderer.mqh"
 #include "AC_Layer13DynamicGroupSelectionRenderer.mqh"
+#include "AC_Layer14CandidatePoolRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 
-string AC_Layer11L12L13AndSharedOhlcRenderDossierSection(const string symbol)
+string AC_Layer11L12L13L14AndSharedOhlcRenderDossierSection(const string symbol)
 {
    string text = "";
    text += AC_Layer11DossierSection(symbol);
    text += AC_Layer12DossierSection(symbol);
    text += AC_Layer13DossierSection(symbol);
+   text += AC_Layer14DossierSection(symbol);
    text += AC_SharedOhlcRenderDossierSection(symbol);
    return text;
 }
 
 // Surgical render-composition bridge:
 // AC_Layer0DossierPublication.mqh already appends AC_SharedOhlcRenderDossierSection(symbol)
-// after L10. The macro below routes that single existing append through the L11+L12+L13+OHLC wrapper
-// so the Dossier receives L11/L12/L13 without a broad rewrite of the active Dossier owner.
-#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13AndSharedOhlcRenderDossierSection
+// after L10. The macro below routes that single existing append through the L11+L12+L13+L14+OHLC wrapper
+// so the Dossier receives L11/L12/L13/L14 without a broad rewrite of the active Dossier owner.
+#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14AndSharedOhlcRenderDossierSection
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
 
