@@ -1,0 +1,43 @@
+schema_name=aurora_trade_setup_packet
+schema_version=1
+packet_type=trade_setup
+reason_id=RID_YYYYMMDD_HHMMSS_SYMBOL_SIDE
+created_utc=YYYY-MM-DD HH:MM:SS UTC
+created_source=chatgpt_trader_chat
+account=18503
+server=Upcomers-Server
+symbol=SYMBOL
+side=buy
+declared_timeframe=M15
+planned_entry=unknown
+planned_sl=unknown
+planned_tp=unknown
+planned_risk_pct=unknown
+planned_risk_money=unknown
+setup_name=manual_review_setup
+setup_proof_level=UNTESTED
+trade_permission=false
+prop_firm_safe=false
+requires_manual_confirmation=true
+entry_zone_low=unknown
+entry_zone_high=unknown
+invalidation_price=unknown
+target_logic=unknown
+expected_r=unknown
+max_loss_money=unknown
+max_loss_pct=unknown
+account_equity_at_review=unknown
+source_market_board=unknown
+source_account_status=unknown
+source_dossier_symbol=unknown
+source_dossier_generated_time=unknown
+layer_context=unknown
+main_risk=unknown
+decision_summary=unknown
+reviewer=Jason plus ChatGPT trader review
+chat_reference=unknown
+
+[NOTES]
+Paste the trader-chat setup review here.
+Keep this honest: this is journal evidence, not permission and not edge proof.
+[/NOTES]
