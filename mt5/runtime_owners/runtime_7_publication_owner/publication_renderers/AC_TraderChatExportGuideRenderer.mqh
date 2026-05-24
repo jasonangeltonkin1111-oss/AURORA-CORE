@@ -3,7 +3,6 @@
 
 // Compact Board guide for trader-chat export discipline.
 // This is renderer text only. It does not create trade permission, setup permission, packet import, packet matching, or execution authority.
-// L17 is rendered natively inside AC_MarketBoardRenderer.mqh; this wrapper defines the trader overview and appends only the export guide.
 // Trader overview reads existing layer-owner outputs only. It must not calculate new scores, create routes, write files, permit, alert, or execute.
 
 string AC_TCSValueOrNA(string value)
@@ -50,11 +49,20 @@ string AC_TCSTop10RankText(const string symbol)
    return "#" + AC_TCSCsvField(row, 0, "NA");
 }
 
+string AC_TCSDeepText(const string symbol)
+{
+   string row = AC_L17CsvLineForSymbol(symbol);
+   if(row == "") return "No";
+   return "#" + AC_TCSCsvField(row, 0, "NA");
+}
+
 string AC_TCSCompactSymbolRow(const string rank_text,
                               const string symbol,
                               const string ranking_group,
-                              const string final_score,
-                              const string strength_score,
+                              const string score_label,
+                              const string score_value,
+                              const string source_score_label,
+                              const string source_score_value,
                               const string corr_score,
                               const string top10_text)
 {
@@ -63,29 +71,32 @@ string AC_TCSCompactSymbolRow(const string rank_text,
    string bps = (l6_row == "" ? "NA" : AC_TCSCsvField(l6_row, 9, "NA"));
    string move = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 37, "NA"));
    string loc = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 40, "NA"));
+   string deep_text = AC_TCSDeepText(symbol);
 
    return rank_text + " " + symbol
       + " | group=" + ranking_group
-      + " | final=" + final_score
-      + " | strength=" + strength_score
+      + " | " + score_label + "=" + score_value
+      + " | " + source_score_label + "=" + source_score_value
       + " | bps=" + bps
-      + " | spike=NA"
       + " | move=" + move
       + " | loc=" + loc
       + " | corr=" + corr_score
       + " | top10=" + top10_text
-      + " | atr=NA | ind=NA | liq=NA | setup=NA\r\n";
+      + " | deep=" + deep_text + "\r\n";
 }
 
 string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
 {
    AC_L16RefreshSummary();
+   AC_L17RefreshSummary();
    string text = "";
-   text += "\r\nGLOBAL TOP 10 - TRADER OVERVIEW\r\n";
+   text += "\r\nGLOBAL TOP 10 - INSPECTION ORDER\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Purpose: compact inspection order for trader chat; scores are source-owner values, not board calculations.\r\n";
-   text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | permission=false\r\n";
-   text += "Legend: final=inspection score | strength=candidate/source score | bps=spread cost bps | spike=spread spike score | move=movement score | loc=location score | corr=max correlation | NA=owner not active/exposed\r\n";
+   text += "Purpose: compact inspection order; scores are source-owner values, not board calculations.\r\n";
+   text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | deep=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5\r\n";
+   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | deep=L17 deep-evidence rank.\r\n";
+   text += "Inactive future owners: ATR, indicators, liquidity, setup.\r\n";
+   text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
    string csv = AC_L16ReadSmallTextFile(AC_L16Top10CsvPath(), 1000000);
    if(csv == "")
@@ -106,10 +117,10 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       string rank_text = "#" + AC_TCSCsvField(line, 0, "NA");
       string symbol = AC_TCSCsvField(line, 1, "NA");
       string ranking_group = AC_TCSCsvField(line, 3, "NA");
-      string final_score = AC_TCSCsvField(line, 7, "NA");
-      string strength_score = AC_TCSCsvField(line, 8, "NA");
+      string basket_score = AC_TCSCsvField(line, 7, "NA");
+      string source_score = AC_TCSCsvField(line, 8, "NA");
       string corr_score = AC_TCSCsvField(line, 13, "NA");
-      text += AC_TCSCompactSymbolRow(rank_text, symbol, ranking_group, final_score, strength_score, corr_score, rank_text);
+      text += AC_TCSCompactSymbolRow(rank_text, symbol, ranking_group, "basket", basket_score, "source", source_score, corr_score, rank_text);
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
@@ -121,11 +132,13 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
 {
    AC_L11RefreshSummary();
    AC_L13RefreshSummary();
+   AC_L17RefreshSummary();
    string text = "";
-   text += "\r\nTOP 5 PER SELECTED DYNAMIC GROUP\r\n";
+   text += "\r\nTOP 5 PER SELECTED GROUP\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
-   text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | permission=false\r\n";
+   text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | dynamic selected groups only\r\n";
+   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 basket membership | deep=L17 deep-evidence rank.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -160,16 +173,13 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
          StringReplace(row, "\r", "");
          if(row == "") continue;
          if(AC_TCSCsvField(row, 0, "") != ranking_group) continue;
-         // ranking_group_top5.csv schema:
-         // 0 ranking_group, 1 ranking_group_slug, 2 group_state, 3 rankable_count,
-         // 4 top_rank, 5 symbol, 6 l11_group_score, 7 rank_state, 8 leader_flag, 9 backup_flag, ...
          string symbol = AC_TCSCsvField(row, 5, "NA");
          string group_symbol_rank = AC_TCSCsvField(row, 4, "NA");
          string group_score_row = AC_TCSCsvField(row, 6, "NA");
          string top10_text = AC_TCSTop10RankText(symbol);
          string l16_row = AC_L16CsvLineForSymbol(symbol);
          string corr_score = (l16_row == "" ? "NA" : AC_TCSCsvField(l16_row, 13, "NA"));
-         text += AC_TCSCompactSymbolRow("#" + group_symbol_rank, symbol, ranking_group, group_score_row, group_score_row, corr_score, top10_text);
+         text += AC_TCSCompactSymbolRow("#" + group_symbol_rank, symbol, ranking_group, "group_score", group_score_row, "group_rank", "#" + group_symbol_rank, corr_score, top10_text);
          symbols_printed++;
       }
       if(symbols_printed == 0) text += "Rows: NA - no Top 5 rows found for this selected group.\r\n";
@@ -184,10 +194,10 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
 string AC_BoardTraderSelectionOverviewSection()
 {
    string text = "";
-   text += "\r\nTRADER SELECTION OVERVIEW\r\n";
+   text += "\r\nSELECTION DESK - TRADER VIEW\r\n";
    text += "==================================================\r\n";
    text += "Purpose: fast symbol quality cockpit for trader chat. Render-only; no score calculation, no new owner.\r\n";
-   text += "Future placeholders: ATR=NA, indicator=NA, liquidity/risk=NA, setup=NA until their owners exist.\r\n";
+   text += "Trade lock is declared once at the Board header; rows below are inspection order only.\r\n";
    text += AC_BoardGlobalTop10TraderOverviewSection(10);
    text += AC_BoardSelectedGroupsTop5TraderOverviewSection(7, 5);
    return text;
@@ -208,10 +218,24 @@ string AC_BoardTraderChatExportGuideSection()
    return text;
 }
 
+string AC_NormalizeTraderBoardText(string text)
+{
+   StringReplace(text, "Selection Surface:   L16 visible basket + L17 deep-evidence split; inspection only\r\n", "Selection Surface:   Latest accepted selection/evidence surface; see pipeline detail below\r\n");
+   StringReplace(text, "Use For Selection:    L16/L17 inspection surfaces only; no trade permission\r\n", "Use For Selection:    Latest selection/evidence surface is inspection-only; no trade permission\r\n");
+   StringReplace(text, "Best Current Use:     Review L17 deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n", "Best Current Use:     Review selected/deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n");
+   StringReplace(text, "Selection Active:   L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n", "Selection Active:   latest selection/evidence surfaces only; no trade permission\r\n");
+   StringReplace(text, "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n", "Latest accepted selection/evidence surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n");
+   StringReplace(text, "L23 Trade Permission:     false\r\n", "");
+   StringReplace(text, "Permission Active:  No\r\n", "");
+   return text;
+}
+
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
                                const AC_Layer0StatusPacket &status)
 {
-   return AC_BuildTraderBoardText_Base(snapshot, status) + AC_BoardTraderChatExportGuideSection();
+   string text = AC_BuildTraderBoardText_Base(snapshot, status);
+   text = AC_NormalizeTraderBoardText(text);
+   return text + AC_BoardTraderChatExportGuideSection();
 }
 
 #endif
