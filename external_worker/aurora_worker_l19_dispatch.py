@@ -5,9 +5,11 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l19 import L19PublishSummary, publish_l19_candle_geometry_and_structure
+from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
+from aurora_worker_selection_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_root_index
 
 
-def l19_result_lines(summary: L19PublishSummary, duration_ms: int) -> str:
+def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: SelectionSurfaceCleanupSummary = EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY) -> str:
     return "\n".join([
         f"l19_candle_geometry_status={summary.status}",
         f"l19_candle_geometry_reason={summary.reason}",
@@ -45,6 +47,14 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int) -> str:
         f"l19_status_path={summary.status_path}",
         f"l19_board_path={summary.board_path}",
         f"l19_layer_folder={summary.layer_folder}",
+        f"l19_final_cleanup_status={cleanup.status}",
+        f"l19_final_cleanup_reason={cleanup.reason}",
+        f"l19_final_cleanup_legacy_groups_removed={cleanup.legacy_groups_removed}",
+        f"l19_final_cleanup_legacy_global_removed={cleanup.legacy_global_removed}",
+        f"l19_final_cleanup_status_path={cleanup.status_path}",
+        f"l19_root_index_status={root_index.status}",
+        f"l19_root_index_reason={root_index.reason}",
+        f"l19_root_index_path={root_index.root_index_path}",
         "l19_scope=canonical_selection_shortcut_dossiers_only",
         "l19_source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
         "l19_rows_shown_per_tf=5",
@@ -84,16 +94,18 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
     paths.ensure()
     start_ns = time.perf_counter_ns()
     summary = publish_l19_candle_geometry_and_structure(root)
+    cleanup_summary = cleanup_legacy_selection_surface_paths(root)
+    root_index_summary = publish_selection_root_index(root)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l19_block(text, l19_result_lines(summary, duration_ms))
+        updated = _replace_or_append_l19_block(text, l19_result_lines(summary, duration_ms, cleanup_summary, root_index_summary))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=20",
+            "schema_version=21",
             "worker_l19_append_status=appended_by_l19_dispatch",
             f"l19_status={summary.status}",
             f"l19_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
@@ -106,6 +118,8 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
             f"l19_topview_cleanup_count={summary.topview_cleanup_count}",
             f"l19_status_path={summary.status_path}",
             f"l19_board_path={summary.board_path}",
+            f"l19_final_cleanup_status={cleanup_summary.status}",
+            f"l19_root_index_status={root_index_summary.status}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
