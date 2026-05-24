@@ -12,7 +12,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$ExpectedWorkerVersion = "0.6.15_l15_correlation_diversity"
+$ExpectedWorkerVersion = "0.6.17_l17_deep_evidence_selection"
 $WorkerVersion = $ExpectedWorkerVersion
 
 if (Test-Path $WorkerSource) {
