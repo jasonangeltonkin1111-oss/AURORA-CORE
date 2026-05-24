@@ -155,6 +155,7 @@ string AC_Layer14BoardSection()
    text += "Review Candidates:          " + IntegerToString(AC_L14_REVIEW_CANDIDATE_COUNT) + "\r\n";
    text += "Thin Fallback Candidates:   " + IntegerToString(AC_L14_THIN_FALLBACK_CANDIDATE_COUNT) + "\r\n";
    text += "Top Candidate:              " + AC_L14_TOP_CANDIDATE + "\r\n";
+   text += "Source Generated UTC:       " + AC_L14_GENERATED_UTC + "\r\n";
    text += "Candidate Pool Runtime:     FALSE\r\n";
    text += "Trade Permission:           FALSE\r\n";
    text += "Entry Signal:               FALSE\r\n";
@@ -201,10 +202,11 @@ string AC_Layer14DossierSection(const string symbol)
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L14_STATUS + "\r\n";
    text += "Owner: Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
+   text += "Source Generated UTC: " + AC_L14_GENERATED_UTC + "\r\n";
    if(row == "")
    {
       text += "Candidate Pool Member: FALSE\r\n";
-      text += "Reason: symbol not present in raw L14 candidate pool or L14 not accepted yet\r\n";
+      text += "Reason: symbol not present in latest raw L14 candidate pool, or L14 not accepted/readable yet\r\n";
    }
    else
    {
@@ -249,6 +251,7 @@ string AC_Layer14WorkbenchSection()
    text += "review_candidate_count=" + IntegerToString(AC_L14_REVIEW_CANDIDATE_COUNT) + "\r\n";
    text += "thin_fallback_candidate_count=" + IntegerToString(AC_L14_THIN_FALLBACK_CANDIDATE_COUNT) + "\r\n";
    text += "top_candidate=" + AC_L14_TOP_CANDIDATE + "\r\n";
+   text += "source_generated_utc=" + AC_L14_GENERATED_UTC + "\r\n";
    text += "summary_path=" + AC_L14SummaryPath() + "\r\n";
    text += "candidate_pool_path=" + AC_L14CandidateCsvPath() + "\r\n";
    text += "selection_desk_candidate_pool_path=" + AC_L14SelectionDeskPath() + "\r\n";
