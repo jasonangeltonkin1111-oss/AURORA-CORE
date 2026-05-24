@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "trade_journal_route_scaffold";
-static const string AC_BUILD_VERSION      = "1.067";
-static const string AC_UPGRADE_ID         = "TRADE_JOURNAL_ROUTE_SCAFFOLD";
-static const string AC_UPGRADE_SUMMARY    = "Adds Trade Journal Import and Trade History route constants for one-file-per-trade forensic bookkeeping. This is route/source scaffold only: no trade-history generator, no setup-packet matcher, no OnTradeTransaction capture, no trade permission, no selection permission, and no execution permission is added.";
-static const string AC_UPGRADE_SCOPE      = "Publication/FileIO/Route Service route scaffold only. MT5 remains broker-truth and final publication authority. External worker remains calculation_support_only and must not become trade-history truth, broker polling, trade permission, or execution authority. Historical trade motive remains unknown unless a setup packet, reason id, magic/comment tag, or live capture proves it.";
-static const string AC_UPGRADE_TEST_PLAN  = "No compile/runtime proof is claimed by source patch alone. Compile must confirm build_version=1.067. Runtime proof must confirm Trade Journal Import and Trade History folders are created under the active server/account route without disrupting existing Dossiers, Selection Desk, Market Board, Account Status, Workbench, or Gateway routes. No trade journal file generation is claimed until a later bounded owner patch prints one verified file.";
-static const string AC_LOGGING_POLICY     = "event_boundary_trade_journal_route_scaffold_no_duplicate_owner_no_permission";
+static const string AC_BUILD_PHASE        = "trade_journal_historical_mvp_truth_cleanup";
+static const string AC_BUILD_VERSION      = "1.068";
+static const string AC_UPGRADE_ID         = "TRADE_JOURNAL_HISTORICAL_MVP_TRUTH_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Promotes the Trade Journal from route scaffold to bounded historical MVP truth-cleanup status. The system can publish one-file-per-trade Before Aurora reconstructed journals from Layer 1 selected closed rows. Board trader-chat export guide remains renderer-only. No setup-packet importer, packet matcher, OnTradeTransaction live capture, trade permission, selection permission, prop-firm safety approval, or execution permission is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 Trade Journal support owner may write Before Aurora reconstructed journal files from existing Layer 1 selected closed history only. It must not run its own all-time history scan, infer trade motive, infer timeframe, claim live layer-at-entry state, parse setup packets, match packets, capture live transactions, grant permission, or execute. MT5 remains broker-truth and final publication authority. External worker remains calculation_support_only and must not become trade-history truth, broker polling, trade permission, or execution authority.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.068. Runtime proof must confirm existing Trade Journal Import and Trade History folders remain present, Board includes TRADER CHAT EXPORT GUIDE, Before Aurora trade journal files remain one-file-per-trade and truth-labelled, Workbench uses historical_files_written_this_pass rather than fake total wording, and existing Dossiers, Selection Desk, Market Board, Account Status, Workbench, and Gateway routes remain unaffected. No packet import, matching, live capture, or permission is claimed.";
+static const string AC_LOGGING_POLICY     = "event_boundary_trade_journal_historical_mvp_truth_cleanup_no_duplicate_owner_no_permission";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.067_trade_journal_route_scaffold";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.068_trade_journal_historical_mvp_truth_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
