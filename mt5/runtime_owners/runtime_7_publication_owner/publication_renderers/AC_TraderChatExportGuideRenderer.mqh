@@ -53,8 +53,10 @@ string AC_TCSTop10RankText(const string symbol)
 string AC_TCSCompactSymbolRow(const string rank_text,
                               const string symbol,
                               const string ranking_group,
-                              const string final_score,
-                              const string strength_score,
+                              const string score_label,
+                              const string score_value,
+                              const string source_score_label,
+                              const string source_score_value,
                               const string corr_score,
                               const string top10_text)
 {
@@ -66,8 +68,8 @@ string AC_TCSCompactSymbolRow(const string rank_text,
 
    return rank_text + " " + symbol
       + " | group=" + ranking_group
-      + " | final=" + final_score
-      + " | strength=" + strength_score
+      + " | " + score_label + "=" + score_value
+      + " | " + source_score_label + "=" + source_score_value
       + " | bps=" + bps
       + " | spike=NA"
       + " | move=" + move
@@ -85,7 +87,8 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
    text += "--------------------------------------------------\r\n";
    text += "Purpose: compact inspection order for trader chat; scores are source-owner values, not board calculations.\r\n";
    text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | permission=false\r\n";
-   text += "Legend: final=inspection score | strength=candidate/source score | bps=spread cost bps | spike=spread spike score | move=movement score | loc=location score | corr=max correlation | NA=owner not active/exposed\r\n";
+   text += "Legend: basket=Global Top 10 inspection score | source=candidate/source score | bps=spread cost bps | spike=spread spike score | move=movement score | loc=location score | corr=max correlation | NA=owner not active/exposed\r\n";
+   text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
    string csv = AC_L16ReadSmallTextFile(AC_L16Top10CsvPath(), 1000000);
    if(csv == "")
@@ -106,10 +109,10 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       string rank_text = "#" + AC_TCSCsvField(line, 0, "NA");
       string symbol = AC_TCSCsvField(line, 1, "NA");
       string ranking_group = AC_TCSCsvField(line, 3, "NA");
-      string final_score = AC_TCSCsvField(line, 7, "NA");
-      string strength_score = AC_TCSCsvField(line, 8, "NA");
+      string basket_score = AC_TCSCsvField(line, 7, "NA");
+      string source_score = AC_TCSCsvField(line, 8, "NA");
       string corr_score = AC_TCSCsvField(line, 13, "NA");
-      text += AC_TCSCompactSymbolRow(rank_text, symbol, ranking_group, final_score, strength_score, corr_score, rank_text);
+      text += AC_TCSCompactSymbolRow(rank_text, symbol, ranking_group, "basket", basket_score, "source", source_score, corr_score, rank_text);
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
@@ -126,6 +129,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
    text += "--------------------------------------------------\r\n";
    text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
    text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | permission=false\r\n";
+   text += "Legend: group_score=Symbol Ranking Inside Ranking Group score | group_rank=rank inside selected dynamic group | top10=Global Top 10 membership.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -169,7 +173,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
          string top10_text = AC_TCSTop10RankText(symbol);
          string l16_row = AC_L16CsvLineForSymbol(symbol);
          string corr_score = (l16_row == "" ? "NA" : AC_TCSCsvField(l16_row, 13, "NA"));
-         text += AC_TCSCompactSymbolRow("#" + group_symbol_rank, symbol, ranking_group, group_score_row, group_score_row, corr_score, top10_text);
+         text += AC_TCSCompactSymbolRow("#" + group_symbol_rank, symbol, ranking_group, "group_score", group_score_row, "group_rank", "#" + group_symbol_rank, corr_score, top10_text);
          symbols_printed++;
       }
       if(symbols_printed == 0) text += "Rows: NA - no Top 5 rows found for this selected group.\r\n";
