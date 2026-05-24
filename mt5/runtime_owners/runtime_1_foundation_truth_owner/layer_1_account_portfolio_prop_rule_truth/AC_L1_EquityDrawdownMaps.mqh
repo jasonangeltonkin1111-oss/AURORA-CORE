@@ -106,6 +106,7 @@ string AC_L1EquityDrawdownRecoveryMap()
       : IntegerToString(max_dd_start_trade_rank) + " to " + IntegerToString(max_dd_low_trade_rank) + " chronological ranks");
 
    string text = AC_L1MapHeader("EQUITY / DRAWDOWN RECOVERY MAP");
+   text += "section_id:             L1_EQUITY_DRAWDOWN_RECOVERY\r\n";
    text += "Scope:                  selected closed history only; open equity shown separately by live exposure maps\r\n";
    text += "Rows:                   " + IntegerToString(rows) + "\r\n";
    text += "Start Equity Estimate:  " + AC_L1MoneyText(start_equity_est) + "\r\n";

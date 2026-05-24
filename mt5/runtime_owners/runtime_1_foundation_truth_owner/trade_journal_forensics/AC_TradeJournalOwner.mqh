@@ -5,17 +5,22 @@
 // Runtime 1 support bookkeeping/forensics only.
 // MVP historical generator uses Layer 1 selected closed rows only.
 // It does not run its own all-time history scan.
+// It does not call CopyRates.
+// It may copy a bounded trade-duration OHLC slice from the existing Shared OHLC Raw Store files.
+// It may rewrite one existing historical journal per pass only when that file lacks the current OHLC context marker.
 // It does not parse setup packets yet.
 // It does not match packets to trades yet.
 // It does not use OnTradeTransaction yet.
 // It grants no trade permission, no execution permission, no setup permission, and no prop-firm safety approval.
 
 static const string AC_TRADE_JOURNAL_OWNER_NAME = "Runtime 1 - Trade Journal / Trade Forensics Support Owner";
-static const string AC_TRADE_JOURNAL_SCHEMA_VERSION = "trade_journal_status_v1.067";
+static const string AC_TRADE_JOURNAL_SCHEMA_VERSION = "trade_journal_status_v1.070_shared_ohlc_slice";
 static const string AC_TRADE_JOURNAL_AUTHORITY = "bookkeeping_forensics_status_only_no_permission_no_execution";
 static const string AC_TRADE_JOURNAL_STATUS_SKELETON = "skeleton_source_present_historical_mvp_available";
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_WRITES_PER_PASS = 1;
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_ROWS_INSPECTED_PER_PASS = 12;
+static const int    AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS = 240;
+static const string AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER = "TRADE DURATION OHLC CONTEXT";
 
 struct AC_TradeJournalStatusPacket
 {
@@ -32,7 +37,7 @@ struct AC_TradeJournalStatusPacket
    bool   trade_permission;
    bool   execution_permission;
    bool   prop_firm_safety;
-   int    historical_files_written_total;
+   int    historical_files_written_this_pass;
    int    packets_seen_total;
    int    packets_rejected_total;
    int    packets_orphaned_total;
@@ -114,6 +119,213 @@ string AC_TradeJournalClosedTradePath(const AC_L1ClosedTradeRow &row)
    return AC_TradeJournalClosedTradeBaseFolder(row) + "\\" + AC_TradeJournalFilenameTime(basis_time) + "_" + symbol_part + "_" + side_part + "_" + id_part + ".txt";
 }
 
+string AC_TradeJournalSharedOhlcSymbolFolder(const string symbol)
+{
+   return AC_BASE_FOLDER + "\\" + AC_ServerNameForRoute() + "\\Shared Market Data\\OHLC Store\\Symbols\\" + AC_SanitizePathPart(symbol);
+}
+
+string AC_TradeJournalSharedOhlcSeedPath(const string symbol, const string timeframe_label)
+{
+   return AC_TradeJournalSharedOhlcSymbolFolder(symbol) + "\\" + timeframe_label + ".seed.csv";
+}
+
+string AC_TradeJournalSharedOhlcAppendPath(const string symbol, const string timeframe_label)
+{
+   return AC_TradeJournalSharedOhlcSymbolFolder(symbol) + "\\" + timeframe_label + ".append.csv";
+}
+
+int AC_TradeJournalOhlcTfSeconds(const string timeframe_label)
+{
+   if(timeframe_label == "M1") return 60;
+   if(timeframe_label == "M5") return 300;
+   if(timeframe_label == "M15") return 900;
+   if(timeframe_label == "M30") return 1800;
+   if(timeframe_label == "H1") return 3600;
+   if(timeframe_label == "H4") return 14400;
+   if(timeframe_label == "D1") return 86400;
+   return 60;
+}
+
+bool AC_TradeJournalOhlcRowOverlapsTrade(const string line,
+                                         const datetime entry_time,
+                                         const datetime close_time,
+                                         const int timeframe_seconds)
+{
+   int comma = StringFind(line, ",");
+   if(comma <= 0)
+      return false;
+
+   string bar_time_text = StringSubstr(line, 0, comma);
+   long bar_time_long = (long)StringToInteger(bar_time_text);
+   if(bar_time_long <= 0)
+      return false;
+
+   long entry_long = (long)entry_time;
+   long close_long = (long)close_time;
+   long bar_end = bar_time_long + timeframe_seconds;
+
+   return (bar_time_long <= close_long && bar_end >= entry_long);
+}
+
+bool AC_TradeJournalLineIsOhlcDataRow(const string line)
+{
+   if(line == "") return false;
+   if(StringFind(line, "#") == 0) return false;
+   if(StringFind(line, "bar_time") == 0) return false;
+   return (StringFind(line, ",") > 0);
+}
+
+int AC_TradeJournalAppendSharedOhlcFileSlice(const string path,
+                                             const datetime entry_time,
+                                             const datetime close_time,
+                                             const string timeframe_label,
+                                             int &remaining_rows,
+                                             string &rows_text,
+                                             string &source_detail)
+{
+   if(remaining_rows <= 0)
+      return 0;
+
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(!FileIsExist(path, common_flag))
+   {
+      if(source_detail != "") source_detail += ";";
+      source_detail += path + "=missing";
+      return 0;
+   }
+
+   ResetLastError();
+   int handle = FileOpen(path, FILE_READ | FILE_TXT | FILE_ANSI | common_flag);
+   if(handle == INVALID_HANDLE)
+   {
+      if(source_detail != "") source_detail += ";";
+      source_detail += path + "=open_failed_error_" + IntegerToString(GetLastError());
+      return 0;
+   }
+
+   int copied = 0;
+   int scanned = 0;
+   int tf_seconds = AC_TradeJournalOhlcTfSeconds(timeframe_label);
+
+   while(!FileIsEnding(handle) && remaining_rows > 0)
+   {
+      string line = FileReadString(handle);
+      if(!AC_TradeJournalLineIsOhlcDataRow(line))
+         continue;
+      scanned++;
+      if(!AC_TradeJournalOhlcRowOverlapsTrade(line, entry_time, close_time, tf_seconds))
+         continue;
+
+      rows_text += line + "\r\n";
+      copied++;
+      remaining_rows--;
+   }
+
+   FileClose(handle);
+
+   if(source_detail != "") source_detail += ";";
+   source_detail += path + "=read_scanned_" + IntegerToString(scanned) + "_copied_" + IntegerToString(copied);
+   return copied;
+}
+
+bool AC_TradeJournalExistingFileContainsMarker(const string path, const string marker)
+{
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(!FileIsExist(path, common_flag))
+      return false;
+
+   ResetLastError();
+   int handle = FileOpen(path, FILE_READ | FILE_TXT | FILE_ANSI | common_flag);
+   if(handle == INVALID_HANDLE)
+      return false;
+
+   bool found = false;
+   while(!FileIsEnding(handle))
+   {
+      string line = FileReadString(handle);
+      if(StringFind(line, marker) >= 0)
+      {
+         found = true;
+         break;
+      }
+   }
+   FileClose(handle);
+   return found;
+}
+
+string AC_TradeJournalSharedOhlcSliceText(const string symbol,
+                                          const datetime entry_time,
+                                          const datetime close_time)
+{
+   string text = "TRADE DURATION OHLC CONTEXT\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "ohlc_context_type=shared_store_bar_slice_not_tick_replay\r\n";
+   text += "ohlc_owner=Runtime 1 Shared OHLC Raw Storage Owner\r\n";
+   text += "source_policy=read_existing_shared_ohlc_files_only_no_copyrates\r\n";
+   text += "copyrates_used=false\r\n";
+   text += "preferred_timeframe=M1\r\n";
+   text += "fallback_timeframe=M5\r\n";
+   text += "entry_time_broker=" + AC_TradeJournalDateText(entry_time) + "\r\n";
+   text += "close_time_broker=" + AC_TradeJournalDateText(close_time) + "\r\n";
+   text += "price_encoding=integer_points_as_stored_by_shared_ohlc_owner\r\n";
+   text += "columns=bar_time,open_i,high_i,low_i,close_i,tick_volume,spread,real_volume\r\n";
+   text += "max_rows=" + IntegerToString(AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS) + "\r\n";
+
+   if(symbol == "" || entry_time <= 0 || close_time <= 0)
+   {
+      text += "slice_status=blocked_missing_symbol_or_trade_times\r\n";
+      text += "[OHLC_ROWS_BEGIN]\r\n[OHLC_ROWS_END]\r\n\r\n";
+      return text;
+   }
+
+   datetime effective_close = close_time;
+   if(effective_close < entry_time)
+   {
+      text += "slice_status=blocked_close_before_entry\r\n";
+      text += "[OHLC_ROWS_BEGIN]\r\n[OHLC_ROWS_END]\r\n\r\n";
+      return text;
+   }
+
+   string rows_text = "";
+   string source_detail = "";
+   int remaining_rows = AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS;
+   int copied_m1 = 0;
+   int copied_m5 = 0;
+
+   copied_m1 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcSeedPath(symbol, "M1"), entry_time, effective_close, "M1", remaining_rows, rows_text, source_detail);
+   copied_m1 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcAppendPath(symbol, "M1"), entry_time, effective_close, "M1", remaining_rows, rows_text, source_detail);
+
+   string timeframe_used = "M1";
+   int copied_total = copied_m1;
+   if(copied_total <= 0)
+   {
+      remaining_rows = AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS;
+      rows_text = "";
+      source_detail += ";fallback_to_M5";
+      copied_m5 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcSeedPath(symbol, "M5"), entry_time, effective_close, "M5", remaining_rows, rows_text, source_detail);
+      copied_m5 += AC_TradeJournalAppendSharedOhlcFileSlice(AC_TradeJournalSharedOhlcAppendPath(symbol, "M5"), entry_time, effective_close, "M5", remaining_rows, rows_text, source_detail);
+      timeframe_used = "M5";
+      copied_total = copied_m5;
+   }
+
+   string slice_status = "";
+   if(copied_total > 0 && remaining_rows <= 0)
+      slice_status = "copied_from_shared_store_truncated_row_cap";
+   else if(copied_total > 0)
+      slice_status = "copied_from_shared_store";
+   else
+      slice_status = "no_rows_in_trade_duration_or_shared_store_missing";
+
+   text += "timeframe_used=" + timeframe_used + "\r\n";
+   text += "slice_status=" + slice_status + "\r\n";
+   text += "bar_count=" + IntegerToString(copied_total) + "\r\n";
+   text += "source_files=" + source_detail + "\r\n";
+   text += "[OHLC_ROWS_BEGIN]\r\n";
+   text += rows_text;
+   text += "[OHLC_ROWS_END]\r\n\r\n";
+   return text;
+}
+
 void AC_TradeJournalResetStatus()
 {
    AC_TRADE_JOURNAL_STATUS.owner_name = AC_TRADE_JOURNAL_OWNER_NAME;
@@ -129,7 +341,7 @@ void AC_TradeJournalResetStatus()
    AC_TRADE_JOURNAL_STATUS.trade_permission = false;
    AC_TRADE_JOURNAL_STATUS.execution_permission = false;
    AC_TRADE_JOURNAL_STATUS.prop_firm_safety = false;
-   AC_TRADE_JOURNAL_STATUS.historical_files_written_total = 0;
+   AC_TRADE_JOURNAL_STATUS.historical_files_written_this_pass = 0;
    AC_TRADE_JOURNAL_STATUS.packets_seen_total = 0;
    AC_TRADE_JOURNAL_STATUS.packets_rejected_total = 0;
    AC_TRADE_JOURNAL_STATUS.packets_orphaned_total = 0;
@@ -212,6 +424,8 @@ string AC_TradeJournalRenderBeforeAuroraTrade(const AC_L1ClosedTradeRow &row)
    text += "net_result=" + DoubleToString(row.net_result, 2) + "\r\n";
    text += "close_reason=" + IntegerToString(row.close_reason) + "\r\n\r\n";
 
+   text += AC_TradeJournalSharedOhlcSliceText(row.symbol, row.entry_time, row.close_time);
+
    text += "ORDER / DEAL / POSITION GROUPING\r\n";
    text += "--------------------------------------------------\r\n";
    text += "source_quality=" + AC_TradeJournalSafeText(row.source_quality) + "\r\n";
@@ -240,6 +454,7 @@ string AC_TradeJournalRenderBeforeAuroraTrade(const AC_L1ClosedTradeRow &row)
    text += "WHAT AURORA CAN HONESTLY SAY\r\n";
    text += "--------------------------------------------------\r\n";
    text += "- MT5/Layer1 selected history supplied the trade facts above.\r\n";
+   text += "- Shared OHLC rows, when present, are copied from the existing raw store only and are bar-level context, not tick replay.\r\n";
    text += "- This is a historical forensic record, not proof of motive or edge.\r\n";
    text += "- Costs/result fields are limited by the Layer 1 reconstruction quality fields.\r\n\r\n";
 
@@ -248,12 +463,14 @@ string AC_TradeJournalRenderBeforeAuroraTrade(const AC_L1ClosedTradeRow &row)
    text += "- Aurora cannot prove why this trade was taken.\r\n";
    text += "- Aurora cannot prove the timeframe used.\r\n";
    text += "- Aurora cannot prove live layer state at entry.\r\n";
+   text += "- OHLC context cannot prove setup logic, edge, or execution quality by itself.\r\n";
    text += "- Aurora cannot claim trade permission, prop-firm safety, or proven edge.\r\n\r\n";
 
    text += "PROOF / QUALITY LEDGER\r\n";
    text += "--------------------------------------------------\r\n";
    text += "mt5_facts=layer1_selected_history_row\r\n";
    text += "history_grouping=" + AC_TradeJournalSafeText(row.paired_entry_status) + "\r\n";
+   text += "ohlc_duration_context=read_existing_shared_store_only_no_copyrates\r\n";
    text += "live_capture=unavailable_before_Aurora\r\n";
    text += "setup_packet=unavailable\r\n";
    text += "timeframe=unknown\r\n";
@@ -315,7 +532,7 @@ bool AC_TradeJournalPublishOneHistoricalTrade()
       }
 
       string final_path = AC_TradeJournalClosedTradePath(row);
-      if(FileIsExist(final_path, common_flag))
+      if(FileIsExist(final_path, common_flag) && AC_TradeJournalExistingFileContainsMarker(final_path, AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER))
          continue;
 
       string content = AC_TradeJournalRenderBeforeAuroraTrade(row);
@@ -328,13 +545,13 @@ bool AC_TradeJournalPublishOneHistoricalTrade()
       }
 
       written++;
-      AC_TRADE_JOURNAL_STATUS.historical_files_written_total++;
+      AC_TRADE_JOURNAL_STATUS.historical_files_written_this_pass++;
    }
 
    if(written > 0)
-      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_wrote_before_aurora_file";
+      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_wrote_or_upgraded_before_aurora_file";
    else if(AC_TRADE_JOURNAL_STATUS.historical_generator_status == "waiting_for_layer1_selected_history")
-      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_no_new_file_this_pass";
+      AC_TRADE_JOURNAL_STATUS.historical_generator_status = "mvp_no_new_or_upgrade_file_this_pass";
 
    AC_TRADE_JOURNAL_STATUS.status = "historical_mvp_active_bounded";
    AC_TRADE_JOURNAL_STATUS.last_service_duration_ms = GetTickCount() - start_ms;
@@ -352,7 +569,9 @@ string AC_TradeJournalStatusRow(const AC_TradeJournalStatusPacket &status)
    row += "|live_capture=" + status.live_capture_status;
    row += "|packet_import=" + status.packet_import_status;
    row += "|packet_matching=" + status.packet_matching_status;
-   row += "|historical_files_written_total=" + IntegerToString(status.historical_files_written_total);
+   row += "|historical_files_written_this_pass=" + IntegerToString(status.historical_files_written_this_pass);
+   row += "|ohlc_duration_context=read_existing_shared_store_only";
+   row += "|ohlc_copyrates_used=false";
    row += "|packets_seen_total=" + IntegerToString(status.packets_seen_total);
    row += "|packets_rejected_total=" + IntegerToString(status.packets_rejected_total);
    row += "|packets_orphaned_total=" + IntegerToString(status.packets_orphaned_total);
@@ -375,10 +594,11 @@ string AC_TradeJournalWorkbenchSection(const AC_TradeJournalStatusPacket &status
    text += "Authority: " + status.authority + "\r\n";
    text += "Route Status: " + status.route_status + "\r\n";
    text += "Historical Generator: " + status.historical_generator_status + "\r\n";
+   text += "OHLC Duration Context: read existing Shared OHLC Store files only; CopyRates used here: FALSE\r\n";
    text += "Live Capture: " + status.live_capture_status + "\r\n";
    text += "Packet Import: " + status.packet_import_status + "\r\n";
    text += "Packet Matching: " + status.packet_matching_status + "\r\n";
-   text += "Historical Files Written This Pass: " + IntegerToString(status.historical_files_written_total) + "\r\n";
+   text += "Historical Files Written This Pass: " + IntegerToString(status.historical_files_written_this_pass) + "\r\n";
    text += "Packets Seen / Rejected / Orphaned / Matched: "
       + IntegerToString(status.packets_seen_total) + " / "
       + IntegerToString(status.packets_rejected_total) + " / "
@@ -387,7 +607,7 @@ string AC_TradeJournalWorkbenchSection(const AC_TradeJournalStatusPacket &status
    text += "Trade Permission: FALSE\r\n";
    text += "Execution Permission: FALSE\r\n";
    text += "Prop Firm Safety: FALSE\r\n";
-   text += "Contract: historical MVP writes Before Aurora reconstructed files only; no old-trade motive reconstruction, no packet matching, no permission, no execution.\r\n";
+   text += "Contract: historical MVP writes Before Aurora reconstructed files only; OHLC context is copied from existing Shared OHLC store files only; no old-trade motive reconstruction, no packet matching, no permission, no execution.\r\n";
    if(status.last_error != "")
       text += "Last Error: " + status.last_error + "\r\n";
    return text;

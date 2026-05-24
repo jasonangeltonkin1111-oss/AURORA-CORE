@@ -64,6 +64,7 @@ string AC_L1RReadinessMap()
    double geometry_pct = (rows_total > 0 ? ((double)rows_with_valid_risk_geometry * 100.0) / rows_total : 0.0);
 
    string text = AC_L1MapHeader("R READINESS MAP");
+   text += "section_id:             L1_R_READINESS\r\n";
    text += "Purpose:                input readiness summary for the money-risk and R diagnostic maps\r\n";
    text += "Selected Closed Rows:   " + IntegerToString(rows_total) + "\r\n";
    text += "Rows With Entry Truth:  " + IntegerToString(rows_with_entry) + " / " + IntegerToString(rows_total) + " (" + AC_L1PercentText(entry_pct) + ")\r\n";
