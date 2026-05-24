@@ -332,7 +332,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "gateway_popup_alerts=false\r\n";
    diagnostics += "gateway_core_blocking=false\r\n";
    diagnostics += AC_TradeJournalStatusText();
-   diagnostics += "trade_journal_owner_contract=bookkeeping_forensics_only_no_history_generator_no_packet_import_no_matching_no_live_capture_no_permission_no_execution\r\n";
+   diagnostics += "trade_journal_owner_contract=bookkeeping_forensics_historical_mvp_one_file_per_trade_read_existing_shared_ohlc_only_no_packet_import_no_matching_no_live_capture_no_permission_no_execution\r\n";
    diagnostics += "layer1_scan_status=" + AC_L1_SCAN_STATUS + "\r\n";
    diagnostics += "layer1_scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS) + "\r\n";
    diagnostics += "layer2_scan_status=" + AC_L2_SCAN_STATUS + "\r\n";
@@ -402,7 +402,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "universe_lookup_contract_status=" + AC_UniverseContractStatus() + "\r\n";
    diagnostics += AC_UniverseDiagnosticsText();
    diagnostics += "logging_policy=" + AC_LOGGING_POLICY + "\r\n";
-   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_basic_system_gate_plus_trade_journal_skeleton_status_only_plus_runtime3_gateway_foundation_no_history_generator_no_packet_matching_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
+   diagnostics += "scope_check=L0_cached_universe_plus_L1_account_history_plus_L2_market_state_owner_gate_plus_L3_broker_specs_value_owner_gate_plus_L4_live_marketwatch_owner_gate_plus_L5_basic_system_gate_plus_trade_journal_historical_mvp_shared_ohlc_context_only_plus_runtime3_gateway_foundation_no_packet_import_no_matching_no_live_capture_no_dom_no_ranking_no_selection_no_strategy_no_execution\r\n";
    phase_start = GetTickCount();
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
