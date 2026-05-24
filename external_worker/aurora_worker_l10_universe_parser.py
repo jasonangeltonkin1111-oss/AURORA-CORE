@@ -6,7 +6,7 @@ from typing import Iterable, List, Tuple
 from aurora_worker_l10_schema import (
     L10_RUNTIME2_ROW_FIELD_COUNT,
     L10_RUNTIME2_ROW_FIELDS,
-    L10_RUNTIME_PERMISSION_LOOKUP_ONLY,
+    L10_SAFE_RUNTIME_PERMISSIONS,
 )
 from aurora_worker_l10_normalize import normalize_symbol_text, canonical_symbol_root
 
@@ -96,7 +96,7 @@ def l10_parse_universe_row(raw_row: str, row_index: int) -> Tuple[L10UniverseTax
         return None, L10InvalidUniverseRow(row_index, "missing_required_fields=" + ",".join(missing), field_count, raw_row)
 
     runtime_permission = _clean(data.get("runtime_permission"))
-    if runtime_permission != L10_RUNTIME_PERMISSION_LOOKUP_ONLY:
+    if runtime_permission not in L10_SAFE_RUNTIME_PERMISSIONS:
         return None, L10InvalidUniverseRow(row_index, f"invalid_runtime_permission={runtime_permission}", field_count, raw_row)
 
     broker_symbol = _clean(data.get("broker_symbol"))
