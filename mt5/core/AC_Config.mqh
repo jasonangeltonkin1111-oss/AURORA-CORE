@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "trade_journal_historical_mvp_truth_cleanup";
-static const string AC_BUILD_VERSION      = "1.068";
-static const string AC_UPGRADE_ID         = "TRADE_JOURNAL_HISTORICAL_MVP_TRUTH_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Promotes the Trade Journal from route scaffold to bounded historical MVP truth-cleanup status. The system can publish one-file-per-trade Before Aurora reconstructed journals from Layer 1 selected closed rows. Board trader-chat export guide remains renderer-only. No setup-packet importer, packet matcher, OnTradeTransaction live capture, trade permission, selection permission, prop-firm safety approval, or execution permission is added.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 Trade Journal support owner may write Before Aurora reconstructed journal files from existing Layer 1 selected closed history only. It must not run its own all-time history scan, infer trade motive, infer timeframe, claim live layer-at-entry state, parse setup packets, match packets, capture live transactions, grant permission, or execute. MT5 remains broker-truth and final publication authority. External worker remains calculation_support_only and must not become trade-history truth, broker polling, trade permission, or execution authority.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.068. Runtime proof must confirm existing Trade Journal Import and Trade History folders remain present, Board includes TRADER CHAT EXPORT GUIDE, Before Aurora trade journal files remain one-file-per-trade and truth-labelled, Workbench uses historical_files_written_this_pass rather than fake total wording, and existing Dossiers, Selection Desk, Market Board, Account Status, Workbench, and Gateway routes remain unaffected. No packet import, matching, live capture, or permission is claimed.";
-static const string AC_LOGGING_POLICY     = "event_boundary_trade_journal_historical_mvp_truth_cleanup_no_duplicate_owner_no_permission";
+static const string AC_BUILD_PHASE        = "board_dossier_l16_render_truth_cleanup";
+static const string AC_BUILD_VERSION      = "1.069";
+static const string AC_UPGRADE_ID         = "BOARD_DOSSIER_L16_RENDER_TRUTH_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Cleans Board and Dossier publication surfaces for the L16 inspection-basket era. Dossier shell schema is bumped so cached Dossiers rewrite and expose current top-view, L16 current selection truth, and no-permission language. No scoring, worker authority, trade permission, alert permission, execution permission, FileIO owner, route owner, or L17 implementation is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces only. Board and Dossier may display L16 Global Top 10 inspection-basket truth, selected/rejected meaning, layout/cache proof, and current no-go language. L16 remains inspection-only. L17 is not implemented here. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, or FileIO authority.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.069. Runtime proof must include fresh Market Board, one L16 selected Dossier, and one non-selected Dossier. Board must show L16 as inspection-only, trade_permission=false, and no alert/execution language. Dossiers must rewrite under the bumped shell schema and show SYMBOL TOP VIEW, SCORE CARD, PIPELINE POSITION, RISK / BLOCKER CARD, L16 CURRENT SELECTION TRUTH, full L11-L16 detail, and NO GO. No L17 output is expected.";
+static const string AC_LOGGING_POLICY     = "event_boundary_board_dossier_l16_render_cleanup_no_permission_no_l17";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.068_trade_journal_historical_mvp_truth_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.069_board_dossier_l16_render_truth_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
