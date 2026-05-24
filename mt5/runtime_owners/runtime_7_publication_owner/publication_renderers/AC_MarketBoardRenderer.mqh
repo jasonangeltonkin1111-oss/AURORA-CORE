@@ -38,6 +38,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 11: Symbol Ranking Inside Ranking Group\r\n";
    text += "Layer 12: Ranking Group Heat / Quality\r\n";
    text += "Layer 13: Dynamic Ranking Group Selection\r\n";
+   text += "Layer 14: Ranking Group Leader Candidate Pool\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
@@ -51,6 +52,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_Layer11BoardSection();
    text += AC_Layer12BoardSection();
    text += AC_Layer13BoardSection();
+   text += AC_Layer14BoardSection();
    text += AC_SharedOhlcRenderBoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
@@ -65,26 +67,27 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Symbol Ranking:     " + AC_L11_STATUS + "\r\n";
    text += "Group Heat Quality: " + AC_L12_STATUS + "\r\n";
    text += "Group Selection:    " + AC_L13_STATUS + "\r\n";
+   text += "Candidate Pool:     " + AC_L14_STATUS + "\r\n";
    text += "OHLC Raw Store:     " + AC_SHARED_OHLC_STATUS + "\r\n";
-   text += "Selection Active:   Group attention only; no symbol basket\r\n";
+   text += "Selection Active:   Raw candidate pool only; no diversification or Global Top 10\r\n";
    text += "Permission Active:  No\r\n";
    text += "\r\n";
    text += "TRUST BLOCKER\r\n";
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 5 remains the only hard gate.\r\n";
+   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 14 builds a raw candidate pool only; Layer 5 remains the only hard gate.\r\n";
    text += "Shared OHLC is raw storage only; no strategy, selection, or permission authority.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
    text += "----------------------------------------\r\n";
    text += "Board refresh is atomic and writes only when state text changes.\r\n";
-   text += "Group selection may exist for inspection; no symbol basket, alerts, or trade permission exists.\r\n";
+   text += "Candidate pool may exist for inspection; no correlation filter, Global Top 10, alerts, or trade permission exists.\r\n";
    return text;
 }
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.15|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.16|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -118,11 +121,12 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l11_status=" + AC_L11_STATUS
       + "|cached_l12_status=" + AC_L12_STATUS
       + "|cached_l13_status=" + AC_L13_STATUS
+      + "|cached_l14_status=" + AC_L14_STATUS
       + "|shared_ohlc_status=" + AC_SHARED_OHLC_STATUS
       + "|shared_ohlc_mode=" + AC_SHARED_OHLC_MODE
       + "|shared_ohlc_seed_complete=" + (AC_SHARED_OHLC_BOOT_SEED_COMPLETE ? "true" : "false")
       + "|main_blocker=" + status.main_blocker
-      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED || AC_L10_ACCEPTED || AC_L11_ACCEPTED || AC_L12_ACCEPTED || AC_L13_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
+      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED || AC_L10_ACCEPTED || AC_L11_ACCEPTED || AC_L12_ACCEPTED || AC_L13_ACCEPTED || AC_L14_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
@@ -170,10 +174,11 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l11_status=" + AC_L11_STATUS + "\r\n";
    text += "cached_l12_status=" + AC_L12_STATUS + "\r\n";
    text += "cached_l13_status=" + AC_L13_STATUS + "\r\n";
+   text += "cached_l14_status=" + AC_L14_STATUS + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "gateway=used_for_L6_L7_L8_L9_L10_L11_L12_L13_surface_taxonomy_ranking_group_selection_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
+   text += "gateway=used_for_L6_L7_L8_L9_L10_L11_L12_L13_L14_surface_taxonomy_ranking_group_selection_candidate_pool_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
@@ -188,6 +193,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer11WorkbenchSection();
    text += AC_Layer12WorkbenchSection();
    text += AC_Layer13WorkbenchSection();
+   text += AC_Layer14WorkbenchSection();
    text += "\r\n" + AC_SharedOhlcRenderWorkbenchSection();
    return text;
 }
@@ -195,7 +201,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 string AC_Layer0FailureAddendumText()
 {
    string text = "";
-   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_L10_L11_L12_L13_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_L10_L11_L12_L13_L14_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
    text += "----------------------------------------\r\n";
    if(AC_L0_FAILURE_ADDENDUM == "") text += "none\r\n";
    else text += AC_L0_FAILURE_ADDENDUM;
