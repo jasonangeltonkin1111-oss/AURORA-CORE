@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
-from collections import defaultdict
 import csv
 import io
 import math
@@ -189,14 +188,14 @@ def _selection_quality(selected: List[Dict[str, str]]) -> str:
     tiers = {row.get("selection_quality_tier", "source_degraded") for row in selected}
     if tiers == {"strong"}:
         return "strong"
-    if "usable_review" in tiers and not ({"weak_fallback", "thin_fallback", "market_segment_fallback"} & tiers):
-        return "usable_review"
     if "thin_fallback" in tiers:
         return "thin_fallback"
     if "weak_fallback" in tiers:
         return "weak_fallback"
     if "market_segment_fallback" in tiers:
         return "market_segment_fallback"
+    if "usable_review" in tiers:
+        return "usable_review"
     return sorted(tiers)[0]
 
 
@@ -254,9 +253,14 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
         if len(selected) >= L13_TARGET_SELECTED_GROUPS:
             break
 
-    if selected and all(row["selection_quality_tier"] != "strong" for row in selected):
+    strong_candidate_count = sum(1 for c in candidates if c[0] == 1)
+    non_strong_selected_count = sum(1 for row in selected if row["selection_quality_tier"] != "strong")
+    if non_strong_selected_count > 0:
         fallback_used = True
-        fallback_reasons.append("strong_clean_group_count_below_target_selected_best_available")
+        if strong_candidate_count <= 0:
+            fallback_reasons.append("strong_clean_group_count_zero_selected_best_available_non_strong_groups")
+        else:
+            fallback_reasons.append("strong_clean_group_count_below_target_filled_with_best_available_non_strong_groups")
     if len(selected) < L13_MIN_SELECTED_GROUPS and selected:
         fallback_used = True
         fallback_reasons.append("selected_group_count_below_minimum_after_group_ladder")
@@ -296,7 +300,7 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
         "fallback_reason": fallback_reason,
         "selection_quality_tier": quality,
         "source_group_count": str(len(rows)),
-        "selected_group_count_before_fallback": str(sum(1 for c in candidates if c[0] == 1)),
+        "selected_group_count_before_fallback": str(strong_candidate_count),
         "selected_group_count_after_fallback": str(len(selected)),
         "market_condition_note": note,
         "generated_utc": utc_stamp(),
