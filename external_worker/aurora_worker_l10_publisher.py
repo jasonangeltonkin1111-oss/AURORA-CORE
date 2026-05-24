@@ -42,6 +42,22 @@ from aurora_worker_l10_schema import (
 from aurora_worker_l10_universe_parser import L10InvalidUniverseRow, l10_invalid_rows_as_dicts
 
 L10_SYMBOL_TAXONOMY_FOLDER = "SymbolTaxonomy"
+L10_GROUP_MEMBER_FIELDS = [
+    "symbol",
+    "canonical_symbol",
+    "asset_class",
+    "market_group",
+    "market_segment",
+    "ranking_group",
+    "taxonomy_state",
+    "rank_allowed",
+    "selection_allowed",
+    "future_group_folder",
+    "future_top5_copy_path",
+    "future_top10_copy_path",
+    "reason",
+    "trade_permission",
+]
 
 
 @dataclass(frozen=True)
@@ -51,6 +67,7 @@ class L10PublishSummary:
     symbol_count: int = 0
     ranking_group_count: int = 0
     symbol_path_index_count: int = 0
+    group_member_csv_count: int = 0
     invalid_universe_row_count: int = 0
     accepted_strict_count: int = 0
     accepted_public_research_count: int = 0
@@ -118,12 +135,39 @@ def _taxonomy_rows(symbols: Iterable[L10ResolvedTaxonomy]) -> list[dict[str, str
     return rows
 
 
+def _group_member_row(row: L10ResolvedTaxonomy) -> dict[str, str]:
+    return {
+        "symbol": row.symbol,
+        "canonical_symbol": row.canonical_symbol,
+        "asset_class": row.asset_class,
+        "market_group": row.market_group,
+        "market_segment": row.market_segment,
+        "ranking_group": row.ranking_group,
+        "taxonomy_state": row.taxonomy_state,
+        "rank_allowed": "true" if row.rank_allowed else "false",
+        "selection_allowed": "true" if row.selection_allowed else "false",
+        "future_group_folder": row.future_group_folder,
+        "future_top5_copy_path": row.future_top5_copy_path,
+        "future_top10_copy_path": row.future_top10_copy_path,
+        "reason": row.reason,
+        "trade_permission": row.trade_permission,
+    }
+
+
 def _write(path: Path, text: str, failed_paths: list[Path]) -> None:
     if not atomic_write_text(path, text):
         failed_paths.append(path)
 
 
-def _summary_text(quality: L10QualitySummary, group_summary, symbol_path_count: int, invalid_count: int, write_failed_count: int, symbol_sidecar_count: int) -> str:
+def _summary_text(
+    quality: L10QualitySummary,
+    group_summary,
+    symbol_path_count: int,
+    invalid_count: int,
+    write_failed_count: int,
+    symbol_sidecar_count: int,
+    group_member_csv_count: int,
+) -> str:
     return "\n".join(
         [
             "schema_name=l10_taxonomy_classification_summary",
@@ -150,11 +194,12 @@ def _summary_text(quality: L10QualitySummary, group_summary, symbol_path_count: 
             f"blocked_group_count={group_summary.blocked_groups}",
             f"symbol_path_index_count={symbol_path_count}",
             f"symbol_sidecar_count={symbol_sidecar_count}",
+            f"group_member_csv_count={group_member_csv_count}",
             f"invalid_universe_row_count={invalid_count}",
             f"write_failed_count={write_failed_count}",
             "selection_runtime=false",
             "trade_permission=false",
-            "meaning=taxonomy_only_no_rank_no_top5_no_top10_no_dossier_copy_no_trade_permission",
+            "meaning=taxonomy_only_group_member_csvs_no_rank_no_top5_no_top10_no_dossier_copy_no_trade_permission",
             f"generated_utc={utc_stamp()}",
             f"generated_unix={unix_time()}",
             "",
@@ -180,6 +225,7 @@ def _group_summary_text(group: L10RankingGroupSummary) -> str:
             f"conflict_count={group.conflict_count}",
             f"group_state={group.group_state}",
             f"future_selection_desk_group_path={group.future_selection_desk_group_path}",
+            f"all_members_csv={group.ranking_group_slug}.members.csv",
             "selection_runtime=false",
             "trade_permission=false",
             f"generated_utc={utc_stamp()}",
@@ -249,6 +295,10 @@ def publish_l10_taxonomy_outputs(
     quality = l10_quality_summary(symbols)
     group_summary = l10_group_build_summary(groups)
 
+    symbols_by_group: dict[str, list[L10ResolvedTaxonomy]] = {}
+    for row in symbols:
+        symbols_by_group.setdefault(row.ranking_group, []).append(row)
+
     taxonomy_csv = _csv_text(_taxonomy_rows(symbols), L10_TAXONOMY_SYMBOL_FIELDS)
     ranking_groups_csv = _csv_text(l10_ranking_group_rows(groups), L10_RANKING_GROUP_FIELDS)
     symbol_path_csv = _csv_text(l10_symbol_path_index_rows(plans), L10_SYMBOL_PATH_INDEX_FIELDS)
@@ -276,15 +326,20 @@ def publish_l10_taxonomy_outputs(
     _write(layer_dir / L10_MISSING_DOSSIER_SOURCE_NAME, missing_dossier_csv, failed_paths)
     _write(layer_dir / L10_INVALID_UNIVERSE_ROWS_NAME, invalid_csv, failed_paths)
 
+    group_member_csv_count = 0
     for group in groups:
         _write(groups_dir / f"{group.ranking_group_slug}.summary.txt", _group_summary_text(group), failed_paths)
+        members = sorted(symbols_by_group.get(group.ranking_group, []), key=lambda row: row.symbol)
+        member_rows = [_group_member_row(row) for row in members]
+        _write(groups_dir / f"{group.ranking_group_slug}.members.csv", _csv_text(member_rows, L10_GROUP_MEMBER_FIELDS), failed_paths)
+        group_member_csv_count += 1
 
     symbol_sidecar_count = 0
     for row in symbols:
         _write(symbol_taxonomy_dir / f"{safe_file_slug(row.symbol)}.txt", _symbol_taxonomy_text(row), failed_paths)
         symbol_sidecar_count += 1
 
-    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths), symbol_sidecar_count)
+    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths), symbol_sidecar_count, group_member_csv_count)
     _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
 
     status = "accepted" if not failed_paths else "write_degraded"
@@ -295,6 +350,7 @@ def publish_l10_taxonomy_outputs(
         symbol_count=quality.total_symbols,
         ranking_group_count=len(groups),
         symbol_path_index_count=len(plans),
+        group_member_csv_count=group_member_csv_count,
         invalid_universe_row_count=len(invalid_rows),
         accepted_strict_count=quality.accepted_strict_count,
         accepted_public_research_count=quality.accepted_public_research_count,
