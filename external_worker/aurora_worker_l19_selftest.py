@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aurora_worker_l19 import _apply_wave2_structures, _build_geometry
+from aurora_worker_l19 import _apply_wave2_structures, _apply_wave3_structures, _build_geometry
 
 
 def _row(bar_time: str, open_i: int, high_i: int, low_i: int, close_i: int) -> list[str]:
@@ -67,10 +67,10 @@ def run_selftest() -> None:
     _assert_true("close outside range invalid", not invalid_close.valid)
     _assert_equal("close outside range reason", invalid_close.invalid_reason, "close outside high low range")
 
-    # Wave 2 policy: index 0 is current possible and must not receive confirmed two-candle tags.
+    current_possible = _geo(0, "2120", 10700, 10900, 10600, 10800)
+
     previous_down = _geo(2, "2000", 10500, 10600, 9900, 10000)
     bullish_engulfing = _geo(1, "2060", 9950, 10800, 9900, 10700)
-    current_possible = _geo(0, "2120", 10700, 10900, 10600, 10800)
     wave2, tagged = _apply_wave2_structures((current_possible, bullish_engulfing, previous_down))
     _assert_equal("wave2 tagged count bullish", str(tagged), "1")
     _assert_true("current possible not wave2 tagged", "Bullish Engulfing" not in wave2[0].structure)
@@ -94,7 +94,37 @@ def run_selftest() -> None:
     _assert_equal("wave2 tagged count outside", str(tagged_outside), "1")
     _assert_true("outside bar tagged", "Outside Bar" in wave2_outside[1].structure)
 
+    # Wave 3 policy: index 0 is current possible and must not receive confirmed three-candle tags.
+    oldest_down = _geo(3, "6000", 11000, 11100, 9900, 10000)
+    middle_small = _geo(2, "6060", 9950, 10100, 9800, 10000)
+    morning_star = _geo(1, "6120", 10050, 10800, 10000, 10700)
+    wave3, tagged3 = _apply_wave3_structures((current_possible, morning_star, middle_small, oldest_down))
+    _assert_equal("wave3 tagged count morning", str(tagged3), "1")
+    _assert_true("current possible not wave3 tagged", "Morning Star" not in wave3[0].structure)
+    _assert_true("morning star tagged", "Morning Star" in wave3[1].structure)
+
+    oldest_up = _geo(3, "7000", 10000, 11100, 9900, 11000)
+    middle_small2 = _geo(2, "7060", 11000, 11200, 10900, 10950)
+    evening_star = _geo(1, "7120", 10900, 10950, 10100, 10200)
+    wave3_evening, tagged_evening = _apply_wave3_structures((current_possible, evening_star, middle_small2, oldest_up))
+    _assert_equal("wave3 tagged count evening", str(tagged_evening), "1")
+    _assert_true("evening star tagged", "Evening Star" in wave3_evening[1].structure)
+
+    soldier_old = _geo(3, "8000", 10000, 10400, 9900, 10300)
+    soldier_mid = _geo(2, "8060", 10200, 10700, 10100, 10600)
+    soldier_cur = _geo(1, "8120", 10500, 11000, 10400, 10900)
+    wave3_soldiers, tagged_soldiers = _apply_wave3_structures((current_possible, soldier_cur, soldier_mid, soldier_old))
+    _assert_equal("wave3 tagged count soldiers", str(tagged_soldiers), "1")
+    _assert_true("three white soldiers tagged", "Three White Soldiers" in wave3_soldiers[1].structure)
+
+    crow_old = _geo(3, "9000", 11000, 11100, 10600, 10700)
+    crow_mid = _geo(2, "9060", 10800, 10900, 10300, 10400)
+    crow_cur = _geo(1, "9120", 10500, 10600, 10000, 10100)
+    wave3_crows, tagged_crows = _apply_wave3_structures((current_possible, crow_cur, crow_mid, crow_old))
+    _assert_equal("wave3 tagged count crows", str(tagged_crows), "1")
+    _assert_true("three black crows tagged", "Three Black Crows" in wave3_crows[1].structure)
+
 
 if __name__ == "__main__":
     run_selftest()
-    print("L19 geometry and wave 2 self-test OK")
+    print("L19 geometry wave 1, wave 2, and wave 3 self-test OK")
