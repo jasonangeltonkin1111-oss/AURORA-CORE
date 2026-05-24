@@ -5,6 +5,7 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l18 import L18PublishSummary, publish_l18_selected_raw_ohlc_bar_pack
+from aurora_worker_l19_dispatch import run_l19_after_l18
 
 
 def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
@@ -40,6 +41,7 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
         f"l18_status_path={summary.status_path}",
         f"l18_board_path={summary.board_path}",
         f"l18_layer_folder={summary.layer_folder}",
+        "l18_next_layer=L19_candle_geometry_and_structure_dispatch_owned",
         "l18_scope=canonical_selection_shortcut_dossiers_only",
         "l18_source_owner=Runtime_1_Shared_OHLC_Raw_Storage_Owner",
         "l18_source_policy=read_existing_shared_ohlc_seed_files_only",
@@ -87,6 +89,7 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "schema_name=aurora_worker_result_manifest",
             "schema_version=18",
             "worker_l18_append_status=appended_by_l18_dispatch",
+            "worker_l19_dispatch_policy=l18_dispatch_runs_l19_after_l18",
             f"l18_status={summary.status}",
             f"l18_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
             f"l18_source_files_found={summary.source_files_found}",
@@ -108,4 +111,5 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
+    run_l19_after_l18(root)
     return summary
