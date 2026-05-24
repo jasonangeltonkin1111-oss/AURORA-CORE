@@ -66,12 +66,27 @@ L9_EVENT_ZONES = (
     "structure_data_partial",
 )
 
+L9_LOCATION_CONTEXT_FIELDS = [
+    "location_context_time_basis",
+    "distance_to_previous_day_high",
+    "distance_to_previous_day_low",
+    "distance_to_asian_high",
+    "distance_to_asian_low",
+    "distance_to_london_high",
+    "distance_to_london_low",
+    "position_in_session_range_pct",
+    "position_in_daily_range_pct",
+    "nearest_liquidity_reference",
+    "nearest_liquidity_distance_pips",
+]
+
 L9_OUTPUT_FIELDS = [
     "rank_index", "symbol", "layer_id", "layer_name", "l9_model_version",
     "structure_watchlist_score", "structure_bucket", "rank_state", "score_quality",
     "geometry_regime", "event_zone", "watchlist", "entry_signal", "trade_permission", "selection_runtime",
     "asset_class", "ranking_group", "market_state", "quote_quality", "surface_quality",
     "tick_age_seconds", "spread_bps", "price_basis", "price_basis_quality", "price_used",
+    *L9_LOCATION_CONTEXT_FIELDS,
     "structure_proximity_score", "multi_timeframe_confluence_score", "available_room_asymmetry_score",
     "boundary_quality_score", "location_clarity_score", "trigger_zone_freshness_score", "quote_data_quality_score",
     "m15_position_pct", "m15_zone_state", "m15_distance_to_high_atr", "m15_distance_to_low_atr", "m15_score_component",
