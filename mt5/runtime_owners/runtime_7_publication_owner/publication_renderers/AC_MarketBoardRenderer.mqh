@@ -34,6 +34,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Layer 7: Session Relevance Ranking\r\n";
    text += "Layer 8: Movement / Range Ranking\r\n";
    text += "Layer 9: Structure / Location Geometry\r\n";
+   text += "Layer 10: Taxonomy / Ranking Group Map\r\n";
    text += AC_Layer1BoardSection();
    text += AC_Layer2BoardSection();
    text += AC_Layer3BoardSection();
@@ -43,6 +44,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_Layer7BoardSection();
    text += AC_Layer8BoardSection();
    text += AC_Layer9BoardSection();
+   text += AC_Layer10BoardSection();
    text += AC_SharedOhlcRenderBoardSection();
    text += "\r\nTRADING READINESS\r\n";
    text += "----------------------------------------\r\n";
@@ -53,6 +55,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "Session Ranking:    " + AC_L7_STATUS + "\r\n";
    text += "Movement Ranking:   " + AC_L8_STATUS + "\r\n";
    text += "Structure Ranking:  " + AC_L9_STATUS + "\r\n";
+   text += "Taxonomy Map:       " + AC_L10_STATUS + "\r\n";
    text += "OHLC Raw Store:     " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "Selection Active:   No\r\n";
    text += "Permission Active:  No\r\n";
@@ -60,7 +63,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += "TRUST BLOCKER\r\n";
    text += "----------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Layer 6-9 are ranking/scoring only; Layer 5 remains the only hard gate.\r\n";
+   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 5 remains the only hard gate.\r\n";
    text += "Shared OHLC is raw storage only; no strategy, selection, or permission authority.\r\n";
    text += "\r\n";
    text += "ACTION\r\n";
@@ -72,7 +75,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   return "schema_name=layer_status|schema_version=v0.14|layer_id=L0|layer_name=" + status.layer_name
+   return "schema_name=layer_status|schema_version=v0.15|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -102,11 +105,12 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM
       + "|cached_l7_status=" + AC_L0_CACHED_L7_STATUS
       + "|cached_l8_status=" + AC_L0_CACHED_L8_STATUS
+      + "|cached_l10_status=" + AC_L10_STATUS
       + "|shared_ohlc_status=" + AC_SHARED_OHLC_STATUS
       + "|shared_ohlc_mode=" + AC_SHARED_OHLC_MODE
       + "|shared_ohlc_seed_complete=" + (AC_SHARED_OHLC_BOOT_SEED_COMPLETE ? "true" : "false")
       + "|main_blocker=" + status.main_blocker
-      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
+      + "|trade_permission=false|ranking_runtime=" + ((AC_L6_RANKED_ACCEPTED || AC_L7_RANKED_ACCEPTED || AC_L8_RANKED_ACCEPTED || AC_L9_RANKED_ACCEPTED || AC_L10_ACCEPTED) ? "true" : "false") + "|selection_runtime=false|market_state_known=" + (((AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT) > 0) ? "true" : "false");
 }
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
@@ -150,10 +154,11 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l7_status=" + AC_L0_CACHED_L7_STATUS + "\r\n";
    text += "cached_l8_status=" + AC_L0_CACHED_L8_STATUS + "\r\n";
    text += "cached_l9_status=" + AC_L9_STATUS + "\r\n";
+   text += "cached_l10_status=" + AC_L10_STATUS + "\r\n";
    text += "main_blocker=" + status.main_blocker + "\r\n";
    text += "first_failure=" + status.first_failure + "\r\n";
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
-   text += "gateway=used_for_L6_L7_L8_L9_surface_scoring_ranking_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
+   text += "gateway=used_for_L6_L7_L8_L9_L10_surface_taxonomy_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
    text += "\r\n" + AC_Layer1WorkbenchSection();
    text += AC_Layer2WorkbenchSection();
@@ -164,6 +169,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += AC_Layer7WorkbenchSection();
    text += AC_Layer8WorkbenchSection();
    text += AC_Layer9WorkbenchSection();
+   text += AC_Layer10WorkbenchSection();
    text += "\r\n" + AC_SharedOhlcRenderWorkbenchSection();
    return text;
 }
@@ -171,7 +177,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 string AC_Layer0FailureAddendumText()
 {
    string text = "";
-   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
+   text += "L0_L2_L3_L4_L5_L6_L7_L8_L9_L10_FAILED_SYMBOL_PACKET_ADDENDUM\r\n";
    text += "----------------------------------------\r\n";
    if(AC_L0_FAILURE_ADDENDUM == "") text += "none\r\n";
    else text += AC_L0_FAILURE_ADDENDUM;
