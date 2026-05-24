@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "selection_surface_render_truth_cleanup";
-static const string AC_BUILD_VERSION      = "1.070";
-static const string AC_UPGRADE_ID         = "SELECTION_SURFACE_RENDER_TRUTH_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Removes moving current-layer wording from stable Board/Dossier build metadata. Publication surfaces may display current upstream selection truth, selected/rejected meaning, layout/cache proof, and no-permission language without claiming the whole system is on a fixed layer. No scoring, worker authority, trade permission, alert permission, execution permission, FileIO owner, route owner, or new layer implementation is added.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces only. Board and Dossier may display the latest available selection-surface truth and no-go state, but must not present moving layer progress as build identity. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, or FileIO authority.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.070. Runtime proof must include fresh Market Board and one selected plus one non-selected Dossier. Board/Dossier metadata must no longer claim the system is on one moving layer; Dossiers must rewrite under the bumped shell schema and show SYMBOL TOP VIEW, SCORE CARD, PIPELINE POSITION, RISK / BLOCKER CARD, current selection truth, full selection detail, and NO GO. No new layer output is expected from this cleanup.";
-static const string AC_LOGGING_POLICY     = "event_boundary_selection_surface_render_cleanup_no_permission_no_new_layer";
+static const string AC_BUILD_PHASE        = "selection_surface_and_trade_journal_ohlc_marker_cleanup";
+static const string AC_BUILD_VERSION      = "1.071";
+static const string AC_UPGRADE_ID         = "TRADE_JOURNAL_OHLC_MARKER_AND_SELECTION_SURFACE_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Preserves the selection-surface render truth cleanup and promotes Trade Journal OHLC duration context to the versioned fallback-ladder marker contract. Trade Journal may rewrite one Before Aurora journal per pass when that journal lacks the current ohlc_slice_version marker, then copy a bounded bar-level slice from existing Shared OHLC Store files only. No CopyRates, new OHLC owner, sidecar file, packet importer, packet matcher, live trade capture, trade permission, alert permission, execution permission, FileIO owner, route owner, or new layer implementation is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces plus Runtime 1 Trade Journal bookkeeping/forensics status only. Board and Dossier may display latest available selection-surface truth and no-go state. Trade Journal may consume existing Shared OHLC Store files as read-only evidence for Before Aurora journal context. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, FileIO authority, or trade-history truth authority.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.071. Runtime proof must include fresh Market Board, one selected plus one non-selected Dossier, and at least one Before Aurora Trade Journal file regenerated with ohlc_slice_version=v1.071_shared_ohlc_fallback_ladder, source_policy=read_existing_shared_ohlc_files_only_no_copyrates, copyrates_used=false, and fallback_timeframes=M5,M15,M30,H1. Board/Dossier metadata must not claim the system is on one moving layer. No packet import, matching, live capture, permission, or execution is expected.";
+static const string AC_LOGGING_POLICY     = "event_boundary_selection_surface_and_trade_journal_ohlc_marker_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.070_selection_surface_render_truth_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.071_selection_surface_trade_journal_ohlc_marker_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
