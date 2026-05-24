@@ -24,23 +24,24 @@
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 
-string AC_Layer11L12L13L14L15AndSharedOhlcRenderDossierSection(const string symbol)
+string AC_Layer11L12L13L14AndSharedOhlcRenderDossierSection(const string symbol)
 {
    string text = "";
    text += AC_Layer11DossierSection(symbol);
    text += AC_Layer12DossierSection(symbol);
    text += AC_Layer13DossierSection(symbol);
    text += AC_Layer14DossierSection(symbol);
-   text += AC_Layer15DossierSection(symbol);
    text += AC_SharedOhlcRenderDossierSection(symbol);
    return text;
 }
 
 // Surgical render-composition bridge:
 // AC_Layer0DossierPublication.mqh already appends AC_SharedOhlcRenderDossierSection(symbol)
-// after L10. The macro below routes that single existing append through the L11+L12+L13+L14+L15+OHLC wrapper
-// so the Dossier receives L11/L12/L13/L14/L15 without a broad rewrite of the active Dossier owner.
-#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15AndSharedOhlcRenderDossierSection
+// after L10. The macro below routes that single existing append through the L11+L12+L13+L14+OHLC wrapper
+// so the Dossier receives L11/L12/L13/L14 without a broad rewrite of the active Dossier owner.
+// L15 remains available to Board/Workbench renderers, but is intentionally not injected into Dossiers here
+// until L0 Dossier cache invalidation explicitly tracks L15 summary state.
+#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14AndSharedOhlcRenderDossierSection
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
 
