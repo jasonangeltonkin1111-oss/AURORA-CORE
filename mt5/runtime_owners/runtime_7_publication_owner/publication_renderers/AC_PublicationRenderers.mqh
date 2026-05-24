@@ -15,6 +15,7 @@
 #include "AC_Layer7SessionRelevanceRenderer.mqh"
 #include "AC_Layer8MovementRangeRenderer.mqh"
 #include "AC_Layer9StructureLocationRenderer.mqh"
+#include "AC_Layer10TaxonomyRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 #include "AC_Layer0DossierPublication.mqh"
