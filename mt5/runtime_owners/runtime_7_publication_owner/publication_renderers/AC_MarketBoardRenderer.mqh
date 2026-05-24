@@ -1,6 +1,8 @@
 #ifndef AC_MARKET_BOARD_RENDERER_MQH
 #define AC_MARKET_BOARD_RENDERER_MQH
 
+string AC_BoardTraderSelectionOverviewSection();
+
 string AC_BoardHealthTag(const string status)
 {
    if(StringFind(status, "Incremental") >= 0 || StringFind(status, "incremental") >= 0 ||
@@ -281,6 +283,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_BoardSelectionPipelineSnapshotSection();
    text += AC_BoardDegradationSnapshotSection(status);
    text += AC_BoardDossierCoverageSection(status);
+   text += AC_BoardTraderSelectionOverviewSection();
    text += "\r\nFULL LAYER DETAIL\r\n";
    text += "==================================================\r\n";
    text += l1;
