@@ -26,6 +26,7 @@ ENABLE_L15_RUNTIME = True
 ENABLE_L16_RUNTIME = True
 ENABLE_L17_RUNTIME = True
 ENABLE_L18_RUNTIME = True
+ENABLE_L19_RUNTIME = True
 
 
 @dataclass
@@ -70,6 +71,7 @@ def _build_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
         f"last_validation_status={result.status}", f"last_validation_reason={result.reason}",
         f"source_snapshot_id={result.snapshot_id}", f"source_payload_checksum={result.payload_checksum}", f"row_count={result.row_count}",
         f"l18_runtime_enabled={'true' if ENABLE_L18_RUNTIME else 'false'}",
+        f"l19_runtime_enabled={'true' if ENABLE_L19_RUNTIME else 'false'}",
         f"generated_utc={utc_stamp()}", f"generated_unix={now}", "authority=calculation_support_only",
         "trade_permission=false", "selection_runtime=false", "entry_signal=false", "execution=false", "",
     ])
@@ -79,7 +81,7 @@ def _write_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
     return atomic_write_text_fast(_cycle_status_path(root), _build_cycle_status(root, loop, state, result, action, reason))
 
 
-def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, enable_l13_runtime: bool, enable_l14_runtime: bool, enable_l15_runtime: bool, enable_l16_runtime: bool, enable_l17_runtime: bool, enable_l18_runtime: bool) -> bool:
+def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, enable_l13_runtime: bool, enable_l14_runtime: bool, enable_l15_runtime: bool, enable_l16_runtime: bool, enable_l17_runtime: bool, enable_l18_runtime: bool, enable_l19_runtime: bool) -> bool:
     latest_path = _result_latest_path(root)
     latest = read_kv(latest_path) if latest_path.exists() else {}
     l6_status = latest.get("l6_rank_status", "missing")
@@ -94,6 +96,7 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
     l16_status = latest.get("l16_global_top10_status", "missing") if enable_l16_runtime else "disabled"
     l17_status = latest.get("l17_deep_evidence_selection_status", "missing") if enable_l17_runtime else "disabled"
     l18_status = latest.get("l18_selected_raw_ohlc_status", "missing") if enable_l18_runtime else "disabled"
+    l19_status = latest.get("l19_candle_geometry_status", "missing") if enable_l19_runtime else "disabled"
     all_complete = (
         result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete" and l9_status == "complete"
         and l11_status in {"accepted", "write_degraded"}
@@ -104,13 +107,14 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         and ((l16_status in {"accepted", "degraded", "write_degraded"}) if enable_l16_runtime else True)
         and ((l17_status in {"accepted", "degraded", "write_degraded"}) if enable_l17_runtime else True)
         and ((l18_status in {"accepted", "partial", "write_degraded"}) if enable_l18_runtime else True)
+        and ((l19_status in {"accepted", "partial", "write_degraded"}) if enable_l19_runtime else True)
     )
     if not all_complete:
         return False
     accepted_unix = unix_time()
-    epoch_id = "|".join([result.snapshot_id, result.payload_checksum, l6_status, l7_status, l8_status, l9_status, l11_status, l12_status, l13_status, l14_status, l15_status, l16_status, l17_status, l18_status])
+    epoch_id = "|".join([result.snapshot_id, result.payload_checksum, l6_status, l7_status, l8_status, l9_status, l11_status, l12_status, l13_status, l14_status, l15_status, l16_status, l17_status, l18_status, l19_status])
     text = "\n".join([
-        "schema_name=aurora_gateway_surface_accepted_epoch", "schema_version=9", f"worker_version={core.WORKER_VERSION}",
+        "schema_name=aurora_gateway_surface_accepted_epoch", "schema_version=10", f"worker_version={core.WORKER_VERSION}",
         "status=accepted", "epoch_status=accepted", "display_epoch_status=accepted_current", f"epoch_id={epoch_id}",
         f"source_snapshot_id={result.snapshot_id}", f"source_payload_checksum={result.payload_checksum}", f"source_job_id={result.job_id}",
         f"row_count={result.row_count}", f"accepted_unix={accepted_unix}", f"accepted_utc={utc_stamp()}",
@@ -120,9 +124,11 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         f"l13_dynamic_group_selection_status={l13_status}", f"l14_candidate_pool_status={l14_status}",
         f"l15_correlation_diversity_status={l15_status}", f"l16_global_top10_status={l16_status}",
         f"l17_deep_evidence_selection_status={l17_status}", f"l18_selected_raw_ohlc_status={l18_status}",
+        f"l19_candle_geometry_status={l19_status}",
         f"l13_runtime_enabled={'true' if enable_l13_runtime else 'false'}", f"l14_runtime_enabled={'true' if enable_l14_runtime else 'false'}",
         f"l15_runtime_enabled={'true' if enable_l15_runtime else 'false'}", f"l16_runtime_enabled={'true' if enable_l16_runtime else 'false'}",
         f"l17_runtime_enabled={'true' if enable_l17_runtime else 'false'}", f"l18_runtime_enabled={'true' if enable_l18_runtime else 'false'}",
+        f"l19_runtime_enabled={'true' if enable_l19_runtime else 'false'}",
         f"result_latest_path={latest_path}", "authority=calculation_support_only", "candidate_pool_runtime=false",
         "deep_evidence_runtime=false", "global_top10_runtime=false", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", "",
     ])
@@ -212,7 +218,7 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
                     state.last_result = res
                     state.last_action = "calculation_cycle_ran"
                     state.last_reason = "snapshot_stable_and_cycle_due"
-                    _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME, ENABLE_L15_RUNTIME, ENABLE_L16_RUNTIME, ENABLE_L17_RUNTIME, ENABLE_L18_RUNTIME)
+                    _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME, ENABLE_L15_RUNTIME, ENABLE_L16_RUNTIME, ENABLE_L17_RUNTIME, ENABLE_L18_RUNTIME, ENABLE_L19_RUNTIME)
                 elif snapshot_stable:
                     code = state.last_exit_code if state.last_result is not None else 0
                     res = state.last_result if state.last_result is not None else polled_result
