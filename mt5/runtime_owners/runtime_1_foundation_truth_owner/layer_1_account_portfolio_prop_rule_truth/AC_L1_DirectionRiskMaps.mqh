@@ -106,6 +106,7 @@ string AC_L1DirectionRiskMap()
       weaker_side = (buy_net_over_risk <= sell_net_over_risk ? "buy" : "sell");
 
    string text = AC_L1MapHeader("DIRECTION RISK MAP");
+   text += "section_id:             L1_DIRECTION_RISK\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Policy Basis:           Jason numeric policy: 0.10% unit, 0.20% hard, 0.50% extreme\r\n";
