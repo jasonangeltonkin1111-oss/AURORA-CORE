@@ -15,6 +15,7 @@ a = Analysis(
         'aurora_worker_l11',
         'aurora_worker_l11_cleanup',
         'aurora_worker_l11_dispatch',
+        'aurora_worker_l11_tree',
     ],
     hookspath=[],
     hooksconfig={},
