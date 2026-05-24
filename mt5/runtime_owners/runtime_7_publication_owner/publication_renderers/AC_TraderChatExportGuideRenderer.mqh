@@ -124,7 +124,7 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
-   text += "Meaning: inspection basket only; no entry signal, no setup permission, no execution.\r\n";
+   text += "Meaning: inspection basket only; no setup permission, no execution.\r\n";
    return text;
 }
 
@@ -226,6 +226,7 @@ string AC_NormalizeTraderBoardText(string text)
    StringReplace(text, "Best Current Use:     Review L17 deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n", "Best Current Use:     Review selected/deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n");
    StringReplace(text, "Selection Active:   L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n", "Selection Active:   latest selection/evidence surfaces only; no trade permission\r\n");
    StringReplace(text, "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n", "Latest accepted selection/evidence surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n");
+   StringReplace(text, "Dossier Layout Contract:    dossier_topview_v2_l15\r\n", "Dossier Layout Contract:    dossier_topview_selection_surface_v3\r\n");
 
    // Board-facing permission dedupe: keep the single top Board lock, remove repeated layer-level false flags.
    StringReplace(text, "L23 Trade Permission:     false\r\n", "");
@@ -250,6 +251,16 @@ string AC_NormalizeTraderBoardText(string text)
    StringReplace(text, "Layer 7 Blocks Symbols: FALSE\r\n", "");
    StringReplace(text, "Layer 8 Blocks Symbols: FALSE\r\n", "");
    StringReplace(text, "Layer 9 Blocks Symbols: FALSE\r\n", "");
+
+   // Board-facing debug proof trim: Workbench/status rows still preserve these truths.
+   StringReplace(text, "SymbolRank Filename Mode: sanitized_symbol__payload_checksum\r\n", "");
+   StringReplace(text, "Generation Counts OK:       TRUE\r\n", "");
+   StringReplace(text, "Generation Identity OK:     TRUE\r\n", "");
+   StringReplace(text, "Gateway Required:           TRUE\r\n", "");
+   StringReplace(text, "Gateway Required: FALSE\r\n", "");
+   StringReplace(text, "Gateway Result Accepted:    TRUE\r\n", "");
+   StringReplace(text, "Validation: Accepted\r\n", "");
+   StringReplace(text, "Validation: AcceptedWithDrift\r\n", "Validation: drift accepted\r\n");
    return text;
 }
 
