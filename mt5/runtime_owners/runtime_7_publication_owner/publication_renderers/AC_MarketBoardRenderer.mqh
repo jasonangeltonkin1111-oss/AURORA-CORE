@@ -187,6 +187,8 @@ string AC_BoardDossierCoverageSection(const AC_Layer0StatusPacket &status)
    text += "Counter Truth:              ready/left counts are current-generation refresh progress, not physical file count\r\n";
    text += "Failed Current Writes:      " + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "Dossier Pass Duration:      " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
+   text += "Dossier Layout Contract:    " + AC_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
+   text += "Cached Layout Contract:     " + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
    return text;
 }
 
@@ -316,7 +318,9 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms)
       + "|cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false")
       + "|dossier_shell_schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + "|dossier_render_layout_key=" + AC_DOSSIER_RENDER_LAYOUT_KEY
       + "|cached_dossier_shell_schema_version=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION
+      + "|cached_dossier_render_layout_key=" + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY
       + "|cached_l2_route_generation_key=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY
       + "|cached_l3_cache_key=" + AC_L0_CACHED_L3_CACHE_KEY
       + "|cached_l4_cache_key=" + AC_L0_CACHED_L4_CACHE_KEY
@@ -366,7 +370,9 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "pass_duration_ms=" + IntegerToString((int)status.batch_duration_ms) + "\r\n";
    text += "cached_pass_valid=" + (AC_L0_CACHED_PASS_VALID ? "true" : "false") + "\r\n";
    text += "dossier_shell_schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION + "\r\n";
+   text += "dossier_render_layout_key=" + AC_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
    text += "cached_dossier_shell_schema_version=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "\r\n";
+   text += "cached_dossier_render_layout_key=" + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
    text += "l2_route_generation_key=" + AC_L2_ROUTE_GENERATION_KEY + "\r\n";
    text += "cached_l2_route_generation_key=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "\r\n";
    text += "l3_cache_key=" + AC_L3_CACHE_KEY + "\r\n";

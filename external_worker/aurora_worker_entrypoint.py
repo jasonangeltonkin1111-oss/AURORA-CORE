@@ -7,7 +7,7 @@ import argparse
 import time
 
 import aurora_worker as core
-from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, unix_time, utc_stamp
+from aurora_worker_io import WorkerPaths, atomic_write_text, atomic_write_text_fast, read_kv, unix_time, utc_stamp
 from aurora_worker_l11_dispatch import run_l11_after_core
 from aurora_worker_l12_dispatch import run_l12_after_l11
 from aurora_worker_l13_dispatch import run_l13_after_l12
@@ -71,7 +71,8 @@ def _build_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result
 
 
 def _write_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result: core.ValidationResult, action: str, reason: str) -> bool:
-    return atomic_write_text(_cycle_status_path(root), _build_cycle_status(root, loop, state, result, action, reason))
+    # High-frequency, regenerable status surface. Keep atomic replace semantics but avoid durable fsync cost.
+    return atomic_write_text_fast(_cycle_status_path(root), _build_cycle_status(root, loop, state, result, action, reason))
 
 
 def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, enable_l13_runtime: bool, enable_l14_runtime: bool, enable_l15_runtime: bool, enable_l16_runtime: bool) -> bool:

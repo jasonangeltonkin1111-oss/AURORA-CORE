@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -100,6 +100,12 @@ def _write_text_file_durable(path: Path, text: str) -> None:
         os.fsync(handle.fileno())
 
 
+def _write_text_file_fast(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+        handle.flush()
+
+
 def _cleanup_stale_tmp(path: Path) -> None:
     try:
         if path.exists():
@@ -136,23 +142,15 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
         pass
 
 
-def atomic_write_text(path: Path, text: str) -> bool:
-    """Durable best-effort atomic text write for Windows/MT5 shared files.
-
-    Windows can briefly lock the final status file while MT5, Explorer, antivirus,
-    or another reader opens it. A transient WinError 32 must not kill the packaged
-    Gateway daemon or create popup storms. Use a unique tmp per process/write,
-    retry boundedly, and degrade with a sidecar proof if replacement stays locked.
-
-    Returns True only when the final replace succeeded. Returns False after a
-    bounded replace failure and best-effort sidecar proof. Callers that publish
-    heartbeat/result/status files must propagate False as degraded write truth.
-    """
+def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".aurora_tmp_{os.getpid()}_{time.time_ns() & 0xffffffff:x}.tmp")
     last_error: PermissionError | OSError | None = None
     try:
-        _write_text_file_durable(tmp, text)
+        if durable:
+            _write_text_file_durable(tmp, text)
+        else:
+            _write_text_file_fast(tmp, text)
         for attempt in range(WRITE_REPLACE_RETRY_ATTEMPTS):
             try:
                 os.replace(tmp, path)
@@ -167,6 +165,32 @@ def atomic_write_text(path: Path, text: str) -> bool:
         return False
     finally:
         _cleanup_stale_tmp(tmp)
+
+
+def atomic_write_text(path: Path, text: str) -> bool:
+    """Durable best-effort atomic text write for Windows/MT5 shared files.
+
+    Windows can briefly lock the final status file while MT5, Explorer, antivirus,
+    or another reader opens it. A transient WinError 32 must not kill the packaged
+    Gateway daemon or create popup storms. Use a unique tmp per process/write,
+    retry boundedly, and degrade with a sidecar proof if replacement stays locked.
+
+    Returns True only when the final replace succeeded. Returns False after a
+    bounded replace failure and best-effort sidecar proof. Callers that publish
+    heartbeat/result/status files must propagate False as degraded write truth.
+    """
+    return _atomic_write_text(path, text, durable=True)
+
+
+def atomic_write_text_fast(path: Path, text: str) -> bool:
+    """Fast atomic text write for high-frequency non-authoritative status files.
+
+    This keeps the same temp-file + os.replace boundary and bounded lock retry as
+    durable writes, but deliberately skips os.fsync. Use only for status/probe
+    surfaces that can be regenerated on the next loop. Do not use for result,
+    manifest, accepted epoch, install proof, or write-failure sidecars.
+    """
+    return _atomic_write_text(path, text, durable=False)
 
 
 def unix_time() -> int:
