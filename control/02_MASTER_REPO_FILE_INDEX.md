@@ -14,7 +14,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 3. Relevant top-level folder index
 
 ## Source authority levels used here
-- **L1:** Active MT5 source files (implementation truth)
+- **L1:** Active MT5 source files and active external-worker source files (implementation truth)
 - **L2:** Runtime/generated evidence samples (when explicitly present)
 - **L3:** README + `control/01_CONTROL_GOVERNANCE.md`
 - **L4:** Control router/index files
@@ -54,7 +54,8 @@ Complete navigation index for important repository files, ownership boundaries, 
 | `docs/32_L13_DYNAMIC_RANKING_GROUP_SELECTION_CONTROL.md` | L13 dynamic ranking_group selection control | Active | task-specific | L5 | Current L13 control contract. |
 | `docs/33_L14_RANKING_GROUP_LEADER_CANDIDATE_POOL_CONTROL.md` | L14 raw candidate pool control | Active | task-specific | L5 | Current L14 control contract. |
 | `docs/34_L15_CORRELATION_DIVERSITY_SELECTION_CONTROL.md` | L15 correlation / diversity scoring control | Active | task-specific | L5 | Current L15 control contract. |
-| `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Current L16 control contract; no trade permission. |
+| `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Current L16 control contract; held visible basket + fallback labels; no trade permission. |
+| `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Current L17 control contract; consumes L16 held visible display rows only; no evidence collection/trade permission. |
 | `docs/27_RUNTIME_5_TO_7_FUTURE_LAYER_PLAYBOOK.md` .. `docs/33_L13_CLOSEOUT_AND_L14_HANDOFF.md` | Runtime/layer implementation notes and handoffs | Active | task-specific | L5 | Check exact file before using as active source; current source/config still outranks docs. |
 
 ## blueprint
@@ -158,11 +159,13 @@ Complete navigation index for important repository files, ownership boundaries, 
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
 | `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md` | External worker source index | Active | yes | L1/L4 | Runtime 3 calculation-support source map. |
-| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core -> L11 -> L12 -> L13 -> L14 -> L15 -> L16. |
+| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core -> L11 -> L12 -> L13 -> L14 -> L15 -> L16 -> L17. |
 | `external_worker/aurora_worker_l15.py` | L15 correlation/diversity worker | Active | task-specific | L1 | Consumes L14 candidate pool and Shared OHLC Store if available; no broker polling. |
 | `external_worker/aurora_worker_l15_dispatch.py` | L15 result_latest dispatch | Active | task-specific | L1 | Appends `l15_*` fields to worker result output. |
-| `external_worker/aurora_worker_l16.py` | L16 Global Top 10 worker | Active | task-specific | L1 | Consumes L14/L15 outputs only; no raw OHLC/correlation recompute/trading authority. |
+| `external_worker/aurora_worker_l16.py` | L16 Global Top 10 worker | Active | task-specific | L1 | Consumes L14/L15 outputs only; held visible basket; fallback labels; no raw OHLC/correlation recompute/trading authority. |
 | `external_worker/aurora_worker_l16_dispatch.py` | L16 result_latest dispatch | Active | task-specific | L1 | Appends `l16_*` fields to worker result output. |
+| `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes L16 held visible display rows only; selected/rejected split; no evidence collection/trading authority. |
+| `external_worker/aurora_worker_l17_dispatch.py` | L17 result_latest dispatch | Active | task-specific | L1 | Appends `l17_*` fields to worker result output. |
 
 ## Archive (historical context only)
 | path | role | status | must-read? | source authority level | notes |
