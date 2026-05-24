@@ -64,7 +64,7 @@ string AC_BoardSystemCockpitSection(const AC_Layer0StatusPacket &status)
    text += "\r\nSYSTEM COCKPIT\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Runtime Mode:        Publication + inspection ranking\r\n";
-   text += "Selection Stage:     L16 Global Top 10 inspection basket only\r\n";
+   text += "Selection Surface:   Latest accepted upstream selection truth; see pipeline detail below\r\n";
    text += "Permission Stage:    Not active\r\n";
    text += "Primary Warning:     " + AC_BoardWarningText() + "\r\n";
    text += "Main Blocker:        " + status.main_blocker + "\r\n";
@@ -78,8 +78,8 @@ string AC_BoardOperatorActionSection()
    text += "--------------------------------------------------\r\n";
    text += "Use For Trading:      NO\r\n";
    text += "Use For Inspection:   YES\r\n";
-   text += "Use For Selection:    L16 Global Top 10 inspection only; no trade permission\r\n";
-   text += "Best Current Use:     Review Global Top 10, rejected correlations, unfilled slots, and dossiers\r\n";
+   text += "Use For Selection:    Latest selection surface is inspection-only; no trade permission\r\n";
+   text += "Best Current Use:     Review selected/rejected candidates, blockers, stale surfaces, and dossiers\r\n";
    text += "Do Not Do:            No trade, no alert, no execution, no prop-firm safety claim\r\n";
    return text;
 }
@@ -212,7 +212,7 @@ string AC_BoardTradingReadinessSection()
    text += "Correlation/Diversity: " + AC_L15_STATUS + "\r\n";
    text += "Global Top 10:      " + AC_L16_STATUS + "\r\n";
    text += "OHLC Raw Store:     " + AC_SHARED_OHLC_STATUS + "\r\n";
-   text += "Selection Active:   L16 inspection basket only; no trade permission\r\n";
+   text += "Selection Active:   latest accepted selection surface only; no trade permission\r\n";
    text += "Permission Active:  No\r\n";
    return text;
 }
@@ -223,7 +223,7 @@ string AC_BoardTrustBlockerSection(const AC_Layer0StatusPacket &status)
    text += "\r\nTRUST BLOCKER\r\n";
    text += "--------------------------------------------------\r\n";
    text += status.main_blocker + "\r\n";
-   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 14 builds a raw candidate pool only; Layer 15 scores correlation/diversity only; Layer 16 builds an inspection basket only; Layer 5 remains the only hard gate.\r\n";
+   text += "Layer 6-9 are ranking/scoring only; Layer 10 is taxonomy/ranking_group map only; Layer 11 is intra-group inspection priority only; Layer 12 is group heat/quality only; Layer 13 selects groups for attention only; Layer 14 builds a raw candidate pool only; later selection layers may narrow inspection order only; Layer 5 remains the only hard gate.\r\n";
    text += "Shared OHLC is raw storage only; no strategy, selection, or permission authority.\r\n";
    return text;
 }
@@ -234,7 +234,7 @@ string AC_BoardActionSection()
    text += "\r\nACTION\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Board refresh is atomic and writes only when state text changes.\r\n";
-   text += "L16 may guide inspection order; no alerts, execution, or trade permission exists.\r\n";
+   text += "Latest accepted selection surface may guide inspection order; no alerts, execution, or trade permission exists.\r\n";
    return text;
 }
 
