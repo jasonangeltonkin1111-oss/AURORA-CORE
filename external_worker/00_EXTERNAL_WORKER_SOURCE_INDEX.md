@@ -9,7 +9,7 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 
 - `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes.
 - `aurora_worker_io.py` — active worker-side IO helper source used by worker modules. Owns bounded read retry and durable atomic text writes for worker outputs only.
-- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, and L17 calculation-support modules.
+- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules.
 - `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l12.py` / `aurora_worker_l12_dispatch.py` — Layer 12 ranking_group heat / quality support. Must consume L11 outputs and must not build selected groups, candidate pools, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
@@ -17,6 +17,7 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 - `aurora_worker_l15.py` / `aurora_worker_l15_dispatch.py` — Layer 15 correlation / diversity scoring support. Must consume the L14 candidate pool and may read Shared OHLC Store when available. Must not call MT5, poll brokers, create private OHLC caches, scan the full universe, build Global Top 10, permit, alert, or execute.
 - `aurora_worker_l16.py` / `aurora_worker_l16_dispatch.py` — Layer 16 Global Top 10 builder support. Must consume L14/L15 outputs only, build a held visible inspection basket, record clean/fallback display slots, preserve hold truth, and must not permit, alert, execute, or validate an edge.
 - `aurora_worker_l17.py` / `aurora_worker_l17_dispatch.py` — Layer 17 Deep Evidence Selection Split support. Must consume L16 held visible display rows only, prefer CLEAN/CLEAN_DEGRADED rows, preserve fallback labels, cap deep evidence requests, publish selected/rejected split outputs, and must not collect OHLC/ticks/indicators/liquidity, poll brokers, create private OHLC caches, permit, alert, execute, or validate an edge.
+- `aurora_worker_l18.py` / `aurora_worker_l18_dispatch.py` — Layer 18 Selected Raw OHLC Bar Pack support. Must read existing Shared OHLC Store seed files only, decorate canonical Selection Desk copied dossiers only, publish L18 status/Board overview counts, and must not call `CopyRates`, poll brokers, create private OHLC caches, write base Dossiers, calculate signals/patterns, permit, alert, or execute.
 - `AuroraWorker.spec` — PyInstaller packaging spec for the worker executable.
 - `install_worker_global.ps1` — Windows install/register script for the shared global scheduled-task daemon/watchdog path.
 - `register_watchdog_safe.ps1` — Windows watchdog registration/support script.
@@ -34,19 +35,22 @@ core snapshot validation
 -> L15 correlation / diversity scoring
 -> L16 Global Top 10 held visible inspection basket
 -> L17 Deep Evidence Selection Split
+-> L18 Selected Raw OHLC Bar Pack dossier decoration
 ```
 
-This chain remains calculation support. It is not trading runtime authority.
+This chain remains calculation/file-decoration support. It is not trading runtime authority.
 
 ## Shared OHLC rule for L15+
 
-Shared OHLC Raw Storage belongs to Runtime 1. Worker modules may read shared raw OHLC files only when a layer owns that calculation request. They must not call MT5, fetch broker history, or create private OHLC caches.
+Shared OHLC Raw Storage belongs to Runtime 1. Worker modules may read shared raw OHLC files only when a layer owns that calculation/display request. They must not call MT5, fetch broker history, or create private OHLC caches.
 
-If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted correlation.
+If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted correlation or fake L18 completion.
 
 L16 must not read raw OHLC or recompute correlation. L16 consumes L15 correlation/diversity outputs.
 
-L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for selected visible L16 display rows. Future L18-L22 collectors must consume L17 selected rows and remain selected-symbol only.
+L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for selected visible L16 display rows.
+
+L18 may read existing Shared OHLC Store seed files and copy/render selected raw OHLC rows into canonical selected copied dossiers only. L18 must not call `CopyRates`, change Shared OHLC Store contracts, create new OHLC files/caches, touch base Dossiers, or infer trade signals.
 
 ## Generated or packaged artifacts
 
