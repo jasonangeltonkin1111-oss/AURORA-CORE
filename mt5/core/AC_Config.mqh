@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "board_dossier_l16_render_truth_cleanup";
-static const string AC_BUILD_VERSION      = "1.069";
-static const string AC_UPGRADE_ID         = "BOARD_DOSSIER_L16_RENDER_TRUTH_CLEANUP";
-static const string AC_UPGRADE_SUMMARY    = "Cleans Board and Dossier publication surfaces for the L16 inspection-basket era. Dossier shell schema is bumped so cached Dossiers rewrite and expose current top-view, L16 current selection truth, and no-permission language. No scoring, worker authority, trade permission, alert permission, execution permission, FileIO owner, route owner, or L17 implementation is added.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces only. Board and Dossier may display L16 Global Top 10 inspection-basket truth, selected/rejected meaning, layout/cache proof, and current no-go language. L16 remains inspection-only. L17 is not implemented here. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, or FileIO authority.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.069. Runtime proof must include fresh Market Board, one L16 selected Dossier, and one non-selected Dossier. Board must show L16 as inspection-only, trade_permission=false, and no alert/execution language. Dossiers must rewrite under the bumped shell schema and show SYMBOL TOP VIEW, SCORE CARD, PIPELINE POSITION, RISK / BLOCKER CARD, L16 CURRENT SELECTION TRUTH, full L11-L16 detail, and NO GO. No L17 output is expected.";
-static const string AC_LOGGING_POLICY     = "event_boundary_board_dossier_l16_render_cleanup_no_permission_no_l17";
+static const string AC_BUILD_PHASE        = "selection_surface_render_truth_cleanup";
+static const string AC_BUILD_VERSION      = "1.070";
+static const string AC_UPGRADE_ID         = "SELECTION_SURFACE_RENDER_TRUTH_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Removes moving current-layer wording from stable Board/Dossier build metadata. Publication surfaces may display current upstream selection truth, selected/rejected meaning, layout/cache proof, and no-permission language without claiming the whole system is on a fixed layer. No scoring, worker authority, trade permission, alert permission, execution permission, FileIO owner, route owner, or new layer implementation is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces only. Board and Dossier may display the latest available selection-surface truth and no-go state, but must not present moving layer progress as build identity. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, or FileIO authority.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.070. Runtime proof must include fresh Market Board and one selected plus one non-selected Dossier. Board/Dossier metadata must no longer claim the system is on one moving layer; Dossiers must rewrite under the bumped shell schema and show SYMBOL TOP VIEW, SCORE CARD, PIPELINE POSITION, RISK / BLOCKER CARD, current selection truth, full selection detail, and NO GO. No new layer output is expected from this cleanup.";
+static const string AC_LOGGING_POLICY     = "event_boundary_selection_surface_render_cleanup_no_permission_no_new_layer";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.069_board_dossier_l16_render_truth_cleanup";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.070_selection_surface_render_truth_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
