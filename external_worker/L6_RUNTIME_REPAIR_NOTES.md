@@ -19,3 +19,31 @@ Acceptance target:
 - Dossier shows actual rank index, friction score, and friction bucket.
 
 Layer 7 remains HOLD until this is proven.
+
+## L6 cost/friction scope guardrail
+
+L6 must remain a cost and friction layer only. It must not absorb setup logic, SMC concepts, candle patterns, liquidity narratives, trade direction, entry timing, signal confidence, or permission logic.
+
+Allowed L6 primitives and outputs:
+
+- spread
+- spread points
+- spread bps
+- spread cost via MT5 `OrderCalcProfit` primitives
+- effective minimum-lot cost
+- cost model comparison and mismatch flags
+- commission unknown penalty
+- slippage unknown penalty
+- tick age / quote quality penalty
+- friction score and friction bucket
+
+L6 may later feed L22/L23 risk geometry, but it must not calculate L22/L23 trade geometry itself.
+
+Future downstream fields reserved for L22/L23 consumers:
+
+- `spread_to_stop_ratio`
+- `expected_r_after_cost`
+
+Reserved means: future layers may consume L6 spread/cost primitives to calculate those values after a real stop distance, target model, setup context, broker cost model, and prop-risk profile exist. L6 must not invent stop distance, target distance, trade direction, R expectation, setup validity, or trade permission.
+
+Decision rule: if a proposed L6 change needs candle interpretation, liquidity interpretation, stop placement, target placement, setup classification, or directional bias, reject it from L6 and move it to the correct later layer.
