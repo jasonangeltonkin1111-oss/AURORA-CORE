@@ -1,32 +1,31 @@
 #ifndef AC_L1_REFRESH_MQH
 #define AC_L1_REFRESH_MQH
 
-void AC_L1TagBaseAccountStatusSection(const string heading, const string section_id)
+void AC_L1RemoveLegacyBracketSectionId(const string legacy_id)
 {
-   string marker = "[section_id=" + section_id + "]";
-   if(StringFind(AC_L1_ACCOUNT_STATUS_TEXT, marker) >= 0)
-      return;
-
-   string needle = "\r\n" + heading + "\r\n";
-   string replacement = "\r\n" + marker + "\r\n" + heading + "\r\n";
-   StringReplace(AC_L1_ACCOUNT_STATUS_TEXT, needle, replacement);
+   string core = "[section_id=" + legacy_id + "]";
+   StringReplace(AC_L1_ACCOUNT_STATUS_TEXT, core + "\r\n", "");
+   StringReplace(AC_L1_ACCOUNT_STATUS_TEXT, core + "\n", "");
+   StringReplace(AC_L1_ACCOUNT_STATUS_TEXT, core, "");
 }
 
 void AC_L1NormalizeBaseAccountStatusSections()
 {
-   // Base Account Status is built by AC_BuildLayer1Texts().
-   // This normalizer only adds stable section ids so GPT/operator reviews can cite sections consistently.
-   // It must not recalculate account truth, scan history, change trade rows, grant permission, or move content to Market Board.
+   // Base Account Status section ids are now rendered directly by AC_L1_Render.mqh.
+   // This function only removes legacy bracket-style tags from older local/runtime copies.
+   // It must not add duplicate ids, recalculate account truth, move content, or grant permission.
    if(AC_L1_ACCOUNT_STATUS_TEXT == "")
       return;
 
-   AC_L1TagBaseAccountStatusSection("ACCOUNT SUMMARY", "account_summary");
-   AC_L1TagBaseAccountStatusSection("RESULTS", "results");
-   AC_L1TagBaseAccountStatusSection("Open Positions - Full", "open_positions_full");
-   AC_L1TagBaseAccountStatusSection("Pending Orders - Full", "pending_orders_full");
-   AC_L1TagBaseAccountStatusSection("Closed Trade History - Selected Detail", "closed_trade_history_selected_detail");
-   AC_L1TagBaseAccountStatusSection("Canceled / Rejected / Expired Orders - Selected Detail", "cancel_reject_expire_selected_detail");
-   AC_L1TagBaseAccountStatusSection("Direction Summary", "direction_summary");
+   AC_L1RemoveLegacyBracketSectionId("account_summary");
+   AC_L1RemoveLegacyBracketSectionId("results");
+   AC_L1RemoveLegacyBracketSectionId("open_positions_full");
+   AC_L1RemoveLegacyBracketSectionId("pending_orders_full");
+   AC_L1RemoveLegacyBracketSectionId("closed_trade_history_selected_detail");
+   AC_L1RemoveLegacyBracketSectionId("cancel_reject_expire_selected_detail");
+   AC_L1RemoveLegacyBracketSectionId("symbol_performance");
+   AC_L1RemoveLegacyBracketSectionId("daily_performance");
+   AC_L1RemoveLegacyBracketSectionId("direction_summary");
 }
 
 void AC_L1AppendPortfolioMaps()
@@ -65,11 +64,15 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DataQualityLedger();
 
+   // Final safety strip in case an older local renderer or copied Include injected legacy bracket ids.
+   AC_L1NormalizeBaseAccountStatusSections();
+
    AC_L1_WORKBENCH_SECTION += "account_status_report_order=overseer_index_base_live_portfolio_cluster_recovery_risk_cost_quality\r\n";
    AC_L1_WORKBENCH_SECTION += "overseer_brief=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "next_decision_hints=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "section_index=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "base_account_status_section_ids=enabled\r\n";
+   AC_L1_WORKBENCH_SECTION += "legacy_bracket_section_ids=stripped\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure=enabled_board_and_account_status\r\n";
    AC_L1_WORKBENCH_SECTION += "live_risk_at_sl=enabled_estimated_account_status_and_board_summary\r\n";
    AC_L1_WORKBENCH_SECTION += "live_exposure_maps=enabled_account_status_symbol_and_asset\r\n";
