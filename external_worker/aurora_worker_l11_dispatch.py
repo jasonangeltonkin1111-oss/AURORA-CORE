@@ -5,9 +5,12 @@ from pathlib import Path
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, payload_checksum, unix_time, utc_stamp
 from aurora_worker_l11 import L11PublishSummary, publish_l11_symbol_ranking_inside_group
 from aurora_worker_l11_cleanup import cleanup_l11_stale_symbol_rank_sidecars
+from aurora_worker_l11_tree import L11TreeSummary, publish_l11_selection_desk_taxonomy_tree
+
+EMPTY_TREE_SUMMARY = L11TreeSummary("pending", "l11_taxonomy_tree_not_run")
 
 
-def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecars_removed: int = 0) -> str:
+def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecars_removed: int = 0, tree: L11TreeSummary = EMPTY_TREE_SUMMARY) -> str:
     return "\n".join([
         f"l11_symbol_ranking_status={summary.status}",
         f"l11_symbol_ranking_reason={summary.reason}",
@@ -32,6 +35,17 @@ def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecar
         f"l11_ranked_symbols_by_group_path={summary.ranked_symbols_by_group_path}",
         f"l11_ranking_group_top5_path={summary.ranking_group_top5_path}",
         f"l11_visible_group_index_path={summary.visible_group_index_path}",
+        f"l11_taxonomy_tree_status={tree.status}",
+        f"l11_taxonomy_tree_reason={tree.reason}",
+        f"l11_taxonomy_tree_rows={tree.taxonomy_tree_rows}",
+        f"l11_taxonomy_tree_files_written={tree.taxonomy_tree_files_written}",
+        f"l11_taxonomy_tree_files_expected={tree.taxonomy_tree_files_expected}",
+        f"l11_taxonomy_tree_rank_cards_written={tree.taxonomy_tree_rank_cards_written}",
+        f"l11_taxonomy_tree_rank_cards_expected={tree.taxonomy_tree_rank_cards_expected}",
+        f"l11_taxonomy_tree_stale_rank_cards_removed={tree.stale_rank_cards_removed}",
+        f"l11_taxonomy_tree_write_failed_count={tree.write_failed_count}",
+        f"l11_taxonomy_tree_index_path={tree.taxonomy_tree_index_path}",
+        f"l11_taxonomy_tree_csv_path={tree.taxonomy_tree_csv_path}",
         "l11_meaning=intra_group_inspection_priority_only",
         "l11_directional_validity=false",
         "l11_expectancy_validated=false",
@@ -49,7 +63,6 @@ def _replace_or_append_l11_block(result_text: str, lines: str) -> str:
     if marker not in normalized:
         return normalized.rstrip() + "\n" + lines
     before, _sep, tail = normalized.partition(marker)
-    # Drop an existing contiguous l11_* block only. Keep any later non-l11 lines.
     kept_tail = []
     for line in tail.splitlines():
         if line.startswith("l11_"):
@@ -68,17 +81,21 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
         stale_sidecars_removed = cleanup_l11_stale_symbol_rank_sidecars(root)
         if stale_sidecars_removed > 0:
             summary = publish_l11_symbol_ranking_inside_group(paths.outbox)
+    tree_summary = publish_l11_selection_desk_taxonomy_tree(root)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, duration_ms, stale_sidecars_removed))
+        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, duration_ms, stale_sidecars_removed, tree_summary))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=8",
+            "schema_version=9",
             "worker_l11_append_status=appended_by_l11_dispatch",
             f"l11_stale_symbol_rank_sidecars_removed={stale_sidecars_removed}",
+            f"l11_taxonomy_tree_status={tree_summary.status}",
+            f"l11_taxonomy_tree_files_written={tree_summary.taxonomy_tree_files_written}",
+            f"l11_taxonomy_tree_files_expected={tree_summary.taxonomy_tree_files_expected}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
