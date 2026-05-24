@@ -137,6 +137,7 @@ string AC_L1StreakDamageMap()
    }
 
    string text = AC_L1MapHeader("STREAK DAMAGE MAP");
+   text += "section_id:             L1_STREAK_DAMAGE\r\n";
    text += "Scope:                  selected closed history in chronological order\r\n";
    text += "Rows:                   " + IntegerToString(rows) + "\r\n";
    text += "Max Loss Streak:        " + IntegerToString(max_loss_streak) + " trades / " + AC_L1MoneyText(max_loss_streak_money) + "\r\n";
@@ -205,6 +206,7 @@ string AC_L1RecoveryQualityMap()
    else if(recovered_events <= 0 && current_distance > 0.0) quality = "no recovery event in selected sample";
 
    string text = AC_L1MapHeader("RECOVERY QUALITY MAP");
+   text += "section_id:             L1_RECOVERY_QUALITY\r\n";
    text += "Scope:                  selected closed history only; reconstructed from closed rows\r\n";
    text += "Rows:                   " + IntegerToString(rows) + "\r\n";
    text += "Start Equity Estimate:  " + AC_L1MoneyText(start_equity_est) + "\r\n";
