@@ -176,6 +176,7 @@ string AC_L1TradeClusterV2Map()
    double cluster_loss_share = (total_loss_abs > 0.0 && same_symbol_net < 0.0 ? (MathAbs(same_symbol_net) / total_loss_abs) * 100.0 : 0.0);
 
    string text = AC_L1MapHeader("TRADE CLUSTER MAP V2");
+   text += "section_id:             L1_TRADE_CLUSTER_V2\r\n";
    text += "Scope:                  selected closed history; minute-level cluster diagnostics\r\n";
    text += "Risk Source:            estimated money risk when available; cluster map is diagnostic only\r\n";
    text += AC_L1PadRight("Cluster Type", 22)
