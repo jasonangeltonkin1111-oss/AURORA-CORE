@@ -51,6 +51,7 @@ Runtime 2 taxonomy/universe lookup: SKELETON / CONTRACT ONLY unless generated ro
 Runtime 7 publication/FileIO routes: EXISTS
 Selection Desk: STRUCTURE PLACEHOLDERS ONLY
 Dossiers: STRUCTURE PLACEHOLDERS ONLY
+Trade Journal System: DESIGN CONTRACT ADDED; runtime implementation pending compile/runtime proof
 External calculation worker architecture: DESIGN-STAGE ONLY
 Python worker + file snapshot bridge: BEST FIRST CANDIDATE, not production authority
 C/C++ worker: HOLD as later optimization
@@ -66,7 +67,7 @@ Auto-trading: BLOCKED
 Trading edge claim: UNPROVEN
 ```
 
-No guidebook may upgrade trading permission, setup alerts, external feeds, or auto-trading without explicit evidence upgrade through validation/outcome proof.
+No guidebook may upgrade trading permission, setup alerts, external feeds, auto-trading, or trade-journal reason certainty without explicit evidence upgrade through validation/outcome proof.
 
 ---
 
@@ -124,6 +125,7 @@ Account + Broker Truth
 -> Selected Deep Evidence
 -> Integrity / Permission / Alert State
 -> Outcome Validation Later
+-> Trade Journal Forensics / Bookkeeping Later
 ```
 
 Meaning:
@@ -137,6 +139,7 @@ wide cheap truth
 -> diversified attention
 -> selected-symbol evidence
 -> permission blocked unless validated
+-> one-file-per-trade forensic record when implemented
 ```
 
 Forbidden interpretation:
@@ -145,6 +148,7 @@ Forbidden interpretation:
 ranking = signal
 Global Top 10 = trade list
 deep evidence = confirmation
+trade journal note = proven motive
 architecture = edge proof
 placeholder file = runtime truth
 ```
@@ -221,7 +225,20 @@ Selection Desk/Global/Global Top 10.txt
 Selection Desk/Selection Index.txt
 ```
 
-Current status:
+Trade Journal stable parent routes are design-contract only until runtime source and proof exist:
+
+```text
+Trade Journal Import/Inbox/
+Trade Journal Import/Accepted/
+Trade Journal Import/Rejected/
+Trade Journal Import/Orphaned/
+Trade History/Before Aurora/
+Trade History/Aurora Captured/
+```
+
+Trade Journal final records must be one file per trade. Setup packet imports and final trade history must not grant trade permission.
+
+Current Selection Desk status:
 
 ```text
 structure placeholders only
@@ -406,6 +423,7 @@ route construction
 Workbench outputs
 Dossier folder structure
 Selection Desk folder structure
+Trade Journal Import and Trade History route support when implementation is added
 manifest/status/diagnostic publication support
 ```
 
@@ -418,7 +436,24 @@ ranking truth
 selection truth
 trade permission
 strategy
+trade motive reconstruction
 ```
+
+---
+
+### Trade Forensics / Trade Journal Owner - Support Owner
+
+Owns future bookkeeping/forensic journal records only:
+
+```text
+setup packet import contract
+before/after Aurora cutoff classification
+one final text file per trade
+match-confidence labels
+what Aurora can and cannot claim
+```
+
+It consumes MT5 trade facts and optional live/packet evidence. It does not grant permission, execute trades, rank symbols, or prove edge.
 
 ---
 
@@ -445,6 +480,7 @@ docs/12_VALIDATION_OUTCOME_GUIDEBOOK.md validation/outcome/edge
 docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md external worker
 docs/14_MT5_FUNCTION_GUIDEBOOK.md MT5 API constraints
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md source truth / anti-drift
+docs/26_TRADE_JOURNAL_SYSTEM.md trade journal setup packet and one-file-per-trade forensic contract
 ```
 
 If older guidebooks still use bucket-era language, treat it as stale unless explicitly marked historical.
@@ -459,6 +495,7 @@ Runtime file output proves only observed publication behavior under observed ter
 Placeholder files prove only structure publication.
 Backtests do not prove live edge.
 Selection is attention, not permission.
+Trade journal setup packets prove user/chat intent only when linked; they do not prove edge or permission.
 No live trading, prop-firm readiness, strategy edge, or execution approval exists until evidence specifically proves it.
 ```
 
