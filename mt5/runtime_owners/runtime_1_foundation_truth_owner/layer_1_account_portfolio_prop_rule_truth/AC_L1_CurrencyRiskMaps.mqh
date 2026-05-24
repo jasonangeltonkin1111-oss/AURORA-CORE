@@ -173,7 +173,7 @@ string AC_L1CurrencyResultRiskMap()
    text += "Non-Forex Rows Skipped: " + IntegerToString(non_forex_rows) + "\r\n";
    text += "Risk Eligible Forex:    " + IntegerToString(risk_eligible_forex_rows) + "\r\n";
    text += "Worst Currency Net:     " + worst_ccy + " " + AC_L1MoneyText(worst_net) + "\r\n";
-   text += "Worst Currency Net/Risk:" + worst_risk_ccy + " " + DoubleToString(worst_net_risk, 2) + "\r\n";
+   text += "Worst Currency Net/Risk: " + worst_risk_ccy + " " + DoubleToString(worst_net_risk, 2) + "\r\n";
    text += AC_L1PadRight("Currency", 8)
       + AC_L1PadLeft("Touches", 8)
       + AC_L1PadLeft("RiskRows", 8)
