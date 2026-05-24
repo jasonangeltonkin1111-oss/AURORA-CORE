@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-WINDOWS_FORBIDDEN_PATH_CHARS = {'\\\\', '/', ':', '*', '?', '"', '<', '>', '|'}
+WINDOWS_FORBIDDEN_PATH_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
 KNOWN_BROKER_SUFFIXES = (
     ".nx",
     ".c",
@@ -103,7 +103,7 @@ def fx_pair_parts(symbol: str | None) -> tuple[str, str] | None:
 
 def future_group_folder_path(ranking_group: str | None) -> str:
     group_slug = safe_folder_slug(ranking_group)
-    return f"Selection Desk/Top 5 Per Group/{group_slug}/"
+    return f"Selection Desk/Groups/{group_slug}/"
 
 
 def future_top5_copy_path(symbol: str | None, ranking_group: str | None) -> str:
@@ -114,7 +114,7 @@ def future_top5_copy_path(symbol: str | None, ranking_group: str | None) -> str:
 
 def future_top10_copy_path(symbol: str | None) -> str:
     file_slug = safe_file_slug(symbol)
-    return f"Selection Desk/Top 10/pending_l16_rank__{file_slug}.txt"
+    return f"Selection Desk/Global/pending_l16_rank__{file_slug}.txt"
 
 
 def normalize_match_candidates(symbol: str | None) -> tuple[str, ...]:
