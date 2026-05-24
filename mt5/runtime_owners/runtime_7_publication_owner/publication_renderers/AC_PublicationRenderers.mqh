@@ -26,6 +26,22 @@
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 
+string AC_FilterLinesContaining(string text, const string needle)
+{
+   string lines[];
+   ushort sep = StringGetCharacter("\n", 0);
+   int count = StringSplit(text, sep, lines);
+   string out = "";
+   for(int i = 0; i < count; i++)
+   {
+      string line = lines[i];
+      if(StringFind(line, needle) >= 0) continue;
+      StringReplace(line, "\r", "");
+      out += line + "\r\n";
+   }
+   return out;
+}
+
 string AC_DossierL16L17PipelineCorrectionSection(const string symbol)
 {
    AC_L16RefreshSummary();
@@ -99,6 +115,13 @@ string AC_NormalizeDossierShellText(string text)
    if(StringFind(text, "AURORA CORE - SYMBOL DOSSIER") < 0)
       return text;
 
+   string top_trade_lock_marker = "__AC_DOSSIER_TOP_TRADE_PERMISSION_LOCK__\r\n";
+   int top_trade_lock_pos = StringFind(text, "Trade Permission: FALSE\r\n");
+   if(top_trade_lock_pos >= 0)
+   {
+      text = StringSubstr(text, 0, top_trade_lock_pos) + top_trade_lock_marker + StringSubstr(text, top_trade_lock_pos + StringLen("Trade Permission: FALSE\r\n"));
+   }
+
    // Native top-shell wording cleanup. Current selection truth below remains the detailed authority.
    StringReplace(text, "Pipeline Position:   L15 correlation/diversity scored\r\n", "Pipeline Position:   Latest accepted selection/evidence surface; see CURRENT SELECTION TRUTH\r\n");
    StringReplace(text, "Pipeline Position:   L14 raw candidate pool member\r\n", "Pipeline Position:   Candidate-pool visible; see CURRENT SELECTION TRUTH\r\n");
@@ -109,7 +132,7 @@ string AC_NormalizeDossierShellText(string text)
    StringReplace(text, "Next step: Layer 16 Global Top 10 builder after L15 correlation/diversity output is accepted.\r\n", "Next step: inspect currently selected evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n");
    StringReplace(text, "Layer 11-15 are inspection/selection-scoring surfaces only; no Global Top 10, alert, or trade permission exists here.\r\n", "Layer 11+ selection/evidence surfaces are inspection and evidence-budget surfaces only; no alert, trade permission, or execution exists here.\r\n");
 
-   // Top-shell permission is already declared in the Dossier header and NO GO block.
+   // Top-shell permission is declared once in the Dossier header and in the compact NO GO block.
    StringReplace(text, "Trade Permission:    FALSE\r\n", "");
    StringReplace(text, "Entry Signal:        FALSE\r\n", "");
    StringReplace(text, "Execution:           FALSE\r\n", "");
@@ -125,30 +148,38 @@ string AC_NormalizeDossierShellText(string text)
    StringReplace(text, "Trade Permission:          FALSE\r\n", "");
    StringReplace(text, "Trade Permission:           FALSE\r\n", "");
    StringReplace(text, "Selection Runtime: FALSE\r\n", "");
+   StringReplace(text, "Selection Runtime:          FALSE\r\n", "");
    StringReplace(text, "Ranking Runtime: FALSE\r\n", "");
+   StringReplace(text, "Ranking Runtime:            FALSE\r\n", "");
    StringReplace(text, "Candidate Pool Runtime: FALSE\r\n", "");
    StringReplace(text, "Global Top10 Runtime: FALSE\r\n", "");
    StringReplace(text, "Deep Evidence Runtime: FALSE\r\n", "");
    StringReplace(text, "Entry Signal: FALSE\r\n", "");
    StringReplace(text, "Entry Signal:           false\r\n", "");
    StringReplace(text, "Entry Signal:          FALSE\r\n", "");
+   StringReplace(text, "Entry Signal:               FALSE\r\n", "");
    StringReplace(text, "Execution: FALSE\r\n", "");
    StringReplace(text, "Execution:              false\r\n", "");
    StringReplace(text, "Execution:             FALSE\r\n", "");
+   StringReplace(text, "Execution:                  FALSE\r\n", "");
    StringReplace(text, "Layer 6 Blocks Symbols: FALSE\r\n", "");
    StringReplace(text, "Layer 7 Blocks Symbols: FALSE\r\n", "");
    StringReplace(text, "Layer 8 Blocks Symbols: FALSE\r\n", "");
    StringReplace(text, "Layer 9 Blocks Symbols: FALSE\r\n", "");
 
    // Debug proof belongs in Workbench/status files unless abnormal.
-   StringReplace(text, "SymbolRank Filename Mode: sanitized_symbol__payload_checksum\r\n", "");
-   StringReplace(text, "Generation Counts OK: TRUE\r\n", "");
-   StringReplace(text, "Generation Identity OK: TRUE\r\n", "");
-   StringReplace(text, "Gateway Required: FALSE\r\n", "");
-   StringReplace(text, "Gateway Required: TRUE\r\n", "");
+   text = AC_FilterLinesContaining(text, "Rank Path:");
+   text = AC_FilterLinesContaining(text, "Symbol Sidecar Path:");
+   text = AC_FilterLinesContaining(text, "Source Generated UTC:");
+   text = AC_FilterLinesContaining(text, "SymbolRank Filename Mode:");
+   text = AC_FilterLinesContaining(text, "Generation Counts OK:");
+   text = AC_FilterLinesContaining(text, "Generation Identity OK:");
+   text = AC_FilterLinesContaining(text, "Gateway Required:");
    StringReplace(text, "Gateway Result Accepted: TRUE\r\n", "");
    StringReplace(text, "Validation: Accepted\r\n", "");
    StringReplace(text, "Validation: AcceptedWithDrift\r\n", "Validation: drift accepted\r\n");
+
+   StringReplace(text, top_trade_lock_marker, "Trade Permission: FALSE\r\n");
    return text;
 }
 
