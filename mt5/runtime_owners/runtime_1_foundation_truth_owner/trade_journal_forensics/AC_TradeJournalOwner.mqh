@@ -20,7 +20,7 @@ static const string AC_TRADE_JOURNAL_STATUS_SKELETON = "skeleton_source_present_
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_WRITES_PER_PASS = 1;
 static const int    AC_TRADE_JOURNAL_MAX_HISTORICAL_ROWS_INSPECTED_PER_PASS = 12;
 static const int    AC_TRADE_JOURNAL_OHLC_SLICE_MAX_ROWS = 240;
-static const string AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER = "TRADE DURATION OHLC CONTEXT";
+static const string AC_TRADE_JOURNAL_OHLC_CONTEXT_MARKER = "ohlc_slice_version=v1.071_shared_ohlc_fallback_ladder";
 
 struct AC_TradeJournalStatusPacket
 {
@@ -277,6 +277,7 @@ string AC_TradeJournalSharedOhlcSliceText(const string symbol,
 {
    string text = "TRADE DURATION OHLC CONTEXT\r\n";
    text += "--------------------------------------------------\r\n";
+   text += "ohlc_slice_version=v1.071_shared_ohlc_fallback_ladder\r\n";
    text += "ohlc_context_type=shared_store_bar_slice_not_tick_replay\r\n";
    text += "ohlc_owner=Runtime 1 Shared OHLC Raw Storage Owner\r\n";
    text += "source_policy=read_existing_shared_ohlc_files_only_no_copyrates\r\n";
