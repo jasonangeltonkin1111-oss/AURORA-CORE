@@ -150,6 +150,8 @@ def _tier(row: Dict[str, str]) -> Tuple[int, str, str, str]:
         return (1, "SELECTED_STRONG", "strong", "strong_clean_group")
     if state in {"ACCEPTED", "ACCEPTED_WITH_REVIEW"} and not thin and rankable >= 3 and top5 >= 1:
         return (2, "SELECTED_WITH_REVIEW", "usable_review", "best_available_non_thin_review_group")
+    if thin and rankable >= 1:
+        return (4, "SELECTED_THIN_FALLBACK", "thin_fallback", "last_resort_thin_group")
     if rankable >= 2 and top5 >= 1:
         return (3, "SELECTED_WEAK_FALLBACK", "weak_fallback", "best_available_weak_group")
     if rankable >= 1:
@@ -207,7 +209,7 @@ def _market_note(selection_quality_tier: str, fallback_used: bool) -> str:
     if selection_quality_tier == "weak_fallback":
         return "selected_best_available_weak_groups_for_inspection_only"
     if selection_quality_tier == "thin_fallback":
-        return "selected_thin_groups_only_to_keep_inspection_pipeline_alive"
+        return "selected_thin_fallback_groups_included_for_inspection_pipeline_truth"
     if fallback_used:
         return "fallback_used_to_avoid_empty_group_selection"
     return "source_degraded_no_safe_group_selection"
