@@ -2,27 +2,41 @@
 #define AC_L1_REFRESH_MQH
 void AC_L1AppendPortfolioMaps()
 {
+   // Account Status is a GPT-overseer briefing pack first, then the normal account report,
+   // then grouped evidence blocks. Do not move this content onto Market Board.
    AC_L1_ACCOUNT_STATUS_TEXT = AC_L1OverseerBriefPack() + AC_L1AccountStatusSectionIndex() + AC_L1_ACCOUNT_STATUS_TEXT;
+
+   // Live/open-pending evidence first after the base report because it can change fastest.
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingLiveMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingRiskReadinessMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingSymbolExposureMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingAssetExposureMap();
+
+   // Selected-history portfolio shape and leak maps.
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1AccountPortfolioMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1PortfolioConcentrationMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1AssetRiskHeatMapV2();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DirectionRiskMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TimeWindowRiskMapV2();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1HoldingTimeRiskMapV2();
-   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TradeClusterV2Map();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CurrencyResultRiskMap();
-   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
-   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DataQualityLedger();
+
+   // Cluster, recovery, and sequence damage.
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TradeClusterV2Map();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1EquityDrawdownRecoveryMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RecoveryDamageMapsFull();
+
+   // Money-risk, R-multiple, and risk-efficiency proof spine.
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1ClosedMoneyRiskReadinessMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RMultipleMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RiskEfficiencyMapsFull();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RReadinessMap();
+
+   // Cost, tag, and data-quality proof last before raw/history detail from base renderer.
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DataQualityLedger();
+
+   AC_L1_WORKBENCH_SECTION += "account_status_report_order=overseer_index_base_live_portfolio_cluster_recovery_risk_cost_quality\r\n";
    AC_L1_WORKBENCH_SECTION += "overseer_brief=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "next_decision_hints=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "section_index=enabled_account_status_prefix\r\n";
