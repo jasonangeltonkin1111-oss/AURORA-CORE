@@ -29,6 +29,7 @@ from aurora_worker_l9_contract import (
     L9_TOP20_NAME,
 )
 from aurora_worker_l9_event_zone import classify_l9_event_zone
+from aurora_worker_l9_location_context import calculate_l9_location_context
 from aurora_worker_l9_price_basis import resolve_l9_price_basis
 from aurora_worker_l9_room import calculate_room_profile
 from aurora_worker_l9_tf_location import calculate_tf_location, weighted_location_score
@@ -161,6 +162,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
     latest_close_price = (packet.latest_close_i * point) if point > 0.0 and packet.latest_close_i > 0 else None
     price = resolve_l9_price_basis(row, latest_close_price)
     price_i = int(round(price.price_used / point)) if point > 0.0 and price.price_used > 0.0 else 0
+    location_context = calculate_l9_location_context(packet, price_i, point)
 
     locations = []
     for tf, weight in L9_TF_WEIGHTS.items():
@@ -207,6 +209,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
         packet.reason,
         f"structure_score={structure_score:.2f}",
         f"rank_state={rank_state}",
+        "location_context=distance_only_no_sweep_no_direction",
         L9_POLICY,
     ])
 
@@ -238,6 +241,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
         "price_basis": price.price_basis,
         "price_basis_quality": price.price_basis_quality,
         "price_used": price.price_used,
+        **location_context,
         "structure_proximity_score": location_score,
         "multi_timeframe_confluence_score": event.confluence_score,
         "available_room_asymmetry_score": room.room_quality_score,
@@ -341,11 +345,14 @@ def _top20_text(rows: List[Dict[str, object]]) -> str:
         f"Model Version: {L9_MODEL_VERSION}",
         f"Policy: {L9_POLICY}",
         "Source: Runtime 1 Shared OHLC Priority Windows + L9 input primitives",
+        "Context: distance/reference only; no sweep confirmation, no CHOCH, no BOS, no FVG, no OB, no direction",
         "",
-        "rank|symbol|score|bucket|state|event_zone|reason",
+        "rank|symbol|score|bucket|state|event_zone|nearest_liquidity_reference|nearest_liquidity_distance_pips|reason",
     ]
     for index, row in enumerate(rows[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row['reason']}")
+        lines.append(
+            f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row.get('nearest_liquidity_reference', 'not_available')}|{row.get('nearest_liquidity_distance_pips', 'not_available')}|{row['reason']}"
+        )
     lines.append("")
     return "\n".join(lines)
 
@@ -392,6 +399,7 @@ def _manifest(summary: L9FinalSummary, input_checksum: str, ranked_checksum: str
         "selection_runtime=false",
         "entry_signal=false",
         f"structure_location_policy={L9_POLICY}",
+        "location_context_policy=distance_reference_only_no_sweep_no_direction_no_setup",
         f"source_owner={L9_SOURCE_OWNER}",
         f"score_weights={','.join(f'{k}:{v:g}' for k, v in L9_SCORE_WEIGHTS.items())}",
         f"timeframe_weights={','.join(f'{k}:{v:g}' for k, v in L9_TF_WEIGHTS.items())}",
@@ -438,7 +446,7 @@ def publish_l9_structure_scores(outbox: Path) -> L9FinalSummary:
                 pass
 
     summary.status = "complete" if scored else "empty_input"
-    summary.reason = "l9 structure/location scores published" if scored else "l9 input exists but contains zero rows"
+    summary.reason = "l9 structure/location scores and distance-only location context published" if scored else "l9 input exists but contains zero rows"
     summary.input_count = len(input_rows)
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for r in scored if r["rank_state"] == "ranked")
