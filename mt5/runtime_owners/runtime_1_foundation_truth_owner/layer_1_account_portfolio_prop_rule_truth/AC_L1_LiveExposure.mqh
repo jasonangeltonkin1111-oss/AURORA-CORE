@@ -121,6 +121,7 @@ string AC_L1OpenPendingRiskReadinessMap()
    double combined_risk_pct = (AC_L1_EQUITY > 0.0 ? (combined_risk_money / AC_L1_EQUITY) * 100.0 : 0.0);
 
    string text = AC_L1MapHeader("OPEN / PENDING RISK-AT-SL READINESS MAP");
+   text += "section_id:             L1_OPEN_PENDING_RISK_AT_SL_READINESS\r\n";
    text += "Purpose:                estimated risk-at-SL readiness for live open/pending rows\r\n";
    text += "Estimate Source:        OrderCalcProfit using entry/open price to SL in account currency\r\n";
    text += "Proof Status:           estimated, not execution permission or prop-rule proof\r\n";
@@ -208,6 +209,7 @@ string AC_L1OpenPendingLiveMap()
    double equity_pct = (AC_L1_EQUITY > 0.0 ? (total_pl / AC_L1_EQUITY) * 100.0 : 0.0);
 
    string text = AC_L1MapHeader("OPEN / PENDING LIVE EXPOSURE MAP");
+   text += "section_id:             L1_OPEN_PENDING_LIVE_EXPOSURE\r\n";
    text += "Freshness Source:       current PositionsTotal/OrdersTotal scan inside Layer 1\r\n";
    text += "Open Positions:         " + IntegerToString(open_total) + "\r\n";
    text += "Pending Orders:         " + IntegerToString(pending_total) + "\r\n";
