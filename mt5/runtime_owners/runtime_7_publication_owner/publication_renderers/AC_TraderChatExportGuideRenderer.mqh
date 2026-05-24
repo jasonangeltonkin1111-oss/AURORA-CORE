@@ -220,13 +220,36 @@ string AC_BoardTraderChatExportGuideSection()
 
 string AC_NormalizeTraderBoardText(string text)
 {
+   // Cockpit wording: generic latest surface, not a moving layer label.
    StringReplace(text, "Selection Surface:   L16 visible basket + L17 deep-evidence split; inspection only\r\n", "Selection Surface:   Latest accepted selection/evidence surface; see pipeline detail below\r\n");
    StringReplace(text, "Use For Selection:    L16/L17 inspection surfaces only; no trade permission\r\n", "Use For Selection:    Latest selection/evidence surface is inspection-only; no trade permission\r\n");
    StringReplace(text, "Best Current Use:     Review L17 deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n", "Best Current Use:     Review selected/deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n");
    StringReplace(text, "Selection Active:   L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n", "Selection Active:   latest selection/evidence surfaces only; no trade permission\r\n");
    StringReplace(text, "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n", "Latest accepted selection/evidence surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n");
+
+   // Board-facing permission dedupe: keep the single top Board lock, remove repeated layer-level false flags.
    StringReplace(text, "L23 Trade Permission:     false\r\n", "");
    StringReplace(text, "Permission Active:  No\r\n", "");
+   StringReplace(text, "Ranking Runtime:            FALSE\r\n", "");
+   StringReplace(text, "Selection Runtime:          FALSE\r\n", "");
+   StringReplace(text, "Selection Runtime: FALSE\r\n", "");
+   StringReplace(text, "Candidate Pool Runtime: FALSE\r\n", "");
+   StringReplace(text, "Global Top10 Runtime: FALSE\r\n", "");
+   StringReplace(text, "Deep Evidence Runtime: FALSE\r\n", "");
+   StringReplace(text, "Trade Permission:     FALSE\r\n", "");
+   StringReplace(text, "Trade Permission:      FALSE\r\n", "");
+   StringReplace(text, "Trade Permission:           FALSE\r\n", "");
+   StringReplace(text, "Trade Permission:          FALSE\r\n", "");
+   StringReplace(text, "Entry Signal: FALSE\r\n", "");
+   StringReplace(text, "Entry Signal:        FALSE\r\n", "");
+   StringReplace(text, "Entry Signal:          FALSE\r\n", "");
+   StringReplace(text, "Execution: FALSE\r\n", "");
+   StringReplace(text, "Execution:           FALSE\r\n", "");
+   StringReplace(text, "Execution:             FALSE\r\n", "");
+   StringReplace(text, "Layer 6 Blocks Symbols: FALSE\r\n", "");
+   StringReplace(text, "Layer 7 Blocks Symbols: FALSE\r\n", "");
+   StringReplace(text, "Layer 8 Blocks Symbols: FALSE\r\n", "");
+   StringReplace(text, "Layer 9 Blocks Symbols: FALSE\r\n", "");
    return text;
 }
 
