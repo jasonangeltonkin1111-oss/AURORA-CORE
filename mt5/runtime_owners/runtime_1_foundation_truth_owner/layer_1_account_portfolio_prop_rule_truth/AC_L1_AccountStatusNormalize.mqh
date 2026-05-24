@@ -5,24 +5,53 @@ void AC_L1EnsureSectionId(string &text,
                           const string header,
                           const string section_id)
 {
-   string needle = header + "\r\n----------------------------------------\r\n";
-   string replacement = header + "\r\n----------------------------------------\r\nsection_id:             " + section_id + "\r\n";
-   if(StringFind(text, replacement) >= 0) return;
-   StringReplace(text, needle, replacement);
+   string standard = "section_id:             " + section_id;
+   if(StringFind(text, header) < 0) return;
+   if(StringFind(text, standard) >= 0) return;
+
+   string needle_crlf = header + "\r\n----------------------------------------\r\n";
+   string replacement_crlf = header + "\r\n----------------------------------------\r\n" + standard + "\r\n";
+   if(StringFind(text, needle_crlf) >= 0)
+   {
+      StringReplace(text, needle_crlf, replacement_crlf);
+      return;
+   }
+
+   string needle_lf = header + "\n----------------------------------------\n";
+   string replacement_lf = header + "\n----------------------------------------\n" + standard + "\n";
+   StringReplace(text, needle_lf, replacement_lf);
 }
 
 void AC_L1NormalizeBracketSectionId(string &text,
                                     const string legacy_id,
                                     const string section_id)
 {
-   string legacy = "[section_id=" + legacy_id + "]\r\n";
-   string standard = "section_id:             " + section_id + "\r\n";
-   if(StringFind(text, standard) >= 0)
+   string standard_line = "section_id:             " + section_id;
+   string standard_crlf = standard_line + "\r\n";
+   string standard_lf = standard_line + "\n";
+   string legacy_core = "[section_id=" + legacy_id + "]";
+   string legacy_crlf = legacy_core + "\r\n";
+   string legacy_lf = legacy_core + "\n";
+
+   if(StringFind(text, standard_line) >= 0)
    {
-      StringReplace(text, legacy, "");
+      StringReplace(text, legacy_crlf, "");
+      StringReplace(text, legacy_lf, "");
+      StringReplace(text, legacy_core, "");
       return;
    }
-   StringReplace(text, legacy, standard);
+
+   if(StringFind(text, legacy_crlf) >= 0)
+   {
+      StringReplace(text, legacy_crlf, standard_crlf);
+      return;
+   }
+   if(StringFind(text, legacy_lf) >= 0)
+   {
+      StringReplace(text, legacy_lf, standard_lf);
+      return;
+   }
+   StringReplace(text, legacy_core, standard_line);
 }
 
 void AC_L1NormalizeBaseAccountStatusSections()
