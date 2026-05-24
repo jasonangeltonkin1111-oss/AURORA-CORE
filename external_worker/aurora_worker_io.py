@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -126,7 +126,7 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
             "trade_permission=false",
             "",
         ])
-        tmp = sidecar.with_name(f"{sidecar.name}.{os.getpid()}.{unix_time()}.tmp")
+        tmp = sidecar.with_name(f".aurora_fail_{os.getpid()}_{time.time_ns() & 0xffffffff:x}.tmp")
         _write_text_file_durable(tmp, text)
         try:
             os.replace(tmp, sidecar)
@@ -149,7 +149,7 @@ def atomic_write_text(path: Path, text: str) -> bool:
     heartbeat/result/status files must propagate False as degraded write truth.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
+    tmp = path.with_name(f".aurora_tmp_{os.getpid()}_{time.time_ns() & 0xffffffff:x}.tmp")
     last_error: PermissionError | OSError | None = None
     try:
         _write_text_file_durable(tmp, text)
