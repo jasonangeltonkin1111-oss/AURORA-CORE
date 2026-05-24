@@ -47,6 +47,10 @@ string AC_Layer11L12L13L14L15L16AndSharedOhlcRenderDossierSection(const string s
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
 
+// Wrap the existing board renderer so a compact trader-chat export guide can be appended without rewriting the Board owner.
+#define AC_BuildTraderBoardText AC_BuildTraderBoardText_Base
 #include "AC_MarketBoardRenderer.mqh"
+#undef AC_BuildTraderBoardText
+#include "AC_TraderChatExportGuideRenderer.mqh"
 
 #endif
