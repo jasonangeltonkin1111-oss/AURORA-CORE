@@ -8,6 +8,7 @@ import io
 
 from aurora_worker_io import atomic_write_text, payload_checksum, unix_time, utc_stamp
 from aurora_worker_l10_group_builder import L10RankingGroupSummary, l10_group_build_summary, l10_ranking_group_rows
+from aurora_worker_l10_normalize import safe_file_slug
 from aurora_worker_l10_path_planner import L10SymbolPathPlan, l10_symbol_path_index_rows, l10_symbol_path_index_text
 from aurora_worker_l10_quality import L10QualitySummary, L10ResolvedTaxonomy, l10_quality_summary, l10_rows_for_state
 from aurora_worker_l10_schema import (
@@ -39,6 +40,8 @@ from aurora_worker_l10_schema import (
     l10_trade_permission_text,
 )
 from aurora_worker_l10_universe_parser import L10InvalidUniverseRow, l10_invalid_rows_as_dicts
+
+L10_SYMBOL_TAXONOMY_FOLDER = "SymbolTaxonomy"
 
 
 @dataclass(frozen=True)
@@ -120,7 +123,7 @@ def _write(path: Path, text: str, failed_paths: list[Path]) -> None:
         failed_paths.append(path)
 
 
-def _summary_text(quality: L10QualitySummary, group_summary, symbol_path_count: int, invalid_count: int, write_failed_count: int) -> str:
+def _summary_text(quality: L10QualitySummary, group_summary, symbol_path_count: int, invalid_count: int, write_failed_count: int, symbol_sidecar_count: int) -> str:
     return "\n".join(
         [
             "schema_name=l10_taxonomy_classification_summary",
@@ -146,6 +149,7 @@ def _summary_text(quality: L10QualitySummary, group_summary, symbol_path_count: 
             f"review_only_group_count={group_summary.review_only_groups}",
             f"blocked_group_count={group_summary.blocked_groups}",
             f"symbol_path_index_count={symbol_path_count}",
+            f"symbol_sidecar_count={symbol_sidecar_count}",
             f"invalid_universe_row_count={invalid_count}",
             f"write_failed_count={write_failed_count}",
             "selection_runtime=false",
@@ -185,6 +189,45 @@ def _group_summary_text(group: L10RankingGroupSummary) -> str:
     )
 
 
+def _symbol_taxonomy_text(row: L10ResolvedTaxonomy) -> str:
+    return "\n".join(
+        [
+            "schema_name=l10_symbol_taxonomy_sidecar",
+            f"schema_version={L10_SCHEMA_VERSION}",
+            f"layer_id={L10_LAYER_ID}",
+            f"layer_name={L10_LAYER_NAME}",
+            f"owner={L10_OWNER}",
+            f"symbol={row.symbol}",
+            f"canonical_symbol={row.canonical_symbol}",
+            f"asset_class={row.asset_class}",
+            f"market_group={row.market_group}",
+            f"market_segment={row.market_segment}",
+            f"ranking_group={row.ranking_group}",
+            f"taxonomy_state={row.taxonomy_state}",
+            f"review_state={row.review_state}",
+            f"match_type={row.match_type}",
+            f"match_confidence={row.match_confidence}",
+            f"classification_source={row.classification_source}",
+            f"classification_confidence={row.classification_confidence}",
+            f"evidence_rank={row.evidence_rank}",
+            f"source_status={row.source_status}",
+            f"block_reason={row.block_reason}",
+            f"rank_allowed={'true' if row.rank_allowed else 'false'}",
+            f"selection_allowed={'true' if row.selection_allowed else 'false'}",
+            f"future_group_folder={row.future_group_folder}",
+            f"future_top5_copy_path={row.future_top5_copy_path}",
+            f"future_top10_copy_path={row.future_top10_copy_path}",
+            f"reason={row.reason}",
+            "selection_runtime=false",
+            "trade_permission=false",
+            "meaning=taxonomy_only_no_rank_no_selection_no_trade_permission",
+            f"generated_utc={utc_stamp()}",
+            f"generated_unix={unix_time()}",
+            "",
+        ]
+    )
+
+
 def publish_l10_taxonomy_outputs(
     outbox_root: Path,
     taxonomy_symbols: Iterable[L10ResolvedTaxonomy],
@@ -194,8 +237,10 @@ def publish_l10_taxonomy_outputs(
 ) -> L10PublishSummary:
     layer_dir = outbox_root / "Layers" / L10_LAYER_FOLDER
     groups_dir = layer_dir / L10_GROUPS_FOLDER
+    symbol_taxonomy_dir = layer_dir / L10_SYMBOL_TAXONOMY_FOLDER
     layer_dir.mkdir(parents=True, exist_ok=True)
     groups_dir.mkdir(parents=True, exist_ok=True)
+    symbol_taxonomy_dir.mkdir(parents=True, exist_ok=True)
 
     symbols = tuple(taxonomy_symbols)
     groups = tuple(ranking_groups)
@@ -234,7 +279,12 @@ def publish_l10_taxonomy_outputs(
     for group in groups:
         _write(groups_dir / f"{group.ranking_group_slug}.summary.txt", _group_summary_text(group), failed_paths)
 
-    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths))
+    symbol_sidecar_count = 0
+    for row in symbols:
+        _write(symbol_taxonomy_dir / f"{safe_file_slug(row.symbol)}.txt", _symbol_taxonomy_text(row), failed_paths)
+        symbol_sidecar_count += 1
+
+    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths), symbol_sidecar_count)
     _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
 
     status = "accepted" if not failed_paths else "write_degraded"
