@@ -384,7 +384,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "layer4_cutoff_rule=open_symbols_only_closed_symbols_stop_after_layer3_until_reopened\r\n";
    diagnostics += "layer4_owner_contract=runtime1_foundation_truth_symbolinfotick_marketwatch_only_no_history_no_dom_no_indicators_no_ranking_no_permission\r\n";
    diagnostics += "layer5_owner_contract=runtime1_basic_system_gate_consumes_l2_l3_l4_owner_packets_no_gateway_no_calculation_no_ranking_no_selection_no_permission\r\n";
-   diagnostics += "trade_journal_contract=runtime1_support_bookkeeping_only_one_file_per_trade_later_no_permission_no_execution\r\n";
+   diagnostics += "trade_journal_contract=runtime1_support_bookkeeping_historical_mvp_one_file_per_trade_shared_ohlc_context_only_no_packet_import_no_matching_no_live_capture_no_permission_no_execution\r\n";
    diagnostics += "gateway_contract=runtime3_global_daemon_watchdog_job_bus_result_acceptance_no_popup_no_board_dossier_authority_no_permission\r\n";
    diagnostics += "board_contract=near_instant_atomic_update_only_on_content_change\r\n";
    diagnostics += "workbench_contract=slower_developer_status_refresh_meta_non_trading_proof_not_trader_bloat\r\n";
