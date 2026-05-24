@@ -29,9 +29,14 @@ imports:
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
  &#8226;   <a href="#aurora_worker_l11_dispatch">aurora_worker_l11_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
+ &#8226;   <a href="#aurora_worker_recorder">aurora_worker_recorder</a>
+ &#8226;   <a href="#aurora_worker_surface_overseer">aurora_worker_surface_overseer</a>
  &#8226;   <a href="#codecs">codecs</a>
  &#8226;   <a href="#collections">collections</a>
  &#8226;   <a href="#collections.abc">collections.abc</a>
@@ -236,9 +241,12 @@ imported by:
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
  &#8226;   <a href="#aurora_worker_l11_dispatch">aurora_worker_l11_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -1234,9 +1242,12 @@ imported by:
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
  &#8226;   <a href="#aurora_worker_l11_dispatch">aurora_worker_l11_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -1533,6 +1544,7 @@ imports:
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#pathlib">pathlib</a>
 
@@ -1540,6 +1552,31 @@ imports:
   <div class="import">
 imported by:
     <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l11_dossier_copy"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l11_dossier_copy.py" type="text/plain"><tt>aurora_worker_l11_dossier_copy</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#collections">collections</a>
+ &#8226;   <a href="#csv">csv</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#re">re</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_l11_dispatch">aurora_worker_l11_dispatch</a>
 
   </div>
 
@@ -1604,8 +1641,53 @@ imports:
     <a href="#__future__">__future__</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
+ &#8226;   <a href="#collections">collections</a>
  &#8226;   <a href="#csv">csv</a>
  &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#time">time</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l13"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l13.py" type="text/plain"><tt>aurora_worker_l13</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#csv">csv</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l13_dispatch"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l13_dispatch.py" type="text/plain"><tt>aurora_worker_l13_dispatch</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#time">time</a>
 
@@ -1917,6 +1999,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#aurora_worker">aurora_worker</a>
+ &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
 
   </div>
 
@@ -1958,7 +2041,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#aurora_worker_recorder">aurora_worker_recorder</a>
+    <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_recorder">aurora_worker_recorder</a>
 
   </div>
 
@@ -2262,8 +2346,10 @@ imported by:
  &#8226;   <a href="#ast">ast</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
+ &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
  &#8226;   <a href="#collections.abc">collections.abc</a>
  &#8226;   <a href="#contextlib">contextlib</a>
  &#8226;   <a href="#dis">dis</a>
@@ -2424,9 +2510,11 @@ imported by:
     <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -2632,8 +2720,10 @@ imported by:
  &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
  &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -6081,6 +6171,7 @@ imports:
  &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib._bootstrap">importlib._bootstrap</a>
  &#8226;   <a href="#importlib._bootstrap_external">importlib._bootstrap_external</a>
+ &#8226;   <a href="#importlib.machinery">importlib.machinery</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#warnings">warnings</a>
 
@@ -6212,6 +6303,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#ctypes.util">ctypes.util</a>
+ &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib.abc">importlib.abc</a>
  &#8226;   <a href="#inspect">inspect</a>
  &#8226;   <a href="#py_compile">py_compile</a>
@@ -6641,9 +6733,11 @@ imported by:
  &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -6904,6 +6998,7 @@ imported by:
  &#8226;   <a href="#_pydecimal">_pydecimal</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -7151,9 +7246,12 @@ imported by:
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
  &#8226;   <a href="#aurora_worker_l11_cleanup">aurora_worker_l11_cleanup</a>
  &#8226;   <a href="#aurora_worker_l11_dispatch">aurora_worker_l11_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -7406,6 +7504,7 @@ imported by:
  &#8226;   <a href="#ast">ast</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#base64">base64</a>
  &#8226;   <a href="#csv">csv</a>
@@ -8157,6 +8256,7 @@ imported by:
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
  &#8226;   <a href="#aurora_worker_l12_dispatch">aurora_worker_l12_dispatch</a>
+ &#8226;   <a href="#aurora_worker_l13_dispatch">aurora_worker_l13_dispatch</a>
  &#8226;   <a href="#aurora_worker_recorder">aurora_worker_recorder</a>
  &#8226;   <a href="#datetime">datetime</a>
  &#8226;   <a href="#email._parseaddr">email._parseaddr</a>
@@ -8344,8 +8444,10 @@ imported by:
  &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
  &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
  &#8226;   <a href="#aurora_worker_l11">aurora_worker_l11</a>
+ &#8226;   <a href="#aurora_worker_l11_dossier_copy">aurora_worker_l11_dossier_copy</a>
  &#8226;   <a href="#aurora_worker_l11_tree">aurora_worker_l11_tree</a>
  &#8226;   <a href="#aurora_worker_l12">aurora_worker_l12</a>
+ &#8226;   <a href="#aurora_worker_l13">aurora_worker_l13</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
