@@ -96,6 +96,7 @@ string AC_L1ClosedMoneyRiskReadinessMap()
    double largest_risk_pct_equity = (AC_L1_EQUITY > 0.0 ? (largest_est_risk / AC_L1_EQUITY) * 100.0 : 0.0);
 
    string text = AC_L1MapHeader("CLOSED TRADE MONEY-RISK READINESS MAP");
+   text += "section_id:             L1_CLOSED_MONEY_RISK_READINESS\r\n";
    text += "Purpose:                prove whether closed rows can estimate initial SL money risk\r\n";
    text += "Estimate Source:        OrderCalcProfit from reconstructed entry price to stored SL\r\n";
    text += "Proof Status:           estimated account-currency risk, not broker equity curve or trade permission proof\r\n";
