@@ -260,6 +260,7 @@ void AC_L1ClusterStats(int &cluster_groups,
 string AC_L1SelectedHistoryNotice()
 {
    string text = AC_L1MapHeader("SELECTED HISTORY NOTICE");
+   text += "section_id:             L1_SELECTED_HISTORY_NOTICE\r\n";
    text += "Results Scope:          SELECTED HISTORY ONLY\r\n";
    text += "Selected Closed Rows:   " + IntegerToString(ArraySize(AC_L1_CLOSED)) + "\r\n";
    text += "History Rule:           all closed rows inside last 90 days; fill older rows to 100 when available\r\n";
@@ -289,6 +290,7 @@ string AC_L1DiagnosisPanel()
    else mode = "positive_history_not_edge_proof";
 
    string text = AC_L1MapHeader("LAYER 1 DIAGNOSIS PANEL");
+   text += "section_id:             L1_DIAGNOSIS_PANEL\r\n";
    text += "Mode:                   " + mode + "\r\n";
    text += "Profit Factor:          " + DoubleToString(profit_factor, 2) + "\r\n";
    text += "Expected Payoff:        " + AC_L1MoneyText(expected_payoff) + "\r\n";
@@ -314,6 +316,7 @@ string AC_L1FlagLedger()
    AC_L1ClusterStats(cluster_groups, cluster_rows, cluster_net);
 
    string text = AC_L1MapHeader("LAYER 1 FLAG LEDGER");
+   text += "section_id:             L1_FLAG_LEDGER\r\n";
    if(closed_count <= 0)
       text += "INFO     | no_closed_rows | selected history has no closed rows\r\n";
    if(profit_factor < 1.0 && closed_count > 0)
@@ -340,6 +343,7 @@ string AC_L1RiskBudgetMap()
    double worst_day_usage = (daily_budget > 0.0 && AC_L1_WORST_DAY_NET < 0.0 ? (MathAbs(AC_L1_WORST_DAY_NET) / daily_budget) * 100.0 : 0.0);
 
    string text = AC_L1MapHeader("JASON RISK BUDGET MAP");
+   text += "section_id:             L1_JASON_RISK_BUDGET\r\n";
    text += "Equity:                 " + AC_L1MoneyText(AC_L1_EQUITY) + "\r\n";
    text += "0.10% Unit Risk:        " + AC_L1MoneyText(unit_risk) + "\r\n";
    text += "0.20% Hard Trade Risk:  " + AC_L1MoneyText(hard_risk) + "\r\n";
@@ -369,6 +373,7 @@ string AC_L1AssetClassMap()
    }
 
    string text = AC_L1MapHeader("ASSET CLASS MAP");
+   text += "section_id:             L1_ASSET_CLASS_BASIC\r\n";
    text += AC_L1PadRight("Class", 12) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
    for(int c = 0; c < 6; c++)
       text += AC_L1MapStatsLine(AC_L1AssetClassName(c), trades[c], wins[c], net[c]);
@@ -407,6 +412,7 @@ string AC_L1CurrencyExposureMap()
    }
 
    string text = AC_L1MapHeader("CURRENCY TOUCH MAP - FOREX ONLY");
+   text += "section_id:             L1_CURRENCY_TOUCH_BASIC\r\n";
    text += AC_L1PadRight("Currency", 12) + AC_L1PadLeft("Touches", 7) + AC_L1PadLeft("Net50", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
    for(int c = 0; c < 10; c++)
       text += AC_L1MapStatsLine(AC_L1CurrencyName(c), touches[c], wins[c], net[c]);
@@ -417,6 +423,7 @@ string AC_L1CurrencyExposureMap()
 string AC_L1SymbolPainStrengthMap(const int limit)
 {
    string text = AC_L1MapHeader("SYMBOL PAIN / STRENGTH MAP");
+   text += "section_id:             L1_SYMBOL_PAIN_STRENGTH\r\n";
    text += "Worst Symbols\r\n";
    text += AC_L1PadRight("Symbol", 14) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
 
@@ -487,6 +494,7 @@ string AC_L1TimeWindowMap()
    }
 
    string text = AC_L1MapHeader("TIME WINDOW MAP - BROKER SERVER TIME");
+   text += "section_id:             L1_TIME_WINDOW_BASIC\r\n";
    text += AC_L1PadRight("Window", 12) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
    for(int w = 0; w < 5; w++)
       text += AC_L1MapStatsLine(AC_L1TimeWindowName(w), trades[w], wins[w], net[w]);
@@ -511,6 +519,7 @@ string AC_L1HoldingTimeMap()
    }
 
    string text = AC_L1MapHeader("HOLDING TIME MAP");
+   text += "section_id:             L1_HOLDING_TIME_BASIC\r\n";
    text += AC_L1PadRight("Duration", 12) + AC_L1PadLeft("Trades", 7) + AC_L1PadLeft("Net", 11) + AC_L1PadLeft("Avg", 10) + AC_L1PadLeft("Win%", 9) + "\r\n";
    for(int h = 0; h < 5; h++)
       text += AC_L1MapStatsLine(AC_L1HoldBucketName(h), trades[h], wins[h], net[h]);
@@ -562,6 +571,7 @@ string AC_L1ClusterMap()
 
    int estimated_decision_units = raw_rows - cluster_rows + cluster_groups;
    string text = AC_L1MapHeader("CLUSTER MAP");
+   text += "section_id:             L1_CLUSTER_BASIC\r\n";
    text += "Raw Closed Rows:          " + IntegerToString(raw_rows) + "\r\n";
    text += "Estimated Decision Units: " + IntegerToString(estimated_decision_units) + "\r\n";
    text += "Cluster Groups:           " + IntegerToString(cluster_groups) + "\r\n";
