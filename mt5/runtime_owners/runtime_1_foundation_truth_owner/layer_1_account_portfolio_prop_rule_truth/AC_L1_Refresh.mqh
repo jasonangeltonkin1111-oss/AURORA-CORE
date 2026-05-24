@@ -11,6 +11,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1AssetRiskHeatMapV2();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1DirectionRiskMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TimeWindowRiskMapV2();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1HoldingTimeRiskMapV2();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TradeClusterV2Map();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CurrencyResultRiskMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CostAndTagMapsFull();
@@ -28,6 +29,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "asset_risk_heat_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "direction_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "time_window_risk_maps=enabled_account_status_only\r\n";
+   AC_L1_WORKBENCH_SECTION += "holding_time_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "cluster_v2_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "currency_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "recovery_damage_maps=enabled_account_status_only\r\n";
