@@ -217,6 +217,16 @@ imported by:
     <a href="#aurora_worker">aurora_worker</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -1163,6 +1173,8 @@ imports:
     <a href="#__future__">__future__</a>
  &#8226;   <a href="#argparse">argparse</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -1204,6 +1216,8 @@ imports:
 imported by:
     <a href="#aurora_worker">aurora_worker</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -1213,6 +1227,231 @@ imported by:
  &#8226;   <a href="#aurora_worker_recorder">aurora_worker_recorder</a>
  &#8226;   <a href="#aurora_worker_render_index">aurora_worker_render_index</a>
  &#8226;   <a href="#aurora_worker_surface_overseer">aurora_worker_surface_overseer</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10.py" type="text/plain"><tt>aurora_worker_l10</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker">aurora_worker</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_group_builder"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_group_builder.py" type="text/plain"><tt>aurora_worker_l10_group_builder</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_matcher"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_matcher.py" type="text/plain"><tt>aurora_worker_l10_matcher</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_normalize"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_normalize.py" type="text/plain"><tt>aurora_worker_l10_normalize</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#re">re</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_path_planner"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_path_planner.py" type="text/plain"><tt>aurora_worker_l10_path_planner</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_publisher"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_publisher.py" type="text/plain"><tt>aurora_worker_l10_publisher</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+ &#8226;   <a href="#csv">csv</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_quality"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_quality.py" type="text/plain"><tt>aurora_worker_l10_quality</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_schema"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_schema.py" type="text/plain"><tt>aurora_worker_l10_schema</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_source"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_source.py" type="text/plain"><tt>aurora_worker_l10_source</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker">aurora_worker</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="aurora_worker_l10_universe_parser"></a>
+  <a target="code" href="///C:/Users/Jason/AppData/Roaming/MetaQuotes/Terminal/43C1572456A3A33910D4FE26B1396DC3/MQL5/Include/AURORA-CORE/external_worker/aurora_worker_l10_universe_parser.py" type="text/plain"><tt>aurora_worker_l10_universe_parser</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
 
   </div>
 
@@ -1997,7 +2236,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
+    <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
  &#8226;   <a href="#aurora_worker_l9_score">aurora_worker_l9_score</a>
@@ -2193,6 +2433,14 @@ imported by:
     <a href="#aurora_worker">aurora_worker</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -5639,6 +5887,7 @@ imports:
  &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib._bootstrap">importlib._bootstrap</a>
  &#8226;   <a href="#importlib._bootstrap_external">importlib._bootstrap_external</a>
+ &#8226;   <a href="#importlib.machinery">importlib.machinery</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#warnings">warnings</a>
 
@@ -5770,6 +6019,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#ctypes.util">ctypes.util</a>
+ &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib.abc">importlib.abc</a>
  &#8226;   <a href="#inspect">inspect</a>
  &#8226;   <a href="#py_compile">py_compile</a>
@@ -6196,6 +6446,7 @@ imports:
 imported by:
     <a href="#_compression">_compression</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -6695,6 +6946,9 @@ imported by:
     <a href="#aurora_worker">aurora_worker</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>
@@ -6946,6 +7200,7 @@ imported by:
  &#8226;   <a href="#argparse">argparse</a>
  &#8226;   <a href="#ast">ast</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
+ &#8226;   <a href="#aurora_worker_l10_normalize">aurora_worker_l10_normalize</a>
  &#8226;   <a href="#base64">base64</a>
  &#8226;   <a href="#csv">csv</a>
  &#8226;   <a href="#ctypes._aix">ctypes._aix</a>
@@ -7871,6 +8126,15 @@ imported by:
     <a href="#aurora_worker">aurora_worker</a>
  &#8226;   <a href="#aurora_worker_entrypoint.py">aurora_worker_entrypoint.py</a>
  &#8226;   <a href="#aurora_worker_io">aurora_worker_io</a>
+ &#8226;   <a href="#aurora_worker_l10">aurora_worker_l10</a>
+ &#8226;   <a href="#aurora_worker_l10_group_builder">aurora_worker_l10_group_builder</a>
+ &#8226;   <a href="#aurora_worker_l10_matcher">aurora_worker_l10_matcher</a>
+ &#8226;   <a href="#aurora_worker_l10_path_planner">aurora_worker_l10_path_planner</a>
+ &#8226;   <a href="#aurora_worker_l10_publisher">aurora_worker_l10_publisher</a>
+ &#8226;   <a href="#aurora_worker_l10_quality">aurora_worker_l10_quality</a>
+ &#8226;   <a href="#aurora_worker_l10_schema">aurora_worker_l10_schema</a>
+ &#8226;   <a href="#aurora_worker_l10_source">aurora_worker_l10_source</a>
+ &#8226;   <a href="#aurora_worker_l10_universe_parser">aurora_worker_l10_universe_parser</a>
  &#8226;   <a href="#aurora_worker_l6_friction">aurora_worker_l6_friction</a>
  &#8226;   <a href="#aurora_worker_l7_session">aurora_worker_l7_session</a>
  &#8226;   <a href="#aurora_worker_l8_movement">aurora_worker_l8_movement</a>

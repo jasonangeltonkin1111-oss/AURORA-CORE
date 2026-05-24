@@ -12,7 +12,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$ExpectedWorkerVersion = "0.6.6_l7_session_relevance_sidecar"
+$ExpectedWorkerVersion = "0.6.11_l10_taxonomy"
 $WorkerVersion = $ExpectedWorkerVersion
 
 if (Test-Path $WorkerSource) {
@@ -134,3 +134,4 @@ Write-Host "Worker version source=$WorkerVersion expected=$ExpectedWorkerVersion
 Write-Host "Runtime folder authority=$SharedWorkerRoot"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
 Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired"
+
