@@ -269,6 +269,36 @@ string AC_L1TopPortfolioLeaksSection(const string worst_asset_risk,
    return text;
 }
 
+string AC_L1NextDecisionHintsSection(const string state,
+                                     const string action_bias,
+                                     const string worst_symbol,
+                                     const string money_asset,
+                                     const string worst_asset_risk,
+                                     const string weak_direction,
+                                     const string weak_time,
+                                     const string weak_hold,
+                                     const int risk_rows,
+                                     const int closed_count)
+{
+   bool defensive = (StringFind(state, "Defensive") >= 0 || StringFind(action_bias, "Preserve") >= 0);
+   string text = AC_L1MapHeader("LAYER 1 - NEXT DECISION HINTS");
+   text += "section_id:             L1_NEXT_DECISION_HINTS\r\n";
+   text += "Capital Mode:           " + (defensive ? "Defensive" : "Review Only") + "\r\n";
+   text += "Do Not Increase Risk:   " + (defensive ? "TRUE" : "TRUE - Layer 1 never upgrades risk") + "\r\n";
+   text += "Do Not Promote Setup:   TRUE\r\n";
+   text += "Review Priority 1:      " + worst_symbol + " symbol damage\r\n";
+   text += "Review Priority 2:      " + money_asset + " money leak asset\r\n";
+   text += "Review Priority 3:      " + worst_asset_risk + " risk-efficiency asset\r\n";
+   text += "Review Priority 4:      " + weak_direction + " direction risk\r\n";
+   text += "Review Priority 5:      " + weak_time + " time-window risk\r\n";
+   text += "Review Priority 6:      " + weak_hold + " holding-time risk\r\n";
+   text += "Setup Analytics:        BLOCKED until structured magic/comment tags exist\r\n";
+   text += "Live Risk Review:       " + (ArraySize(AC_L1_POSITIONS) > 0 || ArraySize(AC_L1_PENDING) > 0 ? "REVIEW open/pending maps" : "WAITING - no open/pending trades") + "\r\n";
+   text += "Risk Geometry Proof:    " + IntegerToString(risk_rows) + " / " + IntegerToString(closed_count) + " closed rows estimated\r\n";
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
 string AC_L1OverseerBriefPack()
 {
    int closed_count = ArraySize(AC_L1_CLOSED);
@@ -316,6 +346,7 @@ string AC_L1OverseerBriefPack()
    text += "Primary Action Bias:    " + action_bias + "\r\n";
    text += "Trade Permission:       FALSE\r\n";
    text += AC_L1TopPortfolioLeaksSection(worst_asset_risk_name, worst_asset_nor, money_asset, money_asset_net, weak_direction, weak_direction_nor, weak_time, weak_time_nor, weak_hold, weak_hold_nor);
+   text += AC_L1NextDecisionHintsSection(state, action_bias, AC_L1_WORST_SYMBOL, money_asset, worst_asset_risk_name, weak_direction, weak_time, weak_hold, risk_rows, closed_count);
    text += AC_L1MapPolicySection();
    return text;
 }
