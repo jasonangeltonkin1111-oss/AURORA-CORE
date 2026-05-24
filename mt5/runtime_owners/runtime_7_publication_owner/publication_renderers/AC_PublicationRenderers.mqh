@@ -21,10 +21,11 @@
 #include "AC_Layer13DynamicGroupSelectionRenderer.mqh"
 #include "AC_Layer14CandidatePoolRenderer.mqh"
 #include "AC_Layer15CorrelationDiversityRenderer.mqh"
+#include "AC_Layer16GlobalTop10Renderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
 
-string AC_Layer11L12L13L14L15AndSharedOhlcRenderDossierSection(const string symbol)
+string AC_Layer11L12L13L14L15L16AndSharedOhlcRenderDossierSection(const string symbol)
 {
    string text = "";
    text += AC_Layer11DossierSection(symbol);
@@ -32,17 +33,17 @@ string AC_Layer11L12L13L14L15AndSharedOhlcRenderDossierSection(const string symb
    text += AC_Layer13DossierSection(symbol);
    text += AC_Layer14DossierSection(symbol);
    text += AC_Layer15DossierSection(symbol);
+   text += AC_Layer16DossierSection(symbol);
    text += AC_SharedOhlcRenderDossierSection(symbol);
    return text;
 }
 
 // Surgical render-composition bridge:
 // AC_Layer0DossierPublication.mqh already appends AC_SharedOhlcRenderDossierSection(symbol)
-// after L10. The macro below routes that single existing append through the L11+L12+L13+L14+L15+OHLC wrapper
-// so the Dossier receives L11/L12/L13/L14/L15 without a broad rewrite of the active Dossier owner.
-// L15 is now safe to inject here because AC_Layer0DossierPublication.mqh tracks L15 in the Dossier source key
-// and cached no-rewrite contract.
-#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15AndSharedOhlcRenderDossierSection
+// after L10. The macro below routes that single existing append through the L11+L12+L13+L14+L15+L16+OHLC wrapper
+// so the Dossier receives L11/L12/L13/L14/L15/L16 without a broad rewrite of the active Dossier owner.
+// L16 is render-only here. The worker owns Global Top 10 calculation support.
+#define AC_SharedOhlcRenderDossierSection AC_Layer11L12L13L14L15L16AndSharedOhlcRenderDossierSection
 #include "AC_Layer0DossierPublication.mqh"
 #undef AC_SharedOhlcRenderDossierSection
 
