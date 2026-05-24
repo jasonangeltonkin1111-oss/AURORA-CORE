@@ -21,6 +21,7 @@ L10_UNKNOWN_SYMBOLS_NAME = "unknown_symbols.csv"
 L10_REVIEW_REQUIRED_SYMBOLS_NAME = "review_required_symbols.csv"
 L10_CONFLICT_SYMBOLS_NAME = "conflict_symbols.csv"
 L10_OMITTED_SYMBOLS_NAME = "omitted_symbols.csv"
+L10_BLOCKED_SYMBOLS_NAME = "blocked_symbols.csv"
 L10_INVALID_UNIVERSE_ROWS_NAME = "invalid_universe_rows.csv"
 L10_MISSING_DOSSIER_SOURCE_NAME = "missing_dossier_source.csv"
 L10_SUMMARY_NAME = "taxonomy_summary.txt"
@@ -182,6 +183,7 @@ def l10_required_output_names() -> Tuple[str, ...]:
         L10_REVIEW_REQUIRED_SYMBOLS_NAME,
         L10_CONFLICT_SYMBOLS_NAME,
         L10_OMITTED_SYMBOLS_NAME,
+        L10_BLOCKED_SYMBOLS_NAME,
         L10_INVALID_UNIVERSE_ROWS_NAME,
         L10_MISSING_DOSSIER_SOURCE_NAME,
         L10_SUMMARY_NAME,
