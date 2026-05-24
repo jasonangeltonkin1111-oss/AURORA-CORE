@@ -30,9 +30,9 @@ string AC_DossierL16PipelineCorrectionSection(const string symbol)
    AC_L16RefreshSummary();
    string l16_row = AC_L16CsvLineForSymbol(symbol);
    string text = "";
-   text += "\r\nL16 PIPELINE CORRECTION / CURRENT SELECTION TRUTH\r\n";
+   text += "\r\nL16 CURRENT SELECTION TRUTH\r\n";
    text += "----------------------------------------\r\n";
-   text += "Reason: top Dossier shell may still contain older L15-era summary wording; this bridge prints current L16 truth before full selection details.\r\n";
+   text += "Purpose: compact current L16 inspection-basket truth before the full selection detail sections.\r\n";
    text += "L16 Status: " + AC_L16_STATUS + "\r\n";
    text += "L16 Selected Count: " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
    text += "L16 Unfilled Slots: " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
