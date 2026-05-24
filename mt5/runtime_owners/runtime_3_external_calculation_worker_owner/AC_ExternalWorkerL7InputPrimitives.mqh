@@ -8,6 +8,8 @@ static string AC_L7_LAST_INPUT_UPSTREAM_KEY = "not_exported";
 static int    AC_L7_LAST_INPUT_ROWS = 0;
 static ulong  AC_L7_LAST_INPUT_SIZE = 0;
 static string AC_L7_LAST_SESSION_TIME_BASIS = "not_available";
+static string AC_L7_SESSION_SCOPE_POLICY = "answers_session_activity_relevance_only_not_setup_logic";
+static string AC_L7_FUTURE_SESSION_RESEARCH_NOTE = "pending_reference_support_for_asian_london_newyork_session_high_low_session_time_basis_label_and_broker_server_session_handling";
 
 string AC_L7InputUpstreamKey()
 {
@@ -192,6 +194,11 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "csv_precision_policy=price_10_decimals_spread_bps_6_decimals_tick_age_6_decimals\r\n";
    manifest += "session_time_basis=" + AC_L7_LAST_SESSION_TIME_BASIS + "\r\n";
    manifest += "session_definition_source=pending_gateway_static_profile\r\n";
+   manifest += "session_scope_policy=" + AC_L7_SESSION_SCOPE_POLICY + "\r\n";
+   manifest += "future_session_liquidity_reference_support=" + AC_L7_FUTURE_SESSION_RESEARCH_NOTE + "\r\n";
+   manifest += "future_session_reference_allowed=asian_session_high_low_reference;london_session_high_low_reference;newyork_session_high_low_reference;session_time_basis_label;broker_server_session_handling\r\n";
+   manifest += "future_session_reference_forbidden=asian_high_swept_sell_now;london_high_swept_sell_now;newyork_high_swept_sell_now;any_directional_setup_or_trade_permission\r\n";
+   manifest += "session_api_research_note=SymbolInfoSessionTrade_and_SymbolInfoSessionQuote_return_time_of_day_values_where_date_must_be_ignored\r\n";
    manifest += "input_epoch_policy=L7_uses_L4_refresh_time_when_available_to_prevent_identity_churn\r\n";
    manifest += "source_truth_owner=L5_pass_set_plus_L2_market_state_plus_L3_taxonomy_plus_L4_quote_surface_packets\r\n";
    manifest += "calculation_support_owner=Runtime3_Calculation_Gateway_L7_session_relevance_support_pending\r\n";
