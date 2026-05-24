@@ -23,6 +23,8 @@ a = Analysis(
         'aurora_worker_l12_dispatch',
         'aurora_worker_l13',
         'aurora_worker_l13_dispatch',
+        'aurora_worker_l14_dispatch',
+        'aurora_worker_l14',
     ],
     hookspath=[],
     hooksconfig={},
@@ -59,3 +61,5 @@ coll = COLLECT(
     upx_exclude=[],
     name='AuroraWorker',
 )
+
+
