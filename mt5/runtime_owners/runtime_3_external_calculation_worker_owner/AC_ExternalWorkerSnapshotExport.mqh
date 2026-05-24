@@ -1,6 +1,59 @@
 #ifndef AC_EXTERNAL_WORKER_SNAPSHOT_EXPORT_MQH
 #define AC_EXTERNAL_WORKER_SNAPSHOT_EXPORT_MQH
 
+string AC_L10Runtime2UniverseInputPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_10_Taxonomy_Classification\\l10_runtime2_universe_rows.psv";
+}
+
+string AC_L10Runtime2UniverseInputManifestPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_10_Taxonomy_Classification\\l10_runtime2_universe_rows.manifest";
+}
+
+string AC_L10Runtime2UniverseInputRows()
+{
+   string text = "server|broker_file|broker_symbol|canonical_symbol|asset_class|market_group|market_segment|ranking_group|strict_rank_allowed|public_research_rank_allowed|review_lane|classification_confidence|evidence_rank|runtime_permission|evidence_status|source_status|block_reason\r\n";
+   int total = AC_UniverseLoadedRowCount();
+   for(int idx = 0; idx < total; idx++)
+   {
+      string row = AC_UniverseGeneratedRowByIndex(idx);
+      if(row == "") continue;
+      text += row + "\r\n";
+   }
+   return text;
+}
+
+AC_WriteResult AC_ExportLayer10Runtime2UniverseInput()
+{
+   string rows = AC_L10Runtime2UniverseInputRows();
+   string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
+   AC_WriteResult input_write = AC_WriteTextFile(AC_L10Runtime2UniverseInputPath(), rows);
+   string manifest = "schema_name=l10_runtime2_universe_rows_manifest\r\n"
+      + "schema_version=1\r\n"
+      + "source_owner=Runtime 2 - Market Universe / Taxonomy Lookup Owner\r\n"
+      + "export_owner=Runtime 3 - Gateway Support Export\r\n"
+      + "consumer_layer=Layer 10 - Taxonomy / Ranking Group Map\r\n"
+      + "input_file=l10_runtime2_universe_rows.psv\r\n"
+      + "row_schema=server|broker_file|broker_symbol|canonical_symbol|asset_class|market_group|market_segment|ranking_group|strict_rank_allowed|public_research_rank_allowed|review_lane|classification_confidence|evidence_rank|runtime_permission|evidence_status|source_status|block_reason\r\n"
+      + "row_count=" + IntegerToString(AC_UniverseLoadedRowCount()) + "\r\n"
+      + "payload_checksum=" + payload_checksum + "\r\n"
+      + "write_status=" + input_write.status + "\r\n"
+      + "write_ok=" + (input_write.ok ? "true" : "false") + "\r\n"
+      + "runtime2_contract_status=" + AC_UniverseContractStatus() + "\r\n"
+      + "runtime_permission=" + AC_UniverseRuntimePermission() + "\r\n"
+      + "authority=calculation_support_only\r\n"
+      + "ranking_runtime=false\r\n"
+      + "selection_runtime=false\r\n"
+      + "trade_permission=false\r\n";
+   AC_WriteResult manifest_write = AC_WriteTextFile(AC_L10Runtime2UniverseInputManifestPath(), manifest);
+   if(input_write.ok && manifest_write.ok)
+      return input_write;
+   if(input_write.ok && !manifest_write.ok)
+      return AC_MakeSyntheticWriteResult(AC_L10Runtime2UniverseInputManifestPath(), false, manifest_write.status, manifest_write.final_size, "l10_runtime2_input_manifest_write_failed");
+   return input_write;
+}
+
 string AC_ExternalWorkerSnapshotHeader(const string snapshot_id, const string job_id, const int rows, const string payload_checksum)
 {
    string text = "";
@@ -73,6 +126,7 @@ string AC_ExternalWorkerSnapshotRows()
 
 AC_WriteResult AC_ExportExternalWorkerSnapshot()
 {
+   AC_WriteResult l10_runtime2_input_write = AC_ExportLayer10Runtime2UniverseInput();
    AC_WriteResult l6_input_write = AC_ExportLayer6CostFrictionInputPrimitives();
    AC_WriteResult l7_input_write = AC_ExportLayer7SessionRelevanceInputPrimitives();
    AC_WriteResult l8_input_write = AC_ExportLayer8MovementRangeInputPrimitives();
@@ -86,7 +140,7 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "unchanged_cached";
-      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_upstream_unchanged_no_row_build_no_checksum_no_rewrite|key=" + upstream_key + "|l6_input=" + l6_input_write.status + "|l7_input=" + l7_input_write.status + "|l8_input=" + l8_input_write.status + "|l9_input=" + l9_input_write.status);
+      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_upstream_unchanged_no_row_build_no_checksum_no_rewrite|l10_runtime2_input=" + l10_runtime2_input_write.status + "|key=" + upstream_key + "|l6_input=" + l6_input_write.status + "|l7_input=" + l7_input_write.status + "|l8_input=" + l8_input_write.status + "|l9_input=" + l9_input_write.status);
    }
 
    string rows = AC_ExternalWorkerSnapshotRows();
@@ -98,14 +152,14 @@ AC_WriteResult AC_ExportExternalWorkerSnapshot()
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_MANIFEST_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_JOB_STATUS = "unchanged_cached";
       AC_EXTERNAL_WORKER_LAST_SNAPSHOT_UPSTREAM_KEY = upstream_key;
-      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite|l6_input=" + l6_input_write.status + "|l7_input=" + l7_input_write.status + "|l8_input=" + l8_input_write.status + "|l9_input=" + l9_input_write.status);
+      return AC_MakeSyntheticWriteResult(AC_ExternalWorkerSnapshotPath(), true, "unchanged_cached", AC_EXTERNAL_WORKER_LAST_SNAPSHOT_SIZE, "snapshot_payload_unchanged_no_rewrite|l10_runtime2_input=" + l10_runtime2_input_write.status + "|l6_input=" + l6_input_write.status + "|l7_input=" + l7_input_write.status + "|l8_input=" + l8_input_write.status + "|l9_input=" + l9_input_write.status);
    }
 
    string snapshot_id = AC_ExternalWorkerSnapshotId();
    string job_id = AC_ExternalWorkerJobId(snapshot_id);
    string snapshot = AC_ExternalWorkerSnapshotHeader(snapshot_id, job_id, AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS, payload_checksum) + rows;
    AC_WriteResult snapshot_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotPath(), snapshot);
-   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=7\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_requested_layer=R3_GATEWAY\r\njob_expected_output=snapshot_validation_plus_l6_l7_l8_l9_input_primitives\r\ngateway_job_scope=snapshot_validation_plus_l6_l7_l8_l9_input_primitives_no_layer5_advisory_no_selection_no_permission\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nupstream_key=" + upstream_key + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nranking_runtime=false\r\nselection_runtime=false\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\nl7_input_primitives_status=" + l7_input_write.status + "\r\nl7_input_primitives_rows=" + IntegerToString(AC_L7_LAST_INPUT_ROWS) + "\r\nl7_input_primitives_path=" + AC_L7SessionInputCsvPath() + "\r\nl8_input_primitives_status=" + l8_input_write.status + "\r\nl8_input_primitives_rows=" + IntegerToString(AC_L8_LAST_INPUT_ROWS) + "\r\nl8_input_primitives_path=" + AC_L8InputCsvPath() + "\r\nl9_input_primitives_status=" + l9_input_write.status + "\r\nl9_input_primitives_rows=" + IntegerToString(AC_L9_LAST_INPUT_ROWS) + "\r\nl9_input_primitives_path=" + AC_L9InputCsvPath() + "\r\n";
+   string manifest = "schema_name=aurora_external_worker_snapshot_manifest\r\nschema_version=7\r\nsnapshot_id=" + snapshot_id + "\r\njob_bus_schema_version=" + AC_EXTERNAL_WORKER_JOB_BUS_SCHEMA_VERSION + "\r\njob_id=" + job_id + "\r\njob_type=" + AC_EXTERNAL_WORKER_DEFAULT_JOB_TYPE + "\r\njob_requested_layer=R3_GATEWAY\r\njob_expected_output=snapshot_validation_plus_l6_l7_l8_l9_input_primitives\r\ngateway_job_scope=snapshot_validation_plus_l6_l7_l8_l9_input_primitives_no_layer5_advisory_no_selection_no_permission\r\njob_resource_class=" + AC_EXTERNAL_WORKER_JOB_RESOURCE_CLASS + "\r\njob_max_runtime_ms=" + IntegerToString(AC_EXTERNAL_WORKER_JOB_MAX_RUNTIME_MS) + "\r\nwrite_status=" + snapshot_write.status + "\r\nwrite_ok=" + (snapshot_write.ok ? "true" : "false") + "\r\nupstream_key=" + upstream_key + "\r\nrow_count=" + IntegerToString(AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ROWS) + "\r\npayload_checksum=" + payload_checksum + "\r\nauthority=" + AC_EXTERNAL_WORKER_AUTHORITY + "\r\ntrade_permission=false\r\nranking_runtime=false\r\nselection_runtime=false\r\nl10_runtime2_input_status=" + l10_runtime2_input_write.status + "\r\nl10_runtime2_input_rows=" + IntegerToString(AC_UniverseLoadedRowCount()) + "\r\nl10_runtime2_input_path=" + AC_L10Runtime2UniverseInputPath() + "\r\nl6_input_primitives_status=" + l6_input_write.status + "\r\nl6_input_primitives_rows=" + IntegerToString(AC_L6_LAST_INPUT_ROWS) + "\r\nl6_input_primitives_path=" + AC_L6FrictionInputCsvPath() + "\r\nl7_input_primitives_status=" + l7_input_write.status + "\r\nl7_input_primitives_rows=" + IntegerToString(AC_L7_LAST_INPUT_ROWS) + "\r\nl7_input_primitives_path=" + AC_L7SessionInputCsvPath() + "\r\nl8_input_primitives_status=" + l8_input_write.status + "\r\nl8_input_primitives_rows=" + IntegerToString(AC_L8_LAST_INPUT_ROWS) + "\r\nl8_input_primitives_path=" + AC_L8InputCsvPath() + "\r\nl9_input_primitives_status=" + l9_input_write.status + "\r\nl9_input_primitives_rows=" + IntegerToString(AC_L9_LAST_INPUT_ROWS) + "\r\nl9_input_primitives_path=" + AC_L9InputCsvPath() + "\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_ExternalWorkerSnapshotManifestPath(), manifest);
    AC_EXTERNAL_WORKER_LAST_SNAPSHOT_ID = snapshot_id;
    AC_EXTERNAL_WORKER_LAST_JOB_ID = job_id;
