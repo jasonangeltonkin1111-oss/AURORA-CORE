@@ -125,6 +125,24 @@ def _default_dossier_source_path(symbol: str) -> str:
     return f"Dossiers/<Open_or_Closed_or_Unknown>/{symbol}.txt"
 
 
+def _planned_group_path(ranking_group: str, rank_allowed: bool) -> str:
+    if not rank_allowed or ranking_group == "Unknown":
+        return "not_available"
+    return future_group_folder_path(ranking_group)
+
+
+def _planned_top5_path(symbol: str, ranking_group: str, rank_allowed: bool) -> str:
+    if not rank_allowed or ranking_group == "Unknown":
+        return "not_available"
+    return future_top5_copy_path(symbol, ranking_group)
+
+
+def _planned_top10_path(symbol: str, selection_allowed: bool) -> str:
+    if not selection_allowed:
+        return "not_available"
+    return future_top10_copy_path(symbol)
+
+
 def _unknown_result(match: L10SymbolMatchResult, state: str, reason: str) -> L10ResolvedTaxonomy:
     symbol = match.symbol
     return L10ResolvedTaxonomy(
@@ -148,7 +166,7 @@ def _unknown_result(match: L10SymbolMatchResult, state: str, reason: str) -> L10
         dossier_source_path=_default_dossier_source_path(symbol),
         future_group_folder="not_available",
         future_top5_copy_path="not_available",
-        future_top10_copy_path=future_top10_copy_path(symbol),
+        future_top10_copy_path="not_available",
         reason=reason,
         trade_permission=l10_trade_permission_text(),
     )
@@ -219,9 +237,9 @@ def l10_resolve_match_quality(match: L10SymbolMatchResult) -> L10ResolvedTaxonom
         rank_allowed=rank_allowed,
         selection_allowed=selection_allowed,
         dossier_source_path=_default_dossier_source_path(symbol),
-        future_group_folder=future_group_folder_path(ranking_group),
-        future_top5_copy_path=future_top5_copy_path(symbol, ranking_group),
-        future_top10_copy_path=future_top10_copy_path(symbol),
+        future_group_folder=_planned_group_path(ranking_group, rank_allowed),
+        future_top5_copy_path=_planned_top5_path(symbol, ranking_group, rank_allowed),
+        future_top10_copy_path=_planned_top10_path(symbol, selection_allowed),
         reason=reason + ";" + match.reason,
         trade_permission=l10_trade_permission_text(),
     )
