@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from collections import defaultdict
 import csv
 import io
 import time
@@ -10,6 +11,7 @@ from aurora_worker_l12 import L12PublishSummary, publish_l12_ranking_group_heat_
 
 DIST_FIELDS = ["ranking_group","rankable_count","l6_available_count","l7_available_count","l8_available_count","l9_available_count","l6_avg","l7_avg","l8_avg","l9_avg","risk_review_count","not_rankable_count"]
 THIN_FIELDS = ["ranking_group","group_symbol_count","rankable_count","top5_symbol_count","thin_group_flag","thin_group_reason","selection_runtime","trade_permission"]
+RANKABLE_STATES = {"ranked", "ranked_partial", "risk_review"}
 
 
 def _csv_rows(text: str) -> list[dict[str, str]]:
@@ -25,49 +27,95 @@ def _csv_text(rows: list[dict[str, str]], fields: list[str]) -> str:
     return out.getvalue()
 
 
-def _availability(row: dict[str, str], key: str) -> str:
+def _num(value: str | None) -> float | None:
     try:
-        return "1" if float(row.get(key, "0") or 0) > 0 else "0"
+        return float(str(value or "").strip())
     except ValueError:
-        return "0"
+        return None
+
+
+def _rankable(row: dict[str, str]) -> bool:
+    return str(row.get("rank_state", "")).strip().lower() in RANKABLE_STATES
+
+
+def _score_values(rows: list[dict[str, str]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        value = _num(row.get(key))
+        if value is not None:
+            values.append(value)
+    return values
+
+
+def _avg(values: list[float]) -> str:
+    return f"{sum(values) / len(values):.2f}" if values else "0.00"
 
 
 def _publish_l12_contract_reports(paths: WorkerPaths) -> None:
-    layer_dir = paths.outbox / "Layers" / "Layer_12_Ranking_Group_Heat_Quality"
-    heat_path = layer_dir / "l12_group_heat_quality.csv"
+    l12_dir = paths.outbox / "Layers" / "Layer_12_Ranking_Group_Heat_Quality"
+    heat_path = l12_dir / "l12_group_heat_quality.csv"
+    l11_path = paths.outbox / "Layers" / "Layer_11_Symbol_Ranking_Inside_Ranking_Group" / "ranked_symbols_by_group.csv"
     if not heat_path.exists():
         return
-    rows = _csv_rows(read_text(heat_path))
+    heat_rows = _csv_rows(read_text(heat_path))
+    l11_rows = _csv_rows(read_text(l11_path)) if l11_path.exists() else []
+    l11_by_group: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in l11_rows:
+        l11_by_group[row.get("ranking_group", "not_available")].append(row)
+
     dist_rows: list[dict[str, str]] = []
     thin_rows: list[dict[str, str]] = []
-    for row in rows:
-        dist_rows.append({
-            "ranking_group": row.get("ranking_group", "not_available"),
-            "rankable_count": row.get("rankable_count", "0"),
-            "l6_available_count": _availability(row, "l6_avg_score"),
-            "l7_available_count": _availability(row, "l7_avg_score"),
-            "l8_available_count": _availability(row, "l8_avg_score"),
-            "l9_available_count": _availability(row, "l9_avg_score"),
-            "l6_avg": row.get("l6_avg_score", "not_available"),
-            "l7_avg": row.get("l7_avg_score", "not_available"),
-            "l8_avg": row.get("l8_avg_score", "not_available"),
-            "l9_avg": row.get("l9_avg_score", "not_available"),
-            "risk_review_count": row.get("risk_review_count", "0"),
-            "not_rankable_count": row.get("not_rankable_count", "0"),
-        })
-        if row.get("thin_group_flag", "false") == "true":
+    for heat in heat_rows:
+        group = heat.get("ranking_group", "not_available")
+        members = l11_by_group.get(group, [])
+        rankable_rows = [row for row in members if _rankable(row)]
+        if rankable_rows:
+            l6 = _score_values(rankable_rows, "l6_score")
+            l7 = _score_values(rankable_rows, "l7_score")
+            l8 = _score_values(rankable_rows, "l8_score")
+            l9 = _score_values(rankable_rows, "l9_score")
+            dist_rows.append({
+                "ranking_group": group,
+                "rankable_count": str(len(rankable_rows)),
+                "l6_available_count": str(len(l6)),
+                "l7_available_count": str(len(l7)),
+                "l8_available_count": str(len(l8)),
+                "l9_available_count": str(len(l9)),
+                "l6_avg": _avg(l6),
+                "l7_avg": _avg(l7),
+                "l8_avg": _avg(l8),
+                "l9_avg": _avg(l9),
+                "risk_review_count": str(sum(1 for row in members if str(row.get("risk_review_flag", "false")).lower() == "true" or str(row.get("rank_state", "")).lower() == "risk_review")),
+                "not_rankable_count": str(max(0, len(members) - len(rankable_rows))),
+            })
+        else:
+            dist_rows.append({
+                "ranking_group": group,
+                "rankable_count": heat.get("rankable_count", "0"),
+                "l6_available_count": "0",
+                "l7_available_count": "0",
+                "l8_available_count": "0",
+                "l9_available_count": "0",
+                "l6_avg": heat.get("l6_avg_score", "0.00"),
+                "l7_avg": heat.get("l7_avg_score", "0.00"),
+                "l8_avg": heat.get("l8_avg_score", "0.00"),
+                "l9_avg": heat.get("l9_avg_score", "0.00"),
+                "risk_review_count": heat.get("risk_review_count", "0"),
+                "not_rankable_count": heat.get("not_rankable_count", "0"),
+            })
+        if heat.get("thin_group_flag", "false") == "true":
             thin_rows.append({
-                "ranking_group": row.get("ranking_group", "not_available"),
-                "group_symbol_count": row.get("group_symbol_count", "0"),
-                "rankable_count": row.get("rankable_count", "0"),
-                "top5_symbol_count": row.get("top5_symbol_count", "0"),
+                "ranking_group": group,
+                "group_symbol_count": heat.get("group_symbol_count", "0"),
+                "rankable_count": heat.get("rankable_count", "0"),
+                "top5_symbol_count": heat.get("top5_symbol_count", "0"),
                 "thin_group_flag": "true",
-                "thin_group_reason": row.get("thin_group_reason", "not_available"),
+                "thin_group_reason": heat.get("thin_group_reason", "not_available"),
                 "selection_runtime": "false",
                 "trade_permission": "false",
             })
-    atomic_write_text(layer_dir / "l12_component_distribution_by_group.csv", _csv_text(dist_rows, DIST_FIELDS))
-    atomic_write_text(layer_dir / "l12_thin_group_warnings.csv", _csv_text(thin_rows, THIN_FIELDS))
+    atomic_write_text(l12_dir / "l12_component_distribution_by_group.csv", _csv_text(dist_rows, DIST_FIELDS))
+    atomic_write_text(l12_dir / "l12_thin_group_warnings.csv", _csv_text(thin_rows, THIN_FIELDS))
 
 
 def l12_result_lines(summary: L12PublishSummary, duration_ms: int) -> str:
