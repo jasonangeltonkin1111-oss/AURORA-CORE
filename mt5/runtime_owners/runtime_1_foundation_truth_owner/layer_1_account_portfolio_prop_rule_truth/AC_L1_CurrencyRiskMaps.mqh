@@ -167,6 +167,7 @@ string AC_L1CurrencyResultRiskMap()
    }
 
    string text = AC_L1MapHeader("CURRENCY RESULT / RISK MAP - FOREX ONLY");
+   text += "section_id:             L1_CURRENCY_RESULT_RISK\r\n";
    text += "Scope:                  forex-pair rows only; base/quote receive 50% net and 50% estimated risk\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Forex Rows:             " + IntegerToString(forex_rows) + "\r\n";
