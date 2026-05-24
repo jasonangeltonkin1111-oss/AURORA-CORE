@@ -1,5 +1,34 @@
 #ifndef AC_L1_REFRESH_MQH
 #define AC_L1_REFRESH_MQH
+
+void AC_L1TagBaseAccountStatusSection(const string heading, const string section_id)
+{
+   string marker = "[section_id=" + section_id + "]";
+   if(StringFind(AC_L1_ACCOUNT_STATUS_TEXT, marker) >= 0)
+      return;
+
+   string needle = "\r\n" + heading + "\r\n";
+   string replacement = "\r\n" + marker + "\r\n" + heading + "\r\n";
+   StringReplace(AC_L1_ACCOUNT_STATUS_TEXT, needle, replacement);
+}
+
+void AC_L1NormalizeBaseAccountStatusSections()
+{
+   // Base Account Status is built by AC_BuildLayer1Texts().
+   // This normalizer only adds stable section ids so GPT/operator reviews can cite sections consistently.
+   // It must not recalculate account truth, scan history, change trade rows, grant permission, or move content to Market Board.
+   if(AC_L1_ACCOUNT_STATUS_TEXT == "")
+      return;
+
+   AC_L1TagBaseAccountStatusSection("ACCOUNT SUMMARY", "account_summary");
+   AC_L1TagBaseAccountStatusSection("RESULTS", "results");
+   AC_L1TagBaseAccountStatusSection("Open Positions - Full", "open_positions_full");
+   AC_L1TagBaseAccountStatusSection("Pending Orders - Full", "pending_orders_full");
+   AC_L1TagBaseAccountStatusSection("Closed Trade History - Selected Detail", "closed_trade_history_selected_detail");
+   AC_L1TagBaseAccountStatusSection("Canceled / Rejected / Expired Orders - Selected Detail", "cancel_reject_expire_selected_detail");
+   AC_L1TagBaseAccountStatusSection("Direction Summary", "direction_summary");
+}
+
 void AC_L1AppendPortfolioMaps()
 {
    // Account Status is a GPT-overseer briefing pack first, then the normal account report,
@@ -48,6 +77,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "asset_risk_heat_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "direction_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "time_window_risk_maps=enabled_account_status_only\r\n";
+   AC_L1_WORKBENCH_SECTION += "holding_time_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "holding_time_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "cluster_v2_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "currency_risk_maps=enabled_account_status_only\r\n";
