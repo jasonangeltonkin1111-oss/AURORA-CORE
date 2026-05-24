@@ -94,6 +94,7 @@ string AC_L1RiskEfficiencyMap()
    double risk_ready_pct = (rows_total > 0 ? ((double)eligible_rows * 100.0) / rows_total : 0.0);
 
    string text = AC_L1MapHeader("RISK EFFICIENCY MAP");
+   text += "section_id:             L1_RISK_EFFICIENCY\r\n";
    text += "Purpose:                measure return versus estimated initial SL risk\r\n";
    text += "Risk Source:            OrderCalcProfit entry-to-SL estimate from Layer 1 money-risk helper\r\n";
    text += "Policy Basis:           Jason numeric policy: 0.10% unit, 0.20% hard, 0.50% extreme\r\n";
@@ -144,6 +145,7 @@ string AC_L1RiskBreachMap()
    double extreme_pct = (eligible_rows > 0 ? ((double)extreme_breaches * 100.0) / eligible_rows : 0.0);
 
    string text = AC_L1MapHeader("RISK BREACH MAP");
+   text += "section_id:             L1_RISK_BREACH\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += "Unit Risk 0.10%:        " + AC_L1MoneyText(unit_risk_money) + "\r\n";
    text += "Hard Risk 0.20%:        " + AC_L1MoneyText(hard_risk_money) + "\r\n";
@@ -162,6 +164,7 @@ string AC_L1RiskBreachMap()
 string AC_L1RiskBreachBySymbolMap(const int limit)
 {
    string text = AC_L1MapHeader("SYMBOL RISK BREACH HEAT MAP");
+   text += "section_id:             L1_SYMBOL_RISK_BREACH_HEAT\r\n";
    text += "Scope:                  selected closed rows with estimated money-risk only\r\n";
    text += AC_L1PadRight("Symbol", 14)
       + AC_L1PadLeft("Rows", 6)
