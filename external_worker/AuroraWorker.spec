@@ -11,6 +11,7 @@ a = Analysis(
         'ctypes.util',
         'aurora_worker_l11',
         'aurora_worker_l11_cleanup',
+        'aurora_worker_l11_current_gate_guard',
         'aurora_worker_l11_dispatch',
         'aurora_worker_l11_dossier_copy',
         'aurora_worker_l11_tree',
