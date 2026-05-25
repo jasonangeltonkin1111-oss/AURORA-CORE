@@ -27,14 +27,14 @@ string AC_L1AccountStatusSectionIndex()
 
    text += AC_L1SectionIndexLine("L1_ACCOUNT_STATUS_HEADER", "Aurora Core - Account Status", "base report identity and build metadata");
    text += AC_L1SectionIndexLine("L1_ACCOUNT_SUMMARY", "Account Summary", "balance, equity, floating P/L, margin");
-   text += AC_L1SectionIndexLine("L1_RESULTS", "Results", "MT5-style selected-history result metrics");
+   text += AC_L1SectionIndexLine("L1_RESULTS", "Results", "MT5-style selected-history metrics; account supervision only, not edge proof");
    text += AC_L1SectionIndexLine("L1_OPEN_POSITIONS_FULL", "Open Positions - Full", "raw open position detail");
    text += AC_L1SectionIndexLine("L1_PENDING_ORDERS_FULL", "Pending Orders - Full", "raw pending order detail");
    text += AC_L1SectionIndexLine("L1_CLOSED_TRADE_HISTORY_SELECTED_DETAIL", "Closed Trade History - Selected Detail", "raw selected closed trade rows");
    text += AC_L1SectionIndexLine("L1_CANCELED_ORDER_EVENTS_SELECTED_DETAIL", "Canceled Order Events - Selected Detail", "raw cancel/reject/expire rows");
-   text += AC_L1SectionIndexLine("L1_SYMBOL_PERFORMANCE_BASE", "Symbol Performance", "base symbol performance table");
-   text += AC_L1SectionIndexLine("L1_DAILY_PERFORMANCE_BASE", "Daily Performance", "base day performance table");
-   text += AC_L1SectionIndexLine("L1_DIRECTION_SUMMARY_BASE", "Direction Summary", "base buy/sell result summary");
+   text += AC_L1SectionIndexLine("L1_SYMBOL_PERFORMANCE_BASE", "Symbol Performance", "selected-history symbol performance; not strategy validation");
+   text += AC_L1SectionIndexLine("L1_DAILY_PERFORMANCE_BASE", "Daily Performance", "selected closed-trade close-date grouping; not prop-firm daily-loss basis");
+   text += AC_L1SectionIndexLine("L1_DIRECTION_SUMMARY_BASE", "Direction Summary", "selected-history buy/sell result summary; not directional edge proof");
 
    text += AC_L1SectionIndexLine("L1_OPEN_PENDING_LIVE_EXPOSURE", "Open / Pending Live Exposure", "near-live open and pending summary");
    text += AC_L1SectionIndexLine("L1_OPEN_PENDING_RISK_AT_SL_READINESS", "Open / Pending Risk-at-SL Readiness", "live SL risk readiness");
