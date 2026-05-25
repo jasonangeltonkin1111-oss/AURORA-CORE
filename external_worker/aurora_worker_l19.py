@@ -107,6 +107,17 @@ class L19PublishSummary:
     d1_completed_symbols: int = 0
     d1_partial_symbols: int = 0
     d1_missing_symbols: int = 0
+    selected_route_dossiers_seen: int = 0
+    selected_route_dossiers_decorated: int = 0
+    selected_unique_symbols_seen: int = 0
+    selected_duplicate_route_copies: int = 0
+    latest_bar_age_max_seconds: int = -1
+    freshness_fresh_count: int = 0
+    freshness_aging_count: int = 0
+    freshness_stale_count: int = 0
+    freshness_unknown_count: int = 0
+    freshness_status: str = "unknown"
+    freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time"
     status_path: str = "not_available"
     board_path: str = "not_available"
     layer_folder: str = "not_available"
@@ -495,7 +506,7 @@ def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries
 
 def _board_text(summary: L19PublishSummary) -> str:
     return "\n".join([
-        "L19 â€” CANDLE GEOMETRY AND STRUCTURE",
+        "L19 - CANDLE GEOMETRY AND STRUCTURE",
         "--------------------------------------------------",
         "Purpose:                Calculate candle geometry plus Wave 1/2/3 candle structures from selected raw OHLC",
         "Scope:                  Canonical Selection Desk copied dossiers only",
@@ -567,6 +578,10 @@ def _status_text(summary: L19PublishSummary) -> str:
         "private_ohlc_cache=false",
         "raw_ohlc_store_writes=false",
         f"selected_dossiers_seen={summary.selected_dossiers_seen}",
+        f"selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
+        f"selected_route_dossiers_decorated={summary.selected_route_dossiers_decorated}",
+        f"selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
+        f"selected_duplicate_route_copies={summary.selected_duplicate_route_copies}",
         f"selected_dossiers_decorated={summary.selected_dossiers_decorated}",
         f"selected_dossiers_missing_symbol={summary.selected_dossiers_missing_symbol}",
         f"source_files_expected={summary.source_files_expected}",
@@ -582,6 +597,13 @@ def _status_text(summary: L19PublishSummary) -> str:
         f"wave3_rows_tagged={summary.wave3_rows_tagged}",
         f"topview_cleanup_count={summary.topview_cleanup_count}",
         f"write_failed_count={summary.write_failed_count}",
+        f"latest_bar_age_max_seconds={summary.latest_bar_age_max_seconds}",
+        f"freshness_fresh_count={summary.freshness_fresh_count}",
+        f"freshness_aging_count={summary.freshness_aging_count}",
+        f"freshness_stale_count={summary.freshness_stale_count}",
+        f"freshness_unknown_count={summary.freshness_unknown_count}",
+        f"freshness_status={summary.freshness_status}",
+        f"freshness_policy={summary.freshness_policy}",
         f"m5_completed_symbols={summary.m5_completed_symbols}",
         f"m5_partial_symbols={summary.m5_partial_symbols}",
         f"m5_missing_symbols={summary.m5_missing_symbols}",
@@ -608,6 +630,35 @@ def _status_text(summary: L19PublishSummary) -> str:
     ])
 
 
+
+
+def _freshness_bucket(tf: str, age_seconds: int) -> str:
+    caps = {"M5": (900, 1800), "M15": (1800, 3600), "H1": (7200, 14400), "H4": (21600, 43200), "D1": (172800, 345600)}
+    fresh_cap, aging_cap = caps.get(tf, (1800, 3600))
+    if age_seconds < 0:
+        return "unknown"
+    if age_seconds <= fresh_cap:
+        return "fresh"
+    if age_seconds <= aging_cap:
+        return "aging"
+    return "stale"
+
+
+def _latest_age_seconds(root: Path, symbol: str, timeframe: str) -> int:
+    path = _ohlc_path(root, symbol, timeframe)
+    if not path.exists():
+        return -1
+    try:
+        _meta, rows = _parse_header_and_rows(read_text(path))
+        if not rows:
+            return -1
+        bar_time = int(float(rows[-1][0]))
+        if bar_time <= 0:
+            return -1
+        return max(0, unix_time() - bar_time)
+    except Exception:
+        return -1
+
 def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     failed: List[Path] = []
     layer_dir = _layer_folder(root)
@@ -625,6 +676,7 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         if not symbol:
             missing_symbol += 1
             continue
+        unique_symbols.add(symbol)
         rendered: List[str] = []
         tf_summaries: Dict[str, TimeframeGeometrySummary] = {}
         dossier_wave2 = dossier_wave3 = 0
@@ -659,13 +711,23 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
             updated = _replace_l19_in_deep_section(existing, _build_l19_block(symbol, rendered, tf_summaries, dossier_wave2, dossier_wave3))
             if _write(dossier, updated, failed):
                 decorated += 1
+                route_decorated += 1
                 wave2_total += dossier_wave2
                 wave3_total += dossier_wave3
         except Exception:
             failed.append(dossier)
 
-    status = "accepted" if dossiers and not failed and source_missing == 0 and decode_errors == 0 else ("partial" if dossiers else "pending")
-    reason = "l19_candle_geometry_dossiers_decorated" if status == "accepted" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_l19_sources_missing_partial_invalid_or_write_failed")
+    has_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or source_partial > 0 or decorated == 0
+    freshness_bad = freshness["stale"] > 0 or freshness["unknown"] > 0
+    if not dossiers:
+        status = "pending"
+    elif has_errors:
+        status = "partial"
+    elif freshness_bad:
+        status = "degraded"
+    else:
+        status = "accepted"
+    reason = "selected_dossiers_decorated_with_freshness_proof" if status == "accepted" else ("selected_dossiers_decorated_with_stale_or_unknown_freshness" if status == "degraded" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_sources_missing_partial_invalid_or_write_failed"))
     summary = L19PublishSummary(
         status=status, reason=reason, selected_dossiers_seen=len(dossiers), selected_dossiers_decorated=decorated,
         selected_dossiers_missing_symbol=missing_symbol, source_files_expected=source_expected, source_files_found=source_found,
