@@ -26,7 +26,7 @@ class L10SymbolPathPlan:
 
     @property
     def selection_allowed(self) -> bool:
-        # Compatibility field only. L10 does not own selection runtime.
+        # CSV compatibility field only. L10 does not own selection runtime.
         return self.downstream_classification_eligible
 
     def as_symbol_path_index_row(self) -> dict[str, str]:
@@ -94,24 +94,29 @@ def l10_symbol_path_index_text(plans: Iterable[L10SymbolPathPlan], max_rows: int
         "SYMBOL PATH INDEX",
         "----------------------------------------",
         "Meaning: L10 taxonomy roadmap only; group folder hints are pending downstream processing and are not proof that copied Dossiers exist.",
-        "Runtime Permission: FALSE",
+        "Selection Runtime: FALSE",
+        "Trade Permission: FALSE",
+        "Entry Signal: FALSE",
+        "Execution: FALSE",
         "",
     ]
     for plan in materialized[:max_rows]:
         lines.extend(
             [
                 plan.symbol,
-                f"Taxonomy:          {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
-                f"State:             {plan.taxonomy_state}",
-                f"Rank Allowed:      {'TRUE' if plan.rank_allowed else 'FALSE'}",
-                f"Selection Allowed: {'TRUE' if plan.selection_allowed else 'FALSE'}",
-                f"Downstream Classification Eligible: {'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
-                f"Dossier Source:    {plan.dossier_source_path}",
-                f"Future Group Path: {plan.future_group_folder}",
-                f"Top 5 Copy:        {plan.future_top5_copy_path}",
-                f"Top 10 Copy:       {plan.future_top10_copy_path}",
-                f"Reason:            {plan.reason}",
-                "Runtime Permission: FALSE",
+                f"Taxonomy:                              {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
+                f"State:                                 {plan.taxonomy_state}",
+                f"Rank Allowed For Downstream Ranking:   {'TRUE' if plan.rank_allowed else 'FALSE'}",
+                f"Classification Eligible For Downstream:{'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
+                "Selection Runtime:                     FALSE",
+                "Trade Permission:                       FALSE",
+                "Entry Signal:                           FALSE",
+                "Execution:                              FALSE",
+                f"Dossier Source:                         {plan.dossier_source_path}",
+                f"Future Group Path Hint:                 {plan.future_group_folder}",
+                f"Future L11 Top-5 Copy Hint:             {plan.future_top5_copy_path}",
+                f"Future L16 Top-10 Copy Hint:            {plan.future_top10_copy_path}",
+                f"Reason:                                 {plan.reason}",
                 "",
             ]
         )
