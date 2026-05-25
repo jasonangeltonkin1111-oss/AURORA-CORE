@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This document captures the trading-guide-derived research ideas that may later support selected-symbol evidence and setup research without contaminating L12-L16 ranking/selection logic or creating fake trade permission.
+This document captures the trading-guide-derived research ideas that may later support selected-symbol evidence, setup research, manual trader review, and trader-chat export without contaminating L12-L16 ranking/selection logic or creating fake trade permission.
 
-Status: `IDEA / UNTESTED / UNPROVEN`.
+Status: `EVIDENCE EXPORT DESIGN / SETUP RESEARCH UNTESTED / PERMISSION UNPROVEN`.
 
-The concepts here are education and research fuel only. They are not edge proof, not strategy validation, not a signal owner, and not prop-firm permission.
+The concepts here are evidence and research fuel. They are allowed to be packaged as raw truth, partial truth, degraded truth, and manual-review context. They are not edge proof, not strategy validation, not an auto-trading owner, and not prop-firm permission.
 
 ---
 
@@ -31,7 +31,7 @@ trade permission
 execution
 ```
 
-All screenshot-derived structure/liquidity ideas belong no earlier than selected-symbol deep evidence and Layer 23 setup research:
+All screenshot-derived structure/liquidity ideas belong no earlier than selected-symbol deep evidence and Layer 23 setup/trader-review export:
 
 ```text
 L17 = choose which symbols deserve deep evidence
@@ -40,8 +40,20 @@ L19 = selected candle geometry only, no pattern folklore
 L20 = selected rolling tick/spread proxy
 L21 = selected indicator/reference context only
 L22 = selected liquidity/structure/risk-geometry evidence only
-L23 = setup/strategy/permission research, blocked by default until validated
+L23 = setup research, manual-review state, trader-chat export state, and permission flags
 ```
+
+Layer 23 must separate three states:
+
+```text
+raw_evidence_export_allowed=true when truth packet exists, even if partial/degraded
+manual_trader_review_allowed=true when packet is labelled and risk/missing data are visible
+trader_chat_export_allowed=true when packet can be consumed as truth context
+trade_permission=false unless a later validation/permission owner explicitly upgrades it
+auto_trade_allowed=false unless future auto-trading validation explicitly upgrades it
+```
+
+Incomplete L18-L22 evidence must not block raw truth export. It must only reduce completeness/confidence and keep permission false.
 
 ---
 
@@ -101,6 +113,7 @@ best trade now
 entry signal
 trade permission
 prop-firm safe
+auto-trade allowed
 ```
 
 Allowed wording:
@@ -111,8 +124,11 @@ structure_candidate
 liquidity_reference
 setup_research_candidate
 inspection_only
-validation_required
+manual_review_context
+trader_chat_export_packet
+validation_required_for_permission
 trade_permission=false
+auto_trade_allowed=false
 ```
 
 ---
@@ -234,7 +250,7 @@ Allowed:
 ```text
 collect evidence for selected symbols only
 publish completeness/degraded states
-prepare liquidity/structure evidence for L23 research
+prepare liquidity/structure evidence for L23 research and manual review export
 ```
 
 Forbidden:
@@ -245,9 +261,24 @@ setup confirmation
 trade permission
 ```
 
-### L23 — Setup / Strategy / Permission / Alert State
+### L23 — Setup / Strategy / Permission / Trader-Review Export State
 
-Allowed later only after research and proof:
+Allowed as soon as source packets exist, even before strategy validation:
+
+```text
+manual_review_packet_available=true/false
+trader_chat_export_available=true/false
+evidence_completeness_pct
+missing_evidence_list
+degraded_evidence_list
+setup_research_candidate=true/false
+structure_context_summary
+liquidity_context_summary
+risk_geometry_context_summary
+review_warnings
+```
+
+Allowed research candidate labels:
 
 ```text
 SMC_STRUCTURE_RETEST_V1 candidate
@@ -255,7 +286,7 @@ HTF_POI_SWEEP_MSS_FVG_RETRACE candidate
 CRT_TBS_RESEARCH candidate
 ```
 
-Default state:
+Default permission state remains:
 
 ```text
 trade_allowed=false
@@ -264,11 +295,19 @@ directional_alert_allowed=false
 class_2_setup_alert_allowed=false
 ```
 
+Manual review/export is not the same as permission:
+
+```text
+manual_review_allowed=true does not imply trade_allowed=true
+trader_chat_export_allowed=true does not imply entry_signal=true
+setup_research_candidate=true does not imply expectancy_validated=true
+```
+
 ---
 
-## Future Research Requirements Before Coding L22/L23 SMC Evidence
+## Future Research Requirements Before Coding Permission Or Auto-Trading
 
-Coding research required:
+Coding research required before runtime evidence layers and permission surfaces are promoted:
 
 ```text
 MQL5 CopyRates and MqlRates behavior
@@ -282,7 +321,7 @@ worker versus MT5 runtime authority
 selected-symbol-only performance budget
 ```
 
-Trading research required:
+Trading research required before Aurora grants strategy permission, directional alerts, or auto-trading:
 
 ```text
 mechanical swing definition
@@ -303,7 +342,7 @@ prop-firm rule profile
 kill condition
 ```
 
-No exact definition, no code.
+No exact definition, no permission code. Raw evidence export may still exist with explicit missing/degraded labels.
 
 ---
 
@@ -321,7 +360,7 @@ Status:
 IDEA / UNTESTED / UNPROVEN
 ```
 
-Required evidence chain:
+Evidence chain for manual review context:
 
 ```text
 HTF point of interest or liquidity reference
@@ -330,25 +369,28 @@ mechanical CHOCH/MSS candidate
 mechanical BOS candidate
 fresh FVG or OB candidate
 retrace into defined zone
-risk geometry pass
-spread_to_stop_ratio pass
-expected_r_after_cost pass
-L1 prop/account safety pass
-session and quote freshness pass
+risk geometry context
+spread_to_stop_ratio context
+expected_r_after_cost context
+L1 prop/account safety context
+session and quote freshness context
 ```
 
 Output wording must remain:
 
 ```text
 setup_candidate=true/false
+manual_review_allowed=true/false
+trader_chat_export_allowed=true/false
 trade_permission=false unless validation owner explicitly upgrades it
+auto_trade_allowed=false unless future auto-trading validation explicitly upgrades it
 ```
 
 ---
 
-## Cheapest Falsifier
+## Cheapest Falsifier For Permission / Auto-Trading Promotion
 
-Before any L23 promotion:
+These are not required for raw evidence export or manual trader-chat review. They are required before Aurora promotes a setup into validated permission, class-2 directional alerts, or auto-trading:
 
 ```text
 1. Select one exact model only.
@@ -367,7 +409,13 @@ Before any L23 promotion:
 
 Use this document as a guardrail for future L17-L23 work.
 
-Current decision for screenshot-derived trading logic:
+Current decision for selected evidence export and trader-chat review packets:
+
+```text
+PROCEED AS TRUTH EXPORT / TEST FIRST FOR RUNTIME IMPLEMENTATION
+```
+
+Current decision for Aurora-generated trade permission, class-2 directional alerts, or auto-trading:
 
 ```text
 TEST FIRST
