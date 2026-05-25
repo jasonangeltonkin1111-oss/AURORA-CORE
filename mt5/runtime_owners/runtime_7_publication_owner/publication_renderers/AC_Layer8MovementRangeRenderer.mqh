@@ -6,6 +6,8 @@
 // It must not calculate movement, rank, call CopyRates, select, permit, or execute.
 // L8 display uses the Gateway accepted surface epoch to prevent false degraded flicker
 // when the EA publishes a newer input manifest before the next Gateway rank completes.
+// Important: Gateway status input_degraded is still a valid published truth state when
+// counts/identity/files/authority/permission pass. It is degraded evidence, not a broken sidecar.
 
 static string AC_L8_STATUS = "Pending ranked sidecar";
 static string AC_L8_TRUST_STATE = "Ranking Pending";
@@ -236,7 +238,7 @@ void AC_L8RefreshSurfaceAcceptedEpoch()
 
    AC_L8_ACCEPTED_EPOCH_VALID_RENDERED = (
       AC_L8_ACCEPTED_EPOCH_STATUS_RENDERED == "accepted_current" &&
-      AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED == "complete" &&
+      (AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED == "complete" || AC_L8_ACCEPTED_EPOCH_L8_STATUS_RENDERED == "input_degraded") &&
       AC_L8_ACCEPTED_EPOCH_VALID_UNTIL_UNIX_RENDERED > now_unix &&
       now_unix > 0
    );
@@ -318,6 +320,18 @@ void AC_L8ResetRenderState()
    AC_L8_ACCEPTED_EPOCH_AGE_SECONDS_RENDERED = -1;
 }
 
+void AC_L8AcceptPublishedDegradedSidecar(const bool ohlc_ok)
+{
+   AC_L8_RANKED_ACCEPTED = true;
+   AC_L8_DISPLAY_STATE = "ACCEPTED_CURRENT_INPUT_DEGRADED";
+   AC_L8_STATUS = "Ranked sidecar accepted - input degraded";
+   AC_L8_TRUST_STATE = "Ranking Published With Input Degradation";
+   AC_L8_VALIDATION_STATUS = "AcceptedInputDegraded";
+   AC_L8_VALIDATION_REASON = "Gateway published L8 input_degraded truth; counts/identity/files/authority/permission accepted, but OHLC priority windows are incomplete; movement evidence is degraded and inspection-only";
+   AC_L8_MAIN_BLOCKER = ohlc_ok ? "none_l8_gateway_input_degraded" : "none_l8_input_degraded_ohlc_windows_incomplete";
+   AC_L8_TOP20_FIRST_LINE = AC_L8PrettyTop20Line(AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000)));
+}
+
 void AC_L8RefreshRankedSidecar()
 {
    AC_L8ResetRenderState();
@@ -394,7 +408,9 @@ void AC_L8RefreshRankedSidecar()
 
    bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass);
    bool ohlc_ok = (AC_L8_OHLC_MIN_READY_RENDERED == AC_L5_GATE_PASS && AC_L5_GATE_PASS > 0);
-   bool manifest_ok = (ranked_status == "complete" || ranked_status == "input_degraded");
+   bool manifest_clean = (ranked_status == "complete");
+   bool manifest_input_degraded = (ranked_status == "input_degraded");
+   bool manifest_ok = (manifest_clean || manifest_input_degraded);
    bool counts_ok = (ranked_input_count == ranked_rows && ranked_rows == input_rows && source_input_rows == input_rows && source_l5_gate_pass == input_l5_pass);
    bool identity_ok = (source_input_checksum == input_payload_checksum && input_payload_checksum != "not_available")
       || (checksum_match_text == "true" && ranked_input_checksum == input_payload_checksum && ranked_input_checksum_after == input_payload_checksum);
@@ -405,11 +421,18 @@ void AC_L8RefreshRankedSidecar()
       && AC_L8_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true"
       && AC_L8_SYMBOL_RANK_FILES_WRITTEN_RENDERED == ranked_rows
       && AC_L8_SYMBOL_RANK_FILES_ACTUAL_RENDERED == ranked_rows;
+   bool sidecar_truth_ok = input_ok && manifest_ok && counts_ok && identity_ok && authority_ok && permission_ok && files_ok;
 
    AC_L8_GENERATION_COUNTS_OK_RENDERED = counts_ok && files_ok;
    AC_L8_GENERATION_IDENTITY_OK_RENDERED = identity_ok;
 
-   if(input_ok && ohlc_ok && manifest_ok && counts_ok && identity_ok && authority_ok && permission_ok && files_ok)
+   if(sidecar_truth_ok && manifest_input_degraded)
+   {
+      AC_L8AcceptPublishedDegradedSidecar(ohlc_ok);
+      return;
+   }
+
+   if(sidecar_truth_ok && ohlc_ok && manifest_clean)
    {
       AC_L8_RANKED_ACCEPTED = true;
       AC_L8_DISPLAY_STATE = "ACCEPTED_CURRENT";
@@ -545,6 +568,8 @@ string AC_Layer8DossierSection(const string symbol)
    text += "Generation Identity OK: " + AC_L8BoolText(AC_L8_GENERATION_IDENTITY_OK_RENDERED) + "\r\n";
    if(AC_L8_ACCEPTED_HELD_RECALC_PENDING)
       text += "Note: Symbol rank belongs to last accepted L8 epoch; newer input is waiting for next Gateway rank.\r\n";
+   if(AC_L8_DISPLAY_STATE == "ACCEPTED_CURRENT_INPUT_DEGRADED")
+      text += "Note: Gateway accepted degraded L8 evidence; missing OHLC windows degrade movement proof but do not make the sidecar broken.\r\n";
 
    if(l5_gate_status != "pass")
    {
@@ -552,7 +577,7 @@ string AC_Layer8DossierSection(const string symbol)
       text += "Movement Score: not_available\r\n";
       text += "Movement Bucket: not_available\r\n";
    }
-   else if(!ohlc_min && !AC_L8_ACCEPTED_HELD_RECALC_PENDING)
+   else if(!ohlc_min && !AC_L8_ACCEPTED_HELD_RECALC_PENDING && AC_L8_DISPLAY_STATE != "ACCEPTED_CURRENT_INPUT_DEGRADED")
    {
       text += "Rank State: ohlc_priority_windows_pending\r\n";
       text += "Movement Score: pending\r\n";
