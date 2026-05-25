@@ -5,7 +5,7 @@ string AC_L3BuildCacheKey(const int total)
 {
    return AC_DOSSIER_SHELL_SCHEMA_VERSION
       + " | server=" + AccountInfoString(ACCOUNT_SERVER)
-      + " | account=" + IntegerToString((int)AccountInfoInteger(ACCOUNT_LOGIN))
+      + " | account=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN))
       + " | account_currency=" + AccountInfoString(ACCOUNT_CURRENCY)
       + " | symbols=" + IntegerToString(total)
       + " | owner=L3BrokerSpecsTruth";
