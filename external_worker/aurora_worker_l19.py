@@ -16,6 +16,9 @@ L19_END = "----- L19 CANDLE GEOMETRY AND STRUCTURE END -----"
 DISPLAY_BARS: Dict[str, int] = {"M5": 5, "M15": 5, "H1": 5, "H4": 5, "D1": 5}
 RANKED_DOSSIER_RE = re.compile(r"^\d{2}_(.+)\.txt$")
 
+L19_SOURCE_CONTRACT_WAVE2_COMPAT = "wave_1_single_candle_plus_wave_2_closed_assumed_two_candle_structures"
+L19_SOURCE_CONTRACT_ACTIVE = "wave_1_single_candle_plus_wave_2_two_candle_plus_wave_3_three_candle_structures"
+
 DOJI_BODY_MAX_PCT = 5.0
 SMALL_BODY_MAX_PCT = 20.0
 LARGE_BODY_MIN_PCT = 60.0
@@ -443,7 +446,7 @@ def _replace_l19_in_deep_section(existing_text: str, l19_block: str) -> str:
 
 
 def _empty_tf_counts() -> Dict[str, Dict[str, int]]:
-    return {tf: {"complete": 0, "partial": 0, "missing": 0, "decode_error": 0} for tf in DISPLAY_BARS}
+    return {tf: {"complete": 0, "partial": 0, "missing", "decode_error": 0} for tf in DISPLAY_BARS}
 
 
 def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries: Dict[str, TimeframeGeometrySummary], wave2_tagged: int, wave3_tagged: int) -> str:
@@ -456,6 +459,8 @@ def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries
         "Layer:                  L19 Candle Geometry and Structure",
         "Scope:                  Selection copied dossier only",
         "Source Contract:        L18 selected raw OHLC scope using existing Shared OHLC seed files",
+        f"Source Contract Compat: {L19_SOURCE_CONTRACT_WAVE2_COMPAT}",
+        f"Source Contract Active: {L19_SOURCE_CONTRACT_ACTIVE}",
         "Rows Shown Per TF:      5",
         "Structure Wave:         Wave 1 single candle + Wave 2 two candle + Wave 3 three candle structures",
         "Wave 2 Policy:          current possible row is not used as confirmed two-candle structure",
@@ -496,6 +501,8 @@ def _board_text(summary: L19PublishSummary) -> str:
         "Scope:                  Canonical Selection Desk copied dossiers only",
         "Rows Shown Per TF:      5",
         "Structure Wave:         Wave 1 single candle + Wave 2 two candle + Wave 3 three candle structures",
+        f"Source Contract Compat: {L19_SOURCE_CONTRACT_WAVE2_COMPAT}",
+        f"Source Contract Active: {L19_SOURCE_CONTRACT_ACTIVE}",
         "Wave 2 Policy:          current possible row is not used as confirmed two-candle structure",
         "Wave 3 Policy:          current possible row is not used as confirmed three-candle structure; no gap or trend confirmation is claimed",
         "Time Basis:             OHLC Store Unix time rendered as readable store time plus raw Unix",
@@ -547,6 +554,8 @@ def _status_text(summary: L19PublishSummary) -> str:
         f"reason={summary.reason}",
         "scope=canonical_selection_shortcut_dossiers_only",
         "source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
+        f"source_contract_compat={L19_SOURCE_CONTRACT_WAVE2_COMPAT}",
+        f"source_contract_active={L19_SOURCE_CONTRACT_ACTIVE}",
         "rows_shown_per_tf=5",
         "structure_wave=wave_1_single_candle_plus_wave_2_two_candle_plus_wave_3_three_candle_structures",
         "wave2_current_possible_confirmed=false",
