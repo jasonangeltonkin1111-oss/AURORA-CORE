@@ -106,8 +106,8 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         and ((l15_status in {"accepted", "degraded", "write_degraded"}) if enable_l15_runtime else True)
         and ((l16_status in {"accepted", "degraded", "write_degraded"}) if enable_l16_runtime else True)
         and ((l17_status in {"accepted", "degraded", "write_degraded"}) if enable_l17_runtime else True)
-        and ((l18_status in {"accepted", "partial", "write_degraded"}) if enable_l18_runtime else True)
-        and ((l19_status in {"accepted", "partial", "write_degraded"}) if enable_l19_runtime else True)
+        and ((l18_status in {"accepted", "degraded", "partial", "write_degraded"}) if enable_l18_runtime else True)
+        and ((l19_status in {"accepted", "degraded", "partial", "write_degraded"}) if enable_l19_runtime else True)
     )
     if not all_complete:
         return False

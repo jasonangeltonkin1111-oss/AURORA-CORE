@@ -47,6 +47,17 @@ class L18PublishSummary:
     d1_completed_symbols: int = 0
     d1_partial_symbols: int = 0
     d1_missing_symbols: int = 0
+    selected_route_dossiers_seen: int = 0
+    selected_route_dossiers_decorated: int = 0
+    selected_unique_symbols_seen: int = 0
+    selected_duplicate_route_copies: int = 0
+    latest_bar_age_max_seconds: int = -1
+    freshness_fresh_count: int = 0
+    freshness_aging_count: int = 0
+    freshness_stale_count: int = 0
+    freshness_unknown_count: int = 0
+    freshness_status: str = "unknown"
+    freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time"
     status_path: str = "not_available"
     board_path: str = "not_available"
     layer_folder: str = "not_available"
@@ -286,6 +297,10 @@ def _status_text(summary: L18PublishSummary) -> str:
         "private_ohlc_cache=false",
         "base_dossiers_touched=false",
         f"selected_dossiers_seen={summary.selected_dossiers_seen}",
+        f"selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
+        f"selected_route_dossiers_decorated={summary.selected_route_dossiers_decorated}",
+        f"selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
+        f"selected_duplicate_route_copies={summary.selected_duplicate_route_copies}",
         f"selected_dossiers_decorated={summary.selected_dossiers_decorated}",
         f"selected_dossiers_missing_symbol={summary.selected_dossiers_missing_symbol}",
         f"source_files_expected={summary.source_files_expected}",
@@ -295,6 +310,13 @@ def _status_text(summary: L18PublishSummary) -> str:
         f"source_decode_errors={summary.source_decode_errors}",
         f"rows_printed_to_dossiers={summary.rows_printed_to_dossiers}",
         f"write_failed_count={summary.write_failed_count}",
+        f"latest_bar_age_max_seconds={summary.latest_bar_age_max_seconds}",
+        f"freshness_fresh_count={summary.freshness_fresh_count}",
+        f"freshness_aging_count={summary.freshness_aging_count}",
+        f"freshness_stale_count={summary.freshness_stale_count}",
+        f"freshness_unknown_count={summary.freshness_unknown_count}",
+        f"freshness_status={summary.freshness_status}",
+        f"freshness_policy={summary.freshness_policy}",
         f"m5_completed_symbols={summary.m5_completed_symbols}",
         f"m5_partial_symbols={summary.m5_partial_symbols}",
         f"m5_missing_symbols={summary.m5_missing_symbols}",
@@ -321,6 +343,35 @@ def _status_text(summary: L18PublishSummary) -> str:
     ])
 
 
+
+
+def _freshness_bucket(tf: str, age_seconds: int) -> str:
+    caps = {"M5": (900, 1800), "M15": (1800, 3600), "H1": (7200, 14400), "H4": (21600, 43200), "D1": (172800, 345600)}
+    fresh_cap, aging_cap = caps.get(tf, (1800, 3600))
+    if age_seconds < 0:
+        return "unknown"
+    if age_seconds <= fresh_cap:
+        return "fresh"
+    if age_seconds <= aging_cap:
+        return "aging"
+    return "stale"
+
+
+def _latest_age_seconds(root: Path, symbol: str, timeframe: str) -> int:
+    path = _ohlc_path(root, symbol, timeframe)
+    if not path.exists():
+        return -1
+    try:
+        _meta, rows = _parse_header_and_rows(read_text(path))
+        if not rows:
+            return -1
+        bar_time = int(float(rows[-1][0]))
+        if bar_time <= 0:
+            return -1
+        return max(0, unix_time() - bar_time)
+    except Exception:
+        return -1
+
 def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
     failed: List[Path] = []
     layer_dir = _layer_folder(root)
@@ -332,6 +383,12 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
     tf_counts = _empty_tf_counts()
     decorated = 0
     missing_symbol = 0
+    route_seen = len(dossiers)
+    route_decorated = 0
+    unique_symbols = set()
+    freshness = {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0}
+    tf_freshness = {tf: {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0} for tf in DISPLAY_BARS}
+    latest_max_age = -1
     source_expected = len(dossiers) * len(DISPLAY_BARS)
     source_found = 0
     source_missing = 0
@@ -344,6 +401,7 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         if not symbol:
             missing_symbol += 1
             continue
+        unique_symbols.add(symbol)
         rendered: List[str] = []
         tf_statuses: Dict[str, str] = {}
         dossier_rows = 0
@@ -366,17 +424,44 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
                     tf_counts[tf]["decode_error"] += 1
             if decode_error:
                 decode_errors += 1
+            age = _latest_age_seconds(root, symbol, tf)
+            bucket = _freshness_bucket(tf, age)
+            freshness[bucket] += 1
+            tf_freshness[tf][bucket] += 1
+            if age > latest_max_age:
+                latest_max_age = age
         try:
             existing = read_text(dossier)
             updated = _replace_l18_in_deep_section(existing, _build_l18_block(symbol, rendered, tf_statuses, dossier_rows))
             if _write(dossier, updated, failed):
                 decorated += 1
+                route_decorated += 1
                 rows_total += dossier_rows
         except Exception:
             failed.append(dossier)
 
-    status = "accepted" if dossiers and not failed and source_missing == 0 and decode_errors == 0 else ("partial" if dossiers else "pending")
-    reason = "l18_selected_ohlc_dossiers_decorated" if status == "accepted" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_l18_sources_missing_partial_or_write_failed")
+    has_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or source_partial > 0 or decorated == 0
+    freshness_bad = freshness["stale"] > 0 or freshness["unknown"] > 0
+    if not dossiers:
+        status = "pending"
+    elif has_errors:
+        status = "partial"
+    elif freshness_bad:
+        status = "degraded"
+    else:
+        status = "accepted"
+    reason = "selected_dossiers_decorated_with_freshness_proof" if status == "accepted" else ("selected_dossiers_decorated_with_stale_or_unknown_freshness" if status == "degraded" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_sources_missing_partial_invalid_or_write_failed"))
+
+    if freshness["unknown"] and not (freshness["fresh"] or freshness["aging"] or freshness["stale"]):
+        freshness_status = "unknown"
+    elif freshness["stale"] and not (freshness["fresh"] or freshness["aging"]):
+        freshness_status = "stale"
+    elif sum(1 for v in freshness.values() if v > 0) > 1:
+        freshness_status = "mixed"
+    elif freshness["fresh"] > 0:
+        freshness_status = "fresh"
+    else:
+        freshness_status = "aging"
 
     summary = L18PublishSummary(
         status=status,
@@ -406,6 +491,17 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         d1_completed_symbols=tf_counts["D1"]["complete"],
         d1_partial_symbols=tf_counts["D1"]["partial"] + tf_counts["D1"]["decode_error"],
         d1_missing_symbols=tf_counts["D1"]["missing"],
+        selected_route_dossiers_seen=route_seen,
+        selected_route_dossiers_decorated=route_decorated,
+        selected_unique_symbols_seen=len(unique_symbols),
+        selected_duplicate_route_copies=max(0, route_seen - len(unique_symbols)),
+        latest_bar_age_max_seconds=latest_max_age,
+        freshness_fresh_count=freshness["fresh"],
+        freshness_aging_count=freshness["aging"],
+        freshness_stale_count=freshness["stale"],
+        freshness_unknown_count=freshness["unknown"],
+        freshness_status=freshness_status,
+        freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time",
         status_path=str(status_path),
         board_path=str(board_path),
         layer_folder=str(layer_dir),
