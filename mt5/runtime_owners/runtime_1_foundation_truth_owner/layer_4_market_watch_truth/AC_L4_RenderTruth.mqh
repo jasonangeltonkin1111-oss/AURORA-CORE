@@ -81,36 +81,46 @@ string AC_Layer4DossierSection(const string symbol)
    }
 
    AC_L4SymbolPacket p = AC_L4_SYMBOLS[idx];
+   bool tick_safe = (p.tick_available && p.tick_age_ms >= 0);
+   bool bid_safe = (p.tick_available && p.bid_valid);
+   bool ask_safe = (p.tick_available && p.ask_valid);
+   bool last_safe = (p.tick_available && p.last_valid);
+   bool spread_safe = (p.tick_available && p.bid_ask_valid && p.point > 0.0);
+   bool daily_open_safe = (p.daily_open > 0.0);
+   bool daily_bid_range_safe = (p.daily_high_bid > 0.0 && p.daily_low_bid > 0.0 && p.daily_high_bid >= p.daily_low_bid);
+   bool daily_ask_range_safe = (p.daily_high_ask > 0.0 && p.daily_low_ask > 0.0 && p.daily_high_ask >= p.daily_low_ask);
+   bool daily_position_safe = (p.daily_high_bid > p.daily_low_bid && p.bid > 0.0);
+
    text += "Status: " + p.scan_status + "\r\n";
    text += "Quote Quality: " + p.quote_quality + "\r\n";
    text += "Surface Quality: " + p.surface_quality + "\r\n";
    text += "Tick Source: SymbolInfoTick\r\n";
-   text += "Tick Time: " + AC_L4DateTimeText(p.tick_time_broker) + " broker/server\r\n";
-   text += "Tick Age: " + AC_L4NumberText(p.tick_age_seconds, 1) + " sec\r\n";
-   text += "Bid: " + AC_L4PriceText(p.bid, p.digits) + "\r\n";
-   text += "Ask: " + AC_L4PriceText(p.ask, p.digits) + "\r\n";
-   text += "Last: " + AC_L4PriceText(p.last, p.digits) + "\r\n";
-   text += "Spread: " + AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4NumberText(p.spread_pips_live, 1) + " pips / " + AC_L4BpsText(p.spread_bps_live) + "\r\n";
+   text += "Tick Time: " + (p.tick_available ? AC_L4DateTimeText(p.tick_time_broker) + " broker/server" : "Not available") + "\r\n";
+   text += "Tick Age: " + (tick_safe ? AC_L4NumberText(p.tick_age_seconds, 1) + " sec" : "Not available") + "\r\n";
+   text += "Bid: " + (bid_safe ? AC_L4PriceText(p.bid, p.digits) : "Not available") + "\r\n";
+   text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
+   text += "Last: " + (last_safe ? AC_L4PriceText(p.last, p.digits) : "Not available") + "\r\n";
+   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4NumberText(p.spread_pips_live, 1) + " pips / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
    text += "Spread Score: " + p.spread_score + "\r\n";
    text += "Spread Source: " + p.spread_source + "\r\n";
-   text += "Broker Spread Spec: " + IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") + "\r\n";
+   text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
    text += "Spread Check: " + p.spread_vs_spec_status + "\r\n";
    text += "Zero Spread State: " + p.zero_spread_state + "\r\n";
 
    text += "\r\nDaily Change\r\n";
    text += "----------------------------------------\r\n";
    text += "Daily Change: " + (p.daily_change_status == "Available" ? AC_L4PctText(p.daily_change_pct) : "Not available") + "\r\n";
-   text += "Daily Open: " + AC_L4PriceText(p.daily_open, p.digits) + "\r\n";
-   text += "Daily High Bid: " + AC_L4PriceText(p.daily_high_bid, p.digits) + "\r\n";
-   text += "Daily Low Bid: " + AC_L4PriceText(p.daily_low_bid, p.digits) + "\r\n";
-   text += "Daily High Ask: " + AC_L4PriceText(p.daily_high_ask, p.digits) + "\r\n";
-   text += "Daily Low Ask: " + AC_L4PriceText(p.daily_low_ask, p.digits) + "\r\n";
-   text += "Daily Range Position: " + AC_L4PctText(p.daily_range_position_pct) + "\r\n";
-   text += "Daily Change Source: Broker Market Watch property\r\n";
+   text += "Daily Open: " + (daily_open_safe ? AC_L4PriceText(p.daily_open, p.digits) : "Not available") + "\r\n";
+   text += "Daily High Bid: " + (daily_bid_range_safe ? AC_L4PriceText(p.daily_high_bid, p.digits) : "Not available") + "\r\n";
+   text += "Daily Low Bid: " + (daily_bid_range_safe ? AC_L4PriceText(p.daily_low_bid, p.digits) : "Not available") + "\r\n";
+   text += "Daily High Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_high_ask, p.digits) : "Not available") + "\r\n";
+   text += "Daily Low Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_low_ask, p.digits) : "Not available") + "\r\n";
+   text += "Daily Range Position: " + (daily_position_safe ? AC_L4PctText(p.daily_range_position_pct) : "Not available") + "\r\n";
+   text += "Daily Change Source: Broker Market Watch property; zero OHLC values rendered as Not available\r\n";
 
    text += "\r\nActivity\r\n";
    text += "----------------------------------------\r\n";
-   text += "Session Average Weighted Price: " + AC_L4PriceText(p.session_aw, p.digits) + "\r\n";
+   text += "Session Average Weighted Price: " + (p.session_aw > 0.0 ? AC_L4PriceText(p.session_aw, p.digits) : "Not available") + "\r\n";
    text += "Session Volume: " + AC_L4NumberText(p.session_volume, 2) + "\r\n";
    text += "Session Turnover: " + AC_L4NumberText(p.session_turnover, 2) + "\r\n";
    text += "Session Deals: " + IntegerToString((int)p.session_deals) + "\r\n";
