@@ -385,6 +385,8 @@ void AC_L8RefreshRankedSidecar()
    string trade_permission = AC_L8KvValue(ranked_manifest, "trade_permission", "not_available");
    string ranking_runtime = AC_L8KvValue(ranked_manifest, "ranking_runtime", "not_available");
    string selection_runtime = AC_L8KvValue(ranked_manifest, "selection_runtime", "not_available");
+   int manifest_ohlc_seen = AC_L8KvInt(ranked_manifest, "ohlc_window_files_seen", 0);
+   int manifest_ohlc_missing = AC_L8KvInt(ranked_manifest, "ohlc_window_files_missing", -1);
 
    AC_L8_RANKED_SOURCE_INPUT_CHECKSUM_RENDERED = source_input_checksum;
    AC_L8_RANKED_INPUT_CHECKSUM_RENDERED = ranked_input_checksum;
@@ -408,6 +410,8 @@ void AC_L8RefreshRankedSidecar()
 
    bool input_ok = (input_write_ok == "true" && input_rows > 0 && input_rows == input_l5_pass);
    bool ohlc_ok = (AC_L8_OHLC_MIN_READY_RENDERED == AC_L5_GATE_PASS && AC_L5_GATE_PASS > 0);
+   bool manifest_ohlc_ok = (manifest_ohlc_missing == 0 && ranked_rows > 0 && manifest_ohlc_seen >= ranked_rows * 4);
+   bool epoch_ohlc_ok = (ohlc_ok || manifest_ohlc_ok);
    bool manifest_clean = (ranked_status == "complete");
    bool manifest_input_degraded = (ranked_status == "input_degraded");
    bool manifest_ok = (manifest_clean || manifest_input_degraded);
@@ -428,24 +432,26 @@ void AC_L8RefreshRankedSidecar()
 
    if(sidecar_truth_ok && manifest_input_degraded)
    {
-      AC_L8AcceptPublishedDegradedSidecar(ohlc_ok);
+      AC_L8AcceptPublishedDegradedSidecar(epoch_ohlc_ok);
       return;
    }
 
-   if(sidecar_truth_ok && ohlc_ok && manifest_clean)
+   if(sidecar_truth_ok && epoch_ohlc_ok && manifest_clean)
    {
       AC_L8_RANKED_ACCEPTED = true;
       AC_L8_DISPLAY_STATE = "ACCEPTED_CURRENT";
       AC_L8_STATUS = "Ranked sidecar accepted";
       AC_L8_TRUST_STATE = "Ranking Ready";
       AC_L8_VALIDATION_STATUS = "Accepted";
-      AC_L8_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L8 input proof, OHLC priority windows, and permission boundaries";
+      AC_L8_VALIDATION_REASON = "ranked manifest/top20/csv/SymbolRanks sidecars match L8 input proof, published OHLC priority-window epoch, and permission boundaries; live_ohlc_ok="
+         + (ohlc_ok ? "true" : "false")
+         + ";manifest_ohlc_ok=" + (manifest_ohlc_ok ? "true" : "false");
       AC_L8_MAIN_BLOCKER = "none";
       AC_L8_TOP20_FIRST_LINE = AC_L8PrettyTop20Line(AC_L8FirstTop20Symbol(AC_L8ReadSmallTextFile(AC_L8RankedTop20Path(), 16000)));
       return;
    }
 
-   bool identity_only_blocker = input_ok && ohlc_ok && manifest_ok && counts_ok && !identity_ok && authority_ok && permission_ok && files_ok;
+   bool identity_only_blocker = input_ok && epoch_ohlc_ok && manifest_ok && counts_ok && !identity_ok && authority_ok && permission_ok && files_ok;
    if(identity_only_blocker && AC_L8SurfaceEpochValidForL8())
    {
       AC_L8_RANKED_ACCEPTED = true;
@@ -467,6 +473,7 @@ void AC_L8RefreshRankedSidecar()
    AC_L8_VALIDATION_STATUS = "Degraded";
    AC_L8_VALIDATION_REASON = "input_ok=" + (input_ok ? "true" : "false")
       + ";ohlc_ok=" + (ohlc_ok ? "true" : "false")
+      + ";manifest_ohlc_ok=" + (manifest_ohlc_ok ? "true" : "false")
       + ";manifest_ok=" + (manifest_ok ? "true" : "false")
       + ";counts_ok=" + (counts_ok ? "true" : "false")
       + ";identity_ok=" + (identity_ok ? "true" : "false")
@@ -626,6 +633,8 @@ string AC_Layer8DossierSection(const string symbol)
          text += "H1 Range 72: " + AC_L8KvValue(rank_text, "h1_range_points_72", "not_available") + "\r\n";
          text += "Reason: " + AC_L8KvValue(rank_text, "reason", "not_available") + "\r\n";
          text += "Rank Source: " + rank_path + "\r\n";
+         text += "L8 Ranked Payload Checksum: " + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+         text += "Dossier L8 Surface Current: TRUE\r\n";
       }
    }
 
