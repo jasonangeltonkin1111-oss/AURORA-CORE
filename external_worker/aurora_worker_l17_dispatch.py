@@ -5,11 +5,9 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l17 import L17PublishSummary, publish_l17_deep_evidence_selection_split
-from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
-from aurora_worker_selection_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_root_index
 
 
-def l17_result_lines(summary: L17PublishSummary, duration_ms: int, cleanup: SelectionSurfaceCleanupSummary = EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY) -> str:
+def l17_result_lines(summary: L17PublishSummary, duration_ms: int) -> str:
     return "\n".join([
         f"l17_deep_evidence_selection_status={summary.status}",
         f"l17_deep_evidence_selection_reason={summary.reason}",
@@ -34,16 +32,8 @@ def l17_result_lines(summary: L17PublishSummary, duration_ms: int, cleanup: Sele
         f"l17_rejected_path={summary.rejected_path}",
         f"l17_summary_path={summary.summary_path}",
         f"l17_selection_desk_path={summary.selection_desk_path}",
-        f"l17_legacy_cleanup_status={cleanup.status}",
-        f"l17_legacy_cleanup_reason={cleanup.reason}",
-        f"l17_legacy_groups_removed={cleanup.legacy_groups_removed}",
-        f"l17_legacy_global_removed={cleanup.legacy_global_removed}",
-        f"l17_legacy_deep_evidence_files_preserved={cleanup.deep_evidence_files_preserved}",
-        f"l17_legacy_cleanup_status_path={cleanup.status_path}",
-        f"l17_root_index_status={root_index.status}",
-        f"l17_root_index_reason={root_index.reason}",
-        f"l17_root_index_path={root_index.root_index_path}",
-        f"l17_root_readme_path={root_index.readme_path}",
+        "l17_cleanup_owner=deferred_to_l19_final_selection_cleanup",
+        "l17_root_index_owner=deferred_to_l19_final_selection_cleanup",
         "l17_next_layer=L18_selected_raw_ohlc_bar_pack_entrypoint_owned",
         "l17_max_deep_selected=5",
         "l17_collects_ohlc=false",
@@ -82,24 +72,20 @@ def run_l17_after_l16(root: Path) -> L17PublishSummary:
     paths.ensure()
     start_ns = time.perf_counter_ns()
     summary = publish_l17_deep_evidence_selection_split(paths.outbox)
-    cleanup_summary = cleanup_legacy_selection_surface_paths(root)
-    root_index_summary = publish_selection_root_index(root)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l17_block(text, l17_result_lines(summary, duration_ms, cleanup_summary, root_index_summary))
+        updated = _replace_or_append_l17_block(text, l17_result_lines(summary, duration_ms))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=17",
+            "schema_version=18",
             "worker_l17_append_status=appended_by_l17_dispatch",
             "worker_l18_dispatch_policy=entrypoint_runs_l18_after_l17",
-            f"l17_legacy_cleanup_status={cleanup_summary.status}",
-            f"l17_legacy_cleanup_status_path={cleanup_summary.status_path}",
-            f"l17_root_index_status={root_index_summary.status}",
-            f"l17_root_index_path={root_index_summary.root_index_path}",
+            "l17_cleanup_owner=deferred_to_l19_final_selection_cleanup",
+            "l17_root_index_owner=deferred_to_l19_final_selection_cleanup",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
