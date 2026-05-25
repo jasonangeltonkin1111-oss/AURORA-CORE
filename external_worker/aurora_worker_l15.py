@@ -437,7 +437,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
     group_rows: List[Dict[str, str]] = []
     for group, members in grouped.items():
         member_symbols = {m["symbol"] for m in members}
-        group_pairs = [p for p in pair_rows if p["symbol_a"] in member_symbols or p["symbol_b"] in member_symbols]
+        group_pairs = [p for p in pair_rows if p["symbol_a"] in member_symbols and p["symbol_b"] in member_symbols]
         ok = [p for p in group_pairs if p["data_quality_reason"] == "ok" and p["correlation_abs"] != "not_available"]
         corr_values = [_num(p["correlation_abs"]) for p in ok]
         scores = [_num(m["diversity_score"]) for m in members]
