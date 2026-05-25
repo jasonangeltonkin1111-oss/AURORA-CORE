@@ -2,7 +2,7 @@
 #define AC_LAYER13_DYNAMIC_GROUP_SELECTION_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 13 Dynamic Ranking Group Selection.
-// Reads worker L13 summary and CSV outputs only.
+// Reads worker L13 summary and canonical layer summary index outputs only.
 // Must not rank symbols, build candidates, run correlation, build Global Top 10, permit, alert, or execute.
 
 static string AC_L13_STATUS = "Pending L13 dynamic group selection";
@@ -25,8 +25,9 @@ string AC_L13LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\
 string AC_L13SummaryPath(){ return AC_L13LayerFolder() + "\\l13_group_selection_summary.txt"; }
 string AC_L13SelectedCsvPath(){ return AC_L13LayerFolder() + "\\l13_selected_ranking_groups.csv"; }
 string AC_L13RejectedCsvPath(){ return AC_L13LayerFolder() + "\\l13_rejected_ranking_groups.csv"; }
-string AC_L13SelectionDeskIndexPath(){ return AC_SelectionGroupsFolder() + "\\00_Selected_Ranking_Groups.txt"; }
-string AC_L13SelectionDeskIndexCsvPath(){ return AC_SelectionGroupsFolder() + "\\00_Selected_Ranking_Groups.csv"; }
+string AC_L13CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L13_Selected_Ranking_Groups"; }
+string AC_L13SelectionDeskIndexPath(){ return AC_L13CanonicalSummaryFolder() + "\\00_Selected_Ranking_Groups.txt"; }
+string AC_L13SelectionDeskIndexCsvPath(){ return AC_L13CanonicalSummaryFolder() + "\\00_Selected_Ranking_Groups.csv"; }
 
 string AC_L13ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -127,7 +128,7 @@ void AC_L13RefreshSummary()
       AC_L13_ACCEPTED = true;
       AC_L13_STATUS = "Accepted";
       AC_L13_VALIDATION_STATUS = "Accepted";
-      AC_L13_VALIDATION_REASON = "summary/files/counts/permission all accepted";
+      AC_L13_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
       AC_L13_MAIN_BLOCKER = "none";
       return;
    }
@@ -150,7 +151,7 @@ string AC_Layer13BoardSection()
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L13_STATUS + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L12 group heat quality\r\n";
+   text += "Input Source:               L12 group heat quality from guarded L11\r\n";
    text += "Valid Groups:               " + IntegerToString(AC_L13_VALID_GROUP_COUNT) + "\r\n";
    text += "Selected Groups:            " + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + "\r\n";
    text += "Rejected Groups:            " + IntegerToString(AC_L13_REJECTED_GROUP_COUNT) + "\r\n";
@@ -268,7 +269,7 @@ string AC_Layer13WorkbenchSection()
    text += "schema_version=1\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=13\r\n";
-   text += "input_source=L12\r\n";
+   text += "input_source=L12_from_guarded_L11\r\n";
    text += "status=" + AC_L13_STATUS + "\r\n";
    text += "validation_status=" + AC_L13_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L13_VALIDATION_REASON + "\r\n";
