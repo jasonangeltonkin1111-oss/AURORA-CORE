@@ -254,7 +254,8 @@ void AC_RefreshLayer4MarketWatchTruth()
    AC_L4Reset();
    int total = SymbolsTotal(false);
    AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
-   // Keep this key stable across ordinary quote refreshes. Refresh timestamps belong in rendered proof, not in the universe Dossier invalidation key.
+   // Refresh key must change on each L4 quote cycle so L5 can detect fresh L4 packet truth.
+   // Stable universe invalidation remains in AC_L4_CACHE_KEY.
    AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst | refresh_time=" + TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
 
    for(int idx=0; idx<total; idx++)
