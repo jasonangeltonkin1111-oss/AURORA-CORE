@@ -9,7 +9,7 @@ void AC_RefreshLayer3BrokerSpecsTruth()
    // L3 owns static/semi-static broker symbol specs and value metadata. It must
    // not be invalidated by ordinary L2 open/closed route churn; L5 consumes L2
    // and L3 separately when building the hard gate.
-   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | symbols " + IntegerToString(total) + " | owner=L3BrokerSpecsTruth";
+   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | symbols " + IntegerToString(total) + " | owner=L3BrokerSpecsTruth | broker_universe=SymbolsTotal_false";
 
    for(int idx = 0; idx < total; idx++)
    {
