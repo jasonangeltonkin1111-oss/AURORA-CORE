@@ -1,15 +1,26 @@
 #ifndef AC_L3_REFRESH_MQH
 #define AC_L3_REFRESH_MQH
+
+string AC_L3BuildCacheKey(const int total)
+{
+   return AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + " | server=" + AccountInfoString(ACCOUNT_SERVER)
+      + " | account=" + IntegerToString((int)AccountInfoInteger(ACCOUNT_LOGIN))
+      + " | account_currency=" + AccountInfoString(ACCOUNT_CURRENCY)
+      + " | symbols=" + IntegerToString(total)
+      + " | owner=L3BrokerSpecsTruth";
+}
+
 void AC_RefreshLayer3BrokerSpecsTruth()
 {
    AC_L3Reset();
    int total = SymbolsTotal(false);
    AC_L3_LAST_SYMBOLS_TOTAL = total;
    AC_L3_LAST_L2_ROUTE_KEY = AC_L2_ROUTE_GENERATION_KEY;
-   // L3 owns static/semi-static broker symbol specs and value metadata. It must
-   // not be invalidated by ordinary L2 open/closed route churn; L5 consumes L2
-   // and L3 separately when building the hard gate.
-   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | symbols " + IntegerToString(total) + " | owner=L3BrokerSpecsTruth";
+   // L3 owns static/semi-static broker symbol specs and account-currency value
+   // metadata. Ordinary L2 open/closed route churn must not invalidate L3, but
+   // broker server/account/currency/symbol-universe changes must.
+   AC_L3_CACHE_KEY = AC_L3BuildCacheKey(total);
 
    for(int idx = 0; idx < total; idx++)
    {
@@ -32,8 +43,10 @@ void AC_RefreshLayer3BrokerSpecsTruth()
 
 bool AC_L3ShouldRunFullScan()
 {
+   int total = SymbolsTotal(false);
    if(!AC_L3_READY) return true;
-   if(AC_L3_LAST_SYMBOLS_TOTAL != SymbolsTotal(false)) return true;
+   if(AC_L3_LAST_SYMBOLS_TOTAL != total) return true;
+   if(AC_L3_CACHE_KEY != AC_L3BuildCacheKey(total)) return true;
    return false;
 }
 
