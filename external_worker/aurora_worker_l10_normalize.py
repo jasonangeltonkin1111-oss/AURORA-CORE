@@ -76,7 +76,7 @@ def safe_folder_slug(value: str | None, default: str = "Unknown") -> str:
 
 
 def safe_file_slug(value: str | None, default: str = "unknown") -> str:
-    """Create a conservative file slug for manifests and future copy paths."""
+    """Create a conservative file slug for L10 manifests and sidecar filenames."""
     text = str(value or "").strip() or default
     for ch in WINDOWS_FORBIDDEN_PATH_CHARS:
         text = text.replace(ch, "_")
@@ -104,17 +104,6 @@ def fx_pair_parts(symbol: str | None) -> tuple[str, str] | None:
 def future_group_folder_path(ranking_group: str | None) -> str:
     group_slug = safe_folder_slug(ranking_group)
     return f"Selection Desk/Groups/{group_slug}/"
-
-
-def future_top5_copy_path(symbol: str | None, ranking_group: str | None) -> str:
-    group_folder = future_group_folder_path(ranking_group)
-    file_slug = safe_file_slug(symbol)
-    return f"{group_folder}pending_l11_rank__{file_slug}.txt"
-
-
-def future_top10_copy_path(symbol: str | None) -> str:
-    file_slug = safe_file_slug(symbol)
-    return f"Selection Desk/Global/pending_l16_rank__{file_slug}.txt"
 
 
 def normalize_match_candidates(symbol: str | None) -> tuple[str, ...]:
