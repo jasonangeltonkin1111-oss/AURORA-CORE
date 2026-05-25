@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -446,7 +446,7 @@ def _replace_l19_in_deep_section(existing_text: str, l19_block: str) -> str:
 
 
 def _empty_tf_counts() -> Dict[str, Dict[str, int]]:
-    return {tf: {"complete": 0, "partial": 0, "missing": 0, "decode_error": 0} for tf in DISPLAY_BARS}
+    return {tf: {"complete": 0, "partial": 0, "missing", "decode_error": 0} for tf in DISPLAY_BARS}
 
 
 def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries: Dict[str, TimeframeGeometrySummary], wave2_tagged: int, wave3_tagged: int) -> str:
@@ -495,7 +495,7 @@ def _build_l19_block(symbol: str, rendered_sections: Sequence[str], tf_summaries
 
 def _board_text(summary: L19PublishSummary) -> str:
     return "\n".join([
-        "L19 â€” CANDLE GEOMETRY AND STRUCTURE",
+        "L19 — CANDLE GEOMETRY AND STRUCTURE",
         "--------------------------------------------------",
         "Purpose:                Calculate candle geometry plus Wave 1/2/3 candle structures from selected raw OHLC",
         "Scope:                  Canonical Selection Desk copied dossiers only",
@@ -683,4 +683,3 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     _write(status_path, _status_text(summary), failed)
     _write(board_path, _board_text(summary), failed)
     return summary
-
