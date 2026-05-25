@@ -2,7 +2,7 @@
 #define AC_LAYER14_CANDIDATE_POOL_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 14 Ranking Group Leader Candidate Pool.
-// Reads worker L14 summary and CSV outputs only.
+// Reads worker L14 summary and canonical layer summary index outputs only.
 // Must not diversify, run correlation, build Global Top 10, permit, alert, or execute.
 
 static string AC_L14_STATUS = "Pending L14 candidate pool";
@@ -24,8 +24,9 @@ string AC_L14LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\
 string AC_L14SummaryPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool_summary.txt"; }
 string AC_L14CandidateCsvPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool.csv"; }
 string AC_L14CandidateManifestPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool.manifest"; }
-string AC_L14SelectionDeskPath(){ return AC_SelectionGroupsFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.txt"; }
-string AC_L14SelectionDeskCsvPath(){ return AC_SelectionGroupsFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.csv"; }
+string AC_L14CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L14_Candidate_Pool"; }
+string AC_L14SelectionDeskPath(){ return AC_L14CanonicalSummaryFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.txt"; }
+string AC_L14SelectionDeskCsvPath(){ return AC_L14CanonicalSummaryFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.csv"; }
 
 string AC_L14ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -124,7 +125,7 @@ void AC_L14RefreshSummary()
       AC_L14_ACCEPTED = true;
       AC_L14_STATUS = "Accepted";
       AC_L14_VALIDATION_STATUS = "Accepted";
-      AC_L14_VALIDATION_REASON = "summary/files/counts/permission all accepted";
+      AC_L14_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
       AC_L14_MAIN_BLOCKER = "none";
       return;
    }
@@ -147,7 +148,7 @@ string AC_Layer14BoardSection()
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L14_STATUS + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L13 selected groups + L11 top5 + L12 group heat\r\n";
+   text += "Input Source:               L13 selected groups + guarded L11 top5 + L12 group heat\r\n";
    text += "Selected Groups Consumed:   " + IntegerToString(AC_L14_SELECTED_GROUP_COUNT) + "\r\n";
    text += "Candidate Pool Size:        " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) + "\r\n";
    text += "Leader Candidates:          " + IntegerToString(AC_L14_LEADER_CANDIDATE_COUNT) + "\r\n";
@@ -240,7 +241,7 @@ string AC_Layer14WorkbenchSection()
    text += "schema_version=1\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=14\r\n";
-   text += "input_source=L13_selected_groups+L11_top5+L12_group_heat_quality\r\n";
+   text += "input_source=L13_selected_groups+guarded_L11_top5+L12_group_heat_quality\r\n";
    text += "status=" + AC_L14_STATUS + "\r\n";
    text += "validation_status=" + AC_L14_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L14_VALIDATION_REASON + "\r\n";
