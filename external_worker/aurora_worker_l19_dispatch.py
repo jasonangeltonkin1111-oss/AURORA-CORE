@@ -25,7 +25,9 @@ def l19_result_lines(
 ) -> str:
     return "\n".join([
         f"l19_wick_candle_geometry_status={summary.status}",
+        f"l19_candle_geometry_status={summary.status}",
         f"l19_wick_candle_geometry_reason={summary.reason}",
+        f"l19_candle_geometry_reason={summary.reason}",
         f"l19_wick_candle_geometry_duration_ms={duration_ms}",
         f"l19_selected_dossiers_seen={summary.selected_dossiers_seen}",
         f"l19_selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
