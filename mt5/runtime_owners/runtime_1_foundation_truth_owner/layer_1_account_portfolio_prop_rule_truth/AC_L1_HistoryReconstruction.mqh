@@ -6,10 +6,12 @@ bool AC_L1HistoryBudgetExceeded()
    if(AC_L1_HISTORY_SCAN_STARTED_MS == 0) return false;
    uint elapsed = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
    if(elapsed <= (uint)AC_L1_HISTORY_SCAN_BUDGET_MS) return false;
-   AC_L1_HISTORY_BUDGET_ABORT_COUNT++;
+
    AC_L1_HISTORY_SCAN_DURATION_MS = elapsed;
    AC_L1_SCAN_STATUS = "complete_with_degraded";
    AC_L1_HISTORY_STATUS = "available_partial_budget_limited";
+   if(AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0)
+      AC_L1_HISTORY_BUDGET_ABORT_COUNT = 1;
    if(StringFind(AC_L1_HISTORY_QUALITY, "budget_limited") < 0)
       AC_L1_HISTORY_QUALITY += "_budget_limited";
    if(StringFind(AC_L1_HISTORY_NOTE, "history reconstruction stopped by Layer 1 scan budget") < 0)
