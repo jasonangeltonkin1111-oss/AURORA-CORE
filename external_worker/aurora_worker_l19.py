@@ -530,6 +530,10 @@ def _board_text(summary: L19PublishSummary) -> str:
         f"Selected Dossiers Decorated:  {summary.selected_dossiers_decorated}",
         f"Selected Missing Symbol:      {summary.selected_dossiers_missing_symbol}",
         f"Top View Cleanup Replacements:{summary.topview_cleanup_count}",
+        f"Route Dossiers Seen:          {summary.selected_route_dossiers_seen}",
+        f"Route Dossiers Decorated:     {summary.selected_route_dossiers_decorated}",
+        f"Unique Symbols Seen:          {summary.selected_unique_symbols_seen}",
+        f"Duplicate Route Copies:       {summary.selected_duplicate_route_copies}",
         "",
         "Geometry Coverage",
         f"M5:   completed_symbols={summary.m5_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
@@ -552,6 +556,9 @@ def _board_text(summary: L19PublishSummary) -> str:
         f"Wave 2 Rows Tagged:           {summary.wave2_rows_tagged}",
         f"Wave 3 Rows Tagged:           {summary.wave3_rows_tagged}",
         f"Write Failed Count:           {summary.write_failed_count}",
+        f"Freshness Status:             {summary.freshness_status}",
+        f"Latest Bar Age Max Seconds:   {summary.latest_bar_age_max_seconds}",
+        f"Freshness Counts:             fresh={summary.freshness_fresh_count} aging={summary.freshness_aging_count} stale={summary.freshness_stale_count} unknown={summary.freshness_unknown_count}",
         f"Generated UTC:                {utc_stamp()}",
         "",
     ])
@@ -670,6 +677,12 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     decorated = missing_symbol = source_found = source_missing = source_partial = decode_errors = 0
     rows_total = valid_total = zero_total = invalid_total = wave2_total = wave3_total = topview_cleanup_total = 0
     source_expected = len(dossiers) * len(DISPLAY_BARS)
+    route_seen = len(dossiers)
+    route_decorated = 0
+    unique_symbols = set()
+    freshness = {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0}
+    tf_freshness = {tf: {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0} for tf in DISPLAY_BARS}
+    latest_max_age = -1
 
     for dossier in dossiers:
         symbol = _symbol_from_dossier(dossier)
@@ -704,6 +717,12 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
                     tf_counts[tf]["decode_error"] += 1
             if summary.status == "decode_error" or had_decode_or_invalid:
                 decode_errors += 1
+            age = _latest_age_seconds(root, symbol, tf)
+            bucket = _freshness_bucket(tf, age)
+            freshness[bucket] += 1
+            tf_freshness[tf][bucket] += 1
+            if age > latest_max_age:
+                latest_max_age = age
         try:
             existing = read_text(dossier)
             _cleaned, cleanup_count = _cleanup_selected_dossier_topview(existing)
@@ -728,6 +747,18 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     else:
         status = "accepted"
     reason = "selected_dossiers_decorated_with_freshness_proof" if status == "accepted" else ("selected_dossiers_decorated_with_stale_or_unknown_freshness" if status == "degraded" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_sources_missing_partial_invalid_or_write_failed"))
+
+    if freshness["unknown"] and not (freshness["fresh"] or freshness["aging"] or freshness["stale"]):
+        freshness_status = "unknown"
+    elif freshness["stale"] and not (freshness["fresh"] or freshness["aging"]):
+        freshness_status = "stale"
+    elif sum(1 for v in freshness.values() if v > 0) > 1:
+        freshness_status = "mixed"
+    elif freshness["fresh"] > 0:
+        freshness_status = "fresh"
+    else:
+        freshness_status = "aging"
+
     summary = L19PublishSummary(
         status=status, reason=reason, selected_dossiers_seen=len(dossiers), selected_dossiers_decorated=decorated,
         selected_dossiers_missing_symbol=missing_symbol, source_files_expected=source_expected, source_files_found=source_found,
@@ -740,6 +771,17 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         h1_completed_symbols=tf_counts["H1"]["complete"], h1_partial_symbols=tf_counts["H1"]["partial"] + tf_counts["H1"]["decode_error"], h1_missing_symbols=tf_counts["H1"]["missing"],
         h4_completed_symbols=tf_counts["H4"]["complete"], h4_partial_symbols=tf_counts["H4"]["partial"] + tf_counts["H4"]["decode_error"], h4_missing_symbols=tf_counts["H4"]["missing"],
         d1_completed_symbols=tf_counts["D1"]["complete"], d1_partial_symbols=tf_counts["D1"]["partial"] + tf_counts["D1"]["decode_error"], d1_missing_symbols=tf_counts["D1"]["missing"],
+        selected_route_dossiers_seen=route_seen,
+        selected_route_dossiers_decorated=route_decorated,
+        selected_unique_symbols_seen=len(unique_symbols),
+        selected_duplicate_route_copies=max(0, route_seen - len(unique_symbols)),
+        latest_bar_age_max_seconds=latest_max_age,
+        freshness_fresh_count=freshness["fresh"],
+        freshness_aging_count=freshness["aging"],
+        freshness_stale_count=freshness["stale"],
+        freshness_unknown_count=freshness["unknown"],
+        freshness_status=freshness_status,
+        freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time",
         status_path=str(status_path), board_path=str(board_path), layer_folder=str(layer_dir),
     )
     _write(status_path, _status_text(summary), failed)
