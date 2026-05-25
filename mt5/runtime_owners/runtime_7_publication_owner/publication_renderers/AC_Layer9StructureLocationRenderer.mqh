@@ -4,6 +4,8 @@
 // Runtime 7 render-only surface for Layer 9 Structure / Location Geometry.
 // Reads only L9 sidecar proof files, accepted surface epoch proof, and Runtime 1 OHLC priority-window file existence.
 // It must not calculate structure/location, rank, call CopyRates, select, permit, or execute.
+// Important: an accepted L9 sidecar can still be partial geometry evidence when required OHLC
+// windows or clean-ranked rows are missing. Partial geometry is publishable truth, not trade proof.
 
 static string AC_L9_STATUS = "Pending ranked sidecar";
 static string AC_L9_TRUST_STATE = "Geometry Pending";
@@ -11,6 +13,7 @@ static string AC_L9_VALIDATION_STATUS = "Pending";
 static string AC_L9_VALIDATION_REASON = "ranked_symbols.manifest missing or not accepted";
 static string AC_L9_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
 static string AC_L9_DISPLAY_STATE = "PENDING_RANK";
+static string AC_L9_GEOMETRY_QUALITY_STATE = "pending";
 static bool   AC_L9_RANKED_ACCEPTED = false;
 static bool   AC_L9_STATUS_OK_RENDERED = false;
 static bool   AC_L9_COUNTS_OK_RENDERED = false;
@@ -241,6 +244,35 @@ void AC_L9RefreshOhlcWindowReadiness()
    }
 }
 
+bool AC_L9FullGeometryReady()
+{
+   return (AC_L9_RANKED_COUNT_RENDERED > 0 && AC_L9_OHLC_REQUIRED_READY_RENDERED == AC_L5_GATE_PASS && AC_L5_GATE_PASS > 0);
+}
+
+void AC_L9SetAcceptedCurrentState()
+{
+   AC_L9_RANKED_ACCEPTED = true;
+   if(AC_L9FullGeometryReady())
+   {
+      AC_L9_GEOMETRY_QUALITY_STATE = "clean_geometry_ready";
+      AC_L9_STATUS = "Ranked sidecar accepted";
+      AC_L9_TRUST_STATE = "Geometry Ready";
+      AC_L9_VALIDATION_STATUS = "Accepted";
+      AC_L9_DISPLAY_STATE = "ACCEPTED_CURRENT";
+      AC_L9_VALIDATION_REASON = "ranked manifest identity/counts/files/authority/permission all match current L9 input and required OHLC windows are ready";
+      AC_L9_MAIN_BLOCKER = "none";
+      return;
+   }
+
+   AC_L9_GEOMETRY_QUALITY_STATE = "partial_geometry_only";
+   AC_L9_STATUS = "Ranked sidecar accepted - partial geometry only";
+   AC_L9_TRUST_STATE = "Geometry Published With Input Degradation";
+   AC_L9_VALIDATION_STATUS = "AcceptedPartialGeometry";
+   AC_L9_DISPLAY_STATE = "ACCEPTED_CURRENT_PARTIAL_GEOMETRY";
+   AC_L9_VALIDATION_REASON = "ranked manifest identity/counts/files/authority/permission pass, but clean geometry is not ready; publish partial location/distance evidence only";
+   AC_L9_MAIN_BLOCKER = "none_l9_partial_geometry_clean_rows_or_required_ohlc_missing";
+}
+
 void AC_L9RefreshAcceptedEpoch()
 {
    AC_L9_ACCEPTED_EPOCH_PRESENT = false;
@@ -264,7 +296,7 @@ void AC_L9RefreshAcceptedEpoch()
    if(accepted_unix > 0) AC_L9_ACCEPTED_EPOCH_AGE_SECONDS = now_unix - accepted_unix;
 
    bool epoch_status_ok = (AC_L9_ACCEPTED_EPOCH_STATUS == "complete" || AC_L9_ACCEPTED_EPOCH_STATUS == "accepted" || AC_L9_ACCEPTED_EPOCH_STATUS == "all_complete");
-   bool l9_status_ok = (AC_L9_ACCEPTED_EPOCH_L9_STATUS == "complete" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "accepted" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "Ranked sidecar accepted");
+   bool l9_status_ok = (AC_L9_ACCEPTED_EPOCH_L9_STATUS == "complete" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "accepted" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "Ranked sidecar accepted" || AC_L9_ACCEPTED_EPOCH_L9_STATUS == "partial_geometry_only");
    bool ttl_ok = (AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX > 0 && now_unix <= AC_L9_ACCEPTED_EPOCH_VALID_UNTIL_UNIX);
    AC_L9_ACCEPTED_EPOCH_VALID = epoch_status_ok && l9_status_ok && ttl_ok;
 }
@@ -273,6 +305,7 @@ void AC_L9RefreshRankedSidecar()
 {
    AC_L9RefreshOhlcWindowReadiness();
    AC_L9RefreshAcceptedEpoch();
+   AC_L9_GEOMETRY_QUALITY_STATE = "pending";
    AC_L9_RANKED_ACCEPTED = false;
    AC_L9_STATUS_OK_RENDERED = false;
    AC_L9_COUNTS_OK_RENDERED = false;
@@ -351,19 +384,14 @@ void AC_L9RefreshRankedSidecar()
 
    if(hard_ok && AC_L9_IDENTITY_OK_RENDERED)
    {
-      AC_L9_RANKED_ACCEPTED = true;
-      AC_L9_STATUS = "Ranked sidecar accepted";
-      AC_L9_TRUST_STATE = "Geometry Ready";
-      AC_L9_VALIDATION_STATUS = "Accepted";
-      AC_L9_DISPLAY_STATE = "ACCEPTED_CURRENT";
-      AC_L9_VALIDATION_REASON = "ranked manifest identity/counts/files/authority/permission all match current L9 input";
-      AC_L9_MAIN_BLOCKER = "none";
+      AC_L9SetAcceptedCurrentState();
       return;
    }
 
    if(hard_ok && !AC_L9_IDENTITY_OK_RENDERED && AC_L9_ACCEPTED_EPOCH_VALID)
    {
       AC_L9_RANKED_ACCEPTED = true;
+      AC_L9_GEOMETRY_QUALITY_STATE = "held_epoch_recalc_pending";
       AC_L9_STATUS = "Accepted held - recalculation pending";
       AC_L9_TRUST_STATE = "Geometry Ready Held";
       AC_L9_VALIDATION_STATUS = "AcceptedHeldRecalcPending";
@@ -375,6 +403,7 @@ void AC_L9RefreshRankedSidecar()
 
    if(hard_ok && !AC_L9_IDENTITY_OK_RENDERED && AC_L9_ACCEPTED_EPOCH_PRESENT && !AC_L9_ACCEPTED_EPOCH_VALID)
    {
+      AC_L9_GEOMETRY_QUALITY_STATE = "expired_stale";
       AC_L9_STATUS = "Accepted epoch expired - rank stale";
       AC_L9_TRUST_STATE = "Geometry Expired";
       AC_L9_VALIDATION_STATUS = "ExpiredStale";
@@ -384,6 +413,7 @@ void AC_L9RefreshRankedSidecar()
       return;
    }
 
+   AC_L9_GEOMETRY_QUALITY_STATE = "broken_or_unaccepted";
    AC_L9_STATUS = "Ranked sidecar degraded";
    AC_L9_TRUST_STATE = "Geometry Degraded";
    AC_L9_VALIDATION_STATUS = "Degraded";
@@ -406,6 +436,7 @@ string AC_Layer9BoardSection()
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L9_STATUS + "\r\n";
    text += "Display State:              " + AC_L9_DISPLAY_STATE + "\r\n";
+   text += "Geometry Quality:           " + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Trust:                      " + AC_L9_TRUST_STATE + "\r\n";
    text += "Validation:                 " + AC_L9_VALIDATION_STATUS + "\r\n";
    text += "Owner:                      Runtime 4 - Surface Scoring Owner\r\n";
@@ -450,12 +481,15 @@ string AC_Layer9DossierSection(const string symbol)
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L9_STATUS + "\r\n";
    text += "Display State: " + AC_L9_DISPLAY_STATE + "\r\n";
+   text += "Geometry Quality: " + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Owner: Runtime 4 - Surface Scoring Owner\r\n";
    text += "Gateway Result Accepted: " + AC_L9BoolText(AC_L9_RANKED_ACCEPTED) + "\r\n";
    text += "Validation: " + AC_L9_VALIDATION_STATUS + "\r\n";
    text += "Latest Input Pending Next Rank: " + AC_L9BoolText(AC_L9_LATEST_INPUT_PENDING_NEXT_RANK) + "\r\n";
    text += "Accepted Epoch Valid: " + AC_L9BoolText(AC_L9_ACCEPTED_EPOCH_VALID) + "\r\n";
    text += "M15/H1/H4/D1 Windows: " + (AC_L9FastWindowAvailable(symbol,"M15") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"H1") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"H4") ? "available" : "pending") + " / " + (AC_L9FastWindowAvailable(symbol,"D1") ? "available" : "pending") + "\r\n";
+   if(AC_L9_GEOMETRY_QUALITY_STATE == "partial_geometry_only")
+      text += "Note: L9 is accepted as partial location/distance evidence only; missing clean rows or OHLC windows block full geometry confidence.\r\n";
 
    if(!AC_L9_RANKED_ACCEPTED)
    {
@@ -512,6 +546,7 @@ string AC_Layer9WorkbenchSection()
    text += "layer_name=Layer 9 - Structure / Location Geometry\r\n";
    text += "status=" + AC_L9_STATUS + "\r\n";
    text += "display_state=" + AC_L9_DISPLAY_STATE + "\r\n";
+   text += "geometry_quality_state=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "trust_state=" + AC_L9_TRUST_STATE + "\r\n";
    text += "validation_status=" + AC_L9_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L9_VALIDATION_REASON + "\r\n";
