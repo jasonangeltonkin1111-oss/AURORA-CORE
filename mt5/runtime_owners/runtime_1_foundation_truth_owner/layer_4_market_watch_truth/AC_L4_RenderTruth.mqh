@@ -101,7 +101,7 @@ string AC_Layer4DossierSection(const string symbol)
    text += "Bid: " + (bid_safe ? AC_L4PriceText(p.bid, p.digits) : "Not available") + "\r\n";
    text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
    text += "Last: " + (last_safe ? AC_L4PriceText(p.last, p.digits) : "Not available") + "\r\n";
-   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4NumberText(p.spread_pips_live, 1) + " pips / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
+   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
    text += "Spread Cost Band: " + p.spread_score + "\r\n";
    text += "Spread Source: " + p.spread_source + "\r\n";
    text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
