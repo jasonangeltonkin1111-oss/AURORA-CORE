@@ -2,7 +2,7 @@
 #define AC_LAYER12_GROUP_HEAT_QUALITY_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 12 Ranking Group Heat / Quality.
-// Reads worker L12 summary and canonical layer summary index outputs only.
+// Reads worker L12 summary and canonical Selection Desk/Groups index outputs only.
 // Must not rank symbols, select groups, build candidates, build Global Top 10, permit, alert, or execute.
 
 static string AC_L12_STATUS = "Pending L12 group heat quality";
@@ -23,7 +23,7 @@ static string AC_L12_GENERATED_UTC = "not_available";
 string AC_L12LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_12_Ranking_Group_Heat_Quality"; }
 string AC_L12SummaryPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality_summary.txt"; }
 string AC_L12HeatCsvPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality.csv"; }
-string AC_L12CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L12_Group_Heat_Quality"; }
+string AC_L12CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\Groups"; }
 string AC_L12SelectionDeskIndexPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.txt"; }
 string AC_L12SelectionDeskIndexCsvPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.csv"; }
 
@@ -123,7 +123,7 @@ void AC_L12RefreshSummary()
       AC_L12_ACCEPTED = true;
       AC_L12_STATUS = "Accepted";
       AC_L12_VALIDATION_STATUS = "Accepted";
-      AC_L12_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
+      AC_L12_VALIDATION_REASON = "summary/files/counts/selection_desk_groups_index/permission all accepted";
       AC_L12_MAIN_BLOCKER = "none";
       return;
    }
@@ -241,7 +241,7 @@ string AC_Layer12WorkbenchSection()
    text += "\r\nL12_RANKING_GROUP_HEAT_QUALITY\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l12_ranking_group_heat_quality\r\n";
-   text += "schema_version=1\r\n";
+   text += "schema_version=2\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=12\r\n";
    text += "input_source=L11_guarded\r\n";
