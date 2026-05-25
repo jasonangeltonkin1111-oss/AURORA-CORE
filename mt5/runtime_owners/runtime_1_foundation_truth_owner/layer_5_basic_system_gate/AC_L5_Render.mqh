@@ -1,5 +1,45 @@
 #ifndef AC_L5_RENDER_MQH
 #define AC_L5_RENDER_MQH
+
+void AC_L5AppendCoreCounters(string &text, const bool machine_format)
+{
+   if(machine_format)
+   {
+      text += "scanned_symbols=" + IntegerToString(AC_L5_SCANNED) + "\r\n";
+      text += "gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+      text += "gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
+      text += "blocked_closed_market=" + IntegerToString(AC_L5_BLOCK_CLOSED_MARKET) + "\r\n";
+      text += "blocked_stale_quote=" + IntegerToString(AC_L5_BLOCK_STALE_QUOTE) + "\r\n";
+      text += "blocked_missing_tick=" + IntegerToString(AC_L5_BLOCK_MISSING_TICK) + "\r\n";
+      text += "blocked_invalid_bidask=" + IntegerToString(AC_L5_BLOCK_INVALID_BIDASK) + "\r\n";
+      text += "blocked_missing_specs=" + IntegerToString(AC_L5_BLOCK_MISSING_SPECS) + "\r\n";
+      text += "blocked_trade_mode=" + IntegerToString(AC_L5_BLOCK_TRADE_MODE) + "\r\n";
+      text += "blocked_absurd_spread=" + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD) + "\r\n";
+      text += "blocked_classification_review=" + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW) + "\r\n";
+      text += "blocked_l2_not_ready=" + IntegerToString(AC_L5_BLOCK_L2_NOT_READY) + "\r\n";
+      text += "blocked_l3_not_ready=" + IntegerToString(AC_L5_BLOCK_L3_NOT_READY) + "\r\n";
+      text += "blocked_l4_not_ready=" + IntegerToString(AC_L5_BLOCK_L4_NOT_READY) + "\r\n";
+      text += "blocked_l4_surface_not_usable=" + IntegerToString(AC_L5_BLOCK_L4_SURFACE_NOT_USABLE) + "\r\n";
+      text += "absurd_spread_bps_limit=" + DoubleToString(AC_L5_ABSURD_SPREAD_BPS_LIMIT, 2) + "\r\n";
+      text += "max_fresh_tick_age_seconds=" + DoubleToString(AC_L5_MAX_FRESH_TICK_AGE_SECONDS, 1) + "\r\n";
+      return;
+   }
+
+   text += "Scanned Symbols:            " + IntegerToString(AC_L5_SCANNED) + "\r\n";
+   text += "Gate Pass:                  " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
+   text += "Gate Blocked:               " + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
+   text += "Closed / Not Open:          " + IntegerToString(AC_L5_BLOCK_CLOSED_MARKET) + "\r\n";
+   text += "Stale / Non-Fresh Quote:    " + IntegerToString(AC_L5_BLOCK_STALE_QUOTE) + "\r\n";
+   text += "Missing Tick:               " + IntegerToString(AC_L5_BLOCK_MISSING_TICK) + "\r\n";
+   text += "Invalid Bid/Ask:            " + IntegerToString(AC_L5_BLOCK_INVALID_BIDASK) + "\r\n";
+   text += "Missing Specs:              " + IntegerToString(AC_L5_BLOCK_MISSING_SPECS) + "\r\n";
+   text += "Trade Mode Blocked:         " + IntegerToString(AC_L5_BLOCK_TRADE_MODE) + "\r\n";
+   text += "Absurd Spread:              " + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD) + "\r\n";
+   text += "Classification Review:      " + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW) + "\r\n";
+   text += "L4 Surface Not Usable:      " + IntegerToString(AC_L5_BLOCK_L4_SURFACE_NOT_USABLE) + "\r\n";
+   text += "Max Fresh Tick Age:         " + DoubleToString(AC_L5_MAX_FRESH_TICK_AGE_SECONDS, 1) + " sec\r\n";
+}
+
 void AC_BuildLayer5Texts()
 {
    if(AC_L5ShouldRefresh())
@@ -13,17 +53,7 @@ void AC_BuildLayer5Texts()
    AC_L5_BOARD_SECTION += "----------------------------------------\r\n";
    AC_L5_BOARD_SECTION += "Status:                     " + AC_L5_STATUS + "\r\n";
    AC_L5_BOARD_SECTION += "Trust:                      " + AC_L5_TRUST_STATE + "\r\n";
-   AC_L5_BOARD_SECTION += "Scanned Symbols:            " + IntegerToString(AC_L5_SCANNED) + "\r\n";
-   AC_L5_BOARD_SECTION += "Gate Pass:                  " + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
-   AC_L5_BOARD_SECTION += "Gate Blocked:               " + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
-   AC_L5_BOARD_SECTION += "Closed / Not Open:          " + IntegerToString(AC_L5_BLOCK_CLOSED_MARKET) + "\r\n";
-   AC_L5_BOARD_SECTION += "Stale Quote:                " + IntegerToString(AC_L5_BLOCK_STALE_QUOTE) + "\r\n";
-   AC_L5_BOARD_SECTION += "Missing Tick:               " + IntegerToString(AC_L5_BLOCK_MISSING_TICK) + "\r\n";
-   AC_L5_BOARD_SECTION += "Invalid Bid/Ask:            " + IntegerToString(AC_L5_BLOCK_INVALID_BIDASK) + "\r\n";
-   AC_L5_BOARD_SECTION += "Missing Specs:              " + IntegerToString(AC_L5_BLOCK_MISSING_SPECS) + "\r\n";
-   AC_L5_BOARD_SECTION += "Trade Mode Blocked:         " + IntegerToString(AC_L5_BLOCK_TRADE_MODE) + "\r\n";
-   AC_L5_BOARD_SECTION += "Absurd Spread:              " + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD) + "\r\n";
-   AC_L5_BOARD_SECTION += "Classification Review:      " + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW) + "\r\n";
+   AC_L5AppendCoreCounters(AC_L5_BOARD_SECTION, false);
    AC_L5_BOARD_SECTION += "Worst Blocker:              " + AC_L5_MAIN_BLOCKER + "\r\n";
    AC_L5_BOARD_SECTION += "Scan Duration:              " + IntegerToString((int)AC_L5_SCAN_DURATION_MS) + " ms\r\n";
    AC_L5_BOARD_SECTION += "Ranking Runtime:            FALSE\r\n";
@@ -45,25 +75,9 @@ void AC_BuildLayer5Texts()
    AC_L5_WORKBENCH_SECTION += "find_cache_last_index=" + IntegerToString(AC_L5_FIND_LAST_INDEX) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "find_cache_hits=" + IntegerToString(AC_L5_FIND_CACHE_HITS) + "\r\n";
    AC_L5_WORKBENCH_SECTION += "find_full_scan_count=" + IntegerToString(AC_L5_FIND_FULL_SCAN_COUNT) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "scanned_symbols=" + IntegerToString(AC_L5_SCANNED) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "gate_blocked=" + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_closed_market=" + IntegerToString(AC_L5_BLOCK_CLOSED_MARKET) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_stale_quote=" + IntegerToString(AC_L5_BLOCK_STALE_QUOTE) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_missing_tick=" + IntegerToString(AC_L5_BLOCK_MISSING_TICK) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_invalid_bidask=" + IntegerToString(AC_L5_BLOCK_INVALID_BIDASK) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_missing_specs=" + IntegerToString(AC_L5_BLOCK_MISSING_SPECS) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_trade_mode=" + IntegerToString(AC_L5_BLOCK_TRADE_MODE) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_absurd_spread=" + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_classification_review=" + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_l2_not_ready=" + IntegerToString(AC_L5_BLOCK_L2_NOT_READY) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_l3_not_ready=" + IntegerToString(AC_L5_BLOCK_L3_NOT_READY) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "blocked_l4_not_ready=" + IntegerToString(AC_L5_BLOCK_L4_NOT_READY) + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "absurd_spread_bps_limit=" + DoubleToString(AC_L5_ABSURD_SPREAD_BPS_LIMIT, 2) + "\r\n";
+   AC_L5AppendCoreCounters(AC_L5_WORKBENCH_SECTION, true);
    AC_L5_WORKBENCH_SECTION += "main_blocker=" + AC_L5_MAIN_BLOCKER + "\r\n";
-   AC_L5_WORKBENCH_SECTION += "ranking_runtime=false\r\n";
-   AC_L5_WORKBENCH_SECTION += "selection_runtime=false\r\n";
-   AC_L5_WORKBENCH_SECTION += "trade_permission=false\r\n";
+   AC_L5_WORKBENCH_SECTION += "ranking_runtime=false\r\nselection_runtime=false\r\ntrade_permission=false\r\n";
    AC_L5_WORKBENCH_SECTION += "refresh_duration_ms=" + IntegerToString((int)AC_L5_SCAN_DURATION_MS) + "\r\n";
 }
 
@@ -103,13 +117,14 @@ string AC_Layer5DossierSection(const string symbol)
       text += "L3 Gate: " + p.l3_gate + "\r\n";
       text += "L4 Gate: " + p.l4_gate + "\r\n";
       text += "Blocked Closed / Not Open: " + AC_L5BoolText(p.blocked_closed_market) + "\r\n";
-      text += "Blocked Stale Quote: " + AC_L5BoolText(p.blocked_stale_quote) + "\r\n";
+      text += "Blocked Stale / Non-Fresh Quote: " + AC_L5BoolText(p.blocked_stale_quote) + "\r\n";
       text += "Blocked Missing Tick: " + AC_L5BoolText(p.blocked_missing_tick) + "\r\n";
       text += "Blocked Invalid Bid/Ask: " + AC_L5BoolText(p.blocked_invalid_bidask) + "\r\n";
       text += "Blocked Missing Specs: " + AC_L5BoolText(p.blocked_missing_specs) + "\r\n";
       text += "Blocked Trade Mode: " + AC_L5BoolText(p.blocked_trade_mode) + "\r\n";
       text += "Blocked Absurd Spread: " + AC_L5BoolText(p.blocked_absurd_spread) + "\r\n";
       text += "Blocked Classification Review: " + AC_L5BoolText(p.blocked_classification_review) + "\r\n";
+      text += "Blocked L4 Surface Not Usable: " + AC_L5BoolText(p.blocked_l4_surface_not_usable) + "\r\n";
    }
    text += "\r\nBoundary\r\n";
    text += "----------------------------------------\r\n";
@@ -126,7 +141,7 @@ string AC_Layer5StatusRow()
 {
    if(AC_L5ShouldRefresh()) AC_BuildLayer5Texts();
    AC_L5SyncCompatibilityFields();
-   return "schema_name=layer_status|schema_version=v5_basic_gate_4|layer_id=5|layer_name=" + AC_LAYER_5_NAME
+   return "schema_name=layer_status|schema_version=v5_basic_gate_5|layer_id=5|layer_name=" + AC_LAYER_5_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -148,6 +163,8 @@ string AC_Layer5StatusRow()
       + "|blocked_trade_mode=" + IntegerToString(AC_L5_BLOCK_TRADE_MODE)
       + "|blocked_absurd_spread=" + IntegerToString(AC_L5_BLOCK_ABSURD_SPREAD)
       + "|blocked_classification_review=" + IntegerToString(AC_L5_BLOCK_CLASSIFICATION_REVIEW)
+      + "|blocked_l4_surface_not_usable=" + IntegerToString(AC_L5_BLOCK_L4_SURFACE_NOT_USABLE)
+      + "|max_fresh_tick_age_seconds=" + DoubleToString(AC_L5_MAX_FRESH_TICK_AGE_SECONDS, 1)
       + "|main_blocker=" + AC_L5_MAIN_BLOCKER
       + "|calculation_owner=none_basic_gate_only|gateway_required=false|ranking_runtime=false|selection_runtime=false|permission=false";
 }
