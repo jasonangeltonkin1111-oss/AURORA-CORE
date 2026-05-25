@@ -55,7 +55,7 @@ string AC_L1CompactBoardSection()
 
    string health = "Needs validation";
    if(closed_count > 0 && (profit_factor < 1.0 || expected_payoff < 0.0)) health = "Defensive review";
-   if(closed_count > 0 && profit_factor >= 1.0 && expected_payoff >= 0.0) health = "Positive history, not edge proof";
+   if(closed_count > 0 && profit_factor >= 1.0 && expected_payoff >= 0.0) health = "Selected history positive; review only";
 
    string text = "\r\nLAYER 1 - ACCOUNT AND PORTFOLIO\r\n";
    text += "----------------------------------------\r\n";
@@ -77,7 +77,9 @@ string AC_L1CompactBoardSection()
    text += AC_L1BoardLine("Prop Rule Profile", "NOT_LOADED / UNKNOWN");
    text += AC_L1BoardLine("Prop Rule Safety", "UNKNOWN - live/funded permission blocked");
    text += AC_L1BoardLine("Health", health);
+   text += AC_L1BoardLine("Edge Validated", "FALSE");
    text += AC_L1BoardLine("Trade Permission", "FALSE");
+   text += "Note: selected-history metrics are manual-review truth only, not all-time proof, edge proof, permission, or prop-firm readiness.\r\n";
    text += "Note: Account Status carries full trades, maps, cost, tag, quality, drawdown, and prop-rule truth detail.\r\n";
    return text;
 }
@@ -100,6 +102,8 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|r_readiness=enabled|money_risk_readiness=enabled|r_multiple_maps=enabled|risk_efficiency_maps=enabled"
       + "|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled"
       + "|equity_drawdown_map=enabled|prop_rule_profile=not_loaded_unknown|prop_rule_safety=unknown_permission_blocked"
+      + "|selected_history_scope=manual_review_not_all_time_proof"
+      + "|edge_validated=false|prop_firm_ready=false|trade_permission=false"
       + "|scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS)
       + "|history_scan_budget_ms=" + IntegerToString(AC_L1_HISTORY_SCAN_BUDGET_MS)
       + "|history_scan_duration_ms=" + IntegerToString((int)AC_L1_HISTORY_SCAN_DURATION_MS)
