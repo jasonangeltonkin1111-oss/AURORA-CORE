@@ -29,6 +29,7 @@ static int AC_L5_BLOCK_CLASSIFICATION_REVIEW = 0;
 static int AC_L5_BLOCK_L2_NOT_READY = 0;
 static int AC_L5_BLOCK_L3_NOT_READY = 0;
 static int AC_L5_BLOCK_L4_NOT_READY = 0;
+static int AC_L5_BLOCK_L4_SURFACE_NOT_USABLE = 0;
 
 // Compatibility fields retained until AuroraCore diagnostics is fully renamed away from the retired advisory packet wording.
 // They are mapped to Basic System Gate state, not to a deep advisory/calculation packet.
@@ -49,9 +50,10 @@ static string AC_L5_RISK_ADVISORY = "not_layer5_permission_or_risk_owner";
 static string AC_L5_KILL_REASON = "basic_gate_not_run";
 static string AC_L5_QUALITY_STATE = "basic_gate_not_started";
 
-static string AC_L5_GATE_POLICY = "closed_market_or_stale_quote_or_invalid_bidask_or_missing_specs_or_disabled_trade_mode_or_absurd_spread_or_unresolved_classification_review_blocks";
+static string AC_L5_GATE_POLICY = "closed_market_or_non_fresh_quote_or_invalid_bidask_or_missing_specs_or_disabled_trade_mode_or_absurd_spread_or_unresolved_classification_review_or_l4_surface_not_usable_blocks";
 static string AC_L5_WORST_BLOCKER = "None";
 static double AC_L5_ABSURD_SPREAD_BPS_LIMIT = 250.0;
+static double AC_L5_MAX_FRESH_TICK_AGE_SECONDS = 30.0;
 
 struct AC_L5GatePacket
 {
@@ -70,6 +72,7 @@ struct AC_L5GatePacket
    bool blocked_trade_mode;
    bool blocked_absurd_spread;
    bool blocked_classification_review;
+   bool blocked_l4_surface_not_usable;
    bool trade_permission;
 };
 
