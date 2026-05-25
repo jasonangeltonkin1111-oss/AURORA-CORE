@@ -2,7 +2,7 @@
 #define AC_LAYER0_DOSSIER_PUBLICATION_MQH
 static string AC_L0_FIRST_FAILURE = "";
 static string AC_L0_FAILURE_ADDENDUM = "";
-static string AC_DOSSIER_RENDER_LAYOUT_KEY = "dossier_topview_v2_l15";
+static string AC_DOSSIER_RENDER_LAYOUT_KEY = "dossier_topview_v2_l15_l9_quality";
 static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
 static string AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = "";
 static string AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY = "";
@@ -25,6 +25,7 @@ static int    AC_L0_CACHED_L8_RANKED_ROWS = -1;
 static int    AC_L0_CACHED_L8_OHLC_MIN_READY = -1;
 static bool   AC_L0_CACHED_L8_ACCEPTED = false;
 static string AC_L0_CACHED_L9_STATUS = "";
+static string AC_L0_CACHED_L9_GEOMETRY_QUALITY = "";
 static string AC_L0_CACHED_L9_INPUT_CHECKSUM = "";
 static string AC_L0_CACHED_L9_RANKED_CHECKSUM = "";
 static int    AC_L0_CACHED_L9_RANKED_ROWS = -1;
@@ -145,7 +146,7 @@ string AC_DossierSymbolTopViewSection(const string symbol, const string market_s
    text += "Pipeline Position:   " + (l15_row != "" ? "L15 correlation/diversity scored" : (l14_row != "" ? "L14 raw candidate pool member" : "pre-candidate or not selected")) + "\r\n";
    text += "L14 Candidate:       " + (l14_row != "" ? "TRUE rank #" + AC_L14CsvField(l14_row, 0) + " / " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) : "FALSE") + "\r\n";
    text += "L15 Diversity:       " + (l15_row != "" ? "TRUE rank #" + AC_L15CsvField(l15_row, 0) + " / " + IntegerToString(AC_L15_CANDIDATE_POOL_SIZE) : "FALSE") + "\r\n";
-   text += "Surface State:       L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + "\r\n";
+   text += "Surface State:       L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + " | L9_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Selection State:     L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + "\r\n";
    text += "Trade Permission:    FALSE\r\n";
    text += "Entry Signal:        FALSE\r\n";
@@ -234,7 +235,7 @@ string AC_DossierRiskBlockerCardSection(const string symbol)
    text += "Main Cautions:\r\n";
    text += "  L7: " + AC_L7_STATUS + "\r\n";
    text += "  L8: " + AC_L8_STATUS + "\r\n";
-   text += "  L9: " + AC_L9_STATUS + "\r\n";
+   text += "  L9: " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "  L14: " + AC_L14_STATUS + "\r\n";
    text += "  L15: " + AC_L15_STATUS + "\r\n";
    text += "Safety Meaning:        publication/inspection may continue; trading remains blocked\r\n";
@@ -250,7 +251,7 @@ string AC_DossierCurrentLimitsSection(const string symbol, const string market_s
    text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
-   text += "Surface Ranking: L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + "\r\n";
+   text += "Surface Ranking: L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + " | L9_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Selection Ranking: L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + "\r\n";
    text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    text += "Selection Active: L15 scoring only; no Global Top 10 or trade permission\r\n";
@@ -272,7 +273,7 @@ string AC_DossierFoundationStatusSection(const string symbol, const string marke
    text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
    text += "Layer 7 Session Relevance Ranking: " + AC_L7_STATUS + "\r\n";
    text += "Layer 8 Movement / Range Ranking: " + AC_L8_STATUS + "\r\n";
-   text += "Layer 9 Structure / Location Geometry: " + AC_L9_STATUS + "\r\n";
+   text += "Layer 9 Structure / Location Geometry: " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Layer 10 Taxonomy / Ranking Group Map: " + AC_L10_STATUS + "\r\n";
    text += "Layer 11 Symbol Ranking Inside Group: " + AC_L11_STATUS + "\r\n";
    text += "Layer 12 Ranking Group Heat / Quality: " + AC_L12_STATUS + "\r\n";
@@ -425,6 +426,7 @@ void AC_L0CacheLayer9Proof()
 {
    AC_L9RefreshRankedSidecar();
    AC_L0_CACHED_L9_STATUS = AC_L9_STATUS;
+   AC_L0_CACHED_L9_GEOMETRY_QUALITY = AC_L9_GEOMETRY_QUALITY_STATE;
    AC_L0_CACHED_L9_INPUT_CHECKSUM = AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED;
    AC_L0_CACHED_L9_RANKED_CHECKSUM = AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED;
    AC_L0_CACHED_L9_RANKED_ROWS = AC_L9_RANKED_ROWS_RENDERED;
@@ -533,6 +535,7 @@ string AC_L0DossierSourceKey(const int total)
       + "|l8_ohlc_min=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED)
       + "|l8_accepted=" + (AC_L8_RANKED_ACCEPTED ? "true" : "false")
       + "|l9=" + AC_L9_STATUS
+      + "|l9_geometry_quality=" + AC_L9_GEOMETRY_QUALITY_STATE
       + "|l9_input=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED
       + "|l9_ranked=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED
       + "|l9_rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED)
@@ -751,6 +754,7 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L8_OHLC_MIN_READY == AC_L8_OHLC_MIN_READY_RENDERED
       && AC_L0_CACHED_L8_ACCEPTED == AC_L8_RANKED_ACCEPTED
       && AC_L0_CACHED_L9_STATUS == AC_L9_STATUS
+      && AC_L0_CACHED_L9_GEOMETRY_QUALITY == AC_L9_GEOMETRY_QUALITY_STATE
       && AC_L0_CACHED_L9_INPUT_CHECKSUM == AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED
       && AC_L0_CACHED_L9_RANKED_CHECKSUM == AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED
       && AC_L0_CACHED_L9_RANKED_ROWS == AC_L9_RANKED_ROWS_RENDERED
@@ -786,7 +790,7 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|layout=" + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "|l7=" + AC_L0_CACHED_L7_STATUS + "|l7_input_checksum=" + AC_L0_CACHED_L7_INPUT_CHECKSUM + "|l7_ranked_checksum=" + AC_L0_CACHED_L7_RANKED_CHECKSUM + "|l7_rows=" + IntegerToString(AC_L0_CACHED_L7_RANKED_ROWS) + "|l8=" + AC_L0_CACHED_L8_STATUS + "|l8_input_checksum=" + AC_L0_CACHED_L8_INPUT_CHECKSUM + "|l8_ranked_checksum=" + AC_L0_CACHED_L8_RANKED_CHECKSUM + "|l8_rows=" + IntegerToString(AC_L0_CACHED_L8_RANKED_ROWS) + "|l9=" + AC_L0_CACHED_L9_STATUS + "|l9_input_checksum=" + AC_L0_CACHED_L9_INPUT_CHECKSUM + "|l9_ranked_checksum=" + AC_L0_CACHED_L9_RANKED_CHECKSUM + "|l9_rows=" + IntegerToString(AC_L0_CACHED_L9_RANKED_ROWS) + "|l10=" + AC_L0_CACHED_L10_STATUS + "|l10_check=" + AC_L0_CACHED_L10_SUMMARY_CHECK_KEY + "|l11=" + AC_L0_CACHED_L11_STATUS + "|l11_generated=" + AC_L0_CACHED_L11_GENERATED_UTC + "|l12=" + AC_L0_CACHED_L12_STATUS + "|l12_generated=" + AC_L0_CACHED_L12_GENERATED_UTC + "|l13=" + AC_L0_CACHED_L13_STATUS + "|l13_generated=" + AC_L0_CACHED_L13_GENERATED_UTC + "|l14=" + AC_L0_CACHED_L14_STATUS + "|l14_generated=" + AC_L0_CACHED_L14_GENERATED_UTC + "|l15=" + AC_L0_CACHED_L15_STATUS + "|l15_generated=" + AC_L0_CACHED_L15_GENERATED_UTC);
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|schema=" + AC_L0_CACHED_DOSSIER_SCHEMA_VERSION + "|layout=" + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "|l2=" + AC_L0_CACHED_L2_ROUTE_GENERATION_KEY + "|l3=" + AC_L0_CACHED_L3_CACHE_KEY + "|l4=" + AC_L0_CACHED_L4_CACHE_KEY + "|l4_refresh=" + AC_L0_CACHED_L4_REFRESH_KEY + "|l5=" + AC_L0_CACHED_L5_STATUS + "|l6=" + AC_L0_CACHED_L6_STATUS + "|l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "|l7=" + AC_L0_CACHED_L7_STATUS + "|l7_input_checksum=" + AC_L0_CACHED_L7_INPUT_CHECKSUM + "|l7_ranked_checksum=" + AC_L0_CACHED_L7_RANKED_CHECKSUM + "|l7_rows=" + IntegerToString(AC_L0_CACHED_L7_RANKED_ROWS) + "|l8=" + AC_L0_CACHED_L8_STATUS + "|l8_input_checksum=" + AC_L0_CACHED_L8_INPUT_CHECKSUM + "|l8_ranked_checksum=" + AC_L0_CACHED_L8_RANKED_CHECKSUM + "|l8_rows=" + IntegerToString(AC_L0_CACHED_L8_RANKED_ROWS) + "|l9=" + AC_L0_CACHED_L9_STATUS + "|l9_geometry_quality=" + AC_L0_CACHED_L9_GEOMETRY_QUALITY + "|l9_input_checksum=" + AC_L0_CACHED_L9_INPUT_CHECKSUM + "|l9_ranked_checksum=" + AC_L0_CACHED_L9_RANKED_CHECKSUM + "|l9_rows=" + IntegerToString(AC_L0_CACHED_L9_RANKED_ROWS) + "|l10=" + AC_L0_CACHED_L10_STATUS + "|l10_check=" + AC_L0_CACHED_L10_SUMMARY_CHECK_KEY + "|l11=" + AC_L0_CACHED_L11_STATUS + "|l11_generated=" + AC_L0_CACHED_L11_GENERATED_UTC + "|l12=" + AC_L0_CACHED_L12_STATUS + "|l12_generated=" + AC_L0_CACHED_L12_GENERATED_UTC + "|l13=" + AC_L0_CACHED_L13_STATUS + "|l13_generated=" + AC_L0_CACHED_L13_GENERATED_UTC + "|l14=" + AC_L0_CACHED_L14_STATUS + "|l14_generated=" + AC_L0_CACHED_L14_GENERATED_UTC + "|l15=" + AC_L0_CACHED_L15_STATUS + "|l15_generated=" + AC_L0_CACHED_L15_GENERATED_UTC);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
