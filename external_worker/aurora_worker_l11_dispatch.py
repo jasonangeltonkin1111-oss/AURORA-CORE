@@ -119,7 +119,15 @@ def publish_l11_manifest_guard(root: Path) -> L11ManifestGuardSummary:
         f"generated_unix={unix_time()}",
         "",
     ])
-    atomic_write_text(status_path, report)
+    if not atomic_write_text(status_path, report):
+        return L11ManifestGuardSummary(
+            "write_degraded",
+            "l11_manifest_guard_status_write_failed" if failed == 0 else "one_or_more_l11_manifest_guard_outputs_failed_or_missing_payload_or_status_failed",
+            written,
+            len(targets),
+            failed + 1,
+            str(status_path),
+        )
     return summary
 
 
@@ -272,6 +280,7 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
             f"l11_manifest_guard_status={manifest_guard_summary.status}",
             f"l11_manifest_guard_manifests_written={manifest_guard_summary.manifests_written}",
             f"l11_manifest_guard_manifests_expected={manifest_guard_summary.manifests_expected}",
+            f"l11_manifest_guard_write_failed_count={manifest_guard_summary.write_failed_count}",
             f"l11_manifest_guard_status_path={manifest_guard_summary.status_path}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
