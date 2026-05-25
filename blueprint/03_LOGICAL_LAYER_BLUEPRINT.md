@@ -16,7 +16,7 @@ Canonical trading/system layer spine for AURORA CORE. This file is the authorita
 3. Taxonomy / Ranking Group Owner — Layers 10–14
 4. Basket Selection Owner — Layers 15–16
 5. Selected Evidence Owner — Layers 17–22
-6. Permission / Alert Owner — Layer 23
+6. Permission / Alert / Trader-Review Export Owner — Layer 23
 7. Validation / Outcome Owner — outcome proof / experiment registry / future strategy tests
 
 ## Operating Laws
@@ -25,8 +25,9 @@ Canonical trading/system layer spine for AURORA CORE. This file is the authorita
 3. **Selected-evidence-only law:** no all-symbol OHLC/tick/indicators/DOM. Deep evidence is selected-symbol only for Global Top 10, ranking_group leaders, selected backups, manual watch later, future alert candidates.
 4. **Tick is selected and rolling:** 10-minute rolling window, selected symbols captured in parallel, no 10-min wait per symbol, tick flags matter.
 5. **DOM is MT5 proxy-only:** MT5 internal first build only; external DOM/order-flow/liquidity APIs blocked; `MarketBookAdd/MarketBookGet` availability-gated and broker/symbol dependent; no institutional-order-flow claims.
-6. **Alerts are rare:** no per-symbol progress spam; Class 1 system/risk/integrity only now; Class 2 setup/strategy blocked until validated.
+6. **Alerts are rare:** no per-symbol progress spam; Class 1 system/risk/integrity only now. Class 2 setup/strategy alerts require validation, but raw evidence export and manual trader-review packets may exist earlier with clear missing/degraded truth labels.
 7. **Runtime visibility law:** Board-only Atomic Update Overview, no artificial slow-drip, no blind unbounded loops, timer pressure must be visible.
+8. **Export is not permission:** `manual_review_allowed=true` or `trader_chat_export_allowed=true` never implies `trade_allowed=true`, `auto_trade_allowed=true`, `entry_signal=true`, or `expectancy_validated=true`.
 
 ---
 
@@ -176,12 +177,15 @@ Canonical trading/system layer spine for AURORA CORE. This file is the authorita
 - **Inputs / MT5 family:** MarketBookAdd, MarketBookGet, MarketBookRelease, OnBookEvent, CopyTicks.
 - **Forbidden claims:** institutional order flow confirmed; zone touched=buy/sell; sweep=reversal; FVG=continuation.
 
-### L23 — Setup / Strategy / Permission / Alert State
-- **Purpose:** explicit permission/alert state gate.
-- **Defaults:** class_1_system_alert_allowed=true (rare only), class_2_setup_alert_allowed=false, directional_alert_allowed=false, auto_trade_allowed=false, live_allowed=false, trade_allowed=false.
+### L23 — Setup / Strategy / Permission / Trader-Review Export State
+- **Purpose:** package selected-symbol evidence into manual review, trader-chat export, setup research, permission, and alert state without confusing export with permission.
+- **Owns:** manual_review_packet_available, trader_chat_export_available, evidence_completeness_pct, missing_evidence_list, degraded_evidence_list, setup_research_candidate, structure_context_summary, liquidity_context_summary, risk_geometry_context_summary, review_warnings, trade_allowed, auto_trade_allowed, directional_alert_allowed, class_1_system_alert_allowed, class_2_setup_alert_allowed.
+- **Export defaults:** manual review and trader-chat export may be true when a labelled truth packet exists, even if partial/degraded. Missing L18-L22 evidence reduces completeness/confidence; it does not block export.
+- **Permission defaults:** class_1_system_alert_allowed=true (rare only), class_2_setup_alert_allowed=false, directional_alert_allowed=false, auto_trade_allowed=false, live_allowed=false, trade_allowed=false.
 - **Class 1 allowed:** session changed, atomic overview stale, cycle failed, critical governance write failure, terminal disconnected, prop rule danger, tick capture failed for selected batch.
-- **Class 2 future requires:** Top-N in relevant ranking_group; selected/fallback-qualified group; OHLC/wick/tick/indicator-deep integrity complete; strategy formula triple-verified; strategy statistically validated; Layer 1 pass; cooldown passed.
+- **Class 2 / permission future requires:** exact strategy rules, validated permission standard, Layer 1 pass, cooldown pass, and explicit validation/permission upgrade. Backtesting/OOS/forward proof is required for Aurora-generated permission or auto-trading, not for raw evidence export.
 - **Forbidden phrases:** high probability buy, guaranteed setup, confirmed sell, best trade now.
+- **Meaning law:** `manual_review_allowed=true` or `trader_chat_export_allowed=true` does not imply `trade_allowed=true`, `entry_signal=true`, `auto_trade_allowed=true`, or `expectancy_validated=true`.
 
 ## Heatmap Publication Set
 1. Ranking Group Strength Heatmap
@@ -194,3 +198,4 @@ Canonical trading/system layer spine for AURORA CORE. This file is the authorita
 - No all-symbol deep evidence collection.
 - No strategy/edge/live/readiness claims from architecture.
 - No auto-trade permission by score alone.
+- No confusion between trader-review export and Aurora trade permission.
