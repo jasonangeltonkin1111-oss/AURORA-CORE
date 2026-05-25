@@ -20,6 +20,10 @@ L6_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L6_JOB_TYPE = "L6_COST_FRICTION_RANKING_V1"
 L6_LAYER_NAME = "Layer 6 - Cost / Friction Ranking"
 L6_OWNER = "Runtime 4 - Surface Scoring Owner"
+L6_SCORE_MEANING = "surface_cost_friction_only_not_edge_not_permission"
+L6_RANGE_RATIO_UNAVAILABLE = "not_available_no_owner_approved_range_input"
+L6_ATR_RATIO_UNAVAILABLE = "not_available_no_owner_approved_atr_input"
+L6_SWAP_MODEL_STATUS = "not_modelled_v1"
 
 BUCKET_ORDER = {
     "hostile_friction": 0,
@@ -36,19 +40,25 @@ OUTPUT_FIELDS = [
     "layer_id",
     "layer_name",
     "friction_score",
+    "cost_score",
     "friction_bucket",
     "rank_state",
     "score_quality",
     "calculation_quality",
+    "cost_score_confidence",
     "spread_bps",
     "spread_points",
+    "spread_to_recent_range_pct",
+    "spread_to_atr_proxy_pct",
     "spread_cost_worst_minlot_account",
     "effective_cost_minlot_account",
+    "round_trip_cost_estimate_minlot_account",
     "cost_model_compare_status",
     "cost_model_mismatch_ratio",
     "account_cost_zero_nonzero_spread_suspicious",
     "volume_model_quality",
     "commission_model_status",
+    "swap_model_status",
     "spread_bps_penalty",
     "account_cost_penalty",
     "tick_age_penalty",
@@ -61,6 +71,8 @@ OUTPUT_FIELDS = [
     "cost_model_mismatch_penalty",
     "zero_cost_suspicious_penalty",
     "volume_model_penalty",
+    "friction_penalty",
+    "score_meaning",
     "reason",
     "trade_permission",
     "selection_runtime",
@@ -297,6 +309,16 @@ def _effective_cost_minlot(row: Dict[str, str]) -> Tuple[float, str]:
     return value, name
 
 
+def _cost_confidence(rank_state: str, score_quality: str, calculation_quality: str, commission_status: str) -> str:
+    if rank_state == "not_rankable_quality":
+        return "unusable"
+    if "degraded" in calculation_quality or "degraded" in score_quality:
+        return "low"
+    if commission_status != "known_machine_verified" or "uncertainty" in score_quality or "warning" in calculation_quality:
+        return "medium"
+    return "high"
+
+
 def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     symbol = _safe_text(row, "symbol")
     spread_bps = _safe_float(row.get("spread_bps"))
@@ -425,22 +447,38 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         rank_state = "ranked"
         score_quality = "usable_with_cost_uncertainty"
 
+    cost_score_confidence = _cost_confidence(rank_state, score_quality, calculation_quality, commission_status)
+    friction_penalty = max(0.0, min(100.0, 100.0 - score))
+    round_trip_cost_estimate = effective_cost * 2.0 if effective_cost > 0.0 else 0.0
+    reasons += [
+        f"spread_to_recent_range_pct={L6_RANGE_RATIO_UNAVAILABLE}",
+        f"spread_to_atr_proxy_pct={L6_ATR_RATIO_UNAVAILABLE}",
+        f"swap_model_status={L6_SWAP_MODEL_STATUS}",
+        f"score_meaning={L6_SCORE_MEANING}",
+    ]
+
     return {
         "symbol": symbol,
         "friction_score": score,
+        "cost_score": score,
         "friction_bucket": bucket,
         "rank_state": rank_state,
         "score_quality": score_quality,
         "calculation_quality": calculation_quality,
+        "cost_score_confidence": cost_score_confidence,
         "spread_bps": spread_bps,
         "spread_points": spread_points,
+        "spread_to_recent_range_pct": L6_RANGE_RATIO_UNAVAILABLE,
+        "spread_to_atr_proxy_pct": L6_ATR_RATIO_UNAVAILABLE,
         "spread_cost_worst_minlot_account": worst_minlot,
         "effective_cost_minlot_account": effective_cost,
+        "round_trip_cost_estimate_minlot_account": round_trip_cost_estimate,
         "cost_model_compare_status": compare_status,
         "cost_model_mismatch_ratio": compare_ratio,
         "account_cost_zero_nonzero_spread_suspicious": "true" if zero_suspicious else "false",
         "volume_model_quality": volume_model,
         "commission_model_status": commission_status,
+        "swap_model_status": L6_SWAP_MODEL_STATUS,
         "spread_bps_penalty": spread_penalty,
         "account_cost_penalty": account_cost_penalty,
         "tick_age_penalty": tick_age_penalty,
@@ -453,6 +491,8 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         "cost_model_mismatch_penalty": cost_model_mismatch_penalty,
         "zero_cost_suspicious_penalty": zero_cost_suspicious_penalty,
         "volume_model_penalty": volume_model_penalty,
+        "friction_penalty": friction_penalty,
+        "score_meaning": L6_SCORE_MEANING,
         "reason": ";".join(reasons),
         "trade_permission": "false",
         "selection_runtime": "false",
@@ -488,10 +528,14 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
         "Trade Permission: FALSE",
         "Selection Runtime: FALSE",
         "",
-        "rank|symbol|score|bucket|state|spread_bps|effective_minlot_cost|reason",
+        "rank|symbol|score|bucket|state|confidence|spread_bps|effective_minlot_cost|round_trip_minlot_cost|reason",
     ]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['friction_score']):.2f}|{row['friction_bucket']}|{row['rank_state']}|{float(row['spread_bps']):.6f}|{float(row['effective_cost_minlot_account']):.6f}|{row['reason']}")
+        lines.append(
+            f"{index}|{row['symbol']}|{float(row['friction_score']):.2f}|{row['friction_bucket']}|{row['rank_state']}|"
+            f"{row['cost_score_confidence']}|{float(row['spread_bps']):.6f}|{float(row['effective_cost_minlot_account']):.6f}|"
+            f"{float(row['round_trip_cost_estimate_minlot_account']):.6f}|{row['reason']}"
+        )
     lines.append("")
     return "\n".join(lines)
 
@@ -500,7 +544,7 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
     symbol = str(row["symbol"])
     lines = [
         "schema_name=l6_symbol_rank",
-        "schema_version=2",
+        "schema_version=3",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -511,21 +555,32 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
         f"symbol_rank_filename={_symbol_rank_filename(symbol)}",
         f"symbol_rank_checksum={_symbol_rank_checksum(symbol)}",
         f"friction_score={float(row['friction_score']):.6f}",
+        f"cost_score={float(row['cost_score']):.6f}",
+        f"friction_penalty={float(row['friction_penalty']):.6f}",
+        f"cost_score_confidence={row['cost_score_confidence']}",
         f"friction_bucket={row['friction_bucket']}",
         f"rank_state={row['rank_state']}",
         f"score_quality={row['score_quality']}",
         f"calculation_quality={row['calculation_quality']}",
         f"spread_bps={float(row['spread_bps']):.6f}",
         f"spread_points={float(row['spread_points']):.6f}",
+        f"spread_to_recent_range_pct={row['spread_to_recent_range_pct']}",
+        f"spread_to_atr_proxy_pct={row['spread_to_atr_proxy_pct']}",
         f"effective_cost_minlot_account={float(row['effective_cost_minlot_account']):.6f}",
+        f"round_trip_cost_estimate_minlot_account={float(row['round_trip_cost_estimate_minlot_account']):.6f}",
         f"cost_model_compare_status={row['cost_model_compare_status']}",
         f"account_cost_zero_nonzero_spread_suspicious={row['account_cost_zero_nonzero_spread_suspicious']}",
         f"volume_model_quality={row['volume_model_quality']}",
         f"commission_model_status={row['commission_model_status']}",
+        f"swap_model_status={row['swap_model_status']}",
+        f"score_meaning={row['score_meaning']}",
         f"reason={_format_value(row['reason'])}",
         "authority=calculation_support_only",
+        "directional_validity=false",
+        "expectancy_validated=false",
         "trade_permission=false",
         "selection_runtime=false",
+        "execution=false",
         f"generated_utc={utc_stamp()}",
         f"generated_unix={unix_time()}",
         "",
@@ -540,7 +595,7 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
     symbol_rank_count_ok = summary.symbol_rank_files_actual == summary.row_count and summary.symbol_rank_files_written == summary.row_count
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=5",
+        "schema_version=6",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -581,10 +636,17 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         f"zero_cost_nonzero_spread_suspicious_count={summary.zero_cost_suspicious_count}",
         f"cost_model_mismatch_count={summary.mismatch_count}",
         f"payload_checksum={summary.payload_checksum}",
+        f"range_ratio_policy={L6_RANGE_RATIO_UNAVAILABLE}",
+        f"atr_ratio_policy={L6_ATR_RATIO_UNAVAILABLE}",
+        f"swap_model_status={L6_SWAP_MODEL_STATUS}",
+        f"score_meaning={L6_SCORE_MEANING}",
         "authority=calculation_support_only",
+        "directional_validity=false",
+        "expectancy_validated=false",
         "trade_permission=false",
         "ranking_runtime=true",
         "selection_runtime=false",
+        "execution=false",
         f"generated_utc={utc_stamp()}",
         f"generated_unix={unix_time()}",
         "",
