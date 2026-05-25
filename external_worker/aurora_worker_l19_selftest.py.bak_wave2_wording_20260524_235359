@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from aurora_worker_l19 import _apply_wave2_structures, _build_geometry
 
@@ -68,7 +68,6 @@ def run_selftest() -> None:
     _assert_equal("close outside range reason", invalid_close.invalid_reason, "close outside high low range")
 
     # Wave 2 policy: index 0 is current possible and must not receive confirmed two-candle tags.
-    # Current Possible row is not Wave 2 confirmed.
     previous_down = _geo(2, "2000", 10500, 10600, 9900, 10000)
     bullish_engulfing = _geo(1, "2060", 9950, 10800, 9900, 10700)
     current_possible = _geo(0, "2120", 10700, 10900, 10600, 10800)
@@ -99,4 +98,3 @@ def run_selftest() -> None:
 if __name__ == "__main__":
     run_selftest()
     print("L19 geometry and wave 2 self-test OK")
-
