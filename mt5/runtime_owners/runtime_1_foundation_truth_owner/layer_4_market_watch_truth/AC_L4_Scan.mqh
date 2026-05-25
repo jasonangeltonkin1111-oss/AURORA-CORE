@@ -249,9 +249,9 @@ void AC_RefreshLayer4MarketWatchTruth()
 {
    AC_L4Reset();
    int total = SymbolsTotal(false);
-   string refreshed_at = TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
    AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
-   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | refreshed " + refreshed_at + " | time_source=TimeTradeServerFirst";
+   // Keep this key stable across ordinary quote refreshes. Refresh timestamps belong in rendered proof, not in the universe Dossier invalidation key.
+   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst";
 
    for(int idx=0; idx<total; idx++)
    {
