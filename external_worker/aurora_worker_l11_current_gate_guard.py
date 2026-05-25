@@ -43,6 +43,12 @@ L11_TOP5_FIELDS = [
 ]
 
 SAFE_L5_STATES = {"pass", "passed", "accepted", "open", "true", "ok"}
+L5_LABELS = [
+    "Layer 5 Gate Status", "Layer 5 Gate State", "Layer 5 Gate", "Layer 5 Status",
+    "L5 Gate Status", "L5 Gate State", "L5 Status",
+    "l5_gate_status", "l5_gate_state", "l5_status",
+]
+MARKET_STATE_LABELS = ["Market State", "market_state"]
 
 
 def _csv_rows(path: Path) -> List[Dict[str, str]]:
@@ -62,17 +68,6 @@ def _csv_text(rows: Sequence[Dict[str, str]], fields: Sequence[str]) -> str:
     for row in rows:
         writer.writerow({field: str(row.get(field, "not_available")) for field in fields})
     return out.getvalue()
-
-
-def _kv_text(path: Path) -> Dict[str, str]:
-    data: Dict[str, str] = {}
-    if not path.exists():
-        return data
-    for raw in read_text(path).replace("\r\n", "\n").splitlines():
-        if "=" in raw and not raw.strip().startswith("#"):
-            key, value = raw.split("=", 1)
-            data[key.strip()] = value.strip()
-    return data
 
 
 def _sanitize(value: str) -> str:
@@ -107,12 +102,17 @@ def _dossier_candidates(account_root: Path, symbol: str) -> List[Tuple[str, Path
     return out
 
 
+def _existing_dossiers(account_root: Path, symbol: str) -> List[Tuple[str, Path]]:
+    return [(route, path) for route, path in _dossier_candidates(account_root, symbol) if path.exists() and path.is_file()]
+
+
 def _extract_label(text: str, labels: Sequence[str]) -> str:
     for raw in text.replace("\r\n", "\n").splitlines():
         line = raw.strip()
         lower = line.lower()
         for label in labels:
-            if lower.startswith(label.lower()):
+            wanted = label.lower()
+            if lower.startswith(wanted):
                 value = line[len(label):].strip(" :=|\t")
                 return value or "not_available"
     return "not_available"
@@ -120,35 +120,37 @@ def _extract_label(text: str, labels: Sequence[str]) -> str:
 
 def _current_gate_state(account_root: Path, symbol: str) -> Tuple[bool, str, str, str]:
     """Return (safe_to_rank, l5_state, eligible_flag, reason)."""
-    found: Tuple[str, Path] | None = None
-    for route, path in _dossier_candidates(account_root, symbol):
-        if path.exists() and path.is_file():
-            found = (route, path)
-            break
-    if found is None:
+    matches = _existing_dossiers(account_root, symbol)
+    if not matches:
         return False, "blocked_current_dossier_missing", "false", "current_dossier_missing"
+    routes = sorted({route for route, _path in matches})
+    if len(matches) > 1:
+        return False, "blocked_current_duplicate_dossier_routes", "false", "current_dossier_duplicate_routes:" + ";".join(routes)
 
-    route, path = found
+    route, path = matches[0]
     try:
         text = read_text(path)
     except OSError:
         return False, "blocked_current_dossier_unreadable", "false", f"current_dossier_unreadable:{path}"
 
     lower = text.lower()
+    market_state = _extract_label(text, MARKET_STATE_LABELS).strip().lower()
+    dossier_l5 = _extract_label(text, L5_LABELS).strip().lower()
+
     if route != "Open":
         return False, f"blocked_current_route_{route.lower()}", "false", f"current_dossier_route_{route.lower()}"
+    if market_state in {"closed", "unknown"}:
+        return False, f"blocked_current_market_{market_state}", "false", f"current_dossier_market_{market_state}"
     if "market state: closed" in lower or "market_state=closed" in lower:
         return False, "blocked_current_market_closed", "false", "current_dossier_market_closed"
     if "market state: unknown" in lower or "market_state=unknown" in lower:
         return False, "blocked_current_market_unknown", "false", "current_dossier_market_unknown"
-    if "l5 gate status: blocked" in lower or "l5_gate_status=blocked" in lower or "l5 gate state: blocked" in lower or "market_not_open" in lower:
+    if "layer 5 gate status: blocked" in lower or "layer 5 gate state: blocked" in lower or "l5 gate status: blocked" in lower or "l5_gate_status=blocked" in lower or "l5 gate state: blocked" in lower or "market_not_open" in lower:
         return False, "blocked_current_l5", "false", "current_dossier_l5_blocked"
     if "stale_previous_generation" in lower or "dossier stale" in lower:
         return False, "blocked_current_dossier_stale", "false", "current_dossier_stale"
-
-    dossier_l5 = _extract_label(text, ["L5 Gate Status", "l5_gate_status", "L5 Gate State", "l5_gate_state"])
-    if dossier_l5 != "not_available" and dossier_l5.strip().lower() not in SAFE_L5_STATES:
-        return False, f"blocked_current_l5_{_sanitize(dossier_l5.lower())}", "false", f"current_dossier_l5_not_pass:{dossier_l5}"
+    if dossier_l5 != "not_available" and dossier_l5 not in SAFE_L5_STATES:
+        return False, f"blocked_current_l5_{_sanitize(dossier_l5)}", "false", f"current_dossier_l5_not_pass:{dossier_l5}"
 
     return True, "pass", "true", f"current_dossier_open_l5_pass:{path}"
 
@@ -175,6 +177,13 @@ def _mark_not_rankable(row: Dict[str, str], l5_state: str, reason: str) -> Dict[
     return out
 
 
+def _score_sort_value(row: Dict[str, str]) -> float:
+    try:
+        return float(str(row.get("l11_group_score", "0") or "0"))
+    except ValueError:
+        return 0.0
+
+
 def _rerank(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     groups: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for row in rows:
@@ -183,7 +192,7 @@ def _rerank(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     for group, members in sorted(groups.items()):
         rankable = [r for r in members if r.get("rank_state") in {"ranked", "ranked_partial", "risk_review"}]
         not_rankable_count = len(members) - len(rankable)
-        rankable.sort(key=lambda r: (-float(str(r.get("l11_group_score", "0") or "0")), r.get("symbol", "")))
+        rankable.sort(key=lambda r: (-_score_sort_value(r), r.get("symbol", "")))
         rankable_count = len(rankable)
         for idx, row in enumerate(rankable, 1):
             row["ranking_group_rank"] = str(idx)
@@ -358,6 +367,7 @@ def guard_l11_with_current_dossier_gate(outbox_root: Path, summary: L11PublishSu
         f"not_rankable_current_l5_gate_count={guard_blocked}",
         "rule=only_symbols_with_current_open_nonblocked_nonstale_dossier_remain_rankable",
         "authority=safety_filter_inside_l11_dispatch_not_trade_permission",
+        "duplicate_dossier_policy=fail_closed_for_rankability",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
