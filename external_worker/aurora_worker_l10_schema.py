@@ -90,6 +90,7 @@ L10_TAXONOMY_SYMBOL_FIELDS = [
     "source_status",
     "block_reason",
     "rank_allowed",
+    "selection_allowed",
     "downstream_classification_eligible",
     "l5_gate_state",
     "l5_eligible_flag",
@@ -99,6 +100,8 @@ L10_TAXONOMY_SYMBOL_FIELDS = [
     "l9_available",
     "dossier_source_path",
     "future_group_folder",
+    "future_top5_copy_path",
+    "future_top10_copy_path",
     "reason",
     "trade_permission",
 ]
@@ -134,9 +137,12 @@ L10_SYMBOL_PATH_INDEX_FIELDS = [
     "ranking_group",
     "taxonomy_state",
     "rank_allowed",
+    "selection_allowed",
     "downstream_classification_eligible",
     "dossier_source_path",
     "future_group_folder",
+    "future_top5_copy_path",
+    "future_top10_copy_path",
     "reason",
 ]
 
