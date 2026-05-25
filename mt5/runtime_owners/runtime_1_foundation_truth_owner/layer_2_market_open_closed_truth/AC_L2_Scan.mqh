@@ -3,6 +3,19 @@
 
 void AC_BuildLayer2Texts();
 
+// L2 market-session truth must use a current broker-server clock, not a stale
+// Market Watch quote timestamp. In OnTimer(), TimeCurrent() can remain pinned
+// to the last quote receipt for any Market Watch symbol, which can misclassify
+// Monday Forex sessions as Sunday/closed. Prefer TimeTradeServer(), then fall
+// back only when the terminal cannot calculate broker server time.
+datetime AC_L2CurrentSessionServerTime()
+{
+   datetime server_time = TimeTradeServer();
+   if(server_time <= 0) server_time = TimeCurrent();
+   if(server_time <= 0) server_time = TimeGMT();
+   return server_time;
+}
+
 int AC_L2NormalizeSessionSecond(const datetime value)
 {
    int seconds = (int)value;
@@ -114,8 +127,8 @@ void AC_L2InitSymbolState(AC_L2SymbolState &state, const string symbol)
    state.minutes_until_session_close = -1;
    state.minutes_until_next_open = -1;
    state.session_window_basis = "server_session_time_of_day";
-   state.server_time_used = "TimeCurrent";
-   state.server_time_basis = "broker_server_last_known_marketwatch_quote_time";
+   state.server_time_used = "TimeTradeServer_then_TimeCurrent_then_TimeGMT_fallback";
+   state.server_time_basis = "calculated_current_trade_server_time_prefers_TimeTradeServer_not_last_quote_time";
    state.symbol_info_ok = false;
    state.symbol_synchronized_checked = true;
    state.symbol_synchronized = false;
@@ -280,9 +293,7 @@ void AC_L2ScanOneSymbol(const string symbol, const int broker_index, const datet
 void AC_RefreshLayer2MarketSessionTruth()
 {
    AC_L2Reset();
-   datetime server_time = TimeCurrent();
-   if(server_time <= 0) server_time = TimeTradeServer();
-   if(server_time <= 0) server_time = TimeGMT();
+   datetime server_time = AC_L2CurrentSessionServerTime();
 
    MqlDateTime dt;
    TimeToStruct(server_time, dt);
@@ -294,7 +305,7 @@ void AC_RefreshLayer2MarketSessionTruth()
    AC_L2_LAST_SERVER_DAY_OF_WEEK = day_of_week;
    AC_L2_LAST_SYMBOLS_TOTAL = total;
    AC_L2_LAST_FULL_SCAN_TIME = server_time;
-   AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|scan_time=" + IntegerToString((int)server_time);
+   AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|symbols=" + IntegerToString(total) + "|scan_pending=true";
 
    if(total <= 0)
    {
@@ -304,6 +315,7 @@ void AC_RefreshLayer2MarketSessionTruth()
       AC_L2_UNKNOWN_COUNT = 0;
       AC_L2_READY = true;
       AC_L2_SCAN_DURATION_MS = GetTickCount() - AC_L2_SCAN_STARTED_MS;
+      AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|symbols=0|open=0|closed=0|unknown=0|time_source=TimeTradeServerFirst";
       AC_BuildLayer2Texts();
       return;
    }
@@ -325,6 +337,13 @@ void AC_RefreshLayer2MarketSessionTruth()
    if(AC_L2_UNKNOWN_COUNT > 0 || AC_L2_SYMBOL_INFO_FAILURE_COUNT > 0 || AC_L2_TRADE_SESSION_FAILURE_COUNT > 0)
       AC_L2_SCAN_STATUS = "complete_with_degraded";
    AC_L2_SCAN_DURATION_MS = GetTickCount() - AC_L2_SCAN_STARTED_MS;
+   AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + "|server_day=" + IntegerToString(day_of_week)
+      + "|symbols=" + IntegerToString(total)
+      + "|open=" + IntegerToString(AC_L2_OPEN_COUNT)
+      + "|closed=" + IntegerToString(AC_L2_CLOSED_COUNT)
+      + "|unknown=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
+      + "|time_source=TimeTradeServerFirst";
    AC_L2_READY = true;
    AC_BuildLayer2Texts();
 }
@@ -334,8 +353,7 @@ bool AC_L2ShouldRunFullScan()
    if(!AC_L2_READY) return true;
    int total = SymbolsTotal(false);
    if(total != AC_L2_LAST_SYMBOLS_TOTAL) return true;
-   datetime server_time = TimeCurrent();
-   if(server_time <= 0) server_time = TimeTradeServer();
+   datetime server_time = AC_L2CurrentSessionServerTime();
    MqlDateTime dt;
    TimeToStruct(server_time, dt);
    if(dt.day_of_week != AC_L2_LAST_SERVER_DAY_OF_WEEK) return true;
