@@ -281,4 +281,52 @@ string AC_Layer17DossierSection(const string symbol)
    return text;
 }
 
+string AC_Layer17WorkbenchSection()
+{
+   AC_L17RefreshSummary();
+   string text = "";
+   text += "\r\nL17_DEEP_EVIDENCE_QUEUE_SPLIT\r\n";
+   text += "----------------------------------------\r\n";
+   text += "schema_name=l17_deep_evidence_queue_split\r\n";
+   text += "schema_version=1\r\n";
+   text += "owner_name=Runtime 4 - Surface Scoring / Deep Evidence Selection Support\r\n";
+   text += "layer_id=17\r\n";
+   text += "input_source=L16_held_visible_display_rows_only\r\n";
+   text += "status=" + AC_L17_STATUS + "\r\n";
+   text += "validation_status=" + AC_L17_VALIDATION_STATUS + "\r\n";
+   text += "validation_reason=" + AC_L17_VALIDATION_REASON + "\r\n";
+   text += "source_l16_status=" + AC_L17_SOURCE_L16_STATUS + "\r\n";
+   text += "source_l16_hold_state=" + AC_L17_SOURCE_L16_HOLD_STATE + "\r\n";
+   text += "source_l16_visible_surface_state=" + AC_L17_SOURCE_L16_VISIBLE_SURFACE_STATE + "\r\n";
+   text += "visible_candidate_count=" + IntegerToString(AC_L17_VISIBLE_CANDIDATE_COUNT) + "\r\n";
+   text += "deep_selected_count=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
+   text += "rejected_candidate_count=" + IntegerToString(AC_L17_REJECTED_CANDIDATE_COUNT) + "\r\n";
+   text += "clean_selected_count=" + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
+   text += "fallback_selected_count=" + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
+   text += "full_depth_count=" + IntegerToString(AC_L17_FULL_DEPTH_COUNT) + "\r\n";
+   text += "standard_depth_count=" + IntegerToString(AC_L17_STANDARD_DEPTH_COUNT) + "\r\n";
+   text += "fallback_limited_depth_count=" + IntegerToString(AC_L17_FALLBACK_LIMITED_DEPTH_COUNT) + "\r\n";
+   text += "watch_only_count=" + IntegerToString(AC_L17_WATCH_ONLY_COUNT) + "\r\n";
+   text += "alert_eligible_candidate_count=" + IntegerToString(AC_L17_ALERT_ELIGIBLE_CANDIDATE_COUNT) + "\r\n";
+   text += "write_failed_count=" + IntegerToString(AC_L17_WRITE_FAILED_COUNT) + "\r\n";
+   text += "top_symbol=" + AC_L17_TOP_SYMBOL + "\r\n";
+   text += "generated_utc=" + AC_L17_GENERATED_UTC + "\r\n";
+   text += "selected_csv_path=" + AC_L17SelectedCsvPath() + "\r\n";
+   text += "rejected_csv_path=" + AC_L17RejectedCsvPath() + "\r\n";
+   text += "depth_summary_csv_path=" + AC_L17DepthSummaryCsvPath() + "\r\n";
+   text += "manifest_path=" + AC_L17ManifestPath() + "\r\n";
+   text += "selection_desk_path=" + AC_L17SelectionDeskPath() + "\r\n";
+   text += "collects_ohlc=false\r\n";
+   text += "collects_ticks=false\r\n";
+   text += "collects_indicators=false\r\n";
+   text += "collects_liquidity=false\r\n";
+   text += "all_symbol_scan=false\r\n";
+   text += "deep_evidence_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
+   text += "main_blocker=" + AC_L17_MAIN_BLOCKER + "\r\n";
+   return text;
+}
+
 #endif
