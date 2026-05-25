@@ -10,7 +10,8 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 - `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes.
 - `aurora_worker_io.py` — active worker-side IO helper source used by worker modules. Owns bounded read retry and durable atomic text writes for worker outputs only.
 - `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
-- `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
+- `aurora_worker_l10.py` / `aurora_worker_l10_source.py` / `aurora_worker_l10_schema.py` / `aurora_worker_l10_normalize.py` / `aurora_worker_l10_universe_parser.py` / `aurora_worker_l10_matcher.py` / `aurora_worker_l10_quality.py` / `aurora_worker_l10_group_builder.py` / `aurora_worker_l10_path_planner.py` / `aurora_worker_l10_publisher.py` — Layer 10 taxonomy / ranking_group classification support. Must consume Runtime 2 exported lookup rows and broker snapshot symbols, publish taxonomy rows, ranking_group membership/counts, review/unknown/conflict ledgers, and symbol path indexes. Must not rank symbols, build Top 5, build Global Top 10, copy Dossiers, select candidates, permit, alert, execute, or validate an edge.
+- `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must consume L10 taxonomy outputs and L6-L9 render-indexed surface outputs. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l12.py` / `aurora_worker_l12_dispatch.py` — Layer 12 ranking_group heat / quality support. Must consume L11 outputs and must not build selected groups, candidate pools, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l14.py` / `aurora_worker_l14_dispatch.py` — Layer 14 ranking_group leader candidate-pool support. Must consume L13 selected groups and L11 Top 5, preserving L12/L13 context. Must not run correlation, build Global Top 10, permit, alert, or execute.
@@ -29,6 +30,7 @@ Current source chain:
 
 ```text
 core snapshot validation
+-> L10 taxonomy / ranking_group classification when Runtime 2 export is available
 -> L11 symbol ranking inside ranking_group
 -> L12 ranking_group heat / quality
 -> L13 dynamic ranking_group selection
@@ -41,6 +43,10 @@ core snapshot validation
 ```
 
 This chain remains calculation/file-decoration support. It is not trading runtime authority.
+
+## L10 taxonomy rule
+
+L10 may publish `asset_class`, `market_group`, `market_segment`, `ranking_group`, classification source/status, review/unknown/conflict ledgers, group membership counts, and future path hints. L10 must not create Top 5 files, Top 10 files, candidate pools, final Selection Desk baskets, copied Dossiers, alerts, signals, or permissions. Generated Runtime 2 lookup presence is not runtime proof; result files and MT5 readback must prove runtime behavior separately.
 
 ## Shared OHLC rule for L15+
 
