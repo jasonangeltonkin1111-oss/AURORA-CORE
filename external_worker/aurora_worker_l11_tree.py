@@ -175,13 +175,15 @@ def _group_summary_text(group: str, rows: List[Dict[str, str]], top5: List[Dict[
 
 
 def _taxonomy_tree_text(index_rows: List[Dict[str, str]]) -> str:
+    unique_ranking_groups = len({row.get("ranking_group", "Unknown") for row in index_rows})
     lines = [
         "L11 SELECTION DESK TAXONOMY TREE",
         "----------------------------------------",
         f"schema_name={TREE_SCHEMA_NAME}",
         f"schema_version={TREE_SCHEMA_VERSION}",
         "authority=intra_group_inspection_priority_only",
-        f"ranking_group_count={len(index_rows)}",
+        f"taxonomy_tree_rows={len(index_rows)}",
+        f"unique_ranking_group_count={unique_ranking_groups}",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
@@ -238,7 +240,7 @@ def _write_level_indexes(base_dir: Path, rows: List[Dict[str, str]], failed: Lis
         by_asset[row["asset_class_slug"]].append(row)
     for asset_slug, asset_rows in by_asset.items():
         asset_dir = base_dir / asset_slug
-        text = "\n".join(["L11 ASSET CLASS INDEX", "----------------------------------------", f"asset_class={asset_rows[0]['asset_class']}", f"ranking_group_count={len(asset_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+        text = "\n".join(["L11 ASSET CLASS INDEX", "----------------------------------------", f"asset_class={asset_rows[0]['asset_class']}", f"ranking_group_path_count={len(asset_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
         if _write(asset_dir / "00_Asset_Class_Index.txt", text, failed):
             written += 1
         by_mg: Dict[str, List[Dict[str, str]]] = defaultdict(list)
@@ -246,7 +248,7 @@ def _write_level_indexes(base_dir: Path, rows: List[Dict[str, str]], failed: Lis
             by_mg[row["market_group_slug"]].append(row)
         for mg_slug, mg_rows in by_mg.items():
             mg_dir = asset_dir / mg_slug
-            text = "\n".join(["L11 MARKET GROUP INDEX", "----------------------------------------", f"asset_class={mg_rows[0]['asset_class']}", f"market_group={mg_rows[0]['market_group']}", f"ranking_group_count={len(mg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+            text = "\n".join(["L11 MARKET GROUP INDEX", "----------------------------------------", f"asset_class={mg_rows[0]['asset_class']}", f"market_group={mg_rows[0]['market_group']}", f"ranking_group_path_count={len(mg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
             if _write(mg_dir / "00_Market_Group_Index.txt", text, failed):
                 written += 1
             by_seg: Dict[str, List[Dict[str, str]]] = defaultdict(list)
@@ -254,7 +256,7 @@ def _write_level_indexes(base_dir: Path, rows: List[Dict[str, str]], failed: Lis
                 by_seg[row["market_segment_slug"]].append(row)
             for seg_slug, seg_rows in by_seg.items():
                 seg_dir = mg_dir / seg_slug
-                text = "\n".join(["L11 MARKET SEGMENT INDEX", "----------------------------------------", f"asset_class={seg_rows[0]['asset_class']}", f"market_group={seg_rows[0]['market_group']}", f"market_segment={seg_rows[0]['market_segment']}", f"ranking_group_count={len(seg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+                text = "\n".join(["L11 MARKET SEGMENT INDEX", "----------------------------------------", f"asset_class={seg_rows[0]['asset_class']}", f"market_group={seg_rows[0]['market_group']}", f"market_segment={seg_rows[0]['market_segment']}", f"ranking_group_path_count={len(seg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
                 if _write(seg_dir / "00_Market_Segment_Index.txt", text, failed):
                     written += 1
     return written
