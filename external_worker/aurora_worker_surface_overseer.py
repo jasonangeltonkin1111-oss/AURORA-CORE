@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, unix_time, utc_stamp
 
-SURFACE_OVERSEER_SCHEMA_VERSION = "3"
+SURFACE_OVERSEER_SCHEMA_VERSION = "4"
 SURFACE_OVERSEER_STATUS_NAME = "surface_overseer_status.txt"
 EXPECTED_AUTHORITY = "calculation_support_only"
 
@@ -22,8 +22,12 @@ RANKED_OUTPUT_AUTHORITIES = {
     "calculation_support_only",
     "intra_group_inspection_priority_only",
     "ranking_group_attention_quality_only",
+    "correlation_diversity_scoring_only",
+    "global_top10_inspection_basket_only",
+    "deep_evidence_selection_split_only",
 }
-RANKED_OUTPUT_ACCEPTED_STATUSES = {"complete", "accepted", "write_degraded", "not_available"}
+RANKED_OUTPUT_ACCEPTED_STATUSES = {"complete", "accepted", "degraded", "write_degraded", "not_available"}
+SYMBOL_RANK_FILE_CONTRACT_LAYERS = {"6", "7", "8", "9", "10", "11", "12", "13", "14"}
 
 
 @dataclass
@@ -115,6 +119,27 @@ def _manifest_role(path: Path) -> str:
     return "generic_manifest"
 
 
+def _layer_has_symbol_rank_file_contract(data: Dict[str, str], proof: LayerSurfaceProof) -> bool:
+    """Return true only when a layer is expected to publish one symbol rank file per row.
+
+    L15-L17 publish CSV/report/selection surfaces. Their row_count is not supposed to
+    equal numbered symbol rank files, so zero symbol_rank_files_* counters must not
+    degrade them. L6-L14 ranked-sidecar layers still keep strict file-count proof.
+    """
+    explicit = _safe_text(
+        data.get("symbol_rank_file_contract", data.get("file_contract", data.get("rank_file_contract"))),
+        "not_available",
+    ).lower()
+    if explicit in {"per_row", "one_file_per_row", "symbol_rank_files_per_row", "true", "required"}:
+        return True
+    if explicit in {"none", "not_required", "surface_only", "csv_only", "report_only", "false"}:
+        return False
+    layer_id = _safe_text(proof.layer_id, "").strip()
+    if layer_id in SYMBOL_RANK_FILE_CONTRACT_LAYERS:
+        return True
+    return proof.symbol_rank_files_written > 0 or proof.symbol_rank_files_actual > 0
+
+
 def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfaceProof:
     role = _manifest_role(manifest_path)
     proof = LayerSurfaceProof(folder_name=layer_dir.name, manifest_path=str(manifest_path), manifest_role=role)
@@ -172,7 +197,7 @@ def _layer_from_manifest(layer_dir: Path, manifest_path: Path) -> LayerSurfacePr
     row_ok = proof.row_count >= 0 and (proof.input_count <= 0 or proof.row_count == proof.input_count)
     checksum_ok = proof.payload_checksum != "not_available"
     files_ok = True
-    if "symbol_rank_files_written" in data or "symbol_rank_files_actual" in data:
+    if _layer_has_symbol_rank_file_contract(data, proof):
         files_ok = proof.symbol_rank_files_written == proof.row_count and proof.symbol_rank_files_actual == proof.row_count
 
     if not status_ok:
@@ -226,6 +251,7 @@ def _status_text(summary: SurfaceOverseerSummary, proofs: List[LayerSurfaceProof
         f"newest_manifest_unix={summary.newest_manifest_unix}",
         "scope=layer_agnostic_gateway_sidecar_manifest_observer",
         "lifecycle_policy=ranked_outputs_must_align_input_manifests_input_only_layers_are_pending_not_mismatch",
+        "file_count_policy=symbol_rank_file_counts_checked_only_for_per_row_rank_file_contract_layers",
         "surface_write_authority=false",
         "ea_publication_authority=true",
         "authority=calculation_support_only",
