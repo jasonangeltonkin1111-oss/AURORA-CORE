@@ -52,7 +52,7 @@ string AC_BoardWarningText()
 void AC_BoardRefreshSurfacePackets()
 {
    // Existing owner refresh only. This prevents Board/Workbench top text from printing stale
-   // L6-L9 status while later detail sections refresh newer sidecar truth in the same render pass.
+   // surface status while later detail sections refresh newer sidecar truth in the same render pass.
    AC_RefreshLayer6RankedSidecar();
    AC_L7RefreshRankedSidecar();
    AC_L8RefreshRankedSidecar();
@@ -63,6 +63,7 @@ void AC_BoardRefreshSurfacePackets()
    AC_L13RefreshSummary();
    AC_L14RefreshSummary();
    AC_L15RefreshSummary();
+   AC_L16RefreshSummary();
    AC_L17RefreshSummary();
 }
 
