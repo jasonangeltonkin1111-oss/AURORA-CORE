@@ -261,6 +261,10 @@ def _board_text(summary: L18PublishSummary) -> str:
         f"Selected Dossiers Seen:       {summary.selected_dossiers_seen}",
         f"Selected Dossiers Decorated:  {summary.selected_dossiers_decorated}",
         f"Selected Missing Symbol:      {summary.selected_dossiers_missing_symbol}",
+        f"Route Dossiers Seen:          {summary.selected_route_dossiers_seen}",
+        f"Route Dossiers Decorated:     {summary.selected_route_dossiers_decorated}",
+        f"Unique Symbols Seen:          {summary.selected_unique_symbols_seen}",
+        f"Duplicate Route Copies:       {summary.selected_duplicate_route_copies}",
         "",
         "OHLC Source Coverage",
         f"M5:   completed_symbols={summary.m5_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
@@ -278,6 +282,9 @@ def _board_text(summary: L18PublishSummary) -> str:
         f"Source Decode Errors:         {summary.source_decode_errors}",
         f"Rows Printed To Dossiers:     {summary.rows_printed_to_dossiers}",
         f"Write Failed Count:           {summary.write_failed_count}",
+        f"Freshness Status:             {summary.freshness_status}",
+        f"Latest Bar Age Max Seconds:   {summary.latest_bar_age_max_seconds}",
+        f"Freshness Counts:             fresh={summary.freshness_fresh_count} aging={summary.freshness_aging_count} stale={summary.freshness_stale_count} unknown={summary.freshness_unknown_count}",
         f"Generated UTC:                {utc_stamp()}",
         "",
     ])
@@ -440,19 +447,30 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         except Exception:
             failed.append(dossier)
 
-    has_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or source_partial > 0 or decorated == 0
+    hard_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or decorated == 0
+    history_limited = source_partial > 0
     freshness_bad = freshness["stale"] > 0 or freshness["unknown"] > 0
     if not dossiers:
         status = "pending"
-    elif has_errors:
+    elif hard_errors:
         status = "partial"
-    elif freshness_bad:
+    elif history_limited or freshness_bad:
         status = "degraded"
     else:
         status = "accepted"
-    reason = "selected_dossiers_decorated_with_freshness_proof" if status == "accepted" else ("selected_dossiers_decorated_with_stale_or_unknown_freshness" if status == "degraded" else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_sources_missing_partial_invalid_or_write_failed"))
+    if status == "accepted":
+        reason = "selected_dossiers_decorated_with_freshness_proof"
+    elif status == "degraded":
+        reason = "selected_dossiers_decorated_with_limited_history_or_stale_freshness"
+    elif status == "pending":
+        reason = "no_canonical_selected_dossiers_found"
+    else:
+        reason = "one_or_more_sources_missing_invalid_or_write_failed"
 
-    if freshness["unknown"] and not (freshness["fresh"] or freshness["aging"] or freshness["stale"]):
+    freshness_sample_count = sum(freshness.values())
+    if freshness_sample_count == 0:
+        freshness_status = "unknown"
+    elif freshness["unknown"] and not (freshness["fresh"] or freshness["aging"] or freshness["stale"]):
         freshness_status = "unknown"
     elif freshness["stale"] and not (freshness["fresh"] or freshness["aging"]):
         freshness_status = "stale"
