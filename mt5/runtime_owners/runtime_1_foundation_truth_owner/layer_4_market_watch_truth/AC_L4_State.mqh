@@ -36,7 +36,9 @@ void AC_L4Reset()
    AC_L4_SCAN_STARTED_MS = GetTickCount();
    AC_L4_SCAN_DURATION_MS = 0;
    AC_L4_SCAN_STATUS = "Scanning";
-   AC_L4_LAST_REFRESH_TIME = TimeCurrent();
+   // Use the same TimeTradeServer-first clock as L2 session truth. TimeCurrent()
+   // is last-quote time in OnTimer and can freeze on stale Market Watch quotes.
+   AC_L4_LAST_REFRESH_TIME = AC_L2CurrentSessionServerTime();
    ArrayResize(AC_L4_SYMBOLS, 0);
 
    AC_L4_ELIGIBLE_OPEN = 0;
