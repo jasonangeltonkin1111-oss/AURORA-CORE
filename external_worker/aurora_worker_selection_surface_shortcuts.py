@@ -249,7 +249,8 @@ def _copy_dossier_or_placeholder(account_root: Path, symbol: str, target: Path, 
             f"generated_unix={unix_time()}",
             "",
         ])
-        _write(target, text, failed)
+        if not _write(target, text, failed):
+            return False, False, "not_available"
         return False, True, "not_available"
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
