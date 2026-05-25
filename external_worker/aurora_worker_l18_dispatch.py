@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l18 import L18PublishSummary, publish_l18_selected_raw_ohlc_bar_pack
 from aurora_worker_l19_dispatch import run_l19_after_l18
+
+
+def _entrypoint_l19_runtime_enabled() -> bool:
+    main_module = sys.modules.get("__main__")
+    if main_module is None:
+        return True
+    return bool(getattr(main_module, "ENABLE_L19_RUNTIME", True))
 
 
 def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
@@ -84,12 +92,13 @@ def _replace_or_append_l18_block(result_text: str, lines: str) -> str:
     return before.rstrip() + "\n" + lines + (suffix + "\n" if suffix else "")
 
 
-def run_l18_after_l17(root: Path) -> L18PublishSummary:
+def run_l18_after_l17(root: Path, enable_l19_runtime: bool | None = None) -> L18PublishSummary:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
     start_ns = time.perf_counter_ns()
     summary = publish_l18_selected_raw_ohlc_bar_pack(root)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
+    l19_enabled = _entrypoint_l19_runtime_enabled() if enable_l19_runtime is None else bool(enable_l19_runtime)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
@@ -100,7 +109,7 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "schema_name=aurora_worker_result_manifest",
             "schema_version=18",
             "worker_l18_append_status=appended_by_l18_dispatch",
-            "worker_l19_dispatch_policy=l18_dispatch_runs_l19_after_l18",
+            f"worker_l19_dispatch_policy={'l18_dispatch_runs_l19_after_l18' if l19_enabled else 'l19_runtime_disabled'}",
             f"l18_status={summary.status}",
             f"l18_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
             f"l18_source_files_found={summary.source_files_found}",
@@ -109,6 +118,7 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             f"l18_freshness_status={summary.freshness_status}",
             f"l18_status_path={summary.status_path}",
             f"l18_board_path={summary.board_path}",
+            f"l18_l19_runtime_enabled={'true' if l19_enabled else 'false'}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
@@ -124,5 +134,6 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
-    run_l19_after_l18(root)
+    if l19_enabled:
+        run_l19_after_l18(root)
     return summary
