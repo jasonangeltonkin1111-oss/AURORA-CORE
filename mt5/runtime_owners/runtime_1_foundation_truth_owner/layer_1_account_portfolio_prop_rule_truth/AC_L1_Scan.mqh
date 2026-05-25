@@ -9,6 +9,7 @@ string AC_L1AccountPortfolioMapsFull();
 static int AC_L1_HISTORY_LOOKBACK_DAYS = 90;
 static int AC_L1_CLOSED_SCAN_LIMIT = 100;
 static int AC_L1_CANCEL_SCAN_LIMIT = 20;
+static int AC_L1_HISTORY_SCAN_BUDGET_MS = 350;
 
 #include "AC_L1_HistoryReconstruction.mqh"
 #include "AC_L1_OpenPendingScan.mqh"
