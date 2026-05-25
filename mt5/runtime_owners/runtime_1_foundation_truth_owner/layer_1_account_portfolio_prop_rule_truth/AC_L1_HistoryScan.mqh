@@ -198,7 +198,7 @@ void AC_L1ScanHistory()
    if(ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
       AC_L1_HISTORY_QUALITY += "_cancel_rows_capped";
 
-   if(ArraySize(AC_L1_CLOSED) <= 0)
+   if(ArraySize(AC_L1_CLOSED) <= 0 && AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0)
       AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available; position-cost allocation source";
 
    AC_L1_HISTORY_SCAN_DURATION_MS = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
