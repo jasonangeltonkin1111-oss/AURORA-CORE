@@ -2,7 +2,7 @@
 #define AC_LAYER12_GROUP_HEAT_QUALITY_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 12 Ranking Group Heat / Quality.
-// Reads worker L12 summary and CSV outputs only.
+// Reads worker L12 summary and canonical layer summary index outputs only.
 // Must not rank symbols, select groups, build candidates, build Global Top 10, permit, alert, or execute.
 
 static string AC_L12_STATUS = "Pending L12 group heat quality";
@@ -23,8 +23,9 @@ static string AC_L12_GENERATED_UTC = "not_available";
 string AC_L12LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_12_Ranking_Group_Heat_Quality"; }
 string AC_L12SummaryPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality_summary.txt"; }
 string AC_L12HeatCsvPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality.csv"; }
-string AC_L12SelectionDeskIndexPath(){ return AC_SelectionGroupsFolder() + "\\00_Group_Heat_Quality_Index.txt"; }
-string AC_L12SelectionDeskIndexCsvPath(){ return AC_SelectionGroupsFolder() + "\\00_Group_Heat_Quality_Index.csv"; }
+string AC_L12CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L12_Group_Heat_Quality"; }
+string AC_L12SelectionDeskIndexPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.txt"; }
+string AC_L12SelectionDeskIndexCsvPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.csv"; }
 
 string AC_L12ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -122,7 +123,7 @@ void AC_L12RefreshSummary()
       AC_L12_ACCEPTED = true;
       AC_L12_STATUS = "Accepted";
       AC_L12_VALIDATION_STATUS = "Accepted";
-      AC_L12_VALIDATION_REASON = "summary/files/counts/permission all accepted";
+      AC_L12_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
       AC_L12_MAIN_BLOCKER = "none";
       return;
    }
@@ -145,7 +146,7 @@ string AC_Layer12BoardSection()
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L12_STATUS + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L11 ranked groups + Top 5 per ranking_group\r\n";
+   text += "Input Source:               L11 guarded ranked groups + Top 5 per ranking_group\r\n";
    text += "Ranking Groups Scored:      " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
    text += "Accepted Groups:            " + IntegerToString(AC_L12_ACCEPTED_GROUP_COUNT) + "\r\n";
    text += "Thin Groups:                " + IntegerToString(AC_L12_THIN_GROUP_COUNT) + "\r\n";
@@ -243,7 +244,7 @@ string AC_Layer12WorkbenchSection()
    text += "schema_version=1\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=12\r\n";
-   text += "input_source=L11\r\n";
+   text += "input_source=L11_guarded\r\n";
    text += "status=" + AC_L12_STATUS + "\r\n";
    text += "validation_status=" + AC_L12_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L12_VALIDATION_REASON + "\r\n";
