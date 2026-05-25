@@ -6,6 +6,8 @@ static uint   AC_L1_SCAN_STARTED_MS = 0;
 static uint   AC_L1_SCAN_DURATION_MS = 0;
 static uint   AC_L1_RENDER_DURATION_MS = 0;
 static uint   AC_L1_TOTAL_REFRESH_DURATION_MS = 0;
+static uint   AC_L1_HISTORY_SCAN_DURATION_MS = 0;
+static int    AC_L1_HISTORY_BUDGET_ABORT_COUNT = 0;
 static string AC_L1_SCAN_STATUS = "not_started";
 static string AC_L1_SCAN_FAILURE = "";
 static string AC_L1_HISTORY_STATUS = "not_selected";
@@ -72,6 +74,8 @@ void AC_L1Reset()
    AC_L1_SCAN_DURATION_MS = 0;
    AC_L1_RENDER_DURATION_MS = 0;
    AC_L1_TOTAL_REFRESH_DURATION_MS = 0;
+   AC_L1_HISTORY_SCAN_DURATION_MS = 0;
+   AC_L1_HISTORY_BUDGET_ABORT_COUNT = 0;
    AC_L1_SCAN_STATUS = "scanning";
    AC_L1_SCAN_FAILURE = "";
    AC_L1_HISTORY_STATUS = "not_selected";
