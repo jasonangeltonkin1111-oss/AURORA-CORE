@@ -20,6 +20,7 @@ L15_MIN_ALIGNED_RETURNS = 80
 L15_DEFAULT_MAX_CORR_ABS = 0.30
 L15_DEFAULT_MAX_CANDIDATES = 80
 L15_DEFAULT_MAX_OHLC_FILE_SCAN = 5000
+L15_SOFT_CAP_POLICY = "soft_cap_double_lane_main_now_deferred_visible_slow_lane"
 
 SCORE_FIELDS = [
     "candidate_pool_rank", "symbol", "canonical_symbol", "ranking_group", "ranking_group_slug", "asset_class", "market_group", "market_segment",
@@ -64,6 +65,9 @@ class L15PublishSummary:
     candidate_input_count: int = 0
     candidate_pool_capped: str = "false"
     candidate_pool_cap: int = L15_DEFAULT_MAX_CANDIDATES
+    main_lane_candidate_count: int = 0
+    deferred_candidate_count: int = 0
+    soft_cap_policy: str = L15_SOFT_CAP_POLICY
     ohlc_scan_file_limit: int = L15_DEFAULT_MAX_OHLC_FILE_SCAN
     ohlc_scan_file_count: int = 0
     threshold_source: str = "default"
@@ -207,11 +211,9 @@ def _candidate_ohlc_files(root: Path, symbols: Iterable[str]) -> Tuple[Dict[str,
     stores = _ohlc_store_roots(root)
     if not stores:
         return {}, 0
-
     wanted = {_symbol_root(s): s for s in symbols}
     found: Dict[str, Path] = {}
-
-    patterns = []
+    patterns: List[str] = []
     for root_symbol in wanted:
         patterns.extend([
             f"*{root_symbol}*{L15_TIMEFRAME}*.csv",
@@ -235,7 +237,6 @@ def _candidate_ohlc_files(root: Path, symbols: Iterable[str]) -> Tuple[Dict[str,
                         return found, 0
             except OSError:
                 continue
-
     scanned = 0
     max_scan = l15_max_ohlc_file_scan()
     for store in stores:
@@ -312,6 +313,8 @@ def _pearson(a: Dict[str, float], b: Dict[str, float]) -> Tuple[str, float | Non
 
 
 def _corr_state(corr_abs: float | None, reason: str) -> str:
+    if reason == "deferred_soft_cap_slow_lane":
+        return "DEFERRED_SOFT_CAP_SLOW_LANE"
     if reason != "ok" or corr_abs is None:
         return "INSUFFICIENT_SAMPLE" if reason == "insufficient_aligned_returns" else "CORRELATION_UNAVAILABLE"
     if corr_abs <= l15_max_corr_abs():
@@ -333,15 +336,67 @@ def _diversity_state(score: float) -> str:
     return "DIVERSITY_HIGH_RISK"
 
 
-def _ranked_candidate_window(candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], bool]:
+def _ranked_candidate_lanes(candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], bool]:
     cap = l15_max_candidates()
     ranked = sorted(candidates, key=lambda r: (_int(_text(r, "candidate_pool_rank", "999999")), -_num(_text(r, "l14_candidate_priority_score", "0")), _text(r, "symbol")))
-    return ranked[:cap], len(ranked) > cap
+    return ranked[:cap], ranked[cap:], len(ranked) > cap
 
 
-def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], List[Dict[str, str]], int, bool]:
-    candidates, capped = _ranked_candidate_window(candidates)
-    symbols = [_text(r, "symbol") for r in candidates if _text(r, "symbol") != "not_available"]
+def _base_meta(row: Dict[str, str]) -> Dict[str, str]:
+    symbol = _text(row, "symbol")
+    base, quote = _base_quote(symbol)
+    out = dict(row)
+    out["base_currency"] = base
+    out["quote_currency"] = quote
+    return out
+
+
+def _deferred_score_row(row: Dict[str, str]) -> Dict[str, str]:
+    meta = _base_meta(row)
+    return {
+        "candidate_pool_rank": _text(row, "candidate_pool_rank"),
+        "symbol": _text(row, "symbol"),
+        "canonical_symbol": _text(row, "canonical_symbol", _text(row, "symbol")),
+        "ranking_group": _text(row, "ranking_group"),
+        "ranking_group_slug": _text(row, "ranking_group_slug", _safe_slug(_text(row, "ranking_group"))),
+        "asset_class": _text(row, "asset_class"),
+        "market_group": _text(row, "market_group"),
+        "market_segment": _text(row, "market_segment"),
+        "l14_candidate_priority_score": _text(row, "l14_candidate_priority_score"),
+        "leader_or_backup": _text(row, "leader_or_backup"),
+        "candidate_source": _text(row, "candidate_source"),
+        "base_currency": _text(meta, "base_currency"),
+        "quote_currency": _text(meta, "quote_currency"),
+        "pair_count": "0",
+        "corr_pair_count": "0",
+        "corr_unavailable_count": "0",
+        "corr_to_pool_max_abs": "not_available",
+        "corr_to_pool_avg_abs": "not_available",
+        "corr_pair_max_symbol": "not_available",
+        "correlation_state": "DEFERRED_SOFT_CAP_SLOW_LANE",
+        "correlation_reject_reason": "deferred_soft_cap_slow_lane",
+        "currency_overlap_score": "not_available",
+        "ranking_group_overlap_score": "not_available",
+        "diversity_score": "0.00",
+        "diversity_state": "DIVERSITY_HIGH_RISK",
+        "correlation_method": "deferred_soft_cap_no_pairwise_calculation_yet",
+        "correlation_timeframe": L15_TIMEFRAME,
+        "correlation_lookback_bars": str(L15_LOOKBACK_BARS),
+        "correlation_sample_count": "0",
+        "correlation_confidence": "deferred_not_scored_yet",
+        "l16_constraint_hint": "constrained_deferred_slow_lane",
+        "meaning": "correlation_diversity_soft_cap_deferred_visible_not_dropped_not_trade_permission",
+        "selection_runtime": "false",
+        "trade_permission": "false",
+        "entry_signal": "false",
+        "execution": "false",
+        "generated_utc": utc_stamp(),
+    }
+
+
+def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], List[Dict[str, str]], int, bool, int, int]:
+    main_lane, deferred_lane, capped = _ranked_candidate_lanes(candidates)
+    symbols = [_text(r, "symbol") for r in main_lane if _text(r, "symbol") != "not_available"]
     ohlc_files, scanned_count = _candidate_ohlc_files(root, symbols)
     returns: Dict[str, Dict[str, float]] = {}
     for symbol, path in ohlc_files.items():
@@ -350,15 +405,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
         except Exception:
             continue
 
-    meta: Dict[str, Dict[str, str]] = {}
-    for row in candidates:
-        symbol = _text(row, "symbol")
-        base, quote = _base_quote(symbol)
-        new = dict(row)
-        new["base_currency"] = base
-        new["quote_currency"] = quote
-        meta[symbol] = new
-
+    meta = {_text(row, "symbol"): _base_meta(row) for row in main_lane}
     pair_rows: List[Dict[str, str]] = []
     for i in range(len(symbols)):
         for j in range(i + 1, len(symbols)):
@@ -387,7 +434,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
 
     threshold = l15_max_corr_abs()
     score_rows: List[Dict[str, str]] = []
-    for row in candidates:
+    for row in main_lane:
         symbol = _text(row, "symbol")
         related = [p for p in pair_rows if p["symbol_a"] == symbol or p["symbol_b"] == symbol]
         ok = [p for p in related if p["data_quality_reason"] == "ok" and p["correlation_abs"] != "not_available"]
@@ -410,14 +457,13 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
             reason = "above_untested_default_corr_threshold"
         elif shared_hits > 0:
             reason = "currency_overlap_warning"
-        if capped and reason == "none":
-            reason = "candidate_pool_capped_for_budget"
+        m = meta.get(symbol, _base_meta(row))
         score_rows.append({
             "candidate_pool_rank": _text(row, "candidate_pool_rank"), "symbol": symbol, "canonical_symbol": _text(row, "canonical_symbol", symbol),
             "ranking_group": _text(row, "ranking_group"), "ranking_group_slug": _text(row, "ranking_group_slug", _safe_slug(_text(row, "ranking_group"))),
             "asset_class": _text(row, "asset_class"), "market_group": _text(row, "market_group"), "market_segment": _text(row, "market_segment"),
             "l14_candidate_priority_score": _text(row, "l14_candidate_priority_score"), "leader_or_backup": _text(row, "leader_or_backup"), "candidate_source": _text(row, "candidate_source"),
-            "base_currency": _text(meta.get(symbol, {}), "base_currency"), "quote_currency": _text(meta.get(symbol, {}), "quote_currency"),
+            "base_currency": _text(m, "base_currency"), "quote_currency": _text(m, "quote_currency"),
             "pair_count": str(len(related)), "corr_pair_count": str(len(ok)), "corr_unavailable_count": str(len(unavailable)),
             "corr_to_pool_max_abs": f"{max_corr:.6f}" if max_corr is not None else "not_available", "corr_to_pool_avg_abs": f"{avg_corr:.6f}" if avg_corr is not None else "not_available",
             "corr_pair_max_symbol": max_pair, "correlation_state": _corr_state(max_corr, "ok" if max_corr is not None else "missing_ohlc"),
@@ -429,7 +475,9 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
             "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false", "generated_utc": utc_stamp(),
         })
 
+    score_rows.extend(_deferred_score_row(row) for row in deferred_lane)
     score_rows.sort(key=lambda r: (-_num(r["diversity_score"]), _int(r["candidate_pool_rank"]), r["symbol"]))
+
     grouped: Dict[str, List[Dict[str, str]]] = {}
     for row in score_rows:
         grouped.setdefault(row["ranking_group"], []).append(row)
@@ -454,7 +502,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
             "meaning": "ranking_group_diversity_context_only_not_selection_not_trade", "trade_permission": "false", "entry_signal": "false", "execution": "false", "generated_utc": utc_stamp(),
         })
     group_rows.sort(key=lambda r: (-_num(r["group_diversity_score"]), r["ranking_group"]))
-    return score_rows, pair_rows, group_rows, scanned_count, capped
+    return score_rows, pair_rows, group_rows, scanned_count, capped, len(main_lane), len(deferred_lane)
 
 
 def _threshold_lines() -> List[str]:
@@ -463,13 +511,14 @@ def _threshold_lines() -> List[str]:
         "threshold_status=untested_default_not_holy_law",
         f"threshold_source={l15_threshold_source()}",
         f"candidate_pool_cap={l15_max_candidates()}",
+        f"soft_cap_policy={L15_SOFT_CAP_POLICY}",
         f"ohlc_scan_file_limit={l15_max_ohlc_file_scan()}",
     ]
 
 
 def _manifest(payload: str, row_count: int) -> str:
     return "\n".join([
-        "schema_name=l15_correlation_diversity_manifest", "schema_version=2", "layer_id=15", "layer_name=Layer 15 - Correlation / Diversity Selection",
+        "schema_name=l15_correlation_diversity_manifest", "schema_version=3", "layer_id=15", "layer_name=Layer 15 - Correlation / Diversity Selection",
         f"owner={L15_OWNER}", f"authority={L15_AUTHORITY}", f"row_count={row_count}", f"payload_checksum={payload_checksum(payload.splitlines())}",
         *_threshold_lines(),
         "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
@@ -478,10 +527,11 @@ def _manifest(payload: str, row_count: int) -> str:
 
 def _summary(summary: L15PublishSummary) -> str:
     return "\n".join([
-        f"schema_name={L15_SCHEMA_NAME}", "schema_version=2", f"owner_name={L15_OWNER}", "layer_id=15", "layer_name=Layer 15 - Correlation / Diversity Selection",
+        f"schema_name={L15_SCHEMA_NAME}", "schema_version=3", f"owner_name={L15_OWNER}", "layer_id=15", "layer_name=Layer 15 - Correlation / Diversity Selection",
         f"status={summary.status}", f"reason={summary.reason}", "input_source=L14_candidate_pool+L13_selected_groups+Shared_OHLC_Store_when_available",
         f"candidate_input_count={summary.candidate_input_count}", f"candidate_pool_size={summary.candidate_pool_size}", f"candidate_scored_count={summary.candidate_scored_count}",
         f"candidate_pool_capped={summary.candidate_pool_capped}", f"candidate_pool_cap={summary.candidate_pool_cap}",
+        f"main_lane_candidate_count={summary.main_lane_candidate_count}", f"deferred_candidate_count={summary.deferred_candidate_count}", f"soft_cap_policy={summary.soft_cap_policy}",
         f"pairwise_pair_count={summary.pairwise_pair_count}", f"corr_pair_count={summary.corr_pair_count}", f"high_corr_pair_count={summary.high_corr_pair_count}", f"corr_unavailable_count={summary.corr_unavailable_count}",
         f"group_count={summary.group_count}", f"max_pair_corr_abs={summary.max_pair_corr_abs}", f"top_diversity_candidate={summary.top_diversity_candidate}",
         f"ohlc_scan_file_limit={summary.ohlc_scan_file_limit}", f"ohlc_scan_file_count={summary.ohlc_scan_file_count}",
@@ -497,8 +547,9 @@ def _selection_text(score_rows: List[Dict[str, str]], group_rows: List[Dict[str,
         "L15 CORRELATION / DIVERSITY SCORING", "----------------------------------------",
         f"status={summary.status}", f"reason={summary.reason}", f"candidate_input_count={summary.candidate_input_count}",
         f"candidate_pool_size={summary.candidate_pool_size}", f"candidate_scored_count={summary.candidate_scored_count}",
-        f"candidate_pool_capped={summary.candidate_pool_capped}", f"pairwise_pair_count={summary.pairwise_pair_count}",
-        f"corr_pair_count={summary.corr_pair_count}", f"corr_unavailable_count={summary.corr_unavailable_count}",
+        f"candidate_pool_capped={summary.candidate_pool_capped}", f"candidate_pool_cap={summary.candidate_pool_cap}",
+        f"main_lane_candidate_count={summary.main_lane_candidate_count}", f"deferred_candidate_count={summary.deferred_candidate_count}", f"soft_cap_policy={summary.soft_cap_policy}",
+        f"pairwise_pair_count={summary.pairwise_pair_count}", f"corr_pair_count={summary.corr_pair_count}", f"corr_unavailable_count={summary.corr_unavailable_count}",
         *_threshold_lines(), "", "GROUP SUMMARY"
     ]
     for row in group_rows:
@@ -527,7 +578,7 @@ def publish_l15_correlation_diversity_selection(outbox_root: Path) -> L15Publish
         if not candidates:
             return L15PublishSummary("pending", "l14_candidate_pool_empty")
 
-        score_rows, pair_rows, group_rows, ohlc_scan_count, capped = _build(root, candidates)
+        score_rows, pair_rows, group_rows, ohlc_scan_count, capped, main_lane_count, deferred_count = _build(root, candidates)
         layer = outbox_root / "Layers" / L15_LAYER_FOLDER
         groups = layer / "RankingGroups"
         visible = _select_dir(outbox_root)
@@ -557,14 +608,14 @@ def publish_l15_correlation_diversity_selection(outbox_root: Path) -> L15Publish
         threshold = l15_max_corr_abs()
         corr_pairs = [p for p in pair_rows if p["data_quality_reason"] == "ok" and p["correlation_abs"] != "not_available"]
         corr_values = [_num(p["correlation_abs"]) for p in corr_pairs]
-        status = "accepted" if corr_pairs and not capped else ("degraded" if not corr_pairs or capped else "accepted")
+        status = "accepted" if corr_pairs else "degraded"
         reason = "l15_correlation_diversity_published"
         if not corr_pairs:
             reason = "l15_published_with_correlation_unavailable"
         if capped:
-            reason = reason + ";candidate_pool_capped_for_budget"
+            reason += ";soft_cap_deferred_slow_lane_visible_not_dropped"
         if ohlc_scan_count > l15_max_ohlc_file_scan():
-            reason = reason + ";ohlc_scan_limited"
+            reason += ";ohlc_scan_limited"
         if failed:
             status = "write_degraded"
             reason = "one_or_more_l15_outputs_failed"
@@ -577,6 +628,9 @@ def publish_l15_correlation_diversity_selection(outbox_root: Path) -> L15Publish
             candidate_scored_count=len(score_rows),
             candidate_pool_capped="true" if capped else "false",
             candidate_pool_cap=l15_max_candidates(),
+            main_lane_candidate_count=main_lane_count,
+            deferred_candidate_count=deferred_count,
+            soft_cap_policy=L15_SOFT_CAP_POLICY,
             pairwise_pair_count=len(pair_rows),
             corr_pair_count=len(corr_pairs),
             high_corr_pair_count=sum(1 for p in corr_pairs if _num(p["correlation_abs"]) > threshold),
