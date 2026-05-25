@@ -146,20 +146,28 @@ def _candidate_dossier_paths(account_root: Path, symbol: str) -> List[Path]:
     return candidates
 
 
-def _find_dossier(account_root: Path, symbol: str) -> Optional[Path]:
+def _matching_dossiers(account_root: Path, symbol: str) -> List[Path]:
+    matches: List[Path] = []
+    seen = set()
     for path in _candidate_dossier_paths(account_root, symbol):
-        if path.exists() and path.is_file():
-            return path
+        if path.exists() and path.is_file() and str(path).lower() not in seen:
+            matches.append(path)
+            seen.add(str(path).lower())
     dossiers_root = account_root / "Dossiers"
-    if not dossiers_root.exists():
-        return None
-    clean_symbol = str(symbol or "").strip()
-    safe_symbol = _sanitize(clean_symbol)
-    wanted = {clean_symbol.lower(), f"{clean_symbol}.txt".lower(), safe_symbol.lower(), f"{safe_symbol}.txt".lower()}
-    for path in dossiers_root.rglob("*.txt"):
-        if path.name.lower() in wanted:
-            return path
-    return None
+    if dossiers_root.exists():
+        clean_symbol = str(symbol or "").strip()
+        safe_symbol = _sanitize(clean_symbol)
+        wanted = {clean_symbol.lower(), f"{clean_symbol}.txt".lower(), safe_symbol.lower(), f"{safe_symbol}.txt".lower()}
+        for path in dossiers_root.rglob("*.txt"):
+            if path.name.lower() in wanted and str(path).lower() not in seen:
+                matches.append(path)
+                seen.add(str(path).lower())
+    return matches
+
+
+def _find_dossier(account_root: Path, symbol: str) -> Optional[Path]:
+    matches = _matching_dossiers(account_root, symbol)
+    return matches[0] if matches else None
 
 
 def _source_route_state(source: Path) -> str:
@@ -236,14 +244,15 @@ def _shortcut_overlay_text(symbol: str, overlay_lines: Sequence[str] | None, sou
     return "\n".join(lines)
 
 
-def _held_shortcut_text(symbol: str, source: Path, reasons: Sequence[str], overlay_lines: Sequence[str] | None) -> str:
-    return _shortcut_overlay_text(symbol, overlay_lines, str(source), False) + "\n".join([
+def _held_shortcut_text(symbol: str, source: Path | None, reasons: Sequence[str], overlay_lines: Sequence[str] | None) -> str:
+    source_path = str(source) if source is not None else "not_available"
+    return _shortcut_overlay_text(symbol, overlay_lines, source_path, False) + "\n".join([
         "AURORA SELECTION SURFACE DOSSIER COPY HELD",
         "----------------------------------------",
         f"symbol={symbol}",
         "status=held_stale_or_unsafe_source",
         f"reason={';'.join(reasons) if reasons else 'source_not_safe_for_selection_copy'}",
-        "copy_policy=do_not_copy_closed_unknown_blocked_or_stale_source_dossier_into_selection_surface",
+        "copy_policy=do_not_copy_closed_unknown_duplicate_blocked_or_stale_source_dossier_into_selection_surface",
         "dossier_rerendered=false",
         "selection_runtime=false",
         "trade_permission=false",
@@ -292,8 +301,8 @@ def _asset_shortcut_overlay(row: Dict[str, str], asset: str, rank: int) -> List[
 
 
 def _copy_dossier_or_placeholder(account_root: Path, symbol: str, target: Path, failed: List[Path], overlay_lines: Sequence[str] | None = None, selection_row: Optional[Dict[str, str]] = None) -> tuple[bool, bool, str, str]:
-    source = _find_dossier(account_root, symbol)
-    if source is None:
+    matches = _matching_dossiers(account_root, symbol)
+    if not matches:
         text = _shortcut_overlay_text(symbol, overlay_lines, "not_available", True) + "\n".join([
             "AURORA SELECTION SURFACE DOSSIER COPY PLACEHOLDER",
             "----------------------------------------",
@@ -314,6 +323,13 @@ def _copy_dossier_or_placeholder(account_root: Path, symbol: str, target: Path, 
         if not _write(target, text, failed):
             return False, False, "not_available", "copy_failed"
         return False, True, "not_available", "source_missing_placeholder_written"
+    if len(matches) > 1:
+        routes = sorted({_source_route_state(path) for path in matches})
+        reasons = ["duplicate_source_dossiers:" + ";".join(routes), "matched_paths=" + ";".join(str(p) for p in matches[:8])]
+        if not _write(target, _held_shortcut_text(symbol, None, reasons, overlay_lines), failed):
+            return False, False, ";".join(str(p) for p in matches), "copy_failed"
+        return False, False, ";".join(str(p) for p in matches), "source_held_stale_or_unsafe"
+    source = matches[0]
     try:
         source_text = read_text(source)
         rejection_reasons = _source_rejection_reasons(source, source_text, selection_row)
@@ -390,7 +406,7 @@ def _root_readme_text() -> str:
         "02_Asset_Classes/<asset_class>/02_Groups/<ranking_group> = shallow Top 5 per ranking_group system.",
         "90_System_Indexes = root indexes and taxonomy proof surfaces.",
         "91_Layer_Summaries = layer summary copies for operator review.",
-        "Shortcut copies are held when source dossiers are closed, unknown, blocked, stale, or unsafe.",
+        "Shortcut copies are held when source dossiers are closed, unknown, duplicate, blocked, stale, or unsafe.",
         "All shortcut folders are copy/view surfaces only. They do not calculate trade permission, entry signal, or execution.",
         f"generated_utc={utc_stamp()}",
         "",
