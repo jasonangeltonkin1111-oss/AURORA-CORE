@@ -10,8 +10,13 @@ Complete navigation index for important repository files, ownership boundaries, 
 
 ## Mandatory startup path for new chats
 1. `README.md`
-2. `control/01_CONTROL_GOVERNANCE.md`
-3. Relevant top-level folder index
+2. `control/02_MASTER_REPO_FILE_INDEX.md`
+3. `control/00_CONTROL_INDEX.md`
+4. `control/01_CONTROL_GOVERNANCE.md`
+5. Relevant top-level folder index
+6. Relevant real content/source file
+
+This startup path is a read-order discipline. Active source files and direct compile/import/test/runtime evidence still decide implementation truth when docs and source disagree.
 
 ## Source authority levels used here
 - **L1:** Active MT5 source files and active external-worker source files (implementation truth)
@@ -159,13 +164,17 @@ Complete navigation index for important repository files, ownership boundaries, 
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
 | `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md` | External worker source index | Active | yes | L1/L4 | Runtime 3 calculation-support source map. |
-| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core -> L11 -> L12 -> L13 -> L14 -> L15 -> L16 -> L17. |
+| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core -> L11 -> L12 -> L13 -> L14 -> L15 -> L16 -> L17 -> L18; L19 is invoked by L18 dispatch. Source-present does not prove package/runtime/MT5 readback. |
 | `external_worker/aurora_worker_l15.py` | L15 correlation/diversity worker | Active | task-specific | L1 | Consumes L14 candidate pool and Shared OHLC Store if available; no broker polling. |
 | `external_worker/aurora_worker_l15_dispatch.py` | L15 result_latest dispatch | Active | task-specific | L1 | Appends `l15_*` fields to worker result output. |
 | `external_worker/aurora_worker_l16.py` | L16 Global Top 10 worker | Active | task-specific | L1 | Consumes L14/L15 outputs only; held visible basket; fallback labels; no raw OHLC/correlation recompute/trading authority. |
 | `external_worker/aurora_worker_l16_dispatch.py` | L16 result_latest dispatch | Active | task-specific | L1 | Appends `l16_*` fields to worker result output. |
 | `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes L16 held visible display rows only; selected/rejected split; no evidence collection/trading authority. |
 | `external_worker/aurora_worker_l17_dispatch.py` | L17 result_latest dispatch | Active | task-specific | L1 | Appends `l17_*` fields to worker result output. |
+| `external_worker/aurora_worker_l18.py` | L18 Selected Raw OHLC Bar Pack worker | Active | task-specific | L1 | Reads existing Shared OHLC Store files for selected copied dossiers only; no MT5 polling, no private OHLC cache, no base-Dossier writes, no signals. |
+| `external_worker/aurora_worker_l18_dispatch.py` | L18 result_latest dispatch and L19 invocation | Active | task-specific | L1 | Appends `l18_*` fields and invokes L19 after L18; source-present only until import/runtime proof exists. |
+| `external_worker/aurora_worker_l19.py` | L19 Candle Geometry and Structure worker | Active | task-specific | L1 | Reads existing Shared OHLC Store files using L18 selected scope; no MT5 polling, no private OHLC cache, no base-Dossier writes, no signals. |
+| `external_worker/aurora_worker_l19_dispatch.py` | L19 result_latest dispatch | Active | task-specific | L1 | Appends `l19_*` fields to worker result output; source-present only until import/runtime proof exists. |
 
 ## Archive (historical context only)
 | path | role | status | must-read? | source authority level | notes |
