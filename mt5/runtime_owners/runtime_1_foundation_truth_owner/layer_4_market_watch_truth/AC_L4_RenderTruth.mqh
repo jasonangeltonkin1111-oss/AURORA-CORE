@@ -16,8 +16,8 @@ void AC_BuildLayer4Texts()
    AC_L4_BOARD_SECTION += "Fresh Zero Spread:          " + IntegerToString(AC_L4_ZERO_SPREAD_FRESH) + "\r\n";
    AC_L4_BOARD_SECTION += "High Spread Warnings:       " + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_BOARD_SECTION += "Daily Change Available:     " + AC_L4Ratio(AC_L4_DAILY_CHANGE_AVAILABLE, AC_L4_ELIGIBLE_OPEN) + "\r\n";
-   AC_L4_BOARD_SECTION += "Dossier Refresh:            Open symbols every " + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + " sec\r\n";
-   AC_L4_BOARD_SECTION += "Top List Refresh Contract:  " + IntegerToString(AC_L4_TOP_LIST_REFRESH_SECONDS) + " sec when ranking exists\r\n";
+   AC_L4_BOARD_SECTION += "Dossier Refresh:            Open quote packets every " + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + " sec\r\n";
+   AC_L4_BOARD_SECTION += "Layer Authority:            Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
    AC_L4_BOARD_SECTION += "Scan Duration:              " + IntegerToString((int)AC_L4_SCAN_DURATION_MS) + " ms\r\n";
    AC_L4_BOARD_SECTION += "Worst Blocker:              " + AC_L4_WORST_FAILURE_REASON + "\r\n";
    AC_L4_BOARD_SECTION += "Trade Permission:           FALSE\r\n";
@@ -39,6 +39,7 @@ void AC_BuildLayer4Texts()
    AC_L4_WORKBENCH_SECTION += "high_spread_warnings=" + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_success=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_SUCCESS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_failure=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_FAILURE) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "authority=quote_truth_only_no_ranking_no_selection_no_direction_no_entry_no_permission\r\n";
    AC_L4_WORKBENCH_SECTION += "trade_permission=false\r\n";
 }
 
@@ -101,7 +102,7 @@ string AC_Layer4DossierSection(const string symbol)
    text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
    text += "Last: " + (last_safe ? AC_L4PriceText(p.last, p.digits) : "Not available") + "\r\n";
    text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4NumberText(p.spread_pips_live, 1) + " pips / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
-   text += "Spread Score: " + p.spread_score + "\r\n";
+   text += "Spread Cost Band: " + p.spread_score + "\r\n";
    text += "Spread Source: " + p.spread_source + "\r\n";
    text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
    text += "Spread Check: " + p.spread_vs_spec_status + "\r\n";
@@ -129,6 +130,7 @@ string AC_Layer4DossierSection(const string symbol)
    text += "\r\nQuality\r\n";
    text += "----------------------------------------\r\n";
    text += "Failure Reason: " + AC_L4TextOrNA(p.failure_reason) + "\r\n";
+   text += "Authority: Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
    text += "Trade Permission: FALSE\r\n";
    return text;
 }
