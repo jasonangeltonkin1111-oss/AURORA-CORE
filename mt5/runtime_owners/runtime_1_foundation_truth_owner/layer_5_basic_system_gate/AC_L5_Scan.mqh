@@ -5,11 +5,15 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
    AC_L5GatePacket p;
    p.symbol = symbol;
    p.gate_status = "blocked";
+   p.gate_state = "blocked";
    p.gate_reason = "";
+   p.degraded_reason = "";
    p.l2_gate = "not_ready";
    p.l3_gate = "not_ready";
    p.l4_gate = "not_ready";
+   p.eligibility_score = 0.0;
    p.pass = false;
+   p.degraded = false;
    p.blocked_closed_market = false;
    p.blocked_stale_quote = false;
    p.blocked_missing_tick = false;
@@ -19,6 +23,9 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
    p.blocked_absurd_spread = false;
    p.blocked_classification_review = false;
    p.blocked_l4_surface_not_usable = false;
+   p.degraded_l3_value_or_margin = false;
+   p.degraded_l3_volume_grid = false;
+   p.degraded_l3_spec_partial = false;
    p.trade_permission = false;
 
    if(!AC_L2_READY)
@@ -123,14 +130,40 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
    }
 
    p.pass = (p.gate_reason == "");
-   p.gate_status = p.pass ? "pass" : "blocked";
    if(p.pass)
    {
+      if(AC_L5SpecsDegraded(l3))
+      {
+         p.degraded_l3_spec_partial = true;
+         AC_L5AppendReason(p.degraded_reason, "l3_specs_partial");
+         AC_L5_DEGRADED_L3_SPEC_PARTIAL++;
+      }
+      if(AC_L5ValueOrMarginDegraded(l3))
+      {
+         p.degraded_l3_value_or_margin = true;
+         AC_L5AppendReason(p.degraded_reason, "l3_value_or_margin_degraded");
+         AC_L5_DEGRADED_L3_VALUE_OR_MARGIN++;
+      }
+      if(AC_L5VolumeGridDegraded(l3))
+      {
+         p.degraded_l3_volume_grid = true;
+         AC_L5AppendReason(p.degraded_reason, "l3_volume_grid_degraded");
+         AC_L5_DEGRADED_L3_VOLUME_GRID++;
+      }
+
+      p.degraded = (p.degraded_reason != "");
+      p.gate_status = "pass";
+      p.gate_state = p.degraded ? "eligible_degraded" : "eligible_clean";
       p.gate_reason = "eligible_basic_system_gate";
-      AC_L5_GATE_PASS++;
+      p.eligibility_score = p.degraded ? 0.70 : 1.00;
+      if(p.degraded) AC_L5_ELIGIBLE_DEGRADED++;
+      else AC_L5_ELIGIBLE_CLEAN++;
    }
    else
    {
+      p.gate_status = "blocked";
+      p.gate_state = "blocked";
+      p.eligibility_score = 0.0;
       AC_L5TrackWorstBlocker(p.gate_reason);
    }
    return p;
@@ -143,19 +176,20 @@ void AC_RefreshLayer5BasicSystemGate()
    AC_L5_LAST_UPSTREAM_KEY = upstream_key;
 
    int total = SymbolsTotal(false);
-   ArrayResize(AC_L5_SYMBOLS, 0);
+   ArrayResize(AC_L5_SYMBOLS, total);
+   int n = 0;
 
    for(int i = 0; i < total; i++)
    {
       string symbol = SymbolName(i, false);
       if(symbol == "") continue;
       AC_L5GatePacket p = AC_L5EvaluateSymbol(symbol);
-      int n = ArraySize(AC_L5_SYMBOLS);
-      ArrayResize(AC_L5_SYMBOLS, n + 1);
       AC_L5_SYMBOLS[n] = p;
+      n++;
       AC_L5_SCANNED++;
       if(!p.pass) AC_L5TrackWorstBlocker(p.gate_reason);
    }
+   if(n < total) ArrayResize(AC_L5_SYMBOLS, n);
 
    AC_L5_SCAN_DURATION_MS = GetTickCount() - AC_L5_SCAN_STARTED_MS;
    AC_L5_REFRESH_DURATION_MS = AC_L5_SCAN_DURATION_MS;
