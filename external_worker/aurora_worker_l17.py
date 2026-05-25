@@ -294,7 +294,11 @@ def _build_split(rows: List[Dict[str, str]], source_kind: str, summary_kv: Dict[
         symbol = _text(row, "symbol", "")
         canonical_symbol = _text(row, "canonical_symbol", symbol)
         seen_key = canonical_symbol if canonical_symbol and canonical_symbol != "not_available" else symbol
-        if not symbol or not seen_key or seen_key in seen:
+        if not symbol or not seen_key:
+            continue
+        if seen_key in seen:
+            assignment = _watch_depth(row)
+            rejected.append(_rejected_row(row, assignment, "duplicate_canonical_symbol_or_alias_not_deep_selected"))
             continue
         seen.add(seen_key)
         if len(selected) < L17_MAX_DEEP_SELECTED:
