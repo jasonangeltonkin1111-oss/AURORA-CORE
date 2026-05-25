@@ -73,6 +73,7 @@ string AC_L1CompactBoardSection()
    text += AC_L1BoardLine("Worst Day", AC_L1_WORST_DAY + " " + AC_L1MoneyText(AC_L1_WORST_DAY_NET));
    text += AC_L1BoardLine("Hard Risk 0.20%", AC_L1MoneyText(hard_risk_money));
    text += AC_L1BoardLine("Largest Loss Usage", AC_L1PercentText(largest_loss_usage));
+   text += AC_L1BoardLine("History Budget", IntegerToString((int)AC_L1_HISTORY_SCAN_DURATION_MS) + "ms / aborts " + IntegerToString(AC_L1_HISTORY_BUDGET_ABORT_COUNT));
    text += AC_L1BoardLine("Prop Rule Profile", "NOT_LOADED / UNKNOWN");
    text += AC_L1BoardLine("Prop Rule Safety", "UNKNOWN - live/funded permission blocked");
    text += AC_L1BoardLine("Health", health);
@@ -100,6 +101,10 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled"
       + "|equity_drawdown_map=enabled|prop_rule_profile=not_loaded_unknown|prop_rule_safety=unknown_permission_blocked"
       + "|scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS)
+      + "|history_scan_budget_ms=" + IntegerToString(AC_L1_HISTORY_SCAN_BUDGET_MS)
+      + "|history_scan_duration_ms=" + IntegerToString((int)AC_L1_HISTORY_SCAN_DURATION_MS)
+      + "|history_budget_abort_count=" + IntegerToString(AC_L1_HISTORY_BUDGET_ABORT_COUNT)
+      + "|history_status=" + AC_L1_HISTORY_STATUS
       + "|render_duration_ms=" + IntegerToString((int)AC_L1_RENDER_DURATION_MS)
       + "|total_refresh_duration_ms=" + IntegerToString((int)AC_L1_TOTAL_REFRESH_DURATION_MS)
       + "|timing_note=scan_excludes_render_maps_and_file_write_total_excludes_publication_fileio"
