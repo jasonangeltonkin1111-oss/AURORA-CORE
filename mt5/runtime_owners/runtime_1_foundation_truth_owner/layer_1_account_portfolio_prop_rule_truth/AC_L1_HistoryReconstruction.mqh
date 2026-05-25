@@ -12,7 +12,8 @@ bool AC_L1HistoryBudgetExceeded()
    AC_L1_HISTORY_STATUS = "available_partial_budget_limited";
    if(StringFind(AC_L1_HISTORY_QUALITY, "budget_limited") < 0)
       AC_L1_HISTORY_QUALITY += "_budget_limited";
-   AC_L1_HISTORY_NOTE += "; history reconstruction stopped by Layer 1 scan budget; selected rows are partial and must not be interpreted as complete account history";
+   if(StringFind(AC_L1_HISTORY_NOTE, "history reconstruction stopped by Layer 1 scan budget") < 0)
+      AC_L1_HISTORY_NOTE += "; history reconstruction stopped by Layer 1 scan budget; selected rows are partial and must not be interpreted as complete account history";
    return true;
 }
 
