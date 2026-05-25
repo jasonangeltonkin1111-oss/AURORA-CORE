@@ -69,7 +69,10 @@ string AC_L3VolumeGridQuality(const AC_L3SymbolSpecs &s)
 
 string AC_L3ValueQualityText(const AC_L3SymbolSpecs &s)
 {
-   if(s.order_calc_profit_buy_ok && s.order_calc_profit_sell_ok && s.money_per_point_buy_1lot > 0.0 && s.money_per_point_sell_1lot > 0.0 && s.point > 0.0 && s.volume_step > 0.0)
+   // Value formula readiness is about account-currency value per point/tick.
+   // Volume grid belongs to AC_L3VolumeGridQuality() and must not downgrade
+   // proven OrderCalcProfit value truth.
+   if(s.order_calc_profit_buy_ok && s.order_calc_profit_sell_ok && s.money_per_point_buy_1lot > 0.0 && s.money_per_point_sell_1lot > 0.0 && s.point > 0.0)
       return "Value Formula Ready";
    if(s.order_calc_profit_buy_ok || s.order_calc_profit_sell_ok || s.value_from_tick_value)
       return "Value Formula Partial";
