@@ -161,7 +161,7 @@ string AC_BoardSurfaceScoringSnapshotSection()
    text += "Layer 6 Cost/Friction:       " + AC_L6_STATUS + "\r\n";
    text += "Layer 7 Session Relevance:   " + AC_L7_STATUS + "\r\n";
    text += "Layer 8 Movement/Range:      " + AC_L8_STATUS + "\r\n";
-   text += "Layer 9 Structure/Location:  " + AC_L9_STATUS + "\r\n";
+   text += "Layer 9 Structure/Location:  " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Meaning:                    ranking/inspection only; no direction, setup, alert, or permission\r\n";
    return text;
 }
@@ -175,7 +175,7 @@ string AC_BoardSurfaceCoherenceProofSection()
    text += "L6 Status: " + AC_L6_STATUS + " | checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM + " | accepted=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
    text += "L7 Status: " + AC_L7_STATUS + " | rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + " | input=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L7_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
    text += "L8 Status: " + AC_L8_STATUS + " | rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + " | input=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L8_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
-   text += "L9 Status: " + AC_L9_STATUS + " | rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED) + " | input=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L9_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
+   text += "L9 Status: " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + " | rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED) + " | input=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L9_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
    text += "Meaning: this is render-time proof only; it does not grant setup, alert, selection, or trade permission\r\n";
    return text;
 }
@@ -245,7 +245,7 @@ string AC_BoardTradingReadinessSection()
    text += "Cost Ranking:       " + AC_L6_STATUS + "\r\n";
    text += "Session Ranking:    " + AC_L7_STATUS + "\r\n";
    text += "Movement Ranking:   " + AC_L8_STATUS + "\r\n";
-   text += "Structure Ranking:  " + AC_L9_STATUS + "\r\n";
+   text += "Structure Ranking:  " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "Taxonomy Map:       " + AC_L10_STATUS + "\r\n";
    text += "Symbol Ranking:     " + AC_L11_STATUS + "\r\n";
    text += "Group Heat Quality: " + AC_L12_STATUS + "\r\n";
