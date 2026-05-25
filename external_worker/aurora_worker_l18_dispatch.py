@@ -6,7 +6,6 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l18 import L18PublishSummary, publish_l18_selected_raw_ohlc_bar_pack
-from aurora_worker_l19_dispatch import run_l19_after_l18
 
 
 def _entrypoint_l19_runtime_enabled() -> bool:
@@ -135,5 +134,6 @@ def run_l18_after_l17(root: Path, enable_l19_runtime: bool | None = None) -> L18
         ])
         atomic_write_text(manifest_path, manifest)
     if l19_enabled:
+        from aurora_worker_l19_dispatch import run_l19_after_l18
         run_l19_after_l18(root)
     return summary
