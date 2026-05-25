@@ -52,9 +52,9 @@ def _group_text(asset_class: str, ranking_group: str, rows: List[Dict[str, str]]
         "L11 SHALLOW RANKING GROUP TOP 5",
         "----------------------------------------",
         "meaning=ranking_group_inspection_shortcut_only",
-        "source=L11 ranked_symbols_by_group.csv existing ranks",
+        "source=L11 ranked_symbols_by_group.csv guarded ranks",
         "score_owner=Layer 11 Symbol Ranking Inside Ranking Group",
-        "dossier_policy=copied_from_source_dossier_when_available",
+        "dossier_policy=copy_only_when_source_dossier_is_open_nonblocked_nonstale_else_held_warning_card",
         f"asset_class={asset_class}",
         f"ranking_group={ranking_group}",
         f"market_groups={';'.join(market_groups) if market_groups else 'not_available'}",
@@ -84,7 +84,7 @@ def _asset_group_index_text(asset_class: str, rows: List[Dict[str, str]]) -> str
         f"SHALLOW RANKING GROUP INDEX - {asset_class}",
         "----------------------------------------",
         "meaning=asset_class_group_shortcut_index_only",
-        "source=L11 ranked_symbols_by_group.csv existing ranks",
+        "source=L11 ranked_symbols_by_group.csv guarded ranks",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
@@ -122,6 +122,7 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
     copies_written = 0
     copies_expected = 0
     missing = 0
+    held_unsafe = 0
     stale_removed = 0
     by_asset_index: Dict[str, List[Dict[str, str]]] = defaultdict(list)
 
@@ -137,11 +138,13 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
             expected_names.append(target_name)
             target = folder / target_name
             copies_expected += 1
-            ok, source_missing, source_path = _copy_dossier_or_placeholder(account_root, symbol, target, failed)
+            ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(account_root, symbol, target, failed, row)
             if ok:
                 copies_written += 1
             if source_missing:
                 missing += 1
+            if copy_status == "source_held_stale_or_unsafe":
+                held_unsafe += 1
             output_rows.append({
                 "group_shortcut_rank": str(rank),
                 "symbol": symbol,
@@ -162,10 +165,10 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
                 "l8_score": row.get("l8_score", "not_available"), "l8_state": row.get("l8_state", "not_available"),
                 "l9_score": row.get("l9_score", "not_available"), "l9_state": row.get("l9_state", "not_available"),
                 "risk_review_flag": row.get("risk_review_flag", "false"),
-                "reason": row.get("reason", "shallow_group_top5_existing_l11_rank"),
+                "reason": row.get("reason", "shallow_group_top5_existing_l11_rank") + "|copy_status=" + copy_status,
                 "source_dossier_path": source_path,
                 "target_dossier_path": str(target),
-                "copy_status": "source_copied" if ok else ("source_missing_placeholder_written" if source_missing else "copy_failed"),
+                "copy_status": copy_status,
                 "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false",
                 "generated_utc": utc_stamp(),
             })
@@ -200,8 +203,8 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
             if _write(path, text, failed):
                 files_written += 1
 
-    status = "accepted" if not failed and missing == 0 and copies_written == copies_expected else "write_degraded"
-    reason = "shallow_group_top5_shortcuts_published" if status == "accepted" else "one_or_more_shallow_group_top5_shortcuts_missing_or_failed"
-    summary = SelectionShortcutSummary(status, reason, "shallow_group_top5", files_written, files_expected, copies_written, copies_expected, missing, stale_removed, len(failed), str(status_path))
+    status = "accepted" if not failed and missing == 0 and held_unsafe == 0 and copies_written == copies_expected else "write_degraded"
+    reason = "shallow_group_top5_shortcuts_published" if status == "accepted" else "one_or_more_shallow_group_top5_shortcuts_missing_unsafe_or_failed"
+    summary = SelectionShortcutSummary(status, reason, "shallow_group_top5", files_written, files_expected, copies_written, copies_expected, missing, stale_removed, len(failed), str(status_path), held_unsafe)
     _write(status_path, _shortcut_status_text(summary), failed)
     return summary
