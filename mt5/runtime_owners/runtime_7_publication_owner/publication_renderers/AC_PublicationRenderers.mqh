@@ -53,45 +53,51 @@ string AC_DossierL16L17PipelineCorrectionSection(const string symbol)
    text += "----------------------------------------\r\n";
    text += "Purpose: compact current upstream selection truth before full selection detail sections.\r\n";
    text += "Authority: this section supersedes older top-shell pipeline, selection-active, or NEXT REQUIRED wording if those lower sections still mention an earlier layer.\r\n";
-   text += "Current Selection Surface: latest accepted L16/L17 source truth available to the renderer.\r\n";
+   text += "Current Selection Surface: visible held L16 basket plus L17 queue split source truth available to the renderer.\r\n";
    text += "L16 Status: " + AC_L16_STATUS + "\r\n";
+   text += "L16 Visible Surface State: " + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
+   text += "L16 Hold State: " + AC_L16_HOLD_STATE + "\r\n";
+   text += "L16 Hold Valid Until UTC: " + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
+   text += "L16 Visible Basket Meaning: held display basket; latest calculation files may differ until hold expiry.\r\n";
    text += "L16 Selected Count: " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
    text += "L16 Unfilled Slots: " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
    text += "L16 Correlation Rejects: " + IntegerToString(AC_L16_CORRELATION_REJECT_COUNT) + "\r\n";
    text += "L16 Group Cap Rejects: " + IntegerToString(AC_L16_GROUP_CAP_REJECT_COUNT) + "\r\n";
    text += "L16 Top Symbol: " + AC_L16_TOP_SYMBOL + "\r\n";
    text += "L17 Status: " + AC_L17_STATUS + "\r\n";
-   text += "L17 Deep Selected: " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
-   text += "L17 Clean Selected: " + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
-   text += "L17 Fallback Selected: " + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
-   text += "L17 Top Deep Symbol: " + AC_L17_TOP_SYMBOL + "\r\n";
+   text += "L17 Queue Selected: " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
+   text += "L17 Clean Queued: " + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
+   text += "L17 Fallback Queued: " + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
+   text += "L17 Top Queued Symbol: " + AC_L17_TOP_SYMBOL + "\r\n";
    if(l16_row == "")
    {
-      text += "This Symbol L16 Member: FALSE\r\n";
-      text += "This Symbol Meaning: not in current Global Top 10 inspection basket; keep as evidence only.\r\n";
+      text += "This Symbol L16 Visible Member: FALSE\r\n";
+      text += "This Symbol Meaning: not in visible held Global Top 10 inspection basket; keep as evidence only.\r\n";
    }
    else
    {
-      text += "This Symbol L16 Member: TRUE\r\n";
-      text += "This Symbol Global Rank: #" + AC_L16CsvField(l16_row, 0) + " / " + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
+      text += "This Symbol L16 Visible Member: TRUE\r\n";
+      text += "This Symbol Visible Global Rank: #" + AC_L16CsvField(l16_row, 0) + " / " + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
       text += "This Symbol L16 Primary Score: " + AC_L16CsvField(l16_row, 7) + "\r\n";
       text += "This Symbol Selection Reason: " + AC_L16CsvField(l16_row, 22) + "\r\n";
+      text += "This Symbol Row Hold Visible: " + AC_L16CsvField(l16_row, 38) + "\r\n";
+      text += "This Symbol Row Hold State: " + AC_L16CsvField(l16_row, 39) + "\r\n";
    }
    if(l17_row == "")
    {
-      text += "This Symbol L17 Deep Selected: FALSE\r\n";
-      text += "This Symbol L17 Meaning: visible evidence only unless later L17 source truth selects it.\r\n";
+      text += "This Symbol L17 Queue Selected: FALSE\r\n";
+      text += "This Symbol L17 Meaning: visible/watch-only unless later L17 source truth queues it.\r\n";
    }
    else
    {
-      text += "This Symbol L17 Deep Selected: TRUE\r\n";
-      text += "This Symbol L17 Rank: #" + AC_L17CsvField(l17_row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
+      text += "This Symbol L17 Queue Selected: TRUE\r\n";
+      text += "This Symbol L17 Queue Rank: #" + AC_L17CsvField(l17_row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
       text += "This Symbol L17 Depth Assignment: " + AC_L17CsvField(l17_row, 24) + "\r\n";
       text += "This Symbol L17 Budget Class: " + AC_L17CsvField(l17_row, 25) + "\r\n";
       text += "This Symbol L17 Selection Reason: " + AC_L17CsvField(l17_row, 30) + "\r\n";
    }
-   text += "Selection Meaning: current selection surfaces are inspection and evidence-budget surfaces only; no setup alert, no trade permission, no execution.\r\n";
-   text += "Current Next Required: inspect currently selected evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n";
+   text += "Selection Meaning: current selection surfaces are inspection and evidence-budget queue surfaces only; no setup alert, no trade permission, no execution.\r\n";
+   text += "Current Next Required: inspect currently queued evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n";
    return text;
 }
 
@@ -129,8 +135,8 @@ string AC_NormalizeDossierShellText(string text)
    StringReplace(text, "Selection Active: L15 scoring only; no Global Top 10 or trade permission\r\n", "Selection Active: latest selection/evidence surfaces only; no trade permission\r\n");
    StringReplace(text, "Permission Active: No\r\n", "");
    StringReplace(text, "L23 Trade Permission:         false\r\n", "");
-   StringReplace(text, "Next step: Layer 16 Global Top 10 builder after L15 correlation/diversity output is accepted.\r\n", "Next step: inspect currently selected evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n");
-   StringReplace(text, "Layer 11-15 are inspection/selection-scoring surfaces only; no Global Top 10, alert, or trade permission exists here.\r\n", "Layer 11+ selection/evidence surfaces are inspection and evidence-budget surfaces only; no alert, trade permission, or execution exists here.\r\n");
+   StringReplace(text, "Next step: Layer 16 Global Top 10 builder after L15 correlation/diversity output is accepted.\r\n", "Next step: inspect currently queued evidence-budget symbols first; non-selected rows remain visible/watch-only unless later source truth changes.\r\n");
+   StringReplace(text, "Layer 11-15 are inspection/selection-scoring surfaces only; no Global Top 10, alert, or trade permission exists here.\r\n", "Layer 11+ selection/evidence surfaces are inspection and evidence-budget queue surfaces only; no alert, trade permission, or execution exists here.\r\n");
 
    // Top-shell permission is declared once in the Dossier header and in the compact NO GO block.
    StringReplace(text, "Trade Permission:    FALSE\r\n", "");
