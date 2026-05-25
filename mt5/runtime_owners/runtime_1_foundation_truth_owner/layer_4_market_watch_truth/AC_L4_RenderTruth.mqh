@@ -27,6 +27,7 @@ void AC_BuildLayer4Texts()
    AC_L4_WORKBENCH_SECTION += "scan_status=" + AC_L4_SCAN_STATUS + "\r\n";
    AC_L4_WORKBENCH_SECTION += "scan_duration_ms=" + IntegerToString((int)AC_L4_SCAN_DURATION_MS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "cache_key=" + AC_L4_CACHE_KEY + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "refresh_key=" + AC_L4_REFRESH_KEY + "\r\n";
    AC_L4_WORKBENCH_SECTION += "eligible_open=" + IntegerToString(AC_L4_ELIGIBLE_OPEN) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "scanned=" + IntegerToString(AC_L4_SCANNED) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "fresh_quotes=" + IntegerToString(AC_L4_FRESH_QUOTES) + "\r\n";
@@ -94,17 +95,19 @@ string AC_Layer4DossierSection(const string symbol)
 
    text += "Status: " + p.scan_status + "\r\n";
    text += "Quote Quality: " + p.quote_quality + "\r\n";
+   text += "Quote Valid Flag: " + AC_L4BoolText(p.quote_valid_flag) + "\r\n";
    text += "Surface Quality: " + p.surface_quality + "\r\n";
    text += "Tick Source: SymbolInfoTick\r\n";
    text += "Tick Time: " + (p.tick_available ? AC_L4DateTimeText(p.tick_time_broker) + " broker/server" : "Not available") + "\r\n";
+   text += "Tick Time MSC: " + (p.tick_time_msc > 0 ? IntegerToString((int)p.tick_time_msc) : "Not available") + "\r\n";
    text += "Tick Age: " + (tick_safe ? AC_L4NumberText(p.tick_age_seconds, 1) + " sec" : "Not available") + "\r\n";
    text += "Bid: " + (bid_safe ? AC_L4PriceText(p.bid, p.digits) : "Not available") + "\r\n";
    text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
    text += "Last: " + (last_safe ? AC_L4PriceText(p.last, p.digits) : "Not available") + "\r\n";
-   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
+   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4PipsText(p.spread_points_live, p.digits) + " / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
    text += "Spread Cost Band: " + p.spread_score + "\r\n";
    text += "Spread Source: " + p.spread_source + "\r\n";
-   text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
+   text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + AC_L4PipsText((double)p.spread_spec_points, p.digits) + " / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
    text += "Spread Check: " + p.spread_vs_spec_status + "\r\n";
    text += "Zero Spread State: " + p.zero_spread_state + "\r\n";
 
@@ -122,9 +125,9 @@ string AC_Layer4DossierSection(const string symbol)
    text += "\r\nActivity\r\n";
    text += "----------------------------------------\r\n";
    text += "Session Average Weighted Price: " + (p.session_aw > 0.0 ? AC_L4PriceText(p.session_aw, p.digits) : "Not available") + "\r\n";
-   text += "Session Volume: " + AC_L4NumberText(p.session_volume, 2) + "\r\n";
-   text += "Session Turnover: " + AC_L4NumberText(p.session_turnover, 2) + "\r\n";
-   text += "Session Deals: " + IntegerToString((int)p.session_deals) + "\r\n";
+   text += "Session Volume: " + (p.activity_status == "Broker Not Providing" ? "Not available" : AC_L4NumberText(p.session_volume, 2)) + "\r\n";
+   text += "Session Turnover: " + (p.activity_status == "Broker Not Providing" ? "Not available" : AC_L4NumberText(p.session_turnover, 2)) + "\r\n";
+   text += "Session Deals: " + (p.activity_status == "Broker Not Providing" ? "Not available" : IntegerToString((int)p.session_deals)) + "\r\n";
    text += "Activity Status: " + p.activity_status + "\r\n";
 
    text += "\r\nQuality\r\n";
@@ -152,6 +155,7 @@ string AC_Layer4StatusRow()
       + "|zero_spread_fresh=" + IntegerToString(AC_L4_ZERO_SPREAD_FRESH)
       + "|daily_change_available=" + IntegerToString(AC_L4_DAILY_CHANGE_AVAILABLE)
       + "|cache_key=" + AC_L4_CACHE_KEY
+      + "|refresh_key=" + AC_L4_REFRESH_KEY
       + "|trade_permission=false";
 }
 
