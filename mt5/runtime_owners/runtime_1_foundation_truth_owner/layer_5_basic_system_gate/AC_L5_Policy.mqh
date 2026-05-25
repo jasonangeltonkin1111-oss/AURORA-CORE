@@ -65,6 +65,7 @@ void AC_L5Reset()
    AC_L5_BLOCK_L2_NOT_READY = 0;
    AC_L5_BLOCK_L3_NOT_READY = 0;
    AC_L5_BLOCK_L4_NOT_READY = 0;
+   AC_L5_BLOCK_L4_SURFACE_NOT_USABLE = 0;
    AC_L5_WORST_BLOCKER = "None";
    AC_L5_FIND_LAST_INDEX = -1;
    AC_L5_FIND_CACHE_HITS = 0;
@@ -84,6 +85,12 @@ void AC_L5TrackWorstBlocker(const string reason)
 {
    if(reason == "") return;
    if(AC_L5_WORST_BLOCKER == "None") AC_L5_WORST_BLOCKER = reason;
+}
+
+string AC_L5Lower(string value)
+{
+   StringToLower(value);
+   return value;
 }
 
 bool AC_L5TradeModeAllowed(const long trade_mode)
@@ -109,6 +116,25 @@ bool AC_L5ClassificationRequiresReview(const AC_L3SymbolSpecs &l3)
    if(l3.ranking_group == "" || l3.ranking_group == "unknown" || l3.ranking_group == "Unknown") return true;
    if(l3.asset_class == "" || l3.asset_class == "unknown" || l3.asset_class == "Unknown") return true;
    return false;
+}
+
+bool AC_L5QuoteFreshEnough(const AC_L4SymbolPacket &l4)
+{
+   string quote_quality = AC_L5Lower(l4.quote_quality);
+   string zero_spread_state = AC_L5Lower(l4.zero_spread_state);
+
+   if(!l4.tick_available) return false;
+   if(quote_quality != "fresh") return false;
+   if(l4.tick_age_seconds < 0.0) return false;
+   if(l4.tick_age_seconds > AC_L5_MAX_FRESH_TICK_AGE_SECONDS) return false;
+   if(zero_spread_state == "zero spread not fresh") return false;
+   return true;
+}
+
+bool AC_L5SurfaceUsable(const AC_L4SymbolPacket &l4)
+{
+   string surface_quality = AC_L5Lower(l4.surface_quality);
+   return surface_quality == "surface usable";
 }
 
 bool AC_L5SpreadAbsurd(const AC_L4SymbolPacket &l4)
