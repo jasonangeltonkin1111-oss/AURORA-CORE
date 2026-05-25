@@ -1,11 +1,11 @@
 #ifndef AC_LAYER17_DEEP_EVIDENCE_RENDERER_MQH
 #define AC_LAYER17_DEEP_EVIDENCE_RENDERER_MQH
 
-// Runtime 7 render-only surface for Layer 17 Deep Evidence Selection Split.
+// Runtime 7 render-only surface for Layer 17 Deep Evidence Queue Split.
 // Reads worker L17 summary and CSV outputs only.
 // Must not collect OHLC, ticks, indicators, liquidity, permit, alert, or execute.
 
-static string AC_L17_STATUS = "Pending L17 Deep Evidence Split";
+static string AC_L17_STATUS = "Pending L17 Deep Evidence Queue Split";
 static string AC_L17_VALIDATION_STATUS = "Pending";
 static string AC_L17_VALIDATION_REASON = "l17_deep_evidence_summary.txt missing or not accepted/degraded";
 static string AC_L17_MAIN_BLOCKER = "l17 summary has not been accepted yet";
@@ -89,7 +89,7 @@ int AC_L17KvInt(const string text, const string key, const int fallback = 0)
 void AC_L17RefreshSummary()
 {
    AC_L17_ACCEPTED = false;
-   AC_L17_STATUS = "Pending L17 Deep Evidence Split";
+   AC_L17_STATUS = "Pending L17 Deep Evidence Queue Split";
    AC_L17_VALIDATION_STATUS = "Pending";
    AC_L17_VALIDATION_REASON = "l17_deep_evidence_summary.txt missing or unreadable";
    AC_L17_MAIN_BLOCKER = AC_L17_VALIDATION_REASON;
@@ -159,11 +159,11 @@ void AC_L17RefreshSummary()
       AC_L17_STATUS = (status == "accepted" ? "Accepted" : "Degraded Accepted");
       AC_L17_VALIDATION_STATUS = (status == "accepted" ? "Accepted" : "Degraded");
       AC_L17_VALIDATION_REASON = "summary/files/counts/safety/scope accepted; status=" + status;
-      AC_L17_MAIN_BLOCKER = (status == "accepted" ? "none" : "Deep evidence split constrained; inspect selected/rejected rows");
+      AC_L17_MAIN_BLOCKER = (status == "accepted" ? "none" : "Deep evidence queue split constrained; inspect selected/rejected rows");
       return;
    }
 
-   AC_L17_STATUS = "L17 Deep Evidence Split degraded";
+   AC_L17_STATUS = "L17 Deep Evidence Queue Split degraded";
    AC_L17_VALIDATION_STATUS = "Degraded";
    AC_L17_VALIDATION_REASON = "status=" + status
       + ";files_ok=" + (files_ok ? "true" : "false")
@@ -207,22 +207,23 @@ string AC_Layer17BoardSection()
 {
    AC_L17RefreshSummary();
    string text = "";
-   text += "\r\nLAYER 17 - DEEP EVIDENCE SELECTION SPLIT\r\n";
+   text += "\r\nLAYER 17 - DEEP EVIDENCE QUEUE SPLIT\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L17_STATUS + "\r\n";
    text += "Owner:                      Runtime 4 - Surface Scoring / Deep Evidence Selection Support\r\n";
    text += "Input Source:               L16 held visible display rows only\r\n";
+   text += "Meaning:                    queue split only; not evidence collection and not trade permission\r\n";
    text += "Source L16 Status:          " + AC_L17_SOURCE_L16_STATUS + "\r\n";
    text += "Source L16 Hold State:      " + AC_L17_SOURCE_L16_HOLD_STATE + "\r\n";
    text += "Visible Candidates:         " + IntegerToString(AC_L17_VISIBLE_CANDIDATE_COUNT) + "\r\n";
-   text += "Deep Selected:              " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
+   text += "Queue Selected:             " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
    text += "Rejected / Watch Only:      " + IntegerToString(AC_L17_REJECTED_CANDIDATE_COUNT) + "\r\n";
    text += "Clean Selected:             " + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
    text += "Fallback Selected:          " + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
    text += "Full Depth Requests:        " + IntegerToString(AC_L17_FULL_DEPTH_COUNT) + "\r\n";
    text += "Standard Depth Requests:    " + IntegerToString(AC_L17_STANDARD_DEPTH_COUNT) + "\r\n";
    text += "Fallback Limited Requests:  " + IntegerToString(AC_L17_FALLBACK_LIMITED_DEPTH_COUNT) + "\r\n";
-   text += "Top Deep Symbol:            " + AC_L17_TOP_SYMBOL + "\r\n";
+   text += "Top Queued Symbol:          " + AC_L17_TOP_SYMBOL + "\r\n";
    text += "Source Generated UTC:       " + AC_L17_GENERATED_UTC + "\r\n";
    text += "Collects OHLC:              FALSE\r\n";
    text += "Collects Ticks:             FALSE\r\n";
@@ -241,7 +242,7 @@ string AC_Layer17DossierSection(const string symbol)
    AC_L17RefreshSummary();
    string row = AC_L17CsvLineForSymbol(symbol);
    string text = "";
-   text += "\r\nLAYER 17 - DEEP EVIDENCE SELECTION SPLIT\r\n";
+   text += "\r\nLAYER 17 - DEEP EVIDENCE QUEUE SPLIT\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L17_STATUS + "\r\n";
    text += "Owner: Runtime 4 - Surface Scoring / Deep Evidence Selection Support\r\n";
@@ -249,13 +250,13 @@ string AC_Layer17DossierSection(const string symbol)
    text += "Source Generated UTC: " + AC_L17_GENERATED_UTC + "\r\n";
    if(row == "")
    {
-      text += "Deep Evidence Selected: FALSE\r\n";
-      text += "Reason: symbol not present in current L17 selected deep evidence split, or L17 not readable yet\r\n";
+      text += "Queue Selected: FALSE\r\n";
+      text += "Reason: symbol not present in current L17 queue split, or L17 not readable yet\r\n";
    }
    else
    {
-      text += "Deep Evidence Selected: TRUE\r\n";
-      text += "Deep Evidence Rank: #" + AC_L17CsvField(row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
+      text += "Queue Selected: TRUE\r\n";
+      text += "Queue Rank: #" + AC_L17CsvField(row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
       text += "Source L16 Display Rank: #" + AC_L17CsvField(row, 3) + "\r\n";
       text += "Source L16 Tier: " + AC_L17CsvField(row, 5) + "\r\n";
       text += "Source L16 Clean Diversified: " + AC_L17CsvField(row, 6) + "\r\n";
@@ -272,7 +273,7 @@ string AC_Layer17DossierSection(const string symbol)
       text += "Liquidity Depth: " + AC_L17CsvField(row, 29) + "\r\n";
       text += "Selection Reason: " + AC_L17CsvField(row, 30) + "\r\n";
    }
-   text += "Meaning: deep_evidence_selection_split_only_not_evidence_collection_not_trade_permission\r\n";
+   text += "Meaning: deep_evidence_queue_split_only_not_evidence_collection_not_trade_permission\r\n";
    text += "Deep Evidence Runtime: FALSE\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Entry Signal: FALSE\r\n";
