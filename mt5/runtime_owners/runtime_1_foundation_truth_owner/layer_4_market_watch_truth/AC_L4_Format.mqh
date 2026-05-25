@@ -51,6 +51,21 @@ string AC_L4BpsText(const double value)
    return DoubleToString(value, 2) + " BPS";
 }
 
+double AC_L4PointsPerPip(const long digits)
+{
+   // Pip labels are operator convenience only. MT5 authoritative spread unit is points.
+   // 5/3 digit FX-style symbols use 10 points per pip; other symbols keep pip=point.
+   if(digits == 5 || digits == 3) return 10.0;
+   return 1.0;
+}
+
+string AC_L4PipsText(const double points, const long digits)
+{
+   double points_per_pip = AC_L4PointsPerPip(digits);
+   if(points_per_pip <= 0.0) points_per_pip = 1.0;
+   return DoubleToString(points / points_per_pip, 2) + " pips";
+}
+
 string AC_L4SpreadScore(const double bps, const bool available)
 {
    if(!available) return "No Score";
@@ -67,6 +82,7 @@ string AC_L4QuoteQuality(const bool tick_available,
 {
    if(!tick_available) return "Missing Tick";
    if(!bid_ask_valid) return "Invalid Bid / Ask";
+   if(tick_age_seconds < 0.0) return "Stale";
    if(tick_age_seconds <= 10.0) return "Fresh";
    if(tick_age_seconds <= 60.0) return "Aging";
    return "Stale";
