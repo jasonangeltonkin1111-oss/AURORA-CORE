@@ -45,6 +45,21 @@ def _shallow_group_folder(root: Path, asset_class: str, ranking_group: str) -> P
     return _selection_desk(root) / "02_Asset_Classes" / _sanitize(asset_class) / "02_Groups" / _sanitize(ranking_group)
 
 
+def _group_shortcut_overlay(row: Dict[str, str], rank: int) -> List[str]:
+    return [
+        "shortcut_type=shallow_ranking_group_top5_dossier_copy",
+        "current_selection_source=L11 ranked_symbols_by_group.csv",
+        "current_selection_member=true",
+        f"current_group_shortcut_rank={rank}",
+        f"current_symbol={row.get('symbol', 'not_available')}",
+        f"current_l11_group_score={row.get('l11_group_score', 'not_available')}",
+        f"current_ranking_group={row.get('ranking_group', 'Unknown')}",
+        f"current_ranking_group_rank={row.get('ranking_group_rank', 'not_available')}",
+        f"current_l5_gate_state={row.get('l5_gate_state', 'not_available')}",
+        "current_l11_meaning=shallow_group_inspection_shortcut_only_not_trade_permission",
+    ]
+
+
 def _group_text(asset_class: str, ranking_group: str, rows: List[Dict[str, str]], folder: Path) -> str:
     market_groups = sorted({_display(r.get("market_group")) for r in rows})
     market_segments = sorted({_display(r.get("market_segment")) for r in rows})
@@ -138,7 +153,14 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
             expected_names.append(target_name)
             target = folder / target_name
             copies_expected += 1
-            ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(account_root, symbol, target, failed, row)
+            ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(
+                account_root,
+                symbol,
+                target,
+                failed,
+                _group_shortcut_overlay(row, rank),
+                row,
+            )
             if ok:
                 copies_written += 1
             if source_missing:
