@@ -49,6 +49,23 @@ string AC_BoardWarningText()
    return text;
 }
 
+void AC_BoardRefreshSurfacePackets()
+{
+   // Existing owner refresh only. This prevents Board/Workbench top text from printing stale
+   // L6-L9 status while later detail sections refresh newer sidecar truth in the same render pass.
+   AC_RefreshLayer6RankedSidecar();
+   AC_L7RefreshRankedSidecar();
+   AC_L8RefreshRankedSidecar();
+   AC_L9RefreshRankedSidecar();
+   AC_L10RefreshTaxonomySummary();
+   AC_L11RefreshSummary();
+   AC_L12RefreshSummary();
+   AC_L13RefreshSummary();
+   AC_L14RefreshSummary();
+   AC_L15RefreshSummary();
+   AC_L17RefreshSummary();
+}
+
 string AC_BoardHeaderSection(const AC_Layer0StatusPacket &status)
 {
    string text = "";
@@ -145,6 +162,20 @@ string AC_BoardSurfaceScoringSnapshotSection()
    text += "Layer 8 Movement/Range:      " + AC_L8_STATUS + "\r\n";
    text += "Layer 9 Structure/Location:  " + AC_L9_STATUS + "\r\n";
    text += "Meaning:                    ranking/inspection only; no direction, setup, alert, or permission\r\n";
+   return text;
+}
+
+string AC_BoardSurfaceCoherenceProofSection()
+{
+   string text = "";
+   text += "\r\nSURFACE COHERENCE PROOF - L6 TO L9\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "Refresh Source: owner packets refreshed before top Board/Workbench text\r\n";
+   text += "L6 Status: " + AC_L6_STATUS + " | checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM + " | accepted=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
+   text += "L7 Status: " + AC_L7_STATUS + " | rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + " | input=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L7_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
+   text += "L8 Status: " + AC_L8_STATUS + " | rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + " | input=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L8_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
+   text += "L9 Status: " + AC_L9_STATUS + " | rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED) + " | input=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED + " | ranked=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED + " | accepted=" + (AC_L9_RANKED_ACCEPTED ? "true" : "false") + "\r\n";
+   text += "Meaning: this is render-time proof only; it does not grant setup, alert, selection, or trade permission\r\n";
    return text;
 }
 
@@ -252,6 +283,7 @@ string AC_BoardActionSection()
 string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
                                const AC_Layer0StatusPacket &status)
 {
+   AC_BoardRefreshSurfacePackets();
    // Build existing layer detail first. These existing owner sections refresh their own packets/sidecars.
    // The top-view that follows reads those owner fields; it does not create a second refresh/scoring owner.
    string l1 = AC_Layer1BoardSection();
@@ -280,6 +312,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_BoardUniverseSnapshotSection(status);
    text += AC_BoardLayerHealthMatrixSection(status);
    text += AC_BoardSurfaceScoringSnapshotSection();
+   text += AC_BoardSurfaceCoherenceProofSection();
    text += AC_BoardSelectionPipelineSnapshotSection();
    text += AC_BoardDegradationSnapshotSection(status);
    text += AC_BoardDossierCoverageSection(status);
@@ -312,8 +345,8 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
-   AC_L17RefreshSummary();
-   return "schema_name=layer_status|schema_version=v0.19|layer_id=L0|layer_name=" + status.layer_name
+   AC_BoardRefreshSurfacePackets();
+   return "schema_name=layer_status|schema_version=v0.20|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
       + "|trust_state=" + status.trust_state
@@ -342,9 +375,25 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|cached_l4_refresh_key=" + AC_L0_CACHED_L4_REFRESH_KEY
       + "|cached_l5_status=" + AC_L0_CACHED_L5_STATUS
       + "|cached_l6_status=" + AC_L0_CACHED_L6_STATUS
+      + "|current_l6_status=" + AC_L6_STATUS
       + "|cached_l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM
+      + "|current_l6_checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM
       + "|cached_l7_status=" + AC_L0_CACHED_L7_STATUS
+      + "|current_l7_status=" + AC_L7_STATUS
+      + "|current_l7_rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED)
+      + "|current_l7_input_checksum=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|current_l7_ranked_checksum=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED
       + "|cached_l8_status=" + AC_L0_CACHED_L8_STATUS
+      + "|current_l8_status=" + AC_L8_STATUS
+      + "|current_l8_rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED)
+      + "|current_l8_input_checksum=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|current_l8_ranked_checksum=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      + "|cached_l9_status=" + AC_L0_CACHED_L9_STATUS
+      + "|current_l9_status=" + AC_L9_STATUS
+      + "|current_l9_rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED)
+      + "|current_l9_input_checksum=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED
+      + "|current_l9_ranked_checksum=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED
+      + "|current_l9_geometry_quality=" + AC_L9_GEOMETRY_QUALITY_STATE
       + "|cached_l10_status=" + AC_L10_STATUS
       + "|cached_l11_status=" + AC_L11_STATUS
       + "|cached_l12_status=" + AC_L12_STATUS
@@ -365,7 +414,26 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 {
-   AC_L17RefreshSummary();
+   AC_BoardRefreshSurfacePackets();
+   string l1_workbench = AC_Layer1WorkbenchSection();
+   string l2_workbench = AC_Layer2WorkbenchSection();
+   string l3_workbench = AC_Layer3WorkbenchSection();
+   string l4_workbench = AC_Layer4WorkbenchSection();
+   string l5_workbench = AC_Layer5WorkbenchSection();
+   string l6_workbench = AC_Layer6WorkbenchSection();
+   string l7_workbench = AC_Layer7WorkbenchSection();
+   string l8_workbench = AC_Layer8WorkbenchSection();
+   string l9_workbench = AC_Layer9WorkbenchSection();
+   string l10_workbench = AC_Layer10WorkbenchSection();
+   string l11_workbench = AC_Layer11WorkbenchSection();
+   string l12_workbench = AC_Layer12WorkbenchSection();
+   string l13_workbench = AC_Layer13WorkbenchSection();
+   string l14_workbench = AC_Layer14WorkbenchSection();
+   string l15_workbench = AC_Layer15WorkbenchSection();
+   string l16_workbench = AC_Layer16WorkbenchSection();
+   string l17_workbench = AC_Layer17BoardSection();
+   string ohlc_workbench = AC_SharedOhlcRenderWorkbenchSection();
+
    string text = "";
    text += "L0_BOARD_DOSSIER_FOUNDATION\r\n";
    text += "----------------------------------------\r\n";
@@ -403,10 +471,25 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "cached_l4_refresh_key=" + AC_L0_CACHED_L4_REFRESH_KEY + "\r\n";
    text += "cached_l5_status=" + AC_L0_CACHED_L5_STATUS + "\r\n";
    text += "cached_l6_status=" + AC_L0_CACHED_L6_STATUS + "\r\n";
+   text += "current_l6_status=" + AC_L6_STATUS + "\r\n";
    text += "cached_l6_checksum=" + AC_L0_CACHED_L6_CHECKSUM + "\r\n";
+   text += "current_l6_checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM + "\r\n";
    text += "cached_l7_status=" + AC_L0_CACHED_L7_STATUS + "\r\n";
+   text += "current_l7_status=" + AC_L7_STATUS + "\r\n";
+   text += "current_l7_rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
+   text += "current_l7_input_checksum=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "current_l7_ranked_checksum=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
    text += "cached_l8_status=" + AC_L0_CACHED_L8_STATUS + "\r\n";
-   text += "cached_l9_status=" + AC_L9_STATUS + "\r\n";
+   text += "current_l8_status=" + AC_L8_STATUS + "\r\n";
+   text += "current_l8_rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + "\r\n";
+   text += "current_l8_input_checksum=" + AC_L8_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "current_l8_ranked_checksum=" + AC_L8_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "cached_l9_status=" + AC_L0_CACHED_L9_STATUS + "\r\n";
+   text += "current_l9_status=" + AC_L9_STATUS + "\r\n";
+   text += "current_l9_rows=" + IntegerToString(AC_L9_RANKED_ROWS_RENDERED) + "\r\n";
+   text += "current_l9_input_checksum=" + AC_L9_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "current_l9_ranked_checksum=" + AC_L9_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "current_l9_geometry_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
    text += "cached_l10_status=" + AC_L10_STATUS + "\r\n";
    text += "cached_l11_status=" + AC_L11_STATUS + "\r\n";
    text += "cached_l12_status=" + AC_L12_STATUS + "\r\n";
@@ -423,24 +506,24 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "statistics_owner=layer_owner_packet_not_board_calculation\r\n";
    text += "gateway=used_for_L6_L7_L8_L9_L10_L11_L12_L13_L14_L15_L16_L17_surface_taxonomy_ranking_group_selection_candidate_pool_correlation_top10_deep_evidence_split_only_not_for_L0_L1_L2_L3_L4_or_L5\r\n";
    text += "mt5_script_worker=not_used_for_runtime_board_stats\r\n";
-   text += "\r\n" + AC_Layer1WorkbenchSection();
-   text += AC_Layer2WorkbenchSection();
-   text += AC_Layer3WorkbenchSection();
-   text += AC_Layer4WorkbenchSection();
-   text += AC_Layer5WorkbenchSection();
-   text += AC_Layer6WorkbenchSection();
-   text += AC_Layer7WorkbenchSection();
-   text += AC_Layer8WorkbenchSection();
-   text += AC_Layer9WorkbenchSection();
-   text += AC_Layer10WorkbenchSection();
-   text += AC_Layer11WorkbenchSection();
-   text += AC_Layer12WorkbenchSection();
-   text += AC_Layer13WorkbenchSection();
-   text += AC_Layer14WorkbenchSection();
-   text += AC_Layer15WorkbenchSection();
-   text += AC_Layer16WorkbenchSection();
-   text += AC_Layer17BoardSection();
-   text += "\r\n" + AC_SharedOhlcRenderWorkbenchSection();
+   text += "\r\n" + l1_workbench;
+   text += l2_workbench;
+   text += l3_workbench;
+   text += l4_workbench;
+   text += l5_workbench;
+   text += l6_workbench;
+   text += l7_workbench;
+   text += l8_workbench;
+   text += l9_workbench;
+   text += l10_workbench;
+   text += l11_workbench;
+   text += l12_workbench;
+   text += l13_workbench;
+   text += l14_workbench;
+   text += l15_workbench;
+   text += l16_workbench;
+   text += l17_workbench;
+   text += "\r\n" + ohlc_workbench;
    return text;
 }
 
