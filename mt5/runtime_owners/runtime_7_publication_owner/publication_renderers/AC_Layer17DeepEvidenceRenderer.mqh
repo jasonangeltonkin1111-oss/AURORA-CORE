@@ -203,6 +203,22 @@ string AC_L17CsvLineForSymbol(const string symbol)
    return "";
 }
 
+string AC_L17RejectedCsvLineForSymbol(const string symbol)
+{
+   string csv = AC_L17ReadSmallTextFile(AC_L17RejectedCsvPath(), 1000000);
+   if(csv == "") return "";
+   string lines[];
+   ushort separator = StringGetCharacter("\n", 0);
+   int count = StringSplit(csv, separator, lines);
+   for(int i = 1; i < count; i++)
+   {
+      string line = lines[i];
+      StringReplace(line, "\r", "");
+      if(AC_L17CsvField(line, 1, "") == symbol) return line;
+   }
+   return "";
+}
+
 string AC_Layer17BoardSection()
 {
    AC_L17RefreshSummary();
@@ -241,6 +257,7 @@ string AC_Layer17DossierSection(const string symbol)
 {
    AC_L17RefreshSummary();
    string row = AC_L17CsvLineForSymbol(symbol);
+   string rejected_row = AC_L17RejectedCsvLineForSymbol(symbol);
    string text = "";
    text += "\r\nLAYER 17 - DEEP EVIDENCE QUEUE SPLIT\r\n";
    text += "----------------------------------------\r\n";
@@ -248,10 +265,24 @@ string AC_Layer17DossierSection(const string symbol)
    text += "Owner: Runtime 4 - Surface Scoring / Deep Evidence Selection Support\r\n";
    text += "Source L16 Hold State: " + AC_L17_SOURCE_L16_HOLD_STATE + "\r\n";
    text += "Source Generated UTC: " + AC_L17_GENERATED_UTC + "\r\n";
-   if(row == "")
+   if(row == "" && rejected_row == "")
    {
       text += "Queue Selected: FALSE\r\n";
-      text += "Reason: symbol not present in current L17 queue split, or L17 not readable yet\r\n";
+      text += "Visible / Watch Only: UNKNOWN\r\n";
+      text += "Reason: symbol not present in current L17 selected/rejected split, or L17 not readable yet\r\n";
+   }
+   else if(row == "")
+   {
+      text += "Queue Selected: FALSE\r\n";
+      text += "Visible / Watch Only: TRUE\r\n";
+      text += "Source L16 Visible Rank: #" + AC_L17CsvField(rejected_row, 0) + "\r\n";
+      text += "Source L16 Tier: " + AC_L17CsvField(rejected_row, 3) + "\r\n";
+      text += "Source L16 Clean Diversified: " + AC_L17CsvField(rejected_row, 4) + "\r\n";
+      text += "Source L16 Fallback Used: " + AC_L17CsvField(rejected_row, 5) + "\r\n";
+      text += "Ranking Group: " + AC_L17CsvField(rejected_row, 6) + "\r\n";
+      text += "L16 Primary Score: " + AC_L17CsvField(rejected_row, 7) + "\r\n";
+      text += "Reject / Watch Reason: " + AC_L17CsvField(rejected_row, 8) + "\r\n";
+      text += "Would-Have Depth: " + AC_L17CsvField(rejected_row, 9) + "\r\n";
    }
    else
    {
