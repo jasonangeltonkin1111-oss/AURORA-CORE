@@ -347,11 +347,11 @@ def _top20_text(rows: List[Dict[str, object]]) -> str:
         "Source: Runtime 1 Shared OHLC Priority Windows + L9 input primitives",
         "Context: distance/reference only; no sweep confirmation, no CHOCH, no BOS, no FVG, no OB, no direction",
         "",
-        "rank|symbol|score|bucket|state|event_zone|nearest_liquidity_reference|nearest_liquidity_distance_pips|reason",
+        "rank|symbol|score|bucket|state|event_zone|nearest_surface_reference|nearest_surface_obstacle_distance_pips|available_surface_room_pips|surface_geometry_confidence|reason",
     ]
     for index, row in enumerate(rows[:20], start=1):
         lines.append(
-            f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row.get('nearest_liquidity_reference', 'not_available')}|{row.get('nearest_liquidity_distance_pips', 'not_available')}|{row['reason']}"
+            f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row.get('nearest_surface_reference', 'not_available')}|{row.get('nearest_surface_obstacle_distance_pips', 'not_available')}|{row.get('available_surface_room_pips', 'not_available')}|{row.get('surface_geometry_confidence', 'not_available')}|{row['reason']}"
         )
     lines.append("")
     return "\n".join(lines)
@@ -400,6 +400,7 @@ def _manifest(summary: L9FinalSummary, input_checksum: str, ranked_checksum: str
         "entry_signal=false",
         f"structure_location_policy={L9_POLICY}",
         "location_context_policy=distance_reference_only_no_sweep_no_direction_no_setup",
+        "surface_context_policy=surface_reference_distance_only_no_liquidity_map_no_setup",
         f"source_owner={L9_SOURCE_OWNER}",
         f"score_weights={','.join(f'{k}:{v:g}' for k, v in L9_SCORE_WEIGHTS.items())}",
         f"timeframe_weights={','.join(f'{k}:{v:g}' for k, v in L9_TF_WEIGHTS.items())}",
