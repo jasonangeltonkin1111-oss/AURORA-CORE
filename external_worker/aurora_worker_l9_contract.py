@@ -76,6 +76,12 @@ L9_LOCATION_CONTEXT_FIELDS = [
     "distance_to_london_low",
     "position_in_session_range_pct",
     "position_in_daily_range_pct",
+    "nearest_surface_reference",
+    "nearest_surface_obstacle_distance_pips",
+    "available_surface_room_pips",
+    "surface_geometry_confidence",
+    "surface_geometry_confidence_reason",
+    # Deprecated compatibility aliases. L9 owns surface/location geometry, not L22 liquidity.
     "nearest_liquidity_reference",
     "nearest_liquidity_distance_pips",
 ]
