@@ -5,7 +5,7 @@
 // Reads only Python worker L10 summary and per-symbol sidecars.
 // Must not classify, rank, select, copy Dossiers, permit, alert, or execute.
 
-static string AC_L10_STATUS = "Pending taxonomy sidecar";
+static string AC_L10_STATUS = "Pending taxonomy summary";
 static string AC_L10_TRUST_STATE = "Taxonomy Pending";
 static string AC_L10_VALIDATION_STATUS = "Pending";
 static string AC_L10_VALIDATION_REASON = "taxonomy_summary.txt missing or not accepted";
@@ -20,7 +20,7 @@ static int    AC_L10_OMITTED_COUNT = 0;
 static int    AC_L10_BLOCKED_COUNT = 0;
 static int    AC_L10_CONFLICT_COUNT = 0;
 static int    AC_L10_RANK_ALLOWED_COUNT = 0;
-static int    AC_L10_SELECTION_ALLOWED_COUNT = 0;
+static int    AC_L10_DOWNSTREAM_CLASSIFICATION_ELIGIBLE_COUNT = 0;
 static int    AC_L10_RANKING_GROUP_COUNT = 0;
 static int    AC_L10_ACTIVE_GROUP_COUNT = 0;
 static int    AC_L10_ACTIVE_WITH_REVIEW_GROUP_COUNT = 0;
@@ -97,7 +97,7 @@ string AC_L10BoolKv(const bool value){ return value ? "true" : "false"; }
 void AC_L10RefreshTaxonomySummary()
 {
    AC_L10_ACCEPTED = false;
-   AC_L10_STATUS = "Pending taxonomy sidecar";
+   AC_L10_STATUS = "Pending taxonomy summary";
    AC_L10_TRUST_STATE = "Taxonomy Pending";
    AC_L10_VALIDATION_STATUS = "Pending";
    AC_L10_VALIDATION_REASON = "taxonomy_summary.txt missing or unreadable";
@@ -111,7 +111,7 @@ void AC_L10RefreshTaxonomySummary()
    AC_L10_BLOCKED_COUNT = 0;
    AC_L10_CONFLICT_COUNT = 0;
    AC_L10_RANK_ALLOWED_COUNT = 0;
-   AC_L10_SELECTION_ALLOWED_COUNT = 0;
+   AC_L10_DOWNSTREAM_CLASSIFICATION_ELIGIBLE_COUNT = 0;
    AC_L10_RANKING_GROUP_COUNT = 0;
    AC_L10_ACTIVE_GROUP_COUNT = 0;
    AC_L10_ACTIVE_WITH_REVIEW_GROUP_COUNT = 0;
@@ -136,7 +136,7 @@ void AC_L10RefreshTaxonomySummary()
    AC_L10_BLOCKED_COUNT = AC_L10KvInt(summary, "blocked_count", 0);
    AC_L10_CONFLICT_COUNT = AC_L10KvInt(summary, "conflict_count", 0);
    AC_L10_RANK_ALLOWED_COUNT = AC_L10KvInt(summary, "rank_allowed_count", 0);
-   AC_L10_SELECTION_ALLOWED_COUNT = AC_L10KvInt(summary, "selection_allowed_count", 0);
+   AC_L10_DOWNSTREAM_CLASSIFICATION_ELIGIBLE_COUNT = AC_L10KvInt(summary, "downstream_classification_eligible_count", 0);
    AC_L10_RANKING_GROUP_COUNT = AC_L10KvInt(summary, "ranking_group_count", 0);
    AC_L10_ACTIVE_GROUP_COUNT = AC_L10KvInt(summary, "active_group_count", 0);
    AC_L10_ACTIVE_WITH_REVIEW_GROUP_COUNT = AC_L10KvInt(summary, "active_with_review_group_count", 0);
@@ -182,7 +182,7 @@ void AC_L10RefreshTaxonomySummary()
       return;
    }
 
-   AC_L10_STATUS = "Taxonomy sidecar degraded";
+   AC_L10_STATUS = "Taxonomy degraded";
    AC_L10_TRUST_STATE = "Taxonomy Degraded";
    AC_L10_VALIDATION_STATUS = "Degraded";
    AC_L10_VALIDATION_REASON = "files_ok=" + (files_ok ? "true" : "false")
@@ -214,7 +214,7 @@ string AC_Layer10BoardSection()
    text += "Unknown:                    " + IntegerToString(AC_L10_UNKNOWN_COUNT) + "\r\n";
    text += "Conflicts / Blocked:        " + IntegerToString(AC_L10_CONFLICT_COUNT) + " / " + IntegerToString(AC_L10_BLOCKED_COUNT) + "\r\n";
    text += "Rank Allowed:               " + IntegerToString(AC_L10_RANK_ALLOWED_COUNT) + "\r\n";
-   text += "Selection Path Eligible:    " + IntegerToString(AC_L10_SELECTION_ALLOWED_COUNT) + "\r\n";
+   text += "Downstream Class Eligible:  " + IntegerToString(AC_L10_DOWNSTREAM_CLASSIFICATION_ELIGIBLE_COUNT) + "\r\n";
    text += "Ranking Groups:             " + IntegerToString(AC_L10_RANKING_GROUP_COUNT) + "\r\n";
    text += "Active Groups:              " + IntegerToString(AC_L10_ACTIVE_GROUP_COUNT) + "\r\n";
    text += "Active With Review Groups:  " + IntegerToString(AC_L10_ACTIVE_WITH_REVIEW_GROUP_COUNT) + "\r\n";
@@ -225,9 +225,9 @@ string AC_Layer10BoardSection()
    text += "Group Member Folder:        " + AC_L10GroupsFolder() + "\r\n";
    text += "Generated UTC:              " + AC_L10_GENERATED_UTC + "\r\n";
    text += "Policy:                     taxonomy_only_group_member_csvs_no_rank_no_top5_no_top10_no_dossier_copy\r\n";
-   text += "Next Layer:                 L11 fills per-group Top 5 copied Dossiers after ranking\r\n";
+   text += "Next Layer:                 L11 may rank inside each ranking_group; L10 does not rank symbols\r\n";
    text += "Main Blocker:               " + AC_L10_MAIN_BLOCKER + "\r\n";
-   text += "Ranking Runtime:            " + AC_L10BoolText(AC_L10_ACCEPTED) + "\r\n";
+   text += "Ranking Runtime:            FALSE\r\n";
    text += "Selection Runtime:          FALSE\r\n";
    text += "Trade Permission:           FALSE\r\n";
    return text;
@@ -237,7 +237,10 @@ string AC_Layer10DossierSection(const string symbol)
 {
    AC_L10RefreshTaxonomySummary();
    string sidecar_path = AC_L10SymbolTaxonomyPath(symbol);
+   bool sidecar_file_exists = FileIsExist(sidecar_path, AC_CommonFlag());
    string sidecar = AC_L10ReadSmallTextFile(sidecar_path, 16000);
+   bool full_sidecar_set_reported = (AC_L10_ACCEPTED && AC_L10_SYMBOL_COUNT > 0 && AC_L10_SYMBOL_SIDECAR_COUNT == AC_L10_SYMBOL_COUNT);
+
    string text = "";
    text += "\r\nLayer 10 Taxonomy / Ranking Group Map:\r\n";
    text += "\r\nLAYER 10 - TAXONOMY / RANKING GROUP MAP\r\n";
@@ -248,9 +251,16 @@ string AC_Layer10DossierSection(const string symbol)
    text += "Validation: " + AC_L10_VALIDATION_STATUS + "\r\n";
    if(sidecar == "")
    {
-      text += "Symbol Taxonomy State: sidecar_missing\r\n";
+      if(full_sidecar_set_reported)
+         text += "Symbol Taxonomy State: source_available_render_stale_or_path_mismatch\r\n";
+      else if(sidecar_file_exists)
+         text += "Symbol Taxonomy State: sidecar_unreadable\r\n";
+      else
+         text += "Symbol Taxonomy State: sidecar_missing\r\n";
       text += "Symbol Sidecar Path: " + sidecar_path + "\r\n";
-      text += "Reason: L10 symbol sidecar missing or unreadable; taxonomy summary may still be available\r\n";
+      text += "Sidecar File Exists At Render: " + AC_L10BoolText(sidecar_file_exists) + "\r\n";
+      text += "Source Sidecar Set Complete: " + AC_L10BoolText(full_sidecar_set_reported) + "\r\n";
+      text += "Reason: L10 renderer could not read the exact symbol sidecar; this does not overrule an accepted L10 summary.\r\n";
    }
    else
    {
@@ -265,14 +275,14 @@ string AC_Layer10DossierSection(const string symbol)
       text += "Classification Confidence: " + AC_L10KvValue(sidecar, "classification_confidence", "not_available") + "\r\n";
       text += "Evidence Rank: " + AC_L10KvValue(sidecar, "evidence_rank", "not_available") + "\r\n";
       text += "Rank Allowed: " + AC_L10KvValue(sidecar, "rank_allowed", "false") + "\r\n";
-      text += "Selection Path Eligible: " + AC_L10KvValue(sidecar, "selection_allowed", "false") + "\r\n";
+      text += "Downstream Classification Eligible: " + AC_L10KvValue(sidecar, "downstream_classification_eligible", "false") + "\r\n";
       text += "Future Group Folder: " + AC_L10KvValue(sidecar, "future_group_folder", "not_available") + "\r\n";
       text += "Reason: " + AC_L10KvValue(sidecar, "reason", "not_available") + "\r\n";
       text += "Symbol Sidecar Path: " + sidecar_path + "\r\n";
    }
    text += "Group Member CSVs: " + IntegerToString(AC_L10_GROUP_MEMBER_CSV_COUNT) + " / " + IntegerToString(AC_L10_RANKING_GROUP_COUNT) + "\r\n";
    text += "Taxonomy Policy: classification and ranking_group map only; group member CSVs are review lists, not Top 5 and not selection\r\n";
-   text += "Next Layer: L11 ranks symbols inside this ranking_group and may fill per-group Top 5 copied Dossiers\r\n";
+   text += "Next Layer: L11 may rank symbols inside this ranking_group; L10 does not rank symbols\r\n";
    text += "Selection Runtime: FALSE\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Execution: FALSE\r\n";
@@ -298,7 +308,7 @@ string AC_Layer10WorkbenchSection()
    text += "unknown_count=" + IntegerToString(AC_L10_UNKNOWN_COUNT) + "\r\n";
    text += "conflict_count=" + IntegerToString(AC_L10_CONFLICT_COUNT) + "\r\n";
    text += "rank_allowed_count=" + IntegerToString(AC_L10_RANK_ALLOWED_COUNT) + "\r\n";
-   text += "selection_allowed_count=" + IntegerToString(AC_L10_SELECTION_ALLOWED_COUNT) + "\r\n";
+   text += "downstream_classification_eligible_count=" + IntegerToString(AC_L10_DOWNSTREAM_CLASSIFICATION_ELIGIBLE_COUNT) + "\r\n";
    text += "ranking_group_count=" + IntegerToString(AC_L10_RANKING_GROUP_COUNT) + "\r\n";
    text += "active_group_count=" + IntegerToString(AC_L10_ACTIVE_GROUP_COUNT) + "\r\n";
    text += "active_with_review_group_count=" + IntegerToString(AC_L10_ACTIVE_WITH_REVIEW_GROUP_COUNT) + "\r\n";
@@ -317,7 +327,7 @@ string AC_Layer10WorkbenchSection()
    text += "summary_check_key=" + AC_L10_SUMMARY_CHECK_KEY + "\r\n";
    text += "classification_policy=taxonomy_only_group_member_csvs_no_rank_no_top5_no_top10_no_dossier_copy\r\n";
    text += "main_blocker=" + AC_L10_MAIN_BLOCKER + "\r\n";
-   text += "ranking_runtime=" + AC_L10BoolKv(AC_L10_ACCEPTED) + "\r\n";
+   text += "ranking_runtime=false\r\n";
    text += "selection_runtime=false\r\n";
    text += "trade_permission=false\r\n";
    return text;
