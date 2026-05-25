@@ -96,11 +96,11 @@ void AC_BuildLayer2Texts()
    AC_L2_BOARD_SECTION += "Known Completion:    " + completion + "\r\n";
    AC_L2_BOARD_SECTION += "Trade Sessions OK:   " + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Quote Sessions OK:   " + IntegerToString(AC_L2_QUOTE_SESSION_SUCCESS_COUNT) + "\r\n";
-   AC_L2_BOARD_SECTION += "API Failures:         Trade Sessions " + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT) + " | Symbol Info " + IntegerToString(AC_L2_SYMBOL_INFO_FAILURE_COUNT) + "\r\n";
+   AC_L2_BOARD_SECTION += "API Failures:         Trade Sessions " + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT) + " | Quote Sessions " + IntegerToString(AC_L2_QUOTE_SESSION_FAILURE_COUNT) + " | Symbol Info " + IntegerToString(AC_L2_SYMBOL_INFO_FAILURE_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Route Write Attempts: Open " + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT) + " | Closed " + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT) + " | Unknown " + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT) + " | Failed " + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Route Cleanup:        Removed Duplicates " + IntegerToString(AC_L2_DUPLICATE_CLEANUP_COUNT) + " | Failed " + IntegerToString(AC_L2_DUPLICATE_CLEANUP_FAILURE_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Session Basis:        Server session time of day; session dates ignored by design\r\n";
-   AC_L2_BOARD_SECTION += "Server Time Source:   TimeCurrent with broker / MarketWatch caveat\r\n";
+   AC_L2_BOARD_SECTION += "Server Time Source:   TimeTradeServer first; TimeCurrent then TimeGMT fallback\r\n";
    AC_L2_BOARD_SECTION += "Worst Blocker:        " + AC_L2TitleText(AC_L2_WORST_FAILURE_REASON) + "\r\n";
    AC_L2_BOARD_SECTION += "Trade Permission:     FALSE\r\n";
    AC_L2_BOARD_SECTION += "Cutoff Rule:          Closed symbols stop deeper layer publication until the next recheck\r\n";
@@ -127,7 +127,7 @@ void AC_BuildLayer2Texts()
    AC_L2_WORKBENCH_SECTION += "duplicate_cleanup_count=" + IntegerToString(AC_L2_DUPLICATE_CLEANUP_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "duplicate_cleanup_failure_count=" + IntegerToString(AC_L2_DUPLICATE_CLEANUP_FAILURE_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "session_time_basis=server_session_time_of_day\r\n";
-   AC_L2_WORKBENCH_SECTION += "server_time_source=TimeCurrent_then_TimeTradeServer_then_TimeGMT_fallback\r\n";
+   AC_L2_WORKBENCH_SECTION += "server_time_source=TimeTradeServer_then_TimeCurrent_then_TimeGMT_fallback\r\n";
    AC_L2_WORKBENCH_SECTION += "cutoff_rule=closed_symbol_blocks_deeper_layer_publication_until_next_recheck_due\r\n";
    AC_L2_WORKBENCH_SECTION += "worst_failure_reason=" + AC_L2_WORST_FAILURE_REASON + "\r\n";
    AC_L2_WORKBENCH_SECTION += "trade_permission=false\r\n";
