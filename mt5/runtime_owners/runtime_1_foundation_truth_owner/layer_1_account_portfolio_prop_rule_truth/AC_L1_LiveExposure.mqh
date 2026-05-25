@@ -119,12 +119,18 @@ string AC_L1OpenPendingRiskReadinessMap()
    double pending_risk_pct = (AC_L1_EQUITY > 0.0 ? (pending_est_risk_money / AC_L1_EQUITY) * 100.0 : 0.0);
    double combined_risk_money = open_est_risk_money + pending_est_risk_money;
    double combined_risk_pct = (AC_L1_EQUITY > 0.0 ? (combined_risk_money / AC_L1_EQUITY) * 100.0 : 0.0);
+   int combined_rows = open_total + pending_total;
+   int combined_estimated = open_risk_estimated + pending_risk_estimated;
+   int combined_blocked = open_risk_blocked + pending_risk_blocked;
+   string combined_coverage = (combined_rows <= 0 ? "none_no_live_rows" : (combined_blocked <= 0 ? "complete_estimated" : "partial_or_unknown_blocked_rows_present"));
 
    string text = AC_L1MapHeader("OPEN / PENDING RISK-AT-SL READINESS MAP");
    text += "section_id:             L1_OPEN_PENDING_RISK_AT_SL_READINESS\r\n";
    text += "Purpose:                estimated risk-at-SL readiness for live open/pending rows\r\n";
    text += "Estimate Source:        OrderCalcProfit using entry/open price to SL in account currency\r\n";
-   text += "Proof Status:           estimated, not execution permission or prop-rule proof\r\n";
+   text += "Proof Status:           estimated only; blocked rows mean total risk is unknown\r\n";
+   text += "Risk Coverage:          " + combined_coverage + "\r\n";
+   text += "Rows Estimated/Blocked: " + IntegerToString(combined_estimated) + " / " + IntegerToString(combined_blocked) + "\r\n";
    text += "Open Positions:         " + IntegerToString(open_total) + "\r\n";
    text += "Open With SL:           " + IntegerToString(open_with_sl) + "\r\n";
    text += "Open Without SL:        " + IntegerToString(open_without_sl) + "\r\n";
@@ -277,6 +283,10 @@ string AC_L1OpenPendingBoardSummary()
 
    double combined_risk = open_est_risk + pending_est_risk;
    double combined_risk_pct = (AC_L1_EQUITY > 0.0 ? (combined_risk / AC_L1_EQUITY) * 100.0 : 0.0);
+   int total_live_rows = open_total + pending_total;
+   int total_risk_estimated = open_risk_estimated + pending_risk_estimated;
+   int total_risk_blocked = total_live_rows - total_risk_estimated;
+   string risk_coverage = (total_live_rows <= 0 ? "none_no_live_rows" : (total_risk_blocked <= 0 ? "complete_estimated" : "partial_or_unknown_blocked_rows_present"));
 
    string text = "\r\nLAYER 1 - LIVE OPEN/PENDING SUMMARY\r\n";
    text += "----------------------------------------\r\n";
@@ -287,7 +297,9 @@ string AC_L1OpenPendingBoardSummary()
    text += "Open Without SL/TP:   " + IntegerToString(open_no_sl) + " / " + IntegerToString(open_no_tp) + "\r\n";
    text += "Pending No SL/TP:     " + IntegerToString(pending_no_sl) + " / " + IntegerToString(pending_no_tp) + "\r\n";
    text += "Est Risk at SL:       " + AC_L1MoneyText(combined_risk) + " (" + AC_L1PercentText(combined_risk_pct) + " equity)\r\n";
-   text += "Risk Rows Estimated:  " + IntegerToString(open_risk_estimated) + " open / " + IntegerToString(pending_risk_estimated) + " pending\r\n";
+   text += "Risk Coverage:        " + risk_coverage + "\r\n";
+   text += "Risk Rows Est/Blocked: " + IntegerToString(total_risk_estimated) + " / " + IntegerToString(total_risk_blocked) + "\r\n";
+   text += "Risk Note:            estimated only; blocked/no-SL/invalid rows mean total live risk is unknown\r\n";
    text += "Refresh Source:       near-live snapshot scan\r\n";
    text += "Trade Permission:     FALSE\r\n";
    return text;
