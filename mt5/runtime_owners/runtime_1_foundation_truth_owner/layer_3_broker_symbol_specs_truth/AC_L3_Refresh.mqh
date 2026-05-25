@@ -19,7 +19,12 @@ void AC_RefreshLayer3BrokerSpecsTruth()
    }
 
    AC_L3_SCAN_STATUS = "Complete";
-   if(AC_L3_SPEC_PARTIAL_COUNT > 0 || AC_L3_SPEC_UNAVAILABLE_COUNT > 0 || AC_L3_VALUE_UNAVAILABLE_COUNT > 0) AC_L3_SCAN_STATUS = "Complete with warnings";
+   if(AC_L3_SPEC_UNAVAILABLE_COUNT > 0 || AC_L3_CRITICAL_MISSING_COUNT > 0)
+      AC_L3_SCAN_STATUS = "Degraded - specs incomplete";
+   else if(AC_L3_VALUE_UNAVAILABLE_COUNT > 0 || AC_L3_MARGIN_UNAVAILABLE_COUNT > 0)
+      AC_L3_SCAN_STATUS = "Degraded - value/margin unavailable";
+   else if(AC_L3_SPEC_PARTIAL_COUNT > 0 || AC_L3_VALUE_PARTIAL_COUNT > 0 || AC_L3_MARGIN_PARTIAL_COUNT > 0)
+      AC_L3_SCAN_STATUS = "Review - specs complete with value/margin partials";
    AC_L3_SCAN_DURATION_MS = GetTickCount() - AC_L3_SCAN_STARTED_MS;
    AC_L3_READY = true;
    AC_BuildLayer3Texts();
