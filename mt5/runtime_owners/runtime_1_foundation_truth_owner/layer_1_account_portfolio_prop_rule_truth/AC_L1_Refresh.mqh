@@ -28,11 +28,35 @@ void AC_L1NormalizeBaseAccountStatusSections()
    AC_L1RemoveLegacyBracketSectionId("direction_summary");
 }
 
+string AC_L1PropRuleTruthBlock()
+{
+   string text = "\r\nPROP RULE TRUTH\r\n";
+   text += "----------------------------------------\r\n";
+   text += "section_id:             L1_PROP_RULE_TRUTH\r\n";
+   text += "Prop Rule Profile:      NOT_LOADED / UNKNOWN\r\n";
+   text += "Prop Rule Safety:       UNKNOWN - live/funded permission blocked until firm rules are loaded and verified\r\n";
+   text += "Policy Source:          Jason local planning guard only; not broker or prop-firm rule proof\r\n";
+   text += "Trade Permission:       FALSE\r\n";
+   return text;
+}
+
+void AC_L1ResetLiveSnapshotRows()
+{
+   ArrayResize(AC_L1_POSITIONS, 0);
+   ArrayResize(AC_L1_PENDING, 0);
+
+   for(int i = 0; i < ArraySize(AC_L1_SYMBOL_STATS); i++)
+   {
+      AC_L1_SYMBOL_STATS[i].open_count = 0;
+      AC_L1_SYMBOL_STATS[i].pending_count = 0;
+   }
+}
+
 void AC_L1AppendPortfolioMaps()
 {
    // Account Status is a GPT-overseer briefing pack first, then the normal account report,
    // then grouped evidence blocks. Do not move this content onto Market Board.
-   AC_L1_ACCOUNT_STATUS_TEXT = AC_L1OverseerBriefPack() + AC_L1AccountStatusSectionIndex() + AC_L1_ACCOUNT_STATUS_TEXT;
+   AC_L1_ACCOUNT_STATUS_TEXT = AC_L1OverseerBriefPack() + AC_L1AccountStatusSectionIndex() + AC_L1PropRuleTruthBlock() + AC_L1_ACCOUNT_STATUS_TEXT;
 
    // Live/open-pending evidence first after the base report because it can change fastest.
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1OpenPendingLiveMap();
@@ -67,7 +91,10 @@ void AC_L1AppendPortfolioMaps()
    // Final safety strip in case an older local renderer or copied Include injected legacy bracket ids.
    AC_L1NormalizeBaseAccountStatusSections();
 
-   AC_L1_WORKBENCH_SECTION += "account_status_report_order=overseer_index_base_live_portfolio_cluster_recovery_risk_cost_quality\r\n";
+   AC_L1_WORKBENCH_SECTION += "account_status_report_order=overseer_index_prop_rule_base_live_portfolio_cluster_recovery_risk_cost_quality\r\n";
+   AC_L1_WORKBENCH_SECTION += "prop_rule_profile_status=not_loaded_unknown\r\n";
+   AC_L1_WORKBENCH_SECTION += "prop_rule_safety=unknown_live_funded_permission_blocked\r\n";
+   AC_L1_WORKBENCH_SECTION += "prop_rule_policy_source=jason_local_planning_guard_not_firm_rule_proof\r\n";
    AC_L1_WORKBENCH_SECTION += "overseer_brief=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "next_decision_hints=enabled_account_status_prefix\r\n";
    AC_L1_WORKBENCH_SECTION += "section_index=enabled_account_status_prefix\r\n";
@@ -114,7 +141,7 @@ void AC_RefreshLayer1AccountTruth()
 
 void AC_RefreshLayer1SnapshotOnly()
 {
-   ArrayResize(AC_L1_POSITIONS, 0);
+   AC_L1ResetLiveSnapshotRows();
    AC_L1RefreshAccountSnapshot();
    AC_L1ScanPositions();
    AC_L1ScanPendingOrders();
