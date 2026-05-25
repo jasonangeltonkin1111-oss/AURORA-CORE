@@ -3,20 +3,18 @@
 
 string AC_L3SymbolUniverseFingerprint(const int total)
 {
-   ulong hash = 1469598103934665603;
+   uint hash = 2166136261;
    for(int idx = 0; idx < total; idx++)
    {
       string symbol = SymbolName(idx, false);
       int len = StringLen(symbol);
-      hash = hash ^ (ulong)(idx + 1);
-      hash = hash * 1099511628211;
+      hash = (hash ^ (uint)(idx + 1)) * 16777619;
       for(int ch = 0; ch < len; ch++)
       {
-         hash = hash ^ (ulong)StringGetCharacter(symbol, ch);
-         hash = hash * 1099511628211;
+         hash = (hash ^ (uint)StringGetCharacter(symbol, ch)) * 16777619;
       }
    }
-   return IntegerToString((long)hash);
+   return IntegerToString((int)hash);
 }
 
 string AC_L3BuildCacheKey(const int total)
