@@ -6,7 +6,10 @@ void AC_RefreshLayer3BrokerSpecsTruth()
    int total = SymbolsTotal(false);
    AC_L3_LAST_SYMBOLS_TOTAL = total;
    AC_L3_LAST_L2_ROUTE_KEY = AC_L2_ROUTE_GENERATION_KEY;
-   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | symbols " + IntegerToString(total);
+   // L3 owns static/semi-static broker symbol specs and value metadata. It must
+   // not be invalidated by ordinary L2 open/closed route churn; L5 consumes L2
+   // and L3 separately when building the hard gate.
+   AC_L3_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | symbols " + IntegerToString(total) + " | owner=L3BrokerSpecsTruth";
 
    for(int idx = 0; idx < total; idx++)
    {
@@ -26,7 +29,6 @@ bool AC_L3ShouldRunFullScan()
 {
    if(!AC_L3_READY) return true;
    if(AC_L3_LAST_SYMBOLS_TOTAL != SymbolsTotal(false)) return true;
-   if(AC_L3_LAST_L2_ROUTE_KEY != AC_L2_ROUTE_GENERATION_KEY) return true;
    return false;
 }
 
