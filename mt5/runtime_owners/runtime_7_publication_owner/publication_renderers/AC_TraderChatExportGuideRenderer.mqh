@@ -136,7 +136,7 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
    text += "--------------------------------------------------\r\n";
    text += "Purpose: compact inspection order; scores are source-owner values, not board calculations.\r\n";
    text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | queued=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
-   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
+   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
    text += "Inactive future owners: ATR, indicators, liquidity, setup validation, L23 permission upgrade.\r\n";
    text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
@@ -166,7 +166,7 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
-   text += "Meaning: inspection/review export queue only; no setup permission, no execution.\r\n";
+   text += "Meaning: inspection/evidence-review export queue only; no setup permission, no execution.\r\n";
    return text;
 }
 
@@ -180,7 +180,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
    text += "--------------------------------------------------\r\n";
    text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
    text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | dynamic selected groups only\r\n";
-   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
+   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -239,7 +239,7 @@ string AC_BoardTraderSelectionOverviewSection()
    text += "\r\nSELECTION DESK - TRADER VIEW\r\n";
    text += "==================================================\r\n";
    text += "Purpose: fast symbol quality cockpit for trader chat. Render-only; no score calculation, no new owner.\r\n";
-   text += "Trade lock is declared once at the Board header; rows below are inspection/review queue only.\r\n";
+   text += "Trade lock is declared once at the Board header; rows below are inspection/evidence-review queue only.\r\n";
    text += AC_BoardGlobalTop10TraderOverviewSection(10);
    text += AC_BoardSelectedGroupsTop5TraderOverviewSection(7, 5);
    return text;
@@ -283,7 +283,7 @@ string AC_BoardTraderChatExportGuideSection()
    text += "Review Fields: review_status, discretionary_review_action, symbol, human_review_side_optional, declared_timeframe, setup_name, setup_proof_level, planned_entry_or_zone_if_human_defined, planned_sl_or_invalidation_if_human_defined, planned_tp_or_target_logic_if_human_defined, planned_risk_if_human_defined, main_reason, main_risk, reason_id, packet_required, packet_status.\r\n";
    text += "Reason ID Format: RID_YYYYMMDD_HHMMSS_SYMBOL_SIDE. If a human later places a discretionary trade outside Aurora, use the reason_id only as journal linkage.\r\n";
    text += "Safety Locks: trade_allowed=false; auto_trade_allowed=false; entry_signal=false; prop_firm_ready=false; requires_manual_confirmation=true; no approved trade, no guaranteed outcome, no proven edge unless validation evidence exists.\r\n";
-   text += "Packet Meaning: setup packet is journal/review evidence only. MT5 history must confirm any actual human execution. Aurora import/matching is not active unless later runtime proof says so.\r\n";
+   text += "Packet Meaning: setup packet is journal/evidence-review evidence only. MT5 history must confirm any actual human execution. Aurora import/matching is not active unless later runtime proof says so.\r\n";
    text += AC_L23ExportPermissionLockSection();
    text += AC_L23ExportPacketSchemaSection();
    return text;
