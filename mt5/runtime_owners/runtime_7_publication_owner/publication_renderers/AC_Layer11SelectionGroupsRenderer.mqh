@@ -2,7 +2,7 @@
 #define AC_LAYER11_SELECTION_GROUPS_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 11 Symbol Ranking Inside Ranking Group.
-// Reads only Python worker L11 summary/ranked outputs and visible Selection Desk files.
+// Reads only Python worker L11 summary/ranked outputs and canonical Selection Desk indexes.
 // Must not rank, classify, select groups, build Global Top 10, permit, alert, or execute.
 
 static string AC_L11_STATUS = "Pending L11 symbol ranking";
@@ -25,8 +25,9 @@ string AC_L11LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\
 string AC_L11SummaryPath(){ return AC_L11LayerFolder() + "\\l11_summary.txt"; }
 string AC_L11RankedSymbolsPath(){ return AC_L11LayerFolder() + "\\ranked_symbols_by_group.csv"; }
 string AC_L11Top5Path(){ return AC_L11LayerFolder() + "\\ranking_group_top5.csv"; }
-string AC_L11VisibleGroupIndexPath(){ return AC_SelectionGroupsFolder() + "\\00_Group_Index.txt"; }
-string AC_L11VisibleGroupIndexCsvPath(){ return AC_SelectionGroupsFolder() + "\\00_Group_Index.csv"; }
+string AC_L11CanonicalSelectionIndexFolder(){ return AC_SelectionDeskFolder() + "\\90_System_Indexes"; }
+string AC_L11VisibleGroupIndexPath(){ return AC_L11CanonicalSelectionIndexFolder() + "\\00_Group_Index.txt"; }
+string AC_L11VisibleGroupIndexCsvPath(){ return AC_L11CanonicalSelectionIndexFolder() + "\\00_Group_Index.csv"; }
 
 string AC_L11ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -131,7 +132,7 @@ void AC_L11RefreshSummary()
       AC_L11_ACCEPTED = true;
       AC_L11_STATUS = "Accepted";
       AC_L11_VALIDATION_STATUS = "Accepted";
-      AC_L11_VALIDATION_REASON = "summary/files/counts/visible_selection_desk_groups/permission all accepted";
+      AC_L11_VALIDATION_REASON = "summary/files/counts/canonical_selection_desk_indexes/permission all accepted";
       AC_L11_MAIN_BLOCKER = "none";
       return;
    }
@@ -155,11 +156,11 @@ string AC_Layer11BoardSection()
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L11_STATUS + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:                L10 taxonomy + L6-L9 surface scores\r\n";
+   text += "Input Source:                L10 taxonomy + L6-L9 surface scores + current dossier L5 guard\r\n";
    text += "Ranking Groups:             " + IntegerToString(AC_L11_RANKING_GROUP_COUNT) + "\r\n";
    text += "Rankable Symbols:           " + IntegerToString(AC_L11_RANKED_SYMBOL_COUNT) + "\r\n";
    text += "Top 5 per ranking_group:    " + (AC_L11_TOP5_GROUP_COUNT > 0 ? "available" : "pending") + "\r\n";
-   text += "Selection Desk Groups:      " + AC_SelectionGroupsFolder() + "\r\n";
+   text += "Selection Desk Index:       " + AC_L11CanonicalSelectionIndexFolder() + "\r\n";
    text += "Visible Group Files:        " + IntegerToString(AC_L11_VISIBLE_GROUP_FILES_WRITTEN) + " / " + IntegerToString(AC_L11_VISIBLE_GROUP_FILES_EXPECTED) + "\r\n";
    text += "Unknown ranking_group:      " + IntegerToString(AC_L11_NOT_RANKABLE_TAXONOMY_COUNT) + "\r\n";
    text += "Risk Review Symbols:        " + IntegerToString(AC_L11_RISK_REVIEW_COUNT) + "\r\n";
@@ -235,7 +236,7 @@ string AC_Layer11DossierSection(const string symbol)
       else
          text += "Reason: " + AC_L11CsvField(row, 44) + "\r\n";
    }
-   text += "Meaning: intra_group_inspection_priority_only\r\n";
+   text += "Meaning: intra_group_inspection_priority_only_current_l5_guarded\r\n";
    text += "Selection Runtime: FALSE\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Entry Signal: FALSE\r\n";
@@ -255,6 +256,7 @@ string AC_Layer11WorkbenchSection()
    text += "layer_id=11\r\n";
    text += "input_taxonomy_source=L10\r\n";
    text += "input_surface_layers=L6,L7,L8,L9\r\n";
+   text += "input_current_gate_source=published_current_dossier_route_and_l5_status_guard\r\n";
    text += "component_weights=L6:25,L7:20,L8:25,L9:30\r\n";
    text += "status=" + AC_L11_STATUS + "\r\n";
    text += "validation_status=" + AC_L11_VALIDATION_STATUS + "\r\n";
