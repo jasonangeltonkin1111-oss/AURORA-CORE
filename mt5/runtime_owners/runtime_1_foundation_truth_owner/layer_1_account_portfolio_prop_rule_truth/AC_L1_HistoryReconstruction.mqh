@@ -1,6 +1,21 @@
 #ifndef AC_L1_HISTORY_RECONSTRUCTION_MQH
 #define AC_L1_HISTORY_RECONSTRUCTION_MQH
 
+bool AC_L1HistoryBudgetExceeded()
+{
+   if(AC_L1_HISTORY_SCAN_STARTED_MS == 0) return false;
+   uint elapsed = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
+   if(elapsed <= (uint)AC_L1_HISTORY_SCAN_BUDGET_MS) return false;
+   AC_L1_HISTORY_BUDGET_ABORT_COUNT++;
+   AC_L1_HISTORY_SCAN_DURATION_MS = elapsed;
+   AC_L1_SCAN_STATUS = "complete_with_degraded";
+   AC_L1_HISTORY_STATUS = "available_partial_budget_limited";
+   if(StringFind(AC_L1_HISTORY_QUALITY, "budget_limited") < 0)
+      AC_L1_HISTORY_QUALITY += "_budget_limited";
+   AC_L1_HISTORY_NOTE += "; history reconstruction stopped by Layer 1 scan budget; selected rows are partial and must not be interpreted as complete account history";
+   return true;
+}
+
 double AC_L1SafeDealFee(const ulong deal_ticket)
 {
    double value = 0.0;
@@ -10,7 +25,7 @@ double AC_L1SafeDealFee(const ulong deal_ticket)
    return 0.0;
 }
 
-void AC_L1AllocatedPositionCostValues(const long position_id,
+bool AC_L1AllocatedPositionCostValues(const long position_id,
                                       const double close_volume,
                                       double &commission_value,
                                       double &swap_value,
@@ -19,7 +34,7 @@ void AC_L1AllocatedPositionCostValues(const long position_id,
    commission_value = 0.0;
    swap_value = 0.0;
    fee_value = 0.0;
-   if(position_id <= 0) return;
+   if(position_id <= 0) return false;
 
    double commission_sum = 0.0;
    double swap_sum = 0.0;
@@ -29,6 +44,7 @@ void AC_L1AllocatedPositionCostValues(const long position_id,
    int total = HistoryDealsTotal();
    for(int i = 0; i < total; i++)
    {
+      if(AC_L1HistoryBudgetExceeded()) return false;
       ulong ticket = HistoryDealGetTicket(i);
       if(ticket == 0) continue;
       if(HistoryDealGetInteger(ticket, DEAL_POSITION_ID) != position_id) continue;
@@ -54,6 +70,7 @@ void AC_L1AllocatedPositionCostValues(const long position_id,
    commission_value = commission_sum * factor;
    swap_value = swap_sum * factor;
    fee_value = fee_sum * factor;
+   return true;
 }
 
 bool AC_L1SelectedDealIsClosedTrade(const ulong deal_ticket)
@@ -73,6 +90,7 @@ int AC_L1CountSelectedClosedTradeDeals()
    int total = HistoryDealsTotal();
    for(int i = total - 1; i >= 0; i--)
    {
+      if(AC_L1HistoryBudgetExceeded()) break;
       ulong ticket = HistoryDealGetTicket(i);
       if(AC_L1SelectedDealIsClosedTrade(ticket)) count++;
    }
@@ -92,6 +110,7 @@ bool AC_L1FindEntryDealForPosition(const long position_id,
 
    for(int i = close_deal_index - 1; i >= 0; i--)
    {
+      if(AC_L1HistoryBudgetExceeded()) return false;
       ulong ticket = HistoryDealGetTicket(i);
       if(ticket == 0) continue;
       if(HistoryDealGetInteger(ticket, DEAL_POSITION_ID) != position_id) continue;
@@ -123,6 +142,7 @@ bool AC_L1FindHistoryOrderForPosition(const long position_id,
    int total = HistoryOrdersTotal();
    for(int i = 0; i < total; i++)
    {
+      if(AC_L1HistoryBudgetExceeded()) return found;
       ulong order_ticket = HistoryOrderGetTicket(i);
       if(order_ticket == 0) continue;
       if(HistoryOrderGetInteger(order_ticket, ORDER_POSITION_ID) != position_id) continue;
