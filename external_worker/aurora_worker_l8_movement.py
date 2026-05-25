@@ -22,6 +22,7 @@ L8_MODEL_VERSION = "true_range_v2_priority_windows"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
 L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Priority_Windows"
+L8_GATEWAY_ROLE = "Runtime 3 Gateway support only"
 L8_REASON_MAX_PARTS = 16
 L8_REASON_MAX_CHARS = 640
 
@@ -568,7 +569,7 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool])
             continue
         if key in row:
             lines.append(f"{key}={_format_value(row[key])}")
-    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
+    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", f"scoring_owner={L8_OWNER}", f"gateway_role={L8_GATEWAY_ROLE}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority Windows/<TF>.window.csv", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
@@ -580,14 +581,14 @@ def _manifest(summary: L8RankSummary, input_path: Path, store_root: Path) -> str
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest", "schema_version=4", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
-        f"input_csv_path={input_path}", f"shared_ohlc_store_root={store_root}", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        f"input_csv_path={input_path}", f"shared_ohlc_store_root={store_root}", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority Windows/<TF>.window.csv", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
         f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
         f"ohlc_priority_window_payload_checksum={summary.ohlc_priority_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_risk_review_count={summary.ranked_risk_review_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", f"scoring_owner={L8_OWNER}", f"gateway_role={L8_GATEWAY_ROLE}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
