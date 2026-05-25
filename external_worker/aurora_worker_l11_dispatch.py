@@ -4,6 +4,7 @@ from pathlib import Path
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, payload_checksum, unix_time, utc_stamp
 from aurora_worker_l11 import L11PublishSummary, publish_l11_symbol_ranking_inside_group
+from aurora_worker_l11_current_gate_guard import guard_l11_with_current_dossier_gate
 from aurora_worker_l11_cleanup import cleanup_l11_stale_symbol_rank_sidecars
 from aurora_worker_l11_dossier_copy import EMPTY_L11_DOSSIER_COPY_SUMMARY, L11DossierCopySummary, copy_l11_tree_rank_files_from_dossiers
 from aurora_worker_l11_tree import L11TreeSummary, publish_l11_selection_desk_taxonomy_tree
@@ -80,7 +81,7 @@ def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecar
         f"l11_selection_root_index_files_expected={root_index.files_expected}",
         f"l11_selection_root_index_write_failed_count={root_index.write_failed_count}",
         f"l11_selection_root_index_path={root_index.index_path}",
-        "l11_meaning=intra_group_inspection_priority_only",
+        "l11_meaning=intra_group_inspection_priority_only_current_l5_guarded",
         "l11_asset_class_shortcut_meaning=asset_class_review_shortcuts_only_existing_l11_score",
         "l11_shallow_group_shortcut_meaning=ranking_group_review_shortcuts_only_existing_l11_rank",
         "l11_selection_root_index_meaning=operator_navigation_index_only_no_scoring_authority",
@@ -118,6 +119,7 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
         stale_sidecars_removed = cleanup_l11_stale_symbol_rank_sidecars(root)
         if stale_sidecars_removed > 0:
             summary = publish_l11_symbol_ranking_inside_group(paths.outbox)
+    summary = guard_l11_with_current_dossier_gate(paths.outbox, summary)
     tree_summary = publish_l11_selection_desk_taxonomy_tree(root)
     dossier_copy_summary = copy_l11_tree_rank_files_from_dossiers(root)
     asset_shortcuts_summary = publish_l11_asset_class_shortcuts(root)
