@@ -12,9 +12,37 @@ string AC_L3TextOrNA(const string value)
    return value;
 }
 
+string AC_L3AdaptiveMoneyText(const double value)
+{
+   double abs_value = MathAbs(value);
+   if(abs_value == 0.0)
+      return "0.00";
+   if(abs_value < 0.000001)
+      return DoubleToString(value, 10);
+   if(abs_value < 0.005)
+      return DoubleToString(value, 8);
+   if(abs_value < 1.0)
+      return DoubleToString(value, 6);
+   return DoubleToString(value, 2);
+}
+
 string AC_L3MoneyText(const double value)
 {
-   return DoubleToString(value, 2);
+   return AC_L3AdaptiveMoneyText(value);
+}
+
+string AC_L3CalculationMoneyText(const double value, const bool available)
+{
+   if(!available)
+      return "Not available";
+   return AC_L3AdaptiveMoneyText(value);
+}
+
+string AC_L3ReferencePriceText(const bool available, const double value)
+{
+   if(!available)
+      return "Not available";
+   return DoubleToString(value, 8);
 }
 
 string AC_L3NumberText(const double value, const int digits = 6)
