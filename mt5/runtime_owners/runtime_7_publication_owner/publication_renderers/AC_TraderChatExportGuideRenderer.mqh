@@ -26,7 +26,7 @@ string AC_TCSCsvField(string line, int index, string fallback = "NA")
    return AC_TCSValueOrNA(value);
 }
 
-bool AC_TCSHasDeepSelection(const string symbol)
+bool AC_TCSHasQueueSelection(const string symbol)
 {
    return (AC_L17CsvLineForSymbol(symbol) != "");
 }
@@ -38,7 +38,7 @@ bool AC_TCSHasTop10Selection(const string symbol)
 
 string AC_TCSReviewText(const string symbol)
 {
-   if(AC_TCSHasDeepSelection(symbol)) return "YES";
+   if(AC_TCSHasQueueSelection(symbol)) return "YES";
    if(AC_TCSHasTop10Selection(symbol)) return "WATCH";
    return "NO";
 }
@@ -58,10 +58,10 @@ string AC_TCSBoardReadinessReason()
 {
    string state = AC_TCSBoardReadinessState();
    if(state == "READY_FOR_REVIEW")
-      return "selection/evidence candidates exist, but L23 strategy-risk-permission owner is not active";
+      return "selection/evidence-budget queue candidates exist, but L23 strategy-risk-permission owner is not active";
    if(state == "WATCH_ONLY")
-      return "visible Top 10 candidates exist, but no deep-evidence selection is ready";
-   return "no current selected evidence candidates available";
+      return "visible Top 10 candidates exist, but no L17 queue selection is ready";
+   return "no current selected evidence-budget queue candidates available";
 }
 
 string AC_TCSL6CsvLineForSymbol(const string symbol)
@@ -87,7 +87,7 @@ string AC_TCSTop10RankText(const string symbol)
    return "#" + AC_TCSCsvField(row, 0, "NA");
 }
 
-string AC_TCSDeepText(const string symbol)
+string AC_TCSQueueText(const string symbol)
 {
    string row = AC_L17CsvLineForSymbol(symbol);
    if(row == "") return "No";
@@ -109,7 +109,7 @@ string AC_TCSCompactSymbolRow(const string rank_text,
    string bps = (l6_row == "" ? "NA" : AC_TCSCsvField(l6_row, 9, "NA"));
    string move = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 37, "NA"));
    string loc = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 40, "NA"));
-   string deep_text = AC_TCSDeepText(symbol);
+   string queue_text = AC_TCSQueueText(symbol);
    string review_text = AC_TCSReviewText(symbol);
 
    return rank_text + " " + symbol
@@ -121,7 +121,7 @@ string AC_TCSCompactSymbolRow(const string rank_text,
       + " | loc=" + loc
       + " | corr=" + corr_score
       + " | top10=" + top10_text
-      + " | deep=" + deep_text
+      + " | queue=" + queue_text
       + " | review=" + review_text
       + " | permission=NO\r\n";
 }
@@ -134,8 +134,8 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
    text += "\r\nGLOBAL TOP 10 - INSPECTION ORDER\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Purpose: compact inspection order; scores are source-owner values, not board calculations.\r\n";
-   text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | deep=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
-   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | deep=L17 deep-evidence rank | review=manual trade-review queue, not permission.\r\n";
+   text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | queued=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
+   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
    text += "Inactive future owners: ATR, indicators, liquidity, setup, L23 permission.\r\n";
    text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
@@ -179,7 +179,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
    text += "--------------------------------------------------\r\n";
    text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
    text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | dynamic selected groups only\r\n";
-   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 basket membership | deep=L17 deep-evidence rank | review=manual trade-review queue, not permission.\r\n";
+   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -257,63 +257,6 @@ string AC_BoardTraderChatExportGuideSection()
    text += "Safety Locks: trade_permission=false; prop_firm_safe=false; requires_manual_confirmation=true; no approved trade, no guaranteed outcome, no proven edge unless validation evidence exists.\r\n";
    text += "Packet Meaning: setup packet is journal evidence only. MT5 history must confirm actual execution. Aurora import/matching is not active unless later runtime proof says so.\r\n";
    return text;
-}
-
-string AC_NormalizeTraderBoardText(string text)
-{
-   // Cockpit wording: generic latest surface, not a moving layer label.
-   StringReplace(text, "Selection Surface:   L16 visible basket + L17 deep-evidence split; inspection only\r\n", "Selection Surface:   Latest accepted selection/evidence surface; see pipeline detail below\r\n");
-   StringReplace(text, "Use For Selection:    L16/L17 inspection surfaces only; no trade permission\r\n", "Use For Selection:    Latest selection/evidence surface is inspection-only; no trade permission\r\n");
-   StringReplace(text, "Best Current Use:     Review L17 deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n", "Best Current Use:     Review selected/deep-selected symbols first, then rejected/watch-only rows and dossiers\r\n");
-   StringReplace(text, "Selection Active:   L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n", "Selection Active:   latest selection/evidence surfaces only; no trade permission\r\n");
-   StringReplace(text, "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n", "Latest accepted selection/evidence surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n");
-   StringReplace(text, "Dossier Layout Contract:    dossier_topview_v2_l15\r\n", "Dossier Layout Contract:    dossier_topview_selection_surface_v3\r\n");
-
-   // Board trade-readiness bridge: readiness can appear before L23, permission cannot.
-   StringReplace(text, "Auto Trading:     FALSE\r\n", "Auto Trading:     FALSE\r\nTrade Readiness:  " + AC_TCSBoardReadinessState() + "\r\nReadiness Reason: " + AC_TCSBoardReadinessReason() + "\r\nPermission Owner: L23 not active - manual review only\r\n");
-
-   // Board-facing permission dedupe: keep the single top Board lock, remove repeated layer-level false flags.
-   StringReplace(text, "L23 Trade Permission:     false\r\n", "");
-   StringReplace(text, "Permission Active:  No\r\n", "");
-   StringReplace(text, "Ranking Runtime:            FALSE\r\n", "");
-   StringReplace(text, "Selection Runtime:          FALSE\r\n", "");
-   StringReplace(text, "Selection Runtime: FALSE\r\n", "");
-   StringReplace(text, "Candidate Pool Runtime: FALSE\r\n", "");
-   StringReplace(text, "Global Top10 Runtime: FALSE\r\n", "");
-   StringReplace(text, "Deep Evidence Runtime: FALSE\r\n", "");
-   StringReplace(text, "Trade Permission:     FALSE\r\n", "");
-   StringReplace(text, "Trade Permission:      FALSE\r\n", "");
-   StringReplace(text, "Trade Permission:           FALSE\r\n", "");
-   StringReplace(text, "Trade Permission:          FALSE\r\n", "");
-   StringReplace(text, "Entry Signal: FALSE\r\n", "");
-   StringReplace(text, "Entry Signal:        FALSE\r\n", "");
-   StringReplace(text, "Entry Signal:          FALSE\r\n", "");
-   StringReplace(text, "Execution: FALSE\r\n", "");
-   StringReplace(text, "Execution:           FALSE\r\n", "");
-   StringReplace(text, "Execution:             FALSE\r\n", "");
-   StringReplace(text, "Layer 6 Blocks Symbols: FALSE\r\n", "");
-   StringReplace(text, "Layer 7 Blocks Symbols: FALSE\r\n", "");
-   StringReplace(text, "Layer 8 Blocks Symbols: FALSE\r\n", "");
-   StringReplace(text, "Layer 9 Blocks Symbols: FALSE\r\n", "");
-
-   // Board-facing debug proof trim: Workbench/status rows still preserve these truths.
-   StringReplace(text, "SymbolRank Filename Mode: sanitized_symbol__payload_checksum\r\n", "");
-   StringReplace(text, "Generation Counts OK:       TRUE\r\n", "");
-   StringReplace(text, "Generation Identity OK:     TRUE\r\n", "");
-   StringReplace(text, "Gateway Required:           TRUE\r\n", "");
-   StringReplace(text, "Gateway Required: FALSE\r\n", "");
-   StringReplace(text, "Gateway Result Accepted:    TRUE\r\n", "");
-   StringReplace(text, "Validation: Accepted\r\n", "");
-   StringReplace(text, "Validation: AcceptedWithDrift\r\n", "Validation: drift accepted\r\n");
-   return text;
-}
-
-string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
-                               const AC_Layer0StatusPacket &status)
-{
-   string text = AC_BuildTraderBoardText_Base(snapshot, status);
-   text = AC_NormalizeTraderBoardText(text);
-   return text + AC_BoardTraderChatExportGuideSection();
 }
 
 #endif
