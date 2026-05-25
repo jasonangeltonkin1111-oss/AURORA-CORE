@@ -17,6 +17,9 @@ def l15_result_lines(summary: L15PublishSummary, duration_ms: int) -> str:
         f"l15_candidate_scored_count={summary.candidate_scored_count}",
         f"l15_candidate_pool_capped={summary.candidate_pool_capped}",
         f"l15_candidate_pool_cap={summary.candidate_pool_cap}",
+        f"l15_main_lane_candidate_count={summary.main_lane_candidate_count}",
+        f"l15_deferred_candidate_count={summary.deferred_candidate_count}",
+        f"l15_soft_cap_policy={summary.soft_cap_policy}",
         f"l15_pairwise_pair_count={summary.pairwise_pair_count}",
         f"l15_corr_pair_count={summary.corr_pair_count}",
         f"l15_high_corr_pair_count={summary.high_corr_pair_count}",
@@ -71,8 +74,11 @@ def run_l15_after_l14(root: Path) -> L15PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=12",
+            "schema_version=13",
             "worker_l15_append_status=appended_by_l15_dispatch",
+            f"l15_main_lane_candidate_count={summary.main_lane_candidate_count}",
+            f"l15_deferred_candidate_count={summary.deferred_candidate_count}",
+            f"l15_soft_cap_policy={summary.soft_cap_policy}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
