@@ -22,11 +22,29 @@ string AC_L3ObservedMoneyText(const double value)
    return AC_L3MoneyText(value);
 }
 
+string AC_L3ObservedCalculationMoneyText(const double value, const bool available)
+{
+   return AC_L3CalculationMoneyText(value, available);
+}
+
 string AC_L3MarginRateText(const bool available, const double initial, const double maintenance)
 {
    if(!available)
-      return "0.000000 / 0.000000";
+      return "Not available / Not available";
    return AC_L3NumberText(initial, 6) + " / " + AC_L3NumberText(maintenance, 6);
+}
+
+string AC_L3TruthStatusText()
+{
+   if(!AC_L3_READY)
+      return "Pending";
+   if(AC_L3_SPEC_UNAVAILABLE_COUNT > 0 || AC_L3_CRITICAL_MISSING_COUNT > 0)
+      return "Degraded - specs incomplete";
+   if(AC_L3_VALUE_UNAVAILABLE_COUNT > 0 || AC_L3_MARGIN_UNAVAILABLE_COUNT > 0)
+      return "Degraded - value/margin unavailable";
+   if(AC_L3_VALUE_PARTIAL_COUNT > 0 || AC_L3_MARGIN_PARTIAL_COUNT > 0)
+      return "Review - specs complete with value/margin partials";
+   return AC_L3_SCAN_STATUS;
 }
 
 string AC_L3ClosedLayer4Status(const string market_state)
@@ -41,7 +59,8 @@ void AC_BuildLayer3Texts()
    int denom = AC_L3_ELIGIBLE_FROM_L2;
    AC_L3_BOARD_SECTION = "\r\nLAYER 3 - BROKER SPECS AND VALUE TRUTH\r\n";
    AC_L3_BOARD_SECTION += "----------------------------------------\r\n";
-   AC_L3_BOARD_SECTION += "Status:                    " + AC_L3_SCAN_STATUS + "\r\n";
+   AC_L3_BOARD_SECTION += "Status:                    " + AC_L3TruthStatusText() + "\r\n";
+   AC_L3_BOARD_SECTION += "Scan Status:               " + AC_L3_SCAN_STATUS + "\r\n";
    AC_L3_BOARD_SECTION += "Eligible From Layer 2:      " + IntegerToString(AC_L3_ELIGIBLE_FROM_L2) + "\r\n";
    AC_L3_BOARD_SECTION += "Scanned:                   " + AC_L3Ratio(AC_L3_SCANNED_COUNT, denom) + "\r\n";
    AC_L3_BOARD_SECTION += "Closed Symbols Scanned:    " + IntegerToString(AC_L3_SKIPPED_CLOSED) + "\r\n";
@@ -74,6 +93,7 @@ void AC_BuildLayer3Texts()
 
    AC_L3_WORKBENCH_SECTION = "\r\nL3_BROKER_SPECS_VALUE_SCAN\r\n";
    AC_L3_WORKBENCH_SECTION += "----------------------------------------\r\n";
+   AC_L3_WORKBENCH_SECTION += "truth_status=" + AC_L3TruthStatusText() + "\r\n";
    AC_L3_WORKBENCH_SECTION += "scan_status=" + AC_L3_SCAN_STATUS + "\r\n";
    AC_L3_WORKBENCH_SECTION += "scan_duration_ms=" + IntegerToString((int)AC_L3_SCAN_DURATION_MS) + "\r\n";
    AC_L3_WORKBENCH_SECTION += "eligible_from_l2_known=" + IntegerToString(AC_L3_ELIGIBLE_FROM_L2) + "\r\n";
@@ -235,26 +255,26 @@ string AC_Layer3DossierSection(const string symbol)
    text += AC_L3DossierLine("Margin Currency", AC_L3TextOrNA(s.currency_margin));
    text += AC_L3DossierLine("Price Reference", s.price_reference_status);
    text += AC_L3DossierLine("Reference Detail", s.value_reference_detail);
-   text += AC_L3DossierLine("Reference Buy Price", AC_L3NumberText(s.value_reference_buy_price, 8));
-   text += AC_L3DossierLine("Reference Sell Price", AC_L3NumberText(s.value_reference_sell_price, 8));
+   text += AC_L3DossierLine("Reference Buy Price", AC_L3ReferencePriceText(s.value_reference_buy_ok, s.value_reference_buy_price));
+   text += AC_L3DossierLine("Reference Sell Price", AC_L3ReferencePriceText(s.value_reference_sell_ok, s.value_reference_sell_price));
    text += AC_L3DossierLine("Value Source", s.value_source);
-   text += AC_L3DossierLine("Money Per Point Buy One Lot", AC_L3ObservedMoneyText(s.money_per_point_buy_1lot));
+   text += AC_L3DossierLine("Money Per Point Buy One Lot", AC_L3ObservedCalculationMoneyText(s.money_per_point_buy_1lot, s.order_calc_profit_buy_ok || s.value_from_tick_value));
    text += AC_L3DossierLine("Money Per Point Buy Status", s.value_buy_status);
-   text += AC_L3DossierLine("Money Per Point Sell One Lot", AC_L3ObservedMoneyText(s.money_per_point_sell_1lot));
+   text += AC_L3DossierLine("Money Per Point Sell One Lot", AC_L3ObservedCalculationMoneyText(s.money_per_point_sell_1lot, s.order_calc_profit_sell_ok || s.value_from_tick_value));
    text += AC_L3DossierLine("Money Per Point Sell Status", s.value_sell_status);
-   text += AC_L3DossierLine("Money Per Tick Buy One Lot", AC_L3ObservedMoneyText(s.money_per_tick_buy_1lot));
-   text += AC_L3DossierLine("Money Per Tick Sell One Lot", AC_L3ObservedMoneyText(s.money_per_tick_sell_1lot));
+   text += AC_L3DossierLine("Money Per Tick Buy One Lot", AC_L3ObservedCalculationMoneyText(s.money_per_tick_buy_1lot, s.order_calc_profit_buy_ok || s.value_from_tick_value));
+   text += AC_L3DossierLine("Money Per Tick Sell One Lot", AC_L3ObservedCalculationMoneyText(s.money_per_tick_sell_1lot, s.order_calc_profit_sell_ok || s.value_from_tick_value));
    text += AC_L3DossierLine("Tick Value Fallback", s.tick_value_fallback_status);
    text += AC_L3DossierLine("Tick Value Crosscheck", s.tick_value_crosscheck_status);
 
    text += "\r\nMargin Primitives\r\n";
-   text += AC_L3DossierLine("Margin Buy One Lot", AC_L3ObservedMoneyText(s.margin_buy_1lot_account_ccy));
+   text += AC_L3DossierLine("Margin Buy One Lot", AC_L3ObservedCalculationMoneyText(s.margin_buy_1lot_account_ccy, s.order_calc_margin_buy_ok));
    text += AC_L3DossierLine("Margin Buy One Lot Status", s.margin_buy_status);
-   text += AC_L3DossierLine("Margin Sell One Lot", AC_L3ObservedMoneyText(s.margin_sell_1lot_account_ccy));
+   text += AC_L3DossierLine("Margin Sell One Lot", AC_L3ObservedCalculationMoneyText(s.margin_sell_1lot_account_ccy, s.order_calc_margin_sell_ok));
    text += AC_L3DossierLine("Margin Sell One Lot Status", s.margin_sell_status);
-   text += AC_L3DossierLine("Margin Buy Minimum Volume", AC_L3ObservedMoneyText(s.margin_buy_minlot_account_ccy));
+   text += AC_L3DossierLine("Margin Buy Minimum Volume", AC_L3ObservedCalculationMoneyText(s.margin_buy_minlot_account_ccy, s.margin_min_buy_ok));
    text += AC_L3DossierLine("Margin Buy Minimum Volume Status", s.margin_min_buy_status);
-   text += AC_L3DossierLine("Margin Sell Minimum Volume", AC_L3ObservedMoneyText(s.margin_sell_minlot_account_ccy));
+   text += AC_L3DossierLine("Margin Sell Minimum Volume", AC_L3ObservedCalculationMoneyText(s.margin_sell_minlot_account_ccy, s.margin_min_sell_ok));
    text += AC_L3DossierLine("Margin Sell Minimum Volume Status", s.margin_min_sell_status);
    text += AC_L3DossierLine("Margin Rate Buy", AC_L3MarginRateText(s.margin_rate_buy_ok, s.margin_rate_buy_initial, s.margin_rate_buy_maintenance));
    text += AC_L3DossierLine("Margin Rate Buy Status", s.margin_rate_buy_status);
@@ -276,14 +296,19 @@ string AC_Layer3StatusRow()
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
-      + "|layer_status=" + (AC_L3_READY ? AC_L3_SCAN_STATUS : "pending")
+      + "|layer_status=" + (AC_L3_READY ? AC_L3TruthStatusText() : "pending")
+      + "|scan_status=" + (AC_L3_READY ? AC_L3_SCAN_STATUS : "pending")
       + "|eligible_from_l2_known=" + IntegerToString(AC_L3_ELIGIBLE_FROM_L2)
       + "|scanned_count=" + IntegerToString(AC_L3_SCANNED_COUNT)
       + "|closed_symbols_scanned=" + IntegerToString(AC_L3_SKIPPED_CLOSED)
       + "|unknown_symbols_skipped=" + IntegerToString(AC_L3_SKIPPED_UNKNOWN)
       + "|spec_ready_count=" + IntegerToString(AC_L3_SPEC_READY_COUNT)
       + "|value_ready_count=" + IntegerToString(AC_L3_VALUE_READY_COUNT)
+      + "|value_partial_count=" + IntegerToString(AC_L3_VALUE_PARTIAL_COUNT)
+      + "|value_unavailable_count=" + IntegerToString(AC_L3_VALUE_UNAVAILABLE_COUNT)
       + "|margin_ready_count=" + IntegerToString(AC_L3_MARGIN_READY_COUNT)
+      + "|margin_partial_count=" + IntegerToString(AC_L3_MARGIN_PARTIAL_COUNT)
+      + "|margin_unavailable_count=" + IntegerToString(AC_L3_MARGIN_UNAVAILABLE_COUNT)
       + "|taxonomy_ready_count=" + IntegerToString(AC_L3_BUCKET_READY_COUNT)
       + "|trade_permission=false";
 }
