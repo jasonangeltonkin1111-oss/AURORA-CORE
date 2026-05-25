@@ -6,7 +6,6 @@ from typing import Dict, Iterable, List, Optional, Sequence
 import csv
 import io
 import re
-import shutil
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, utc_stamp, unix_time
 
@@ -41,7 +40,6 @@ class SelectionShortcutSummary:
     stale_files_removed: int = 0
     write_failed_count: int = 0
     status_path: str = "not_available"
-    dossier_sources_held_unsafe: int = 0
 
 
 EMPTY_SELECTION_SHORTCUT_SUMMARY = SelectionShortcutSummary("pending", "selection_shortcut_not_run")
@@ -162,109 +160,79 @@ def _find_dossier(account_root: Path, symbol: str) -> Optional[Path]:
     return None
 
 
-def _source_route_state(source: Path) -> str:
-    for parent in source.parents:
-        if parent.name in {"Open", "Closed", "Unknown"}:
-            return parent.name
-    return "not_available"
-
-
-def _first_matching_value(text: str, labels: Sequence[str]) -> str:
-    for raw_line in text.replace("\r\n", "\n").split("\n"):
-        line = raw_line.strip()
-        lower = line.lower()
-        for label in labels:
-            wanted = label.lower()
-            if lower.startswith(wanted):
-                value = line[len(label):].strip(" :=|\t")
-                return value or "not_available"
-    return "not_available"
-
-
-def _row_l5_state(row: Optional[Dict[str, str]]) -> str:
-    if not row:
-        return "not_available"
-    for field in ("l5_gate_state", "l5_status", "l5_gate_status"):
-        value = str(row.get(field, "")).strip()
-        if value:
-            return value
-    return "not_available"
-
-
-def _dossier_source_rejection_reasons(source: Path, source_text: str, selection_row: Optional[Dict[str, str]]) -> List[str]:
-    reasons: List[str] = []
-    route_state = _source_route_state(source)
-    lower = source_text.lower()
-    row_l5 = _row_l5_state(selection_row).lower()
-
-    if route_state in {"Closed", "Unknown"}:
-        reasons.append(f"source_route_{route_state.lower()}")
-
-    if "market state: closed" in lower or "market_state=closed" in lower:
-        reasons.append("source_market_state_closed")
-    if "market state: unknown" in lower or "market_state=unknown" in lower:
-        reasons.append("source_market_state_unknown")
-    if "l5 gate status: blocked" in lower or "l5_gate_status=blocked" in lower or "l5 gate state: blocked" in lower:
-        reasons.append("source_l5_blocked")
-    if "market_not_open" in lower:
-        reasons.append("source_l5_market_not_open")
-    if "dossier stale" in lower or "stale_previous_generation" in lower:
-        reasons.append("source_dossier_stale")
-    if row_l5 and row_l5 not in {"not_available", "pass", "passed", "accepted", "open", "true", "ok"}:
-        reasons.append(f"selection_row_l5_not_pass:{row_l5}")
-
-    # The copy bridge is not an owner of market state. If it cannot find positive
-    # Open-route + non-blocked dossier evidence, it must publish a held warning
-    # rather than copying a stale/closed dossier into a Top 10/Top 5 shortcut.
-    if route_state == "not_available":
-        reasons.append("source_route_unknown")
-    return list(dict.fromkeys(reasons))
-
-
-def _held_dossier_text(symbol: str, source: Path, target: Path, reasons: Sequence[str], selection_row: Optional[Dict[str, str]]) -> str:
-    source_text = read_text(source) if source.exists() else ""
-    route_state = _source_route_state(source)
-    market_state = _first_matching_value(source_text, ["Market State", "market_state"])
-    l5_status = _first_matching_value(source_text, ["L5 Gate Status", "l5_gate_status", "L5 Gate State", "l5_gate_state"])
-    l5_reason = _first_matching_value(source_text, ["L5 Gate Reason", "l5_gate_reason"])
-    return "\n".join([
-        "AURORA SELECTION SURFACE DOSSIER COPY HELD",
+def _shortcut_overlay_text(symbol: str, overlay_lines: Sequence[str] | None, source_path: str, source_missing: bool) -> str:
+    lines = [
+        "AURORA CURRENT SELECTION SHORTCUT TRUTH",
         "----------------------------------------",
         f"symbol={symbol}",
-        "status=held_stale_or_unsafe_source",
-        f"reason={';'.join(reasons) if reasons else 'source_not_safe_for_selection_copy'}",
-        "source_owner=Runtime 7 Dossier publication owner output",
-        "copy_bridge=selection_surface_shortcut_copy_only",
-        "copy_policy=do_not_copy_closed_unknown_blocked_or_stale_source_dossier_into_selection_surface",
-        "dossier_rerendered=false",
-        f"source_dossier_path={source}",
-        f"target_dossier_path={target}",
-        f"source_route_state={route_state}",
-        f"source_market_state={market_state}",
-        f"source_l5_gate_status={l5_status}",
-        f"source_l5_gate_reason={l5_reason}",
-        f"selection_row_l5_state={_row_l5_state(selection_row)}",
+        "shortcut_truth_owner=selection_surface_shortcut_copy_bridge",
+        "shortcut_truth_priority=current_selection_overlay_over_base_dossier_body",
+        "base_dossier_body_policy=historical_body_may_lag_current_selection_overlay",
+        f"source_dossier_path={source_path}",
+        f"source_dossier_missing={'true' if source_missing else 'false'}",
+    ]
+    if overlay_lines:
+        for line in overlay_lines:
+            clean = str(line).strip()
+            if clean:
+                lines.append(clean)
+    lines.extend([
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
         "execution=false",
-        "operator_instruction=refresh_current_dossiers_and_l1_l5_packets_before_trusting_this_selection_shortcut",
-        f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
+        f"shortcut_generated_utc={utc_stamp()}",
+        f"shortcut_generated_unix={unix_time()}",
+        "",
+        "STALE-SECTION WARNING",
+        "Base dossier content below may be older than this current shortcut overlay if the bounded dossier renderer has not refreshed this symbol yet.",
+        "Read the overlay above as the current Selection Desk truth for this shortcut file.",
+        "----------------------------------------",
         "",
     ])
+    return "\n".join(lines)
 
 
-def _copy_dossier_or_placeholder(
-    account_root: Path,
-    symbol: str,
-    target: Path,
-    failed: List[Path],
-    selection_row: Optional[Dict[str, str]] = None,
-) -> tuple[bool, bool, str, str]:
+def _global_shortcut_overlay(row: Dict[str, str], rank: int) -> List[str]:
+    return [
+        "shortcut_type=global_top10_dossier_copy",
+        "current_selection_source=Selection Desk/Global/current_top10.csv",
+        "current_selection_member=true",
+        f"current_l16_rank={rank}",
+        f"current_l16_symbol={row.get('symbol', 'not_available')}",
+        f"current_l16_selection_tier={row.get('selection_tier', 'not_available')}",
+        f"current_l16_clean_diversified={row.get('clean_diversified', 'false')}",
+        f"current_l16_primary_score={row.get('l16_primary_score', 'not_available')}",
+        f"current_l16_max_corr_to_selected={row.get('max_corr_to_selected', 'not_available')}",
+        f"current_l16_max_corr_pair_symbol={row.get('max_corr_pair_symbol', 'not_available')}",
+        f"current_ranking_group={row.get('ranking_group', 'Unknown')}",
+        f"current_asset_class={row.get('asset_class', 'Unknown')}",
+        f"current_market_group={row.get('market_group', 'Unknown')}",
+        f"current_market_segment={row.get('market_segment', 'Unknown')}",
+        "current_l16_meaning=global_top10_inspection_basket_only_not_trade_permission",
+    ]
+
+
+def _asset_shortcut_overlay(row: Dict[str, str], asset: str, rank: int) -> List[str]:
+    return [
+        "shortcut_type=asset_class_top5_dossier_copy",
+        "current_selection_source=L11 ranked_symbols_by_group.csv",
+        "current_selection_member=true",
+        f"current_asset_class_top5_rank={rank}",
+        f"current_asset_class={asset}",
+        f"current_symbol={row.get('symbol', 'not_available')}",
+        f"current_l11_group_score={row.get('l11_group_score', 'not_available')}",
+        f"current_ranking_group={row.get('ranking_group', 'Unknown')}",
+        f"current_market_group={row.get('market_group', 'Unknown')}",
+        f"current_market_segment={row.get('market_segment', 'Unknown')}",
+        "current_l11_meaning=asset_class_inspection_shortcut_only_not_trade_permission",
+    ]
+
+
+def _copy_dossier_or_placeholder(account_root: Path, symbol: str, target: Path, failed: List[Path], overlay_lines: Sequence[str] | None = None) -> tuple[bool, bool, str]:
     source = _find_dossier(account_root, symbol)
     if source is None:
-        text = "\n".join([
+        text = _shortcut_overlay_text(symbol, overlay_lines, "not_available", True) + "\n".join([
             "AURORA SELECTION SURFACE DOSSIER COPY PLACEHOLDER",
             "----------------------------------------",
             f"symbol={symbol}",
@@ -282,24 +250,19 @@ def _copy_dossier_or_placeholder(
             "",
         ])
         _write(target, text, failed)
-        return False, True, "not_available", "source_missing_placeholder_written"
-
-    try:
-        source_text = read_text(source)
-    except OSError:
-        source_text = ""
-    rejection_reasons = _dossier_source_rejection_reasons(source, source_text, selection_row)
-    if rejection_reasons:
-        _write(target, _held_dossier_text(symbol, source, target, rejection_reasons, selection_row), failed)
-        return False, False, str(source), "source_held_stale_or_unsafe"
-
+        return False, True, "not_available"
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-        return True, False, str(source), "source_copied"
+        source_text = read_text(source)
+        text = _shortcut_overlay_text(symbol, overlay_lines, str(source), False) + source_text
+        if not text.endswith("\n"):
+            text += "\n"
+        if not _write(target, text, failed):
+            return False, False, str(source)
+        return True, False, str(source)
     except OSError:
         failed.append(target)
-        return False, False, str(source), "copy_failed"
+        return False, False, str(source)
 
 
 def _cleanup_ranked_txt(folder: Path, expected_names: Iterable[str]) -> int:
@@ -333,7 +296,7 @@ def _asset_top5_text(asset_class: str, rows: List[Dict[str, str]], folder: Path)
         "meaning=asset_class_inspection_shortcut_only",
         "source=L11 ranked_symbols_by_group.csv existing scores",
         "score_owner=Layer 11 Symbol Ranking Inside Ranking Group",
-        "dossier_policy=copy_only_when_source_dossier_is_open_nonblocked_nonstale_else_held_warning_card",
+        "dossier_policy=copied_from_source_dossier_with_current_shortcut_overlay_when_available",
         f"folder={folder}",
         f"selected_count={len(rows)}",
         "selection_runtime=false",
@@ -358,13 +321,13 @@ def _root_readme_text() -> str:
     return "\n".join([
         "AURORA SELECTION DESK",
         "----------------------------------------",
-        "01_Global/Top_10 = Global Top 10 inspection basket with copied dossier files.",
+        "01_Global/Top_10 = Global Top 10 inspection basket with copied dossier files plus current shortcut overlays.",
         "02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class> = top 5 shortcut for the whole asset class.",
         "02_Asset_Classes/<asset_class>/<market_group>/<market_segment>/<ranking_group> = original deep Top 5 per ranking_group system.",
         "90_System_Indexes = root indexes and taxonomy proof surfaces.",
         "91_Layer_Summaries = layer summary copies for operator review.",
-        "Shortcut dossier copy policy: copy only Open/non-blocked/non-stale source dossiers; otherwise publish a HELD warning card.",
         "All shortcut folders are copy/view surfaces only. They do not calculate trade permission, entry signal, or execution.",
+        "Shortcut file overlays are current Selection Desk truth and outrank stale base dossier body text below them.",
         f"generated_utc={utc_stamp()}",
         "",
     ])
@@ -452,7 +415,6 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
     copied = 0
     copy_expected = 0
     missing = 0
-    held_unsafe = 0
     stale_removed = 0
     index_rows: List[Dict[str, str]] = []
 
@@ -469,13 +431,11 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
             expected_names.append(target_name)
             target = folder / target_name
             copy_expected += 1
-            ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(account_root, symbol, target, failed, row)
+            ok, source_missing, source_path = _copy_dossier_or_placeholder(account_root, symbol, target, failed, _asset_shortcut_overlay(row, asset, rank))
             if ok:
                 copied += 1
             if source_missing:
                 missing += 1
-            if copy_status == "source_held_stale_or_unsafe":
-                held_unsafe += 1
             output_rows.append({
                 "asset_class_top5_rank": str(rank),
                 "symbol": symbol,
@@ -496,7 +456,7 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
                 "l8_score": row.get("l8_score", "not_available"), "l8_state": row.get("l8_state", "not_available"),
                 "l9_score": row.get("l9_score", "not_available"), "l9_state": row.get("l9_state", "not_available"),
                 "risk_review_flag": row.get("risk_review_flag", "false"),
-                "reason": row.get("reason", "asset_class_top5_existing_l11_score") + "|copy_status=" + copy_status,
+                "reason": row.get("reason", "asset_class_top5_existing_l11_score"),
                 "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false",
                 "generated_utc": utc_stamp(),
             })
@@ -528,9 +488,9 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
         if _write(path, text, failed):
             written += 1
 
-    status = "accepted" if not failed and missing == 0 and held_unsafe == 0 and copied == copy_expected else "write_degraded"
-    reason = "asset_class_top5_shortcuts_published" if status == "accepted" else "one_or_more_asset_class_shortcuts_missing_unsafe_or_failed"
-    summary = SelectionShortcutSummary(status, reason, "asset_class_top5", written, expected, copied, copy_expected, missing, stale_removed, len(failed), str(status_path), held_unsafe)
+    status = "accepted" if not failed and missing == 0 and copied == copy_expected else "write_degraded"
+    reason = "asset_class_top5_shortcuts_published" if status == "accepted" else "one_or_more_asset_class_shortcuts_missing_or_failed"
+    summary = SelectionShortcutSummary(status, reason, "asset_class_top5", written, expected, copied, copy_expected, missing, stale_removed, len(failed), str(status_path))
     _write(status_path, _shortcut_status_text(summary), failed)
     return summary
 
@@ -583,7 +543,6 @@ def publish_l16_global_top10_shortcuts(root: Path) -> SelectionShortcutSummary:
     copied = 0
     expected_copies = 0
     missing = 0
-    held_unsafe = 0
     output_rows: List[Dict[str, str]] = []
     expected_names: List[str] = []
     for idx, row in enumerate(rows, 1):
@@ -595,13 +554,11 @@ def publish_l16_global_top10_shortcuts(root: Path) -> SelectionShortcutSummary:
         expected_names.append(target_name)
         target = folder / target_name
         expected_copies += 1
-        ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(account_root, symbol, target, failed, row)
+        ok, source_missing, source_path = _copy_dossier_or_placeholder(account_root, symbol, target, failed, _global_shortcut_overlay(row, rank))
         if ok:
             copied += 1
         if source_missing:
             missing += 1
-        if copy_status == "source_held_stale_or_unsafe":
-            held_unsafe += 1
         output_rows.append({
             "global_top10_rank": str(rank),
             "symbol": symbol,
@@ -617,7 +574,7 @@ def publish_l16_global_top10_shortcuts(root: Path) -> SelectionShortcutSummary:
             "max_corr_pair_symbol": row.get("max_corr_pair_symbol", "not_available"),
             "source_dossier_path": source_path,
             "target_dossier_path": str(target),
-            "copy_status": copy_status,
+            "copy_status": "source_copied_with_current_overlay" if ok else ("source_missing_placeholder_with_current_overlay_written" if source_missing else "copy_failed"),
             "meaning": "global_top10_dossier_shortcut_only_not_trade_permission",
             "trade_permission": "false", "entry_signal": "false", "execution": "false",
             "generated_utc": utc_stamp(),
@@ -632,9 +589,9 @@ def publish_l16_global_top10_shortcuts(root: Path) -> SelectionShortcutSummary:
         files_expected += 1
         if _write(path, text, failed):
             files_written += 1
-    status = "accepted" if not failed and missing == 0 and held_unsafe == 0 and copied == expected_copies else "write_degraded"
-    reason = "global_top10_dossier_shortcuts_published" if status == "accepted" else "one_or_more_global_top10_dossier_copies_missing_unsafe_or_failed"
-    summary = SelectionShortcutSummary(status, reason, "global_top10_dossier_copy", files_written, files_expected, copied, expected_copies, missing, stale_removed, len(failed), str(status_path), held_unsafe)
+    status = "accepted" if not failed and missing == 0 and copied == expected_copies else "write_degraded"
+    reason = "global_top10_dossier_shortcuts_published_with_current_overlays" if status == "accepted" else "one_or_more_global_top10_dossier_copies_missing_or_failed"
+    summary = SelectionShortcutSummary(status, reason, "global_top10_dossier_copy", files_written, files_expected, copied, expected_copies, missing, stale_removed, len(failed), str(status_path))
     _write(status_path, _shortcut_status_text(summary), failed)
     return summary
 
@@ -645,7 +602,8 @@ def _global_top10_text(rows: List[Dict[str, str]], folder: Path) -> str:
         "----------------------------------------",
         "meaning=global_top10_inspection_basket_dossier_shortcuts_only",
         "source=Selection Desk/Global/current_top10.csv",
-        "dossier_policy=copy_only_when_source_dossier_is_open_nonblocked_nonstale_else_held_warning_card",
+        "dossier_policy=copied_from_source_dossier_with_current_shortcut_overlay_when_available",
+        "shortcut_overlay_policy=overlay_is_current_selection_truth_base_dossier_body_may_lag",
         f"folder={folder}",
         f"selected_count={len(rows)}",
         "global_top10_runtime=false",
@@ -669,10 +627,11 @@ def _global_top10_text(rows: List[Dict[str, str]], folder: Path) -> str:
 def _shortcut_status_text(summary: SelectionShortcutSummary) -> str:
     return "\n".join([
         "schema_name=selection_surface_shortcut_status",
-        "schema_version=2",
+        "schema_version=1",
         "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner",
         "support_owner=Runtime 3 external worker copy bridge",
         "source_owner=Runtime 7 Dossier publication owner output",
+        "shortcut_truth_policy=current_overlay_above_base_dossier_body",
         f"shortcut_type={summary.shortcut_type}",
         f"status={summary.status}",
         f"reason={summary.reason}",
@@ -681,10 +640,8 @@ def _shortcut_status_text(summary: SelectionShortcutSummary) -> str:
         f"dossier_copies_written={summary.dossier_copies_written}",
         f"dossier_copies_expected={summary.dossier_copies_expected}",
         f"dossier_sources_missing={summary.dossier_sources_missing}",
-        f"dossier_sources_held_unsafe={summary.dossier_sources_held_unsafe}",
         f"stale_files_removed={summary.stale_files_removed}",
         f"write_failed_count={summary.write_failed_count}",
-        "copy_policy=copy_only_open_nonblocked_nonstale_source_dossiers_else_publish_held_warning_card",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
