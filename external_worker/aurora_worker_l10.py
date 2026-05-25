@@ -10,7 +10,7 @@ from aurora_worker_l10_path_planner import l10_build_symbol_path_plans
 from aurora_worker_l10_publisher import L10PublishSummary, publish_l10_taxonomy_outputs
 from aurora_worker_l10_quality import l10_resolve_matches
 from aurora_worker_l10_schema import L10_LAYER_FOLDER, L10_SCHEMA_VERSION
-from aurora_worker_l10_universe_parser import l10_parse_universe_rows
+from aurora_worker_l10_universe_parser import l10_duplicate_keys_as_dicts, l10_parse_universe_rows
 
 
 EMPTY_L10_SUMMARY = L10PublishSummary(
@@ -70,6 +70,7 @@ def _summary_from_existing_outputs(outbox_root: Path, source_checksum: str) -> L
         symbol_path_index_count=as_int("symbol_path_index_count"),
         group_member_csv_count=as_int("group_member_csv_count"),
         invalid_universe_row_count=as_int("invalid_universe_row_count"),
+        duplicate_universe_key_count=as_int("duplicate_universe_key_count"),
         accepted_strict_count=as_int("accepted_strict_count"),
         accepted_public_research_count=as_int("accepted_public_research_count"),
         review_required_count=as_int("review_required_count"),
@@ -112,6 +113,7 @@ def publish_l10_taxonomy_classification(
         return reused
 
     universe_parse = l10_parse_universe_rows(runtime2_rows)
+    duplicate_universe_key_rows = l10_duplicate_keys_as_dicts(universe_parse)
     if not symbols:
         return publish_l10_taxonomy_outputs(
             outbox_root=outbox_root,
@@ -119,6 +121,7 @@ def publish_l10_taxonomy_classification(
             ranking_groups=tuple(),
             symbol_path_plans=tuple(),
             invalid_universe_rows=universe_parse.invalid_rows,
+            duplicate_universe_key_rows=duplicate_universe_key_rows,
             source_payload_checksum=source_checksum,
         )
 
@@ -133,5 +136,6 @@ def publish_l10_taxonomy_classification(
         ranking_groups=ranking_groups,
         symbol_path_plans=path_plans,
         invalid_universe_rows=universe_parse.invalid_rows,
+        duplicate_universe_key_rows=duplicate_universe_key_rows,
         source_payload_checksum=source_checksum,
     )
