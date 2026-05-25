@@ -1,6 +1,24 @@
 #ifndef AC_L3_REFRESH_MQH
 #define AC_L3_REFRESH_MQH
 
+string AC_L3SymbolUniverseFingerprint(const int total)
+{
+   ulong hash = 1469598103934665603;
+   for(int idx = 0; idx < total; idx++)
+   {
+      string symbol = SymbolName(idx, false);
+      int len = StringLen(symbol);
+      hash = hash ^ (ulong)(idx + 1);
+      hash = hash * 1099511628211;
+      for(int ch = 0; ch < len; ch++)
+      {
+         hash = hash ^ (ulong)StringGetCharacter(symbol, ch);
+         hash = hash * 1099511628211;
+      }
+   }
+   return IntegerToString((long)hash);
+}
+
 string AC_L3BuildCacheKey(const int total)
 {
    return AC_DOSSIER_SHELL_SCHEMA_VERSION
@@ -8,6 +26,7 @@ string AC_L3BuildCacheKey(const int total)
       + " | account=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN))
       + " | account_currency=" + AccountInfoString(ACCOUNT_CURRENCY)
       + " | symbols=" + IntegerToString(total)
+      + " | universe_fingerprint=" + AC_L3SymbolUniverseFingerprint(total)
       + " | owner=L3BrokerSpecsTruth";
 }
 
