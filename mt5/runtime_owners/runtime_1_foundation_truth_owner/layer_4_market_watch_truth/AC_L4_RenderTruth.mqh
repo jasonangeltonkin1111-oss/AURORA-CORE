@@ -99,7 +99,7 @@ string AC_Layer4DossierSection(const string symbol)
    text += "Surface Quality: " + p.surface_quality + "\r\n";
    text += "Tick Source: SymbolInfoTick\r\n";
    text += "Tick Time: " + (p.tick_available ? AC_L4DateTimeText(p.tick_time_broker) + " broker/server" : "Not available") + "\r\n";
-   text += "Tick Time MSC: " + (p.tick_time_msc > 0 ? IntegerToString((int)p.tick_time_msc) : "Not available") + "\r\n";
+   text += "Tick Time MSC: " + (p.tick_time_msc > 0 ? IntegerToString(p.tick_time_msc) : "Not available") + "\r\n";
    text += "Tick Age: " + (tick_safe ? AC_L4NumberText(p.tick_age_seconds, 1) + " sec" : "Not available") + "\r\n";
    text += "Bid: " + (bid_safe ? AC_L4PriceText(p.bid, p.digits) : "Not available") + "\r\n";
    text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
