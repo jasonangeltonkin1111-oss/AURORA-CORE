@@ -432,7 +432,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    string l14_workbench = AC_Layer14WorkbenchSection();
    string l15_workbench = AC_Layer15WorkbenchSection();
    string l16_workbench = AC_Layer16WorkbenchSection();
-   string l17_workbench = AC_Layer17BoardSection();
+   string l17_workbench = AC_Layer17WorkbenchSection();
    string ohlc_workbench = AC_SharedOhlcRenderWorkbenchSection();
 
    string text = "";
