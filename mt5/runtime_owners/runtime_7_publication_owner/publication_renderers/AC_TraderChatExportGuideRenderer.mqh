@@ -259,4 +259,12 @@ string AC_BoardTraderChatExportGuideSection()
    return text;
 }
 
+string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
+                               const AC_Layer0StatusPacket &status)
+{
+   string text = AC_BuildTraderBoardText_Base(snapshot, status);
+   text += AC_BoardTraderChatExportGuideSection();
+   return text;
+}
+
 #endif
