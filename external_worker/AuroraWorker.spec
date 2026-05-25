@@ -33,6 +33,8 @@ a = Analysis(
         'aurora_worker_l18_dispatch',
         'aurora_worker_l19',
         'aurora_worker_l19_dispatch',
+        'aurora_worker_selection_root_index',
+        'aurora_worker_selection_surface_cleanup',
     ],
     hookspath=[],
     hooksconfig={},
