@@ -32,6 +32,11 @@ class L12PublishSummary:
     top_heat_group: str = "not_available"
     top_quality_group: str = "not_available"
     top_strength_group: str = "not_available"
+    thin_rankable_group_count: int = 0
+    no_rankable_group_count: int = 0
+    input_l11_ranked_manifest_checksum: str = "not_available"
+    input_l11_ranked_payload_checksum: str = "not_available"
+    input_contract_status: str = "not_available"
 
 EMPTY_L12_SUMMARY = L12PublishSummary("pending", "l12_not_run")
 
@@ -45,6 +50,12 @@ def _num(value: str | None) -> float | None:
         return None if math.isnan(number) or math.isinf(number) else max(0.0, min(100.0, number))
     except ValueError:
         return None
+
+def _int_text(value: str | None, fallback: int = 0) -> int:
+    try:
+        return int(float(str(value or "").strip()))
+    except ValueError:
+        return fallback
 
 def _csv(path: Path) -> List[Dict[str, str]]:
     return [{str(k): "" if v is None else str(v) for k, v in row.items()} for row in csv.DictReader(io.StringIO(read_text(path).replace("\r\n", "\n")))]
@@ -87,11 +98,85 @@ def _write(path: Path, text: str, failed: List[Path]) -> None:
     if not atomic_write_text(path, text):
         failed.append(path)
 
-def _manifest(name: str, rows: List[Dict[str, str]], payload: str) -> str:
-    return "\n".join([f"schema_name={name}_manifest","schema_version=1","layer_id=12","layer_name=Layer 12 - Ranking Group Heat / Quality",f"owner={L12_OWNER}",f"authority={L12_AUTHORITY}",f"row_count={len(rows)}",f"payload_checksum={payload_checksum(payload.splitlines())}","directional_validity=false","expectancy_validated=false","selection_runtime=false","trade_permission=false","entry_signal=false","execution=false",f"generated_utc={utc_stamp()}",f"generated_unix={unix_time()}",""])
+def _rankable_l12_row(row: Dict[str, str]) -> bool:
+    return _int_text(row.get("rankable_count"), 0) > 0
+
+def _rank_sort_value(row: Dict[str, str], key: str) -> tuple[int, float, str]:
+    if not _rankable_l12_row(row):
+        return (1, 0.0, row["ranking_group"])
+    return (0, -float(row[key]), row["ranking_group"])
+
+def _top_ranked_group(rows: List[Dict[str, str]], rank_key: str) -> str:
+    ranked = [row for row in rows if row.get(rank_key, "not_available") != "not_available"]
+    if not ranked:
+        return "not_available"
+    return min(ranked, key=lambda row: int(row[rank_key]))["ranking_group"]
+
+def _visible_rank(row: Dict[str, str], key: str) -> str:
+    value = row.get(key, "not_available")
+    return f"#{value}" if value != "not_available" else "NA"
+
+def _manifest(name: str, rows: List[Dict[str, str]], payload: str, l11_manifest_checksum: str, l11_ranked_checksum: str) -> str:
+    return "\n".join([
+        f"schema_name={name}_manifest",
+        "schema_version=2",
+        "layer_id=12",
+        "layer_name=Layer 12 - Ranking Group Heat / Quality",
+        f"owner={L12_OWNER}",
+        f"authority={L12_AUTHORITY}",
+        f"row_count={len(rows)}",
+        f"payload_checksum={payload_checksum(payload.splitlines())}",
+        f"input_l11_ranked_manifest_checksum={l11_manifest_checksum}",
+        f"input_l11_ranked_payload_checksum={l11_ranked_checksum}",
+        "input_contract_status=accepted",
+        "directional_validity=false",
+        "expectancy_validated=false",
+        "selection_runtime=false",
+        "trade_permission=false",
+        "entry_signal=false",
+        "execution=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "",
+    ])
 
 def _summary(summary: L12PublishSummary) -> str:
-    return "\n".join([f"schema_name={L12_SCHEMA_NAME}","schema_version=1",f"owner_name={L12_OWNER}","layer_id=12","layer_name=Layer 12 - Ranking Group Heat / Quality",f"status={summary.status}",f"reason={summary.reason}","input_source=L11",f"ranking_group_count={summary.ranking_group_count}",f"accepted_group_count={summary.accepted_group_count}",f"thin_group_count={summary.thin_group_count}",f"risk_review_group_count={summary.risk_review_group_count}",f"top_heat_group={summary.top_heat_group}",f"top_quality_group={summary.top_quality_group}",f"top_strength_group={summary.top_strength_group}",f"write_failed_count={summary.write_failed_count}","rank_stability=not_available_first_cycle","rank_change=not_available_first_cycle","prior_cycle_available=false","meaning=ranking_group_attention_quality_only","directional_validity=false","expectancy_validated=false","selection_runtime=false","trade_permission=false","entry_signal=false","execution=false",f"generated_utc={utc_stamp()}",f"generated_unix={unix_time()}",""])
+    return "\n".join([
+        f"schema_name={L12_SCHEMA_NAME}",
+        "schema_version=2",
+        f"owner_name={L12_OWNER}",
+        "layer_id=12",
+        "layer_name=Layer 12 - Ranking Group Heat / Quality",
+        f"status={summary.status}",
+        f"reason={summary.reason}",
+        "input_source=L11",
+        f"input_l11_ranked_manifest_checksum={summary.input_l11_ranked_manifest_checksum}",
+        f"input_l11_ranked_payload_checksum={summary.input_l11_ranked_payload_checksum}",
+        f"input_contract_status={summary.input_contract_status}",
+        f"ranking_group_count={summary.ranking_group_count}",
+        f"accepted_group_count={summary.accepted_group_count}",
+        f"thin_group_count={summary.thin_group_count}",
+        f"thin_rankable_group_count={summary.thin_rankable_group_count}",
+        f"no_rankable_group_count={summary.no_rankable_group_count}",
+        f"risk_review_group_count={summary.risk_review_group_count}",
+        f"top_heat_group={summary.top_heat_group}",
+        f"top_quality_group={summary.top_quality_group}",
+        f"top_strength_group={summary.top_strength_group}",
+        f"write_failed_count={summary.write_failed_count}",
+        "rank_stability=not_available_first_cycle",
+        "rank_change=not_available_first_cycle",
+        "prior_cycle_available=false",
+        "meaning=ranking_group_attention_quality_only",
+        "directional_validity=false",
+        "expectancy_validated=false",
+        "selection_runtime=false",
+        "trade_permission=false",
+        "entry_signal=false",
+        "execution=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "",
+    ])
 
 def _build(ranked: List[Dict[str, str]], top5: List[Dict[str, str]], checksum: str) -> List[Dict[str, str]]:
     grouped: Dict[str, List[Dict[str, str]]] = defaultdict(list)
@@ -124,10 +209,14 @@ def _build(ranked: List[Dict[str, str]], top5: List[Dict[str, str]], checksum: s
         quality = max(0.0, min(100.0, rankable_ratio*.25 + clean_ratio*.25 + completeness*.20 + (100 if tops else 0)*.10 + min(100, backup*25)*.10 - min(25, risk_count*5) - min(25, (group_count-rankable_count)*3) - (20 if thin else 0)))
         strength = max(0.0, min(100.0, top_symbol_score*.35 + top_avg*.35 + top_med*.15 + min(100, backup*25)*.10 + min(100, max(0, rankable_count-risk_count)*10)*.05))
         heat = max(0.0, min(100.0, top_avg*.30 + pct70*.20 + sep*.15 + _avg(l7)*.20))
+        if rankable_count <= 0:
+            heat = quality = strength = 0.0
         first = members[0]
-        out.append({"ranking_group":group,"ranking_group_slug":_text(first,"ranking_group_slug",_safe_slug(group)),"asset_class":_text(first,"asset_class","Unknown"),"market_group":_text(first,"market_group","Unknown"),"market_segment":_text(first,"market_segment","Unknown"),"group_state":state,"ranking_group_heat_rank":"0","ranking_group_quality_rank":"0","ranking_group_strength_rank":"0","ranking_group_heat":f"{heat:.2f}","ranking_group_quality_score":f"{quality:.2f}","ranking_group_strength":f"{strength:.2f}","group_symbol_count":str(group_count),"rankable_count":str(rankable_count),"not_rankable_count":str(group_count-rankable_count),"risk_review_count":str(risk_count),"top5_symbol_count":str(len(tops)),"backup_depth":str(backup),"top_symbol":_text(tops[0],"symbol","not_available") if tops else "not_available","top_symbol_score":f"{top_symbol_score:.2f}","top5_avg_score":f"{top_avg:.2f}","top5_median_score":f"{top_med:.2f}","l6_avg_score":f"{_avg(l6):.2f}","l7_avg_score":f"{_avg(l7):.2f}","l8_avg_score":f"{_avg(l8):.2f}","l9_avg_score":f"{_avg(l9):.2f}","component_completeness_avg":f"{completeness:.2f}","thin_group_flag":"true" if thin else "false","thin_group_reason":"rankable_count_below_3" if thin else "not_thin","rank_stability":"not_available_first_cycle","rank_change":"not_available_first_cycle","prior_cycle_available":"false","meaning":"ranking_group_attention_quality_only","directional_validity":"false","expectancy_validated":"false","selection_runtime":"false","trade_permission":"false","entry_signal":"false","execution":"false","reason":"l12_group_heat_quality_scored","source_l11_checksum":checksum,"generated_utc":utc_stamp()})
+        out.append({"ranking_group":group,"ranking_group_slug":_text(first,"ranking_group_slug",_safe_slug(group)),"asset_class":_text(first,"asset_class","Unknown"),"market_group":_text(first,"market_group","Unknown"),"market_segment":_text(first,"market_segment","Unknown"),"group_state":state,"ranking_group_heat_rank":"not_available","ranking_group_quality_rank":"not_available","ranking_group_strength_rank":"not_available","ranking_group_heat":f"{heat:.2f}","ranking_group_quality_score":f"{quality:.2f}","ranking_group_strength":f"{strength:.2f}","group_symbol_count":str(group_count),"rankable_count":str(rankable_count),"not_rankable_count":str(group_count-rankable_count),"risk_review_count":str(risk_count),"top5_symbol_count":str(len(tops)),"backup_depth":str(backup),"top_symbol":_text(tops[0],"symbol","not_available") if tops else "not_available","top_symbol_score":f"{top_symbol_score:.2f}","top5_avg_score":f"{top_avg:.2f}","top5_median_score":f"{top_med:.2f}","l6_avg_score":f"{_avg(l6):.2f}","l7_avg_score":f"{_avg(l7):.2f}","l8_avg_score":f"{_avg(l8):.2f}","l9_avg_score":f"{_avg(l9):.2f}","component_completeness_avg":f"{completeness:.2f}","thin_group_flag":"true" if thin else "false","thin_group_reason":"no_rankable_symbols" if rankable_count <= 0 else ("rankable_count_below_3" if thin else "not_thin"),"rank_stability":"not_available_first_cycle","rank_change":"not_available_first_cycle","prior_cycle_available":"false","meaning":"ranking_group_attention_quality_only","directional_validity":"false","expectancy_validated":"false","selection_runtime":"false","trade_permission":"false","entry_signal":"false","execution":"false","reason":"l12_no_rankable_symbols_from_guarded_l11" if rankable_count <= 0 else "l12_group_heat_quality_scored","source_l11_checksum":checksum,"generated_utc":utc_stamp()})
     for key, rank_key in [("ranking_group_heat","ranking_group_heat_rank"),("ranking_group_quality_score","ranking_group_quality_rank"),("ranking_group_strength","ranking_group_strength_rank")]:
-        for idx, row in enumerate(sorted(out, key=lambda r: (-float(r[key]), r["ranking_group"])), 1): row[rank_key] = str(idx)
+        rankable_rows = [row for row in sorted(out, key=lambda r: _rank_sort_value(r, key)) if _rankable_l12_row(row)]
+        for idx, row in enumerate(rankable_rows, 1):
+            row[rank_key] = str(idx)
     return out
 
 def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSummary:
@@ -139,7 +228,10 @@ def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSumma
         status = _kv(l11/"l11_summary.txt").get("status", "pending")
         if status not in {"accepted", "write_degraded"}: return L12PublishSummary("pending" if status == "pending" else "degraded", "l11_not_accepted_status=" + status)
         ranked_text = read_text(l11/"ranked_symbols_by_group.csv")
-        rows = _build(_csv(l11/"ranked_symbols_by_group.csv"), _csv(l11/"ranking_group_top5.csv"), payload_checksum(ranked_text.splitlines()))
+        l11_ranked_checksum = payload_checksum(ranked_text.splitlines())
+        l11_manifest_kv = _kv(l11/"ranked_symbols_by_group.manifest")
+        l11_manifest_checksum = l11_manifest_kv.get("payload_checksum", "not_available")
+        rows = _build(_csv(l11/"ranked_symbols_by_group.csv"), _csv(l11/"ranking_group_top5.csv"), l11_ranked_checksum)
         if not rows: return L12PublishSummary("pending", "no_l12_ranking_groups_to_score")
         layer = outbox_root / "Layers" / L12_LAYER_FOLDER
         groups = layer / "RankingGroups"
@@ -148,15 +240,46 @@ def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSumma
         failed: List[Path] = []
         csv_text = _csv_text(rows, L12_FIELDS)
         _write(layer/"l12_group_heat_quality.csv", csv_text, failed)
-        _write(layer/"l12_group_heat_quality.manifest", _manifest("l12_group_heat_quality", rows, csv_text), failed)
+        _write(layer/"l12_group_heat_quality.manifest", _manifest("l12_group_heat_quality", rows, csv_text, l11_manifest_checksum, l11_ranked_checksum), failed)
         for row in rows: _write(groups/(row["ranking_group_slug"]+".heat_quality.txt"), "\n".join([f"{k}={row.get(k,'not_available')}" for k in L12_FIELDS]+[""]), failed)
-        top_heat = min(rows, key=lambda r: int(r["ranking_group_heat_rank"]))["ranking_group"]
-        top_quality = min(rows, key=lambda r: int(r["ranking_group_quality_rank"]))["ranking_group"]
-        top_strength = min(rows, key=lambda r: int(r["ranking_group_strength_rank"]))["ranking_group"]
-        summary = L12PublishSummary("accepted" if not failed else "write_degraded", "l12_group_heat_quality_published" if not failed else "one_or_more_l12_outputs_failed", len(rows), sum(1 for r in rows if r["group_state"]=="ACCEPTED"), sum(1 for r in rows if r["thin_group_flag"]=="true"), sum(1 for r in rows if int(r["risk_review_count"])>0), len(failed), str(layer/"l12_group_heat_quality.csv"), str(layer/"l12_group_heat_quality_summary.txt"), str(visible/"00_Group_Heat_Quality_Index.txt"), top_heat, top_quality, top_strength)
+        top_heat = _top_ranked_group(rows, "ranking_group_heat_rank")
+        top_quality = _top_ranked_group(rows, "ranking_group_quality_rank")
+        top_strength = _top_ranked_group(rows, "ranking_group_strength_rank")
+        accepted_count = sum(1 for r in rows if r["group_state"].startswith("ACCEPTED"))
+        thin_count = sum(1 for r in rows if r["thin_group_flag"]=="true")
+        no_rankable_count = sum(1 for r in rows if r["group_state"]=="NO_RANKABLE_SYMBOLS")
+        thin_rankable_count = sum(1 for r in rows if r["thin_group_flag"]=="true" and _int_text(r.get("rankable_count"), 0) > 0)
+        risk_review_count = sum(1 for r in rows if int(r["risk_review_count"])>0)
+        summary = L12PublishSummary(
+            "accepted" if not failed else "write_degraded",
+            "l12_group_heat_quality_published" if not failed else "one_or_more_l12_outputs_failed",
+            len(rows),
+            accepted_count,
+            thin_count,
+            risk_review_count,
+            len(failed),
+            str(layer/"l12_group_heat_quality.csv"),
+            str(layer/"l12_group_heat_quality_summary.txt"),
+            str(visible/"00_Group_Heat_Quality_Index.txt"),
+            top_heat,
+            top_quality,
+            top_strength,
+            thin_rankable_count,
+            no_rankable_count,
+            l11_manifest_checksum,
+            l11_ranked_checksum,
+            "accepted",
+        )
         _write(layer/"l12_group_heat_quality_summary.txt", _summary(summary), failed)
         _write(visible/"00_Group_Heat_Quality_Index.csv", csv_text, failed)
-        _write(visible/"00_Group_Heat_Quality_Index.txt", "\n".join(["L12 GROUP HEAT / QUALITY INDEX", "----------------------------------------"] + [f"#{r['ranking_group_heat_rank']} {r['ranking_group']} heat={r['ranking_group_heat']} quality={r['ranking_group_quality_score']} strength={r['ranking_group_strength']} state={r['group_state']}" for r in sorted(rows, key=lambda x:int(x['ranking_group_heat_rank']))] + ["selection_runtime=false", "trade_permission=false", ""]), failed)
-        return summary
+        _write(visible/"00_Group_Heat_Quality_Index.txt", "\n".join(["L12 GROUP HEAT / QUALITY INDEX", "----------------------------------------"] + [f"{_visible_rank(r, 'ranking_group_heat_rank')} {r['ranking_group']} heat={r['ranking_group_heat']} quality={r['ranking_group_quality_score']} strength={r['ranking_group_strength']} state={r['group_state']}" for r in sorted(rows, key=lambda x:_rank_sort_value(x, 'ranking_group_heat'))] + ["selection_runtime=false", "trade_permission=false", ""]), failed)
+        return summary if not failed else L12PublishSummary(
+            "write_degraded", summary.reason, summary.ranking_group_count, summary.accepted_group_count,
+            summary.thin_group_count, summary.risk_review_group_count, len(failed), summary.heat_quality_path,
+            summary.summary_path, summary.selection_desk_heat_index_path, summary.top_heat_group,
+            summary.top_quality_group, summary.top_strength_group, summary.thin_rankable_group_count,
+            summary.no_rankable_group_count, summary.input_l11_ranked_manifest_checksum,
+            summary.input_l11_ranked_payload_checksum, summary.input_contract_status,
+        )
     except Exception as exc:
         return L12PublishSummary("exception", f"{type(exc).__name__}: {exc}")
