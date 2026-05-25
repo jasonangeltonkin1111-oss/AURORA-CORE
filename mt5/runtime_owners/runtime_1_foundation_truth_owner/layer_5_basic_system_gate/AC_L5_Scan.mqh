@@ -18,6 +18,7 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
    p.blocked_trade_mode = false;
    p.blocked_absurd_spread = false;
    p.blocked_classification_review = false;
+   p.blocked_l4_surface_not_usable = false;
    p.trade_permission = false;
 
    if(!AC_L2_READY)
@@ -96,10 +97,10 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
       AC_L5AppendReason(p.gate_reason, "tick_missing");
       AC_L5_BLOCK_MISSING_TICK++;
    }
-   if(l4.quote_quality == "stale" || l4.quote_quality == "missing" || l4.tick_age_seconds > 60.0)
+   if(!AC_L5QuoteFreshEnough(l4))
    {
       p.blocked_stale_quote = true;
-      AC_L5AppendReason(p.gate_reason, "quote_stale_or_missing");
+      AC_L5AppendReason(p.gate_reason, "quote_not_fresh_enough");
       AC_L5_BLOCK_STALE_QUOTE++;
    }
    if(!l4.bid_ask_valid)
@@ -107,6 +108,12 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
       p.blocked_invalid_bidask = true;
       AC_L5AppendReason(p.gate_reason, "invalid_bid_ask");
       AC_L5_BLOCK_INVALID_BIDASK++;
+   }
+   if(!AC_L5SurfaceUsable(l4))
+   {
+      p.blocked_l4_surface_not_usable = true;
+      AC_L5AppendReason(p.gate_reason, "l4_surface_not_usable");
+      AC_L5_BLOCK_L4_SURFACE_NOT_USABLE++;
    }
    if(AC_L5SpreadAbsurd(l4))
    {
