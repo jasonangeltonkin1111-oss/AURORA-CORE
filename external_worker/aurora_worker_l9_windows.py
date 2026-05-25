@@ -129,8 +129,9 @@ def load_l9_window_packet(outbox: Path, symbol: str, extra_timeframes: Iterable[
         bars = read_priority_window(path)
         windows[tf] = bars
         checksums[f"{tf.lower()}_window_checksum"] = checksum
-        aggregate_parts.append(f"{tf}={checksum}")
-        if checksum == "missing":
+        aggregate_parts.append(f"{tf}={checksum}:rows={len(bars)}")
+        window_ready = path.exists() and len(bars) > 0
+        if not window_ready:
             files_missing += 1
             if tf in required:
                 required_missing += 1
@@ -138,19 +139,19 @@ def load_l9_window_packet(outbox: Path, symbol: str, extra_timeframes: Iterable[
             files_seen += 1
             if tf in required:
                 required_seen += 1
-            if latest_close_i <= 0 and bars:
+            if latest_close_i <= 0:
                 latest_close_i = bars[0].close_i
 
     aggregate_checksum = payload_checksum(aggregate_parts)
     if required_missing == 0 and required_seen == len(required):
         status = "ready"
-        reason = "all_required_l9_priority_windows_present"
+        reason = "all_required_l9_priority_windows_present_with_rows"
     elif required_seen > 0:
         status = "partial"
-        reason = "some_required_l9_priority_windows_missing"
+        reason = "some_required_l9_priority_windows_missing_or_empty"
     else:
         status = "missing"
-        reason = "all_required_l9_priority_windows_missing"
+        reason = "all_required_l9_priority_windows_missing_or_empty"
 
     return L9WindowPacket(
         symbol=str(symbol).strip(),
