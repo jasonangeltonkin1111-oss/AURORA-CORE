@@ -211,6 +211,8 @@ def _max_corr_to_selected(symbol: str, selected: List[Dict[str, str]], pair_corr
         if corr is None:
             unavailable = True
             corr_state = state
+            if max_pair == "none":
+                max_pair = sel_symbol
             continue
         if corr > max_corr:
             max_corr = corr
@@ -278,12 +280,19 @@ def _build_top10(candidates: List[Dict[str, str]], pair_corr: Dict[Tuple[str, st
             })
             reject_seen += 1
             continue
+        if clean_rows and unavailable:
+            rejects.append({
+                "candidate_rank": _text(cand, "candidate_pool_rank"), "symbol": symbol, "ranking_group": group,
+                "l16_primary_score": _text(cand, "l16_primary_score"), "reject_stage": "correlation_unavailable", "reject_reason": "pairwise_correlation_unavailable_not_strict_clean",
+                "conflicting_selected_symbol": max_pair, "pairwise_corr_abs": "not_available", "ranking_group_count_if_added": str(group_after),
+                "currency_overlap_score": _text(cand, "currency_overlap_score"), "fallback_eligible": "true", "generated_utc": utc_stamp(),
+            })
+            reject_seen += 1
+            continue
+
         reason = "highest_score_seed" if not clean_rows else "score_order_passed_correlation_and_group_caps"
-        if unavailable:
-            reason += ";some_pair_correlation_unavailable_degraded_visible"
         rank = len(clean_rows) + 1
-        tier = "CLEAN_DEGRADED" if unavailable else "CLEAN"
-        row = _make_display_row(cand, rank, str(rank), max_corr if clean_rows else 0.0, max_pair, corr_state, unavailable, reason, reject_seen, tier, True)
+        row = _make_display_row(cand, rank, str(rank), max_corr if clean_rows else 0.0, max_pair, corr_state, False, reason, reject_seen, "CLEAN", True)
         clean_rows.append(row)
         clean_symbols.add(symbol)
         group_counts[group] = group_after
@@ -296,7 +305,10 @@ def _build_top10(candidates: List[Dict[str, str]], pair_corr: Dict[Tuple[str, st
         if symbol in {_text(r, "symbol") for r in display_rows}:
             continue
         max_corr, max_pair, corr_state, unavailable = _max_corr_to_selected(symbol, display_rows, pair_corr)
-        if max_corr <= L16_FALLBACK_SOFT_CORR_ABS:
+        if unavailable:
+            tier = "FALLBACK_UNAVAILABLE_CORRELATION"
+            reason = "fallback_fill_correlation_unavailable_not_strict_clean"
+        elif max_corr <= L16_FALLBACK_SOFT_CORR_ABS:
             tier = "FALLBACK_SOFT_CORR"
             reason = "fallback_fill_soft_correlation_breach_or_next_best"
         elif max_corr <= L16_FALLBACK_MEDIUM_CORR_ABS:
@@ -336,6 +348,7 @@ def _summary_text(summary: L16PublishSummary) -> str:
         f"schema_name={L16_SCHEMA_NAME}", "schema_version=2", f"owner_name={L16_OWNER}", "layer_id=16", "layer_name=Layer 16 - Global Top 10 Builder",
         f"status={summary.status}", f"reason={summary.reason}", "input_source=L14_candidate_pool+L15_correlation_diversity_outputs",
         f"candidate_pool_size={summary.candidate_pool_size}", f"l15_candidate_count={summary.l15_candidate_count}", f"selected_count={summary.selected_count}",
+        f"selected_count_meaning=strict_clean_diversified_count_excludes_fallback_display",
         f"display_slot_count={summary.display_slot_count}", f"clean_selected_count={summary.clean_selected_count}", f"fallback_selected_count={summary.fallback_selected_count}",
         f"unfilled_slots_count={summary.unfilled_slots_count}", f"strict_clean_unfilled_slots_count={summary.strict_clean_unfilled_slots_count}",
         f"reject_count={summary.reject_count}", f"correlation_reject_count={summary.correlation_reject_count}", f"group_cap_reject_count={summary.group_cap_reject_count}",
@@ -355,7 +368,7 @@ def _summary_text(summary: L16PublishSummary) -> str:
 def _selection_text(rows: List[Dict[str, str]], rejects: List[Dict[str, str]], summary: L16PublishSummary) -> str:
     lines = [
         "L16 GLOBAL TOP 10 INSPECTION BASKET", "----------------------------------------",
-        f"status={summary.status}", f"reason={summary.reason}", f"display_slot_count={summary.display_slot_count}",
+        f"status={summary.status}", f"reason={summary.reason}", f"strict_clean_selected_count={summary.clean_selected_count}", f"display_slot_count={summary.display_slot_count}",
         f"clean_selected_count={summary.clean_selected_count}", f"fallback_selected_count={summary.fallback_selected_count}",
         f"unfilled_slots_count={summary.unfilled_slots_count}", f"strict_clean_unfilled_slots_count={summary.strict_clean_unfilled_slots_count}",
         f"correlation_reject_count={summary.correlation_reject_count}", f"group_cap_reject_count={summary.group_cap_reject_count}",
@@ -371,7 +384,7 @@ def _selection_text(rows: List[Dict[str, str]], rejects: List[Dict[str, str]], s
     if summary.unfilled_slots_count > 0:
         lines.append("")
         lines.append(f"UNFILLED_DISPLAY_SLOTS={summary.unfilled_slots_count}")
-        lines.append("unfilled_reason=candidate_pool_smaller_than_display_target_or_write_degraded")
+        lines.append("unfilled_reason=strict_clean_slots_unfilled_due_to_correlation_cap_group_cap_or_unavailable_correlation")
     lines.append("")
     lines.append("REJECT SNAPSHOT")
     for row in rejects[:20]:
@@ -419,7 +432,7 @@ def _held_summary(layer: Path, visible: Path, reason: str, source_summary: L16Pu
     base = source_summary or EMPTY_L16_SUMMARY
     return L16PublishSummary(
         status="degraded", reason=reason, candidate_pool_size=base.candidate_pool_size, l15_candidate_count=base.l15_candidate_count,
-        selected_count=display, unfilled_slots_count=max(0, L16_TARGET_COUNT - display), reject_count=base.reject_count,
+        selected_count=clean, unfilled_slots_count=max(0, L16_TARGET_COUNT - clean), reject_count=base.reject_count,
         correlation_reject_count=base.correlation_reject_count, group_cap_reject_count=base.group_cap_reject_count,
         fallback_count=fallback, group_count=base.group_count, write_failed_count=base.write_failed_count,
         top_symbol=rows[0].get("symbol", "not_available"), output_path=str(layer / "l16_global_top10.csv"),
@@ -494,13 +507,13 @@ def publish_l16_global_top10_builder(outbox_root: Path) -> L16PublishSummary:
         _write(layer / "l16_latest_calculation_rejects.csv", reject_text, failed)
         _write(layer / "l16_latest_calculation_fallbacks.csv", fallback_text, failed)
 
-        corr_rejects = sum(1 for r in rejects if r.get("reject_stage") == "correlation_cap")
+        corr_rejects = sum(1 for r in rejects if r.get("reject_stage") in {"correlation_cap", "correlation_unavailable"})
         group_rejects = sum(1 for r in rejects if r.get("reject_stage") == "group_cap")
         base = L16PublishSummary(
-            status="accepted" if latest_display == L16_TARGET_COUNT else "degraded",
-            reason="l16_global_top10_published_with_fallback_fill" if latest_display == L16_TARGET_COUNT else "l16_published_with_unfilled_display_slots",
-            candidate_pool_size=len(l14_rows), l15_candidate_count=len(l15_rows), selected_count=latest_display,
-            unfilled_slots_count=max(0, L16_TARGET_COUNT - latest_display), reject_count=len(rejects),
+            status="accepted" if latest_clean == L16_TARGET_COUNT else "degraded",
+            reason="l16_strict_clean_global_top10_published" if latest_clean == L16_TARGET_COUNT else "l16_partial_strict_clean_global_top10_with_fallback_display",
+            candidate_pool_size=len(l14_rows), l15_candidate_count=len(l15_rows), selected_count=latest_clean,
+            unfilled_slots_count=max(0, L16_TARGET_COUNT - latest_clean), reject_count=len(rejects),
             correlation_reject_count=corr_rejects, group_cap_reject_count=group_rejects, fallback_count=latest_fallback,
             group_count=len(group_rows), top_symbol=latest_rows[0]["symbol"] if latest_rows else "not_available",
             output_path=str(layer / "l16_global_top10.csv"), summary_path=str(layer / "l16_global_top10_summary.txt"),
@@ -519,8 +532,8 @@ def publish_l16_global_top10_builder(outbox_root: Path) -> L16PublishSummary:
             display_rows = held_rows
             display, clean, fallback = _counts(display_rows)
             summary = L16PublishSummary(
-                **{**base.__dict__, "status": "accepted" if display == L16_TARGET_COUNT else "degraded", "reason": "holding_current_visible_global_top10_until_hold_expiry", "selected_count": display,
-                   "unfilled_slots_count": max(0, L16_TARGET_COUNT - display), "fallback_count": fallback, "top_symbol": display_rows[0].get("symbol", "not_available") if display_rows else "not_available",
+                **{**base.__dict__, "status": "accepted" if clean == L16_TARGET_COUNT else "degraded", "reason": "holding_current_visible_global_top10_until_hold_expiry", "selected_count": clean,
+                   "unfilled_slots_count": max(0, L16_TARGET_COUNT - clean), "fallback_count": fallback, "top_symbol": display_rows[0].get("symbol", "not_available") if display_rows else "not_available",
                    "clean_selected_count": clean, "fallback_selected_count": fallback, "display_slot_count": display, "strict_clean_unfilled_slots_count": max(0, L16_TARGET_COUNT - clean),
                    "hold_state": "holding_current_basket", "hold_started_unix": started, "hold_valid_until_unix": valid_until, "hold_age_seconds": max(0, now - started),
                    "hold_valid_until_utc": _utc_from_unix(valid_until), "visible_surface_state": "static_held"}
