@@ -123,6 +123,13 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "r_readiness=enabled_account_status_only\r\n";
 }
 
+void AC_L1AppendTimingProof()
+{
+   AC_L1_WORKBENCH_SECTION += "render_duration_ms=" + IntegerToString((int)AC_L1_RENDER_DURATION_MS) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "total_refresh_duration_ms=" + IntegerToString((int)AC_L1_TOTAL_REFRESH_DURATION_MS) + "\r\n";
+   AC_L1_WORKBENCH_SECTION += "timing_note=scan_duration_excludes_render_maps_and_file_write;total_refresh_excludes_publication_fileio\r\n";
+}
+
 void AC_RefreshLayer1AccountTruth()
 {
    AC_L1Reset();
@@ -134,17 +141,24 @@ void AC_RefreshLayer1AccountTruth()
    if(AC_L1_SCAN_STATUS == "scanning") AC_L1_SCAN_STATUS = "complete";
    AC_L1_SCAN_DURATION_MS = GetTickCount() - AC_L1_SCAN_STARTED_MS;
    AC_L1_READY = true;
+
+   uint render_start_ms = GetTickCount();
    AC_BuildLayer1Texts();
    AC_L1NormalizeBaseAccountStatusSections();
    AC_L1AppendPortfolioMaps();
+   AC_L1_RENDER_DURATION_MS = GetTickCount() - render_start_ms;
+   AC_L1_TOTAL_REFRESH_DURATION_MS = GetTickCount() - AC_L1_SCAN_STARTED_MS;
+   AC_L1AppendTimingProof();
 }
 
 void AC_RefreshLayer1SnapshotOnly()
 {
+   uint snapshot_start_ms = GetTickCount();
    AC_L1ResetLiveSnapshotRows();
    AC_L1RefreshAccountSnapshot();
    AC_L1ScanPositions();
    AC_L1ScanPendingOrders();
+   AC_L1_TOTAL_REFRESH_DURATION_MS = GetTickCount() - snapshot_start_ms;
 }
 
 #endif
