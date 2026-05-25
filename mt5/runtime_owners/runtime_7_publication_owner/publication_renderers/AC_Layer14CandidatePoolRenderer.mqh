@@ -16,9 +16,17 @@ static int    AC_L14_LEADER_CANDIDATE_COUNT = 0;
 static int    AC_L14_BACKUP_CANDIDATE_COUNT = 0;
 static int    AC_L14_REVIEW_CANDIDATE_COUNT = 0;
 static int    AC_L14_THIN_FALLBACK_CANDIDATE_COUNT = 0;
+static int    AC_L14_SOURCE_GROUP_FALLBACK_COUNT = 0;
+static int    AC_L14_CANONICAL_MISSING_COUNT = 0;
 static int    AC_L14_WRITE_FAILED_COUNT = 0;
 static string AC_L14_TOP_CANDIDATE = "not_available";
 static string AC_L14_GENERATED_UTC = "not_available";
+static string AC_L14_QUALITY_STATE = "pending";
+static string AC_L14_SOURCE_L11_TOP5_CHECKSUM = "not_available";
+static string AC_L14_SOURCE_L11_RANKED_SYMBOLS_CHECKSUM = "not_available";
+static string AC_L14_SOURCE_L12_CHECKSUM = "not_available";
+static string AC_L14_SOURCE_L13_CHECKSUM = "not_available";
+static string AC_L14_SOURCE_FORMULA_CHECKSUM = "not_available";
 
 string AC_L14LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_14_Ranking_Group_Leader_Candidate_Pool"; }
 string AC_L14SummaryPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool_summary.txt"; }
@@ -77,6 +85,15 @@ int AC_L14KvInt(const string text, const string key, const int fallback = 0)
    return (int)StringToInteger(value);
 }
 
+string AC_L14RenderStatusLabel()
+{
+   if(!AC_L14_ACCEPTED) return AC_L14_STATUS;
+   if(AC_L14_QUALITY_STATE == "accepted_clean") return "Accepted clean";
+   if(AC_L14_QUALITY_STATE == "accepted_with_review_or_fallback") return "REVIEW - accepted with review/fallback";
+   if(AC_L14_QUALITY_STATE == "accepted_with_missing_canonical_truth") return "REVIEW - accepted with missing canonical truth";
+   return "REVIEW - accepted with non-clean quality state";
+}
+
 void AC_L14RefreshSummary()
 {
    AC_L14_ACCEPTED = false;
@@ -90,9 +107,17 @@ void AC_L14RefreshSummary()
    AC_L14_BACKUP_CANDIDATE_COUNT = 0;
    AC_L14_REVIEW_CANDIDATE_COUNT = 0;
    AC_L14_THIN_FALLBACK_CANDIDATE_COUNT = 0;
+   AC_L14_SOURCE_GROUP_FALLBACK_COUNT = 0;
+   AC_L14_CANONICAL_MISSING_COUNT = 0;
    AC_L14_WRITE_FAILED_COUNT = 0;
    AC_L14_TOP_CANDIDATE = "not_available";
    AC_L14_GENERATED_UTC = "not_available";
+   AC_L14_QUALITY_STATE = "pending";
+   AC_L14_SOURCE_L11_TOP5_CHECKSUM = "not_available";
+   AC_L14_SOURCE_L11_RANKED_SYMBOLS_CHECKSUM = "not_available";
+   AC_L14_SOURCE_L12_CHECKSUM = "not_available";
+   AC_L14_SOURCE_L13_CHECKSUM = "not_available";
+   AC_L14_SOURCE_FORMULA_CHECKSUM = "not_available";
 
    string summary = AC_L14ReadSmallTextFile(AC_L14SummaryPath(), 50000);
    if(summary == "") return;
@@ -108,9 +133,17 @@ void AC_L14RefreshSummary()
    AC_L14_BACKUP_CANDIDATE_COUNT = AC_L14KvInt(summary, "backup_candidate_count", 0);
    AC_L14_REVIEW_CANDIDATE_COUNT = AC_L14KvInt(summary, "review_candidate_count", 0);
    AC_L14_THIN_FALLBACK_CANDIDATE_COUNT = AC_L14KvInt(summary, "thin_fallback_candidate_count", 0);
+   AC_L14_SOURCE_GROUP_FALLBACK_COUNT = AC_L14KvInt(summary, "source_group_fallback_count", 0);
+   AC_L14_CANONICAL_MISSING_COUNT = AC_L14KvInt(summary, "canonical_missing_count", 0);
    AC_L14_WRITE_FAILED_COUNT = AC_L14KvInt(summary, "write_failed_count", 0);
    AC_L14_TOP_CANDIDATE = AC_L14KvValue(summary, "top_candidate", "not_available");
    AC_L14_GENERATED_UTC = AC_L14KvValue(summary, "generated_utc", "not_available");
+   AC_L14_QUALITY_STATE = AC_L14KvValue(summary, "l14_quality_state", "accepted_with_unknown_quality_state");
+   AC_L14_SOURCE_L11_TOP5_CHECKSUM = AC_L14KvValue(summary, "source_l11_top5_checksum", AC_L14KvValue(summary, "source_l11_checksum", "not_available"));
+   AC_L14_SOURCE_L11_RANKED_SYMBOLS_CHECKSUM = AC_L14KvValue(summary, "source_l11_ranked_symbols_checksum", "not_available");
+   AC_L14_SOURCE_L12_CHECKSUM = AC_L14KvValue(summary, "source_l12_checksum", "not_available");
+   AC_L14_SOURCE_L13_CHECKSUM = AC_L14KvValue(summary, "source_l13_checksum", "not_available");
+   AC_L14_SOURCE_FORMULA_CHECKSUM = AC_L14KvValue(summary, "source_l14_formula_checksum", "not_available");
 
    bool files_ok = FileIsExist(AC_L14CandidateCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L14CandidateManifestPath(), AC_CommonFlag())
@@ -119,14 +152,15 @@ void AC_L14RefreshSummary()
    bool permission_ok = (candidate_pool_runtime == "false" && trade_permission == "false" && entry_signal == "false" && execution == "false");
    bool counts_ok = (AC_L14_CANDIDATE_POOL_SIZE > 0);
    bool writes_ok = (AC_L14_WRITE_FAILED_COUNT == 0);
+   bool quality_known = (AC_L14_QUALITY_STATE != "accepted_with_unknown_quality_state" && AC_L14_QUALITY_STATE != "pending" && AC_L14_QUALITY_STATE != "not_available");
 
-   if(status == "accepted" && files_ok && permission_ok && counts_ok && writes_ok)
+   if(status == "accepted" && files_ok && permission_ok && counts_ok && writes_ok && quality_known)
    {
       AC_L14_ACCEPTED = true;
-      AC_L14_STATUS = "Accepted";
-      AC_L14_VALIDATION_STATUS = "Accepted";
-      AC_L14_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
-      AC_L14_MAIN_BLOCKER = "none";
+      AC_L14_STATUS = AC_L14RenderStatusLabel();
+      AC_L14_VALIDATION_STATUS = (AC_L14_QUALITY_STATE == "accepted_clean") ? "Accepted" : "AcceptedWithReview";
+      AC_L14_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission accepted;quality_state=" + AC_L14_QUALITY_STATE;
+      AC_L14_MAIN_BLOCKER = (AC_L14_QUALITY_STATE == "accepted_clean") ? "none" : "none_for_publication_review_or_fallback_visible";
       return;
    }
 
@@ -136,7 +170,8 @@ void AC_L14RefreshSummary()
       + ";files_ok=" + (files_ok ? "true" : "false")
       + ";counts_ok=" + (counts_ok ? "true" : "false")
       + ";permission_ok=" + (permission_ok ? "true" : "false")
-      + ";writes_ok=" + (writes_ok ? "true" : "false");
+      + ";writes_ok=" + (writes_ok ? "true" : "false")
+      + ";quality_known=" + (quality_known ? "true" : "false");
    AC_L14_MAIN_BLOCKER = AC_L14_VALIDATION_REASON;
 }
 
@@ -147,14 +182,17 @@ string AC_Layer14BoardSection()
    text += "\r\nLAYER 14 - RANKING GROUP LEADER CANDIDATE POOL\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L14_STATUS + "\r\n";
+   text += "Quality State:              " + AC_L14_QUALITY_STATE + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L13 selected groups + guarded L11 top5 + L12 group heat\r\n";
+   text += "Input Source:               L13 selected groups + guarded L11 top5 + L11 ranked canonical lookup + L12 group heat\r\n";
    text += "Selected Groups Consumed:   " + IntegerToString(AC_L14_SELECTED_GROUP_COUNT) + "\r\n";
    text += "Candidate Pool Size:        " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) + "\r\n";
    text += "Leader Candidates:          " + IntegerToString(AC_L14_LEADER_CANDIDATE_COUNT) + "\r\n";
    text += "Backup Candidates:          " + IntegerToString(AC_L14_BACKUP_CANDIDATE_COUNT) + "\r\n";
    text += "Review Candidates:          " + IntegerToString(AC_L14_REVIEW_CANDIDATE_COUNT) + "\r\n";
    text += "Thin Fallback Candidates:   " + IntegerToString(AC_L14_THIN_FALLBACK_CANDIDATE_COUNT) + "\r\n";
+   text += "Source Group Fallbacks:     " + IntegerToString(AC_L14_SOURCE_GROUP_FALLBACK_COUNT) + "\r\n";
+   text += "Canonical Missing:          " + IntegerToString(AC_L14_CANONICAL_MISSING_COUNT) + "\r\n";
    text += "Top Candidate:              " + AC_L14_TOP_CANDIDATE + "\r\n";
    text += "Source Generated UTC:       " + AC_L14_GENERATED_UTC + "\r\n";
    text += "Candidate Pool Runtime:     FALSE\r\n";
@@ -202,17 +240,28 @@ string AC_Layer14DossierSection(const string symbol)
    text += "\r\nLAYER 14 - RANKING GROUP LEADER CANDIDATE POOL\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L14_STATUS + "\r\n";
+   text += "Quality State: " + AC_L14_QUALITY_STATE + "\r\n";
    text += "Owner: Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "Source Generated UTC: " + AC_L14_GENERATED_UTC + "\r\n";
    if(row == "")
    {
-      text += "Candidate Pool Member: FALSE\r\n";
-      text += "Reason: symbol not present in latest raw L14 candidate pool, or L14 not accepted/readable yet\r\n";
+      if(AC_L14_ACCEPTED)
+      {
+         text += "Candidate Pool Member: FALSE_IN_CURRENT_L14_GLOBAL_POOL\r\n";
+         text += "Reason: symbol absent from the accepted global L14 candidate pool CSV for this generated UTC\r\n";
+      }
+      else
+      {
+         text += "Candidate Pool Member: UNKNOWN_L14_NOT_ACCEPTED_OR_UNREADABLE\r\n";
+         text += "Reason: latest L14 candidate pool is not accepted/readable, so this dossier must not infer membership false\r\n";
+      }
    }
    else
    {
       text += "Candidate Pool Member: TRUE\r\n";
       text += "Candidate Pool Rank: #" + AC_L14CsvField(row, 0) + " / " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) + "\r\n";
+      text += "Broker Symbol: " + AC_L14CsvField(row, 1) + "\r\n";
+      text += "Canonical Symbol: " + AC_L14CsvField(row, 2) + "\r\n";
       text += "Candidate Source: " + AC_L14CsvField(row, 8) + "\r\n";
       text += "Leader Or Backup: " + AC_L14CsvField(row, 9) + "\r\n";
       text += "Backup Included Flag: " + AC_L14CsvField(row, 10) + "\r\n";
@@ -238,11 +287,13 @@ string AC_Layer14WorkbenchSection()
    text += "\r\nL14_RANKING_GROUP_LEADER_CANDIDATE_POOL\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l14_ranking_group_leader_candidate_pool\r\n";
-   text += "schema_version=1\r\n";
+   text += "schema_version=2\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
+   text += "authority=candidate_pool_sourcing_only\r\n";
    text += "layer_id=14\r\n";
-   text += "input_source=L13_selected_groups+guarded_L11_top5+L12_group_heat_quality\r\n";
+   text += "input_source=L13_selected_groups+guarded_L11_top5+L11_ranked_canonical_lookup+L12_group_heat_quality\r\n";
    text += "status=" + AC_L14_STATUS + "\r\n";
+   text += "l14_quality_state=" + AC_L14_QUALITY_STATE + "\r\n";
    text += "validation_status=" + AC_L14_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L14_VALIDATION_REASON + "\r\n";
    text += "selected_group_count=" + IntegerToString(AC_L14_SELECTED_GROUP_COUNT) + "\r\n";
@@ -251,8 +302,15 @@ string AC_Layer14WorkbenchSection()
    text += "backup_candidate_count=" + IntegerToString(AC_L14_BACKUP_CANDIDATE_COUNT) + "\r\n";
    text += "review_candidate_count=" + IntegerToString(AC_L14_REVIEW_CANDIDATE_COUNT) + "\r\n";
    text += "thin_fallback_candidate_count=" + IntegerToString(AC_L14_THIN_FALLBACK_CANDIDATE_COUNT) + "\r\n";
+   text += "source_group_fallback_count=" + IntegerToString(AC_L14_SOURCE_GROUP_FALLBACK_COUNT) + "\r\n";
+   text += "canonical_missing_count=" + IntegerToString(AC_L14_CANONICAL_MISSING_COUNT) + "\r\n";
    text += "top_candidate=" + AC_L14_TOP_CANDIDATE + "\r\n";
    text += "source_generated_utc=" + AC_L14_GENERATED_UTC + "\r\n";
+   text += "source_l11_top5_checksum=" + AC_L14_SOURCE_L11_TOP5_CHECKSUM + "\r\n";
+   text += "source_l11_ranked_symbols_checksum=" + AC_L14_SOURCE_L11_RANKED_SYMBOLS_CHECKSUM + "\r\n";
+   text += "source_l12_checksum=" + AC_L14_SOURCE_L12_CHECKSUM + "\r\n";
+   text += "source_l13_checksum=" + AC_L14_SOURCE_L13_CHECKSUM + "\r\n";
+   text += "source_l14_formula_checksum=" + AC_L14_SOURCE_FORMULA_CHECKSUM + "\r\n";
    text += "summary_path=" + AC_L14SummaryPath() + "\r\n";
    text += "candidate_pool_path=" + AC_L14CandidateCsvPath() + "\r\n";
    text += "selection_desk_candidate_pool_path=" + AC_L14SelectionDeskPath() + "\r\n";
