@@ -284,7 +284,10 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
         if base["ranking_group"] in selected_keys:
             continue
         rejected_reason = reason if tier_no == 99 else "not_selected_below_selected_cutoff"
-        if base["thin_group_flag"] == "true" and tier_no >= 3:
+        # Preserve the true no-rankable failure reason. A group with rankable_count=0 is not a
+        # thin-but-usable group; labeling it as thin_group_below_preferred_depth hides the source
+        # degradation and makes L13 rejection proof dishonest.
+        if base["thin_group_flag"] == "true" and tier_no >= 3 and _int(base.get("rankable_count")) > 0:
             rejected_reason = "thin_group_below_preferred_depth"
         row = dict(base)
         row.update({
