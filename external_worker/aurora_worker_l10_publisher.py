@@ -81,6 +81,8 @@ class L10PublishSummary:
     active_with_review_group_count: int = 0
     review_only_group_count: int = 0
     write_failed_count: int = 0
+    source_payload_checksum: str = "not_available"
+    reused_existing_outputs: bool = False
     taxonomy_symbols_path: str = "not_available"
     ranking_groups_path: str = "not_available"
     symbol_path_index_path: str = "not_available"
@@ -167,6 +169,9 @@ def _summary_text(
     write_failed_count: int,
     symbol_sidecar_count: int,
     group_member_csv_count: int,
+    status: str,
+    reason: str,
+    source_payload_checksum: str,
 ) -> str:
     return "\n".join(
         [
@@ -176,6 +181,10 @@ def _summary_text(
             f"layer_name={L10_LAYER_NAME}",
             f"owner={L10_OWNER}",
             f"authority={L10_AUTHORITY}",
+            f"status={status}",
+            f"reason={reason}",
+            f"source_payload_checksum={source_payload_checksum}",
+            "reused_existing_outputs=false",
             f"symbol_count={quality.total_symbols}",
             f"accepted_strict_count={quality.accepted_strict_count}",
             f"accepted_public_research_count={quality.accepted_public_research_count}",
@@ -278,6 +287,7 @@ def publish_l10_taxonomy_outputs(
     ranking_groups: Iterable[L10RankingGroupSummary],
     symbol_path_plans: Iterable[L10SymbolPathPlan],
     invalid_universe_rows: Iterable[L10InvalidUniverseRow] = tuple(),
+    source_payload_checksum: str = "not_available",
 ) -> L10PublishSummary:
     layer_dir = outbox_root / "Layers" / L10_LAYER_FOLDER
     groups_dir = layer_dir / L10_GROUPS_FOLDER
@@ -337,11 +347,25 @@ def publish_l10_taxonomy_outputs(
         _write(symbol_taxonomy_dir / f"{safe_file_slug(row.symbol)}.txt", _symbol_taxonomy_text(row), failed_paths)
         symbol_sidecar_count += 1
 
-    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths), symbol_sidecar_count, group_member_csv_count)
-    _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
-
     status = "accepted" if not failed_paths else "write_degraded"
     reason = "l10_taxonomy_outputs_published" if not failed_paths else "one_or_more_l10_outputs_failed_atomic_write"
+    summary_text = _summary_text(
+        quality,
+        group_summary,
+        len(plans),
+        len(invalid_rows),
+        len(failed_paths),
+        symbol_sidecar_count,
+        group_member_csv_count,
+        status,
+        reason,
+        source_payload_checksum,
+    )
+    _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
+
+    if failed_paths and status == "accepted":
+        status = "write_degraded"
+        reason = "one_or_more_l10_outputs_failed_atomic_write"
     return L10PublishSummary(
         status=status,
         reason=reason,
@@ -364,6 +388,8 @@ def publish_l10_taxonomy_outputs(
         active_with_review_group_count=group_summary.active_with_review_groups,
         review_only_group_count=group_summary.review_only_groups,
         write_failed_count=len(failed_paths),
+        source_payload_checksum=source_payload_checksum,
+        reused_existing_outputs=False,
         taxonomy_symbols_path=str(layer_dir / L10_TAXONOMY_SYMBOLS_NAME),
         ranking_groups_path=str(layer_dir / L10_RANKING_GROUPS_NAME),
         symbol_path_index_path=str(layer_dir / L10_SYMBOL_PATH_INDEX_CSV_NAME),
