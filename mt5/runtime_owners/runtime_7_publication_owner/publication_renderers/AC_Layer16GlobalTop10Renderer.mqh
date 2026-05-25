@@ -23,6 +23,10 @@ static int    AC_L16_WRITE_FAILED_COUNT = 0;
 static string AC_L16_TOP_SYMBOL = "not_available";
 static string AC_L16_GENERATED_UTC = "not_available";
 static string AC_L16_THRESHOLD_STATUS = "untested_default_not_holy_law";
+static string AC_L16_HOLD_STATE = "not_available";
+static string AC_L16_HOLD_VALID_UNTIL_UTC = "not_available";
+static string AC_L16_VISIBLE_SURFACE_STATE = "not_available";
+static int    AC_L16_HOLD_AGE_SECONDS = 0;
 
 string AC_L16LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_16_Global_Top10_Builder"; }
 string AC_L16SummaryPath(){ return AC_L16LayerFolder() + "\\l16_global_top10_summary.txt"; }
@@ -103,6 +107,10 @@ void AC_L16RefreshSummary()
    AC_L16_TOP_SYMBOL = "not_available";
    AC_L16_GENERATED_UTC = "not_available";
    AC_L16_THRESHOLD_STATUS = "untested_default_not_holy_law";
+   AC_L16_HOLD_STATE = "not_available";
+   AC_L16_HOLD_VALID_UNTIL_UTC = "not_available";
+   AC_L16_VISIBLE_SURFACE_STATE = "not_available";
+   AC_L16_HOLD_AGE_SECONDS = 0;
 
    string summary = AC_L16ReadSmallTextFile(AC_L16SummaryPath(), 50000);
    if(summary == "") return;
@@ -125,6 +133,10 @@ void AC_L16RefreshSummary()
    AC_L16_TOP_SYMBOL = AC_L16KvValue(summary, "top_symbol", "not_available");
    AC_L16_GENERATED_UTC = AC_L16KvValue(summary, "generated_utc", "not_available");
    AC_L16_THRESHOLD_STATUS = AC_L16KvValue(summary, "threshold_status", "untested_default_not_holy_law");
+   AC_L16_HOLD_STATE = AC_L16KvValue(summary, "l16_hold_state", "not_available");
+   AC_L16_HOLD_VALID_UNTIL_UTC = AC_L16KvValue(summary, "l16_hold_valid_until_utc", "not_available");
+   AC_L16_VISIBLE_SURFACE_STATE = AC_L16KvValue(summary, "l16_visible_surface_state", "not_available");
+   AC_L16_HOLD_AGE_SECONDS = AC_L16KvInt(summary, "l16_hold_age_seconds", 0);
 
    bool files_ok = FileIsExist(AC_L16Top10CsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L16RejectsCsvPath(), AC_CommonFlag())
@@ -167,6 +179,11 @@ string AC_Layer16BoardSection()
    text += "Status:                     " + AC_L16_STATUS + "\r\n";
    text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "Input Source:               L14 candidate pool + L15 correlation/diversity\r\n";
+   text += "Visible Surface State:      " + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
+   text += "Hold State:                 " + AC_L16_HOLD_STATE + "\r\n";
+   text += "Hold Age Seconds:           " + IntegerToString(AC_L16_HOLD_AGE_SECONDS) + "\r\n";
+   text += "Hold Valid Until UTC:       " + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
+   text += "Visible Basket Meaning:     held display basket; latest calculation files may differ inside worker layer until hold expiry\r\n";
    text += "Candidate Pool Size:        " + IntegerToString(AC_L16_CANDIDATE_POOL_SIZE) + "\r\n";
    text += "L15 Candidate Count:        " + IntegerToString(AC_L16_L15_CANDIDATE_COUNT) + "\r\n";
    text += "Selected Count:             " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
@@ -225,11 +242,15 @@ string AC_Layer16DossierSection(const string symbol)
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L16_STATUS + "\r\n";
    text += "Owner: Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
+   text += "Visible Surface State: " + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
+   text += "Hold State: " + AC_L16_HOLD_STATE + "\r\n";
+   text += "Hold Valid Until UTC: " + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
+   text += "Visible Basket Meaning: held display basket; latest calculation files may differ until hold expiry\r\n";
    text += "Source Generated UTC: " + AC_L16_GENERATED_UTC + "\r\n";
    if(row == "")
    {
       text += "Global Top 10 Member: FALSE\r\n";
-      text += "Reason: symbol not present in latest L16 Global Top 10, or L16 not readable yet\r\n";
+      text += "Reason: symbol not present in visible held L16 Global Top 10, or L16 not readable yet\r\n";
    }
    else
    {
@@ -249,6 +270,8 @@ string AC_Layer16DossierSection(const string symbol)
       text += "Leader / Backup: " + AC_L16CsvField(row, 20) + "\r\n";
       text += "Candidate Source: " + AC_L16CsvField(row, 21) + "\r\n";
       text += "Selection Reason: " + AC_L16CsvField(row, 22) + "\r\n";
+      text += "Row Hold Visible: " + AC_L16CsvField(row, 38) + "\r\n";
+      text += "Row Hold State: " + AC_L16CsvField(row, 39) + "\r\n";
    }
    text += "Meaning: global_top10_inspection_basket_only_not_trade_permission\r\n";
    text += "Global Top10 Runtime: FALSE\r\n";
@@ -265,13 +288,18 @@ string AC_Layer16WorkbenchSection()
    text += "\r\nL16_GLOBAL_TOP10_BUILDER\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l16_global_top10_builder\r\n";
-   text += "schema_version=1\r\n";
+   text += "schema_version=2\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=16\r\n";
    text += "input_source=L14_candidate_pool+L15_correlation_diversity_outputs\r\n";
    text += "status=" + AC_L16_STATUS + "\r\n";
    text += "validation_status=" + AC_L16_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L16_VALIDATION_REASON + "\r\n";
+   text += "visible_surface_state=" + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
+   text += "hold_state=" + AC_L16_HOLD_STATE + "\r\n";
+   text += "hold_age_seconds=" + IntegerToString(AC_L16_HOLD_AGE_SECONDS) + "\r\n";
+   text += "hold_valid_until_utc=" + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
+   text += "visible_basket_meaning=held_display_basket_latest_calculation_files_may_differ_until_hold_expiry\r\n";
    text += "candidate_pool_size=" + IntegerToString(AC_L16_CANDIDATE_POOL_SIZE) + "\r\n";
    text += "l15_candidate_count=" + IntegerToString(AC_L16_L15_CANDIDATE_COUNT) + "\r\n";
    text += "selected_count=" + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
