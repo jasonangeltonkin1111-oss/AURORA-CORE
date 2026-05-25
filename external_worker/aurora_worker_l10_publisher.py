@@ -51,10 +51,8 @@ L10_GROUP_MEMBER_FIELDS = [
     "ranking_group",
     "taxonomy_state",
     "rank_allowed",
-    "selection_allowed",
+    "downstream_classification_eligible",
     "future_group_folder",
-    "future_top5_copy_path",
-    "future_top10_copy_path",
     "reason",
     "trade_permission",
 ]
@@ -78,7 +76,7 @@ class L10PublishSummary:
     conflict_count: int = 0
     missing_dossier_source_count: int = 0
     rank_allowed_count: int = 0
-    selection_allowed_count: int = 0
+    downstream_classification_eligible_count: int = 0
     active_group_count: int = 0
     active_with_review_group_count: int = 0
     review_only_group_count: int = 0
@@ -87,6 +85,10 @@ class L10PublishSummary:
     ranking_groups_path: str = "not_available"
     symbol_path_index_path: str = "not_available"
     summary_path: str = "not_available"
+
+    @property
+    def selection_allowed_count(self) -> int:
+        return self.downstream_classification_eligible_count
 
 
 def _csv_text(rows: Sequence[dict[str, str]], fields: Sequence[str]) -> str:
@@ -145,10 +147,8 @@ def _group_member_row(row: L10ResolvedTaxonomy) -> dict[str, str]:
         "ranking_group": row.ranking_group,
         "taxonomy_state": row.taxonomy_state,
         "rank_allowed": "true" if row.rank_allowed else "false",
-        "selection_allowed": "true" if row.selection_allowed else "false",
+        "downstream_classification_eligible": "true" if row.downstream_classification_eligible else "false",
         "future_group_folder": row.future_group_folder,
-        "future_top5_copy_path": row.future_top5_copy_path,
-        "future_top10_copy_path": row.future_top10_copy_path,
         "reason": row.reason,
         "trade_permission": row.trade_permission,
     }
@@ -186,7 +186,7 @@ def _summary_text(
             f"conflict_count={quality.conflict_count}",
             f"missing_dossier_source_count={quality.missing_dossier_source_count}",
             f"rank_allowed_count={quality.rank_allowed_count}",
-            f"selection_allowed_count={quality.selection_allowed_count}",
+            f"downstream_classification_eligible_count={quality.downstream_classification_eligible_count}",
             f"ranking_group_count={group_summary.total_groups}",
             f"active_group_count={group_summary.active_groups}",
             f"active_with_review_group_count={group_summary.active_with_review_groups}",
@@ -259,10 +259,8 @@ def _symbol_taxonomy_text(row: L10ResolvedTaxonomy) -> str:
             f"source_status={row.source_status}",
             f"block_reason={row.block_reason}",
             f"rank_allowed={'true' if row.rank_allowed else 'false'}",
-            f"selection_allowed={'true' if row.selection_allowed else 'false'}",
+            f"downstream_classification_eligible={'true' if row.downstream_classification_eligible else 'false'}",
             f"future_group_folder={row.future_group_folder}",
-            f"future_top5_copy_path={row.future_top5_copy_path}",
-            f"future_top10_copy_path={row.future_top10_copy_path}",
             f"reason={row.reason}",
             "selection_runtime=false",
             "trade_permission=false",
@@ -361,7 +359,7 @@ def publish_l10_taxonomy_outputs(
         conflict_count=quality.conflict_count,
         missing_dossier_source_count=quality.missing_dossier_source_count,
         rank_allowed_count=quality.rank_allowed_count,
-        selection_allowed_count=quality.selection_allowed_count,
+        downstream_classification_eligible_count=quality.downstream_classification_eligible_count,
         active_group_count=group_summary.active_groups,
         active_with_review_group_count=group_summary.active_with_review_groups,
         review_only_group_count=group_summary.review_only_groups,
