@@ -183,3 +183,20 @@ def l10_invalid_rows_as_dicts(invalid_rows: Iterable[L10InvalidUniverseRow]) -> 
         }
         for row in invalid_rows
     ]
+
+
+def l10_duplicate_keys_as_dicts(parse_result: L10UniverseParseResult) -> List[dict[str, str]]:
+    rows: List[dict[str, str]] = []
+    for key in parse_result.duplicate_primary_keys:
+        rows.append({
+            "duplicate_type": "primary_key",
+            "key": key,
+            "reason": "duplicate_runtime2_primary_key_detected_server_broker_file_broker_symbol",
+        })
+    for key in parse_result.duplicate_broker_symbol_keys:
+        rows.append({
+            "duplicate_type": "broker_symbol_key",
+            "key": key,
+            "reason": "duplicate_runtime2_broker_symbol_key_detected_across_rows",
+        })
+    return rows
