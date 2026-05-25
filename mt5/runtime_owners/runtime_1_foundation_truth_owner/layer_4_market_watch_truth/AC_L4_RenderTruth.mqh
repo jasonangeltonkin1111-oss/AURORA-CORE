@@ -40,6 +40,9 @@ void AC_BuildLayer4Texts()
    AC_L4_WORKBENCH_SECTION += "high_spread_warnings=" + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_success=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_SUCCESS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_failure=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_FAILURE) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_cache_last_index=" + IntegerToString(AC_L4_FIND_LAST_INDEX) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_cache_hits=" + IntegerToString(AC_L4_FIND_CACHE_HITS) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_full_scan_count=" + IntegerToString(AC_L4_FIND_FULL_SCAN_COUNT) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "authority=quote_truth_only_no_ranking_no_selection_no_direction_no_entry_no_permission\r\n";
    AC_L4_WORKBENCH_SECTION += "trade_permission=false\r\n";
 }
@@ -156,6 +159,9 @@ string AC_Layer4StatusRow()
       + "|daily_change_available=" + IntegerToString(AC_L4_DAILY_CHANGE_AVAILABLE)
       + "|cache_key=" + AC_L4_CACHE_KEY
       + "|refresh_key=" + AC_L4_REFRESH_KEY
+      + "|find_cache_last_index=" + IntegerToString(AC_L4_FIND_LAST_INDEX)
+      + "|find_cache_hits=" + IntegerToString(AC_L4_FIND_CACHE_HITS)
+      + "|find_full_scan_count=" + IntegerToString(AC_L4_FIND_FULL_SCAN_COUNT)
       + "|trade_permission=false";
 }
 
