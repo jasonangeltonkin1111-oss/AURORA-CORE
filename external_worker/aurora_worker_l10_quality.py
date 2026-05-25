@@ -6,11 +6,7 @@ from typing import Iterable, Tuple
 from aurora_worker_l10_matcher import L10SymbolMatchResult
 from aurora_worker_l10_schema import l10_trade_permission_text
 from aurora_worker_l10_universe_parser import L10UniverseTaxonomyRow
-from aurora_worker_l10_normalize import (
-    future_group_folder_path,
-    future_top5_copy_path,
-    future_top10_copy_path,
-)
+from aurora_worker_l10_normalize import future_group_folder_path
 
 
 @dataclass(frozen=True)
@@ -31,13 +27,18 @@ class L10ResolvedTaxonomy:
     source_status: str
     block_reason: str
     rank_allowed: bool
-    selection_allowed: bool
+    downstream_classification_eligible: bool
     dossier_source_path: str
     future_group_folder: str
-    future_top5_copy_path: str
-    future_top10_copy_path: str
     reason: str
     trade_permission: str
+
+    @property
+    def selection_allowed(self) -> bool:
+        # Backward-compatible read alias only. New L10 outputs must use
+        # downstream_classification_eligible so Layer 10 never overclaims
+        # selection authority.
+        return self.downstream_classification_eligible
 
     def as_taxonomy_symbol_row(self) -> dict[str, str]:
         return {
@@ -57,11 +58,9 @@ class L10ResolvedTaxonomy:
             "source_status": self.source_status,
             "block_reason": self.block_reason,
             "rank_allowed": "true" if self.rank_allowed else "false",
-            "selection_allowed": "true" if self.selection_allowed else "false",
+            "downstream_classification_eligible": "true" if self.downstream_classification_eligible else "false",
             "dossier_source_path": self.dossier_source_path,
             "future_group_folder": self.future_group_folder,
-            "future_top5_copy_path": self.future_top5_copy_path,
-            "future_top10_copy_path": self.future_top10_copy_path,
             "reason": self.reason,
             "trade_permission": self.trade_permission,
         }
@@ -79,7 +78,13 @@ class L10QualitySummary:
     conflict_count: int
     missing_dossier_source_count: int
     rank_allowed_count: int
-    selection_allowed_count: int
+    downstream_classification_eligible_count: int
+
+    @property
+    def selection_allowed_count(self) -> int:
+        # Backward-compatible read alias for older callers. Do not emit this
+        # as L10 schema truth.
+        return self.downstream_classification_eligible_count
 
 
 def _upper(value: str | None) -> str:
@@ -131,18 +136,6 @@ def _planned_group_path(ranking_group: str, rank_allowed: bool) -> str:
     return future_group_folder_path(ranking_group)
 
 
-def _planned_top5_path(symbol: str, ranking_group: str, rank_allowed: bool) -> str:
-    if not rank_allowed or ranking_group == "Unknown":
-        return "not_available"
-    return future_top5_copy_path(symbol, ranking_group)
-
-
-def _planned_top10_path(symbol: str, selection_allowed: bool) -> str:
-    if not selection_allowed:
-        return "not_available"
-    return future_top10_copy_path(symbol)
-
-
 def _unknown_result(match: L10SymbolMatchResult, state: str, reason: str) -> L10ResolvedTaxonomy:
     symbol = match.symbol
     return L10ResolvedTaxonomy(
@@ -162,11 +155,9 @@ def _unknown_result(match: L10SymbolMatchResult, state: str, reason: str) -> L10
         source_status="not_available",
         block_reason="not_available",
         rank_allowed=False,
-        selection_allowed=False,
+        downstream_classification_eligible=False,
         dossier_source_path=_default_dossier_source_path(symbol),
         future_group_folder="not_available",
-        future_top5_copy_path="not_available",
-        future_top10_copy_path="not_available",
         reason=reason,
         trade_permission=l10_trade_permission_text(),
     )
@@ -183,37 +174,37 @@ def l10_resolve_match_quality(match: L10SymbolMatchResult) -> L10ResolvedTaxonom
         taxonomy_state = "BLOCKED"
         review_state = "blocked_by_taxonomy_source"
         rank_allowed = False
-        selection_allowed = False
+        downstream_classification_eligible = False
         reason = "taxonomy_row_blocked"
     elif _row_is_omitted(row):
         taxonomy_state = "OMITTED"
         review_state = "operator_omitted_or_source_omitted"
         rank_allowed = False
-        selection_allowed = False
+        downstream_classification_eligible = False
         reason = "taxonomy_row_omitted"
     elif _row_needs_review(row):
         taxonomy_state = "REVIEW_REQUIRED"
         review_state = row.review_lane
         rank_allowed = False
-        selection_allowed = False
+        downstream_classification_eligible = False
         reason = "taxonomy_row_requires_review"
     elif _row_strict_rank_allowed(row):
         taxonomy_state = "ACCEPTED_STRICT"
         review_state = row.review_lane
         rank_allowed = True
-        selection_allowed = True
+        downstream_classification_eligible = True
         reason = "strict_rank_allowed_taxonomy_match"
     elif _row_public_research_rank_allowed(row):
         taxonomy_state = "ACCEPTED_PUBLIC_RESEARCH"
         review_state = row.review_lane
         rank_allowed = True
-        selection_allowed = True
+        downstream_classification_eligible = True
         reason = "public_research_rank_allowed_taxonomy_match"
     else:
         taxonomy_state = "REVIEW_REQUIRED"
         review_state = row.review_lane
         rank_allowed = False
-        selection_allowed = False
+        downstream_classification_eligible = False
         reason = "taxonomy_match_not_rank_allowed"
 
     symbol = match.symbol
@@ -235,11 +226,9 @@ def l10_resolve_match_quality(match: L10SymbolMatchResult) -> L10ResolvedTaxonom
         source_status=row.source_status,
         block_reason=row.block_reason,
         rank_allowed=rank_allowed,
-        selection_allowed=selection_allowed,
+        downstream_classification_eligible=downstream_classification_eligible,
         dossier_source_path=_default_dossier_source_path(symbol),
         future_group_folder=_planned_group_path(ranking_group, rank_allowed),
-        future_top5_copy_path=_planned_top5_path(symbol, ranking_group, rank_allowed),
-        future_top10_copy_path=_planned_top10_path(symbol, selection_allowed),
         reason=reason + ";" + match.reason,
         trade_permission=l10_trade_permission_text(),
     )
@@ -262,7 +251,7 @@ def l10_quality_summary(rows: Iterable[L10ResolvedTaxonomy]) -> L10QualitySummar
         conflict_count=sum(1 for row in materialized if row.taxonomy_state == "CONFLICT"),
         missing_dossier_source_count=sum(1 for row in materialized if row.taxonomy_state == "MISSING_DOSSIER_SOURCE"),
         rank_allowed_count=sum(1 for row in materialized if row.rank_allowed),
-        selection_allowed_count=sum(1 for row in materialized if row.selection_allowed),
+        downstream_classification_eligible_count=sum(1 for row in materialized if row.downstream_classification_eligible),
     )
 
 
