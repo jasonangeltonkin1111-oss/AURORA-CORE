@@ -145,7 +145,10 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
 
    if(AC_L4_SYMBOLS[next].tick_available)
    {
-      datetime now_time = TimeCurrent();
+      // TimeCurrent() is last-quote time in OnTimer. If the same stale quote pins
+      // TimeCurrent, tick age can incorrectly become zero. Use L2's current
+      // server-time ladder instead: TimeTradeServer -> TimeCurrent -> TimeGMT.
+      datetime now_time = AC_L2CurrentSessionServerTime();
       long now_msc = (long)now_time * 1000;
       if(AC_L4_SYMBOLS[next].tick_time_msc > 0 && now_msc >= AC_L4_SYMBOLS[next].tick_time_msc)
       {
@@ -156,6 +159,13 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
       {
          AC_L4_SYMBOLS[next].tick_age_ms = (long)(now_time - AC_L4_SYMBOLS[next].tick_time_broker) * 1000;
          AC_L4_SYMBOLS[next].tick_age_seconds = (double)AC_L4_SYMBOLS[next].tick_age_ms / 1000.0;
+      }
+      else
+      {
+         AC_L4_SYMBOLS[next].tick_age_ms = -1;
+         AC_L4_SYMBOLS[next].tick_age_seconds = 999999.0;
+         if(AC_L4_SYMBOLS[next].failure_reason == "")
+            AC_L4_SYMBOLS[next].failure_reason = "Tick time is ahead of current server time or unavailable; quote freshness unsafe.";
       }
 
       AC_L4_SYMBOLS[next].bid_valid = (AC_L4_SYMBOLS[next].bid > 0.0);
@@ -241,7 +251,7 @@ void AC_RefreshLayer4MarketWatchTruth()
    int total = SymbolsTotal(false);
    string refreshed_at = TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
    AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
-   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | refreshed " + refreshed_at;
+   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | refreshed " + refreshed_at + " | time_source=TimeTradeServerFirst";
 
    for(int idx=0; idx<total; idx++)
    {
@@ -262,7 +272,7 @@ void AC_RefreshLayer4MarketWatchTruth()
 bool AC_L4ShouldRunFullScan()
 {
    if(!AC_L4_READY) return true;
-   if(TimeCurrent() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
+   if(AC_L2CurrentSessionServerTime() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
    if(AC_L4_CACHE_KEY == "not_scanned") return true;
    return false;
 }
