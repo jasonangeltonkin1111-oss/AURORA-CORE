@@ -56,6 +56,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 | `docs/34_L15_CORRELATION_DIVERSITY_SELECTION_CONTROL.md` | L15 correlation / diversity scoring control | Active | task-specific | L5 | Current L15 control contract. |
 | `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Current L16 control contract; held visible basket + fallback labels; no trade permission. |
 | `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Current L17 control contract; consumes L16 held visible display rows only; no evidence collection/trade permission. |
+| `docs/37_L23_TRADER_REVIEW_EXPORT_PERMISSION_STATE_CONTROL.md` | L23 trader-review export / permission state design control | Branch design | task-specific | L5 | Branch-only design control; L23 cannot merge until L22 accepted/stable on main. |
 | `docs/27_RUNTIME_5_TO_7_FUTURE_LAYER_PLAYBOOK.md` .. `docs/33_L13_CLOSEOUT_AND_L14_HANDOFF.md` | Runtime/layer implementation notes and handoffs | Active | task-specific | L5 | Check exact file before using as active source; current source/config still outranks docs. |
 
 ## blueprint
