@@ -77,9 +77,7 @@ string AC_L1CompactBoardSection()
    text += AC_L1BoardLine("Prop Rule Profile", "NOT_LOADED / UNKNOWN");
    text += AC_L1BoardLine("Prop Rule Safety", "UNKNOWN - live/funded permission blocked");
    text += AC_L1BoardLine("Health", health);
-   text += AC_L1BoardLine("Edge Validated", "FALSE");
    text += AC_L1BoardLine("Trade Permission", "FALSE");
-   text += "Note: selected-history metrics are manual-review truth only, not all-time proof, edge proof, permission, or prop-firm readiness.\r\n";
    text += "Note: Account Status carries full trades, maps, cost, tag, quality, drawdown, and prop-rule truth detail.\r\n";
    return text;
 }
