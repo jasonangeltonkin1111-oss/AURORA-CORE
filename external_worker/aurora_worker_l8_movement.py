@@ -18,13 +18,14 @@ L8_TOP20_NAME = "ranked_symbols_top20.txt"
 L8_SYMBOL_RANK_FOLDER = "SymbolRanks"
 L8_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L8_JOB_TYPE = "L8_MOVEMENT_RANGE_RANKING_V1"
-L8_MODEL_VERSION = "true_range_v2_priority_windows"
+L8_MODEL_VERSION = "true_range_v3_priority_windows_freshness_guard"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
 L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Priority_Windows"
 L8_GATEWAY_ROLE = "Runtime 3 Gateway support only"
 L8_REASON_MAX_PARTS = 16
 L8_REASON_MAX_CHARS = 640
+L8_STALE_SECONDS_BY_TF = {"M5": 15 * 60, "M15": 45 * 60, "H1": 3 * 60 * 60, "H4": 12 * 60 * 60}
 
 OUTPUT_FIELDS = [
     "rank_index", "symbol", "layer_id", "layer_name", "l8_model_version", "movement_score", "movement_bucket",
@@ -32,7 +33,10 @@ OUTPUT_FIELDS = [
     "quote_quality", "surface_quality", "tick_age_seconds", "spread_bps", "range_availability_score",
     "movement_quality_score", "expansion_compression_score", "multi_timeframe_agreement_score",
     "movement_cleanliness_score", "range_position_quality_score", "quote_surface_quality_score",
+    "ohlc_window_freshness_score", "ohlc_window_stale_count", "ohlc_core_window_stale_count",
     "m5_bars_copied", "m15_bars_copied", "h1_bars_copied", "h4_bars_copied",
+    "m5_latest_bar_age_seconds", "m15_latest_bar_age_seconds", "h1_latest_bar_age_seconds", "h4_latest_bar_age_seconds",
+    "m5_freshness_state", "m15_freshness_state", "h1_freshness_state", "h4_freshness_state",
     "ohlc_priority_window_checksum", "ohlc_window_files_seen", "ohlc_window_files_missing",
     "m5_window_checksum", "m15_window_checksum", "h1_window_checksum", "h4_window_checksum",
     "m5_range_points_12", "m5_range_points_48", "m5_avg_true_range_12", "m5_avg_true_range_48", "m5_expansion_ratio", "m5_chop_proxy", "m5_spike_ratio", "m5_close_position_pct",
@@ -84,6 +88,9 @@ class L8RankSummary:
     ohlc_priority_window_payload_checksum: str = "not_available"
     ohlc_window_files_seen: int = 0
     ohlc_window_files_missing: int = 0
+    ohlc_window_stale_count: int = 0
+    ohlc_core_window_stale_count: int = 0
+    ohlc_window_min_freshness_score: str = "not_available"
     payload_checksum: str = "not_available"
     ranked_csv_path: str = "not_available"
     manifest_path: str = "not_available"
@@ -345,10 +352,26 @@ def _position_pct(rows: List[Dict[str, int]], count: int) -> float:
     return max(0.0, min(100.0, ((close - low) / float(high - low)) * 100.0))
 
 
-def _tf_metrics(rows: List[Dict[str, int]], recent: int, baseline: int) -> Dict[str, float | int]:
+def _freshness_state(age_seconds: int, max_age_seconds: int) -> Tuple[str, float]:
+    if age_seconds < 0:
+        return "missing", 0.0
+    if max_age_seconds <= 0:
+        return "unknown_threshold", 50.0
+    ratio = age_seconds / float(max_age_seconds)
+    if ratio <= 1.0:
+        return "fresh", 100.0
+    if ratio <= 2.0:
+        return "aging", 60.0
+    return "stale", 0.0
+
+
+def _tf_metrics(rows: List[Dict[str, int]], recent: int, baseline: int, timeframe_label: str) -> Dict[str, float | int | str]:
     copied = len(rows)
     recent_avail = min(copied, recent)
     baseline_avail = min(copied, baseline)
+    latest_bar_time = rows[0]["bar_time"] if rows else 0
+    latest_bar_age = max(0, unix_time() - latest_bar_time) if latest_bar_time > 0 else -1
+    freshness_state, freshness_score = _freshness_state(latest_bar_age, L8_STALE_SECONDS_BY_TF.get(timeframe_label, 0))
     recent_range = _range_points(rows, recent_avail)
     baseline_range = _range_points(rows, baseline_avail)
     recent_true = _avg_true_range(rows, recent_avail)
@@ -358,6 +381,10 @@ def _tf_metrics(rows: List[Dict[str, int]], recent: int, baseline: int) -> Dict[
     spike = _largest_true_range(rows, baseline_avail) / baseline_true if baseline_true > 0.0 else 0.0
     return {
         "bars_copied": copied,
+        "latest_bar_time": latest_bar_time,
+        "latest_bar_age_seconds": latest_bar_age,
+        "freshness_state": freshness_state,
+        "freshness_score": freshness_score,
         "range_recent": recent_range,
         "range_baseline": baseline_range,
         "avg_true_recent": recent_true,
@@ -448,10 +475,10 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
     symbol = _safe_text(row, "symbol")
     symbol_dir = _symbol_priority_window_dir(outbox, symbol)
     checksums = _ohlc_window_checksum_packet(symbol_dir)
-    m5 = _tf_metrics(_read_ohlc_window(symbol_dir / "M5.window.csv"), 12, 48)
-    m15 = _tf_metrics(_read_ohlc_window(symbol_dir / "M15.window.csv"), 16, 64)
-    h1 = _tf_metrics(_read_ohlc_window(symbol_dir / "H1.window.csv"), 24, 72)
-    h4 = _tf_metrics(_read_ohlc_window(symbol_dir / "H4.window.csv"), 6, 30)
+    m5 = _tf_metrics(_read_ohlc_window(symbol_dir / "M5.window.csv"), 12, 48, "M5")
+    m15 = _tf_metrics(_read_ohlc_window(symbol_dir / "M15.window.csv"), 16, 64, "M15")
+    h1 = _tf_metrics(_read_ohlc_window(symbol_dir / "H1.window.csv"), 24, 72, "H1")
+    h4 = _tf_metrics(_read_ohlc_window(symbol_dir / "H4.window.csv"), 6, 30, "H4")
 
     market_state = _safe_text(row, "market_state")
     quote_quality = _safe_text(row, "quote_quality")
@@ -463,6 +490,11 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
     exp_scores = [_expansion_score(float(m5["expansion_ratio"])), _expansion_score(float(m15["expansion_ratio"])), _expansion_score(float(h1["expansion_ratio"]))]
     expansion_score = sum(score for score, _reason in exp_scores) / 3.0
     expansion_reasons = ";".join(reason for _score, reason in exp_scores)
+
+    freshness_values = [float(m5["freshness_score"]), float(m15["freshness_score"]), float(h1["freshness_score"]), float(h4["freshness_score"])]
+    ohlc_freshness_score = sum(freshness_values) / float(len(freshness_values))
+    stale_count = sum(1 for tf in (m5, m15, h1, h4) if tf["freshness_state"] == "stale")
+    core_stale_count = sum(1 for tf in (m5, m15, h1) if tf["freshness_state"] == "stale")
 
     movement_presence = min(100.0, ((float(m5["avg_true_baseline"]) > 0) * 28.0) + ((float(m15["avg_true_baseline"]) > 0) * 32.0) + ((float(h1["avg_true_baseline"]) > 0) * 32.0) + ((float(h4["avg_true_baseline"]) > 0) * 8.0))
     agreement_values = [float(m5["expansion_ratio"]), float(m15["expansion_ratio"]), float(h1["expansion_ratio"])]
@@ -480,7 +512,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
     quote_score, quote_reason = _quote_surface_score(quote_quality, surface_quality, spread_bps, tick_age)
     spike_risk = any(float(tf["spike_ratio"]) > 4.0 for tf in (m5, m15, h1)) or violent > 0
 
-    movement_score = max(0.0, min(100.0, availability_score * 0.20 + movement_presence * 0.20 + expansion_score * 0.25 + agreement_score * 0.15 + cleanliness_score * 0.10 + range_position_score * 0.05 + quote_score * 0.05))
+    movement_score = max(0.0, min(100.0, availability_score * 0.18 + movement_presence * 0.18 + expansion_score * 0.23 + agreement_score * 0.14 + cleanliness_score * 0.09 + range_position_score * 0.04 + quote_score * 0.04 + ohlc_freshness_score * 0.10))
 
     rank_state = "ranked"
     score_quality = "usable_true_range_priority_window_model"
@@ -496,6 +528,12 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
     if market_state != "open":
         rank_state = "not_rankable_quality"
         score_quality = "not_rankable_market_not_open"
+    elif core_stale_count >= 3:
+        rank_state = "not_rankable_quality"
+        score_quality = "not_rankable_core_priority_windows_stale"
+    elif stale_count > 0 and rank_state == "ranked":
+        rank_state = "ranked_partial"
+        score_quality = "partial_priority_window_stale_degraded"
     elif spike_risk and rank_state == "ranked":
         rank_state = "ranked_risk_review"
         score_quality = "risk_review_single_bar_true_range_spike_or_violent_expansion_risk"
@@ -505,6 +543,8 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
 
     if spike_risk:
         regime = "violent_spike_risk"
+    elif stale_count > 0:
+        regime = "stale_window_degraded"
     elif avg_chop > 4.0:
         regime = "choppy_range"
     elif compressed >= 2:
@@ -513,9 +553,12 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
         regime = "clean_expansion"
     else:
         regime = "normal"
-    h4_context = "unavailable" if int(h4["bars_copied"]) <= 0 else ("confirms" if float(h4["expansion_ratio"]) >= 1.05 else ("contradicts_short_term" if expanding >= 2 and float(h4["expansion_ratio"]) < 0.75 else "neutral"))
+    h4_context = "unavailable" if int(h4["bars_copied"]) <= 0 else ("stale" if h4["freshness_state"] == "stale" else ("confirms" if float(h4["expansion_ratio"]) >= 1.05 else ("contradicts_short_term" if expanding >= 2 and float(h4["expansion_ratio"]) < 0.75 else "neutral")))
 
     reasons = ["ok_L5Pass", availability_reason, expansion_reasons, quote_reason, f"regime={regime}", f"model={L8_MODEL_VERSION}", f"source={L8_SOURCE_OWNER}", "ranking_only_no_direction_no_entry"]
+    for label, metrics in (("m5", m5), ("m15", m15), ("h1", h1), ("h4", h4)):
+        if metrics["freshness_state"] in {"stale", "aging", "missing"}:
+            reasons.append(f"{label}_ohlc_window_{metrics['freshness_state']}_age_seconds={metrics['latest_bar_age_seconds']}")
     if spike_risk:
         reasons.append("single_bar_true_range_spike_or_violent_expansion_risk")
     if extreme_count > 0:
@@ -528,7 +571,10 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, str | float | int
         "asset_class": _safe_text(row, "asset_class"), "ranking_group": _safe_text(row, "ranking_group"), "market_state": market_state, "quote_quality": quote_quality, "surface_quality": surface_quality,
         "tick_age_seconds": tick_age, "spread_bps": spread_bps, "range_availability_score": availability_score, "movement_quality_score": movement_presence, "expansion_compression_score": expansion_score,
         "multi_timeframe_agreement_score": agreement_score, "movement_cleanliness_score": cleanliness_score, "range_position_quality_score": range_position_score, "quote_surface_quality_score": quote_score,
+        "ohlc_window_freshness_score": ohlc_freshness_score, "ohlc_window_stale_count": stale_count, "ohlc_core_window_stale_count": core_stale_count,
         "m5_bars_copied": int(m5["bars_copied"]), "m15_bars_copied": int(m15["bars_copied"]), "h1_bars_copied": int(h1["bars_copied"]), "h4_bars_copied": int(h4["bars_copied"]),
+        "m5_latest_bar_age_seconds": int(m5["latest_bar_age_seconds"]), "m15_latest_bar_age_seconds": int(m15["latest_bar_age_seconds"]), "h1_latest_bar_age_seconds": int(h1["latest_bar_age_seconds"]), "h4_latest_bar_age_seconds": int(h4["latest_bar_age_seconds"]),
+        "m5_freshness_state": str(m5["freshness_state"]), "m15_freshness_state": str(m15["freshness_state"]), "h1_freshness_state": str(h1["freshness_state"]), "h4_freshness_state": str(h4["freshness_state"]),
         "ohlc_priority_window_checksum": checksums["ohlc_priority_window_checksum"], "ohlc_window_files_seen": int(checksums["ohlc_window_files_seen"]), "ohlc_window_files_missing": int(checksums["ohlc_window_files_missing"]),
         "m5_window_checksum": checksums["m5_window_checksum"], "m15_window_checksum": checksums["m15_window_checksum"], "h1_window_checksum": checksums["h1_window_checksum"], "h4_window_checksum": checksums["h4_window_checksum"],
         "m5_range_points_12": float(m5["range_recent"]), "m5_range_points_48": float(m5["range_baseline"]), "m5_avg_true_range_12": float(m5["avg_true_recent"]), "m5_avg_true_range_48": float(m5["avg_true_baseline"]), "m5_expansion_ratio": float(m5["expansion_ratio"]), "m5_chop_proxy": float(m5["chop_proxy"]), "m5_spike_ratio": float(m5["spike_ratio"]), "m5_close_position_pct": float(m5["close_position_pct"]),
@@ -554,22 +600,27 @@ def _write_ranked_csv(scored: List[Dict[str, str | float | int | bool]]) -> str:
 
 
 def _top20_text(scored: List[Dict[str, str | float | int | bool]]) -> str:
-    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", f"Model Version: {L8_MODEL_VERSION}", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Priority Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|priority_window_checksum|reason"]
+    lines = [
+        "L8 MOVEMENT / RANGE TOP 20",
+        f"generated_utc={utc_stamp()}",
+        f"model={L8_MODEL_VERSION}",
+        "rank|symbol|score|bucket|state|regime|freshness|stale_windows",
+    ]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{row['ohlc_priority_window_checksum']}|{_bounded_reason(str(row['reason']))}")
+        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{float(row['ohlc_window_freshness_score']):.1f}|{row['ohlc_window_stale_count']}")
     lines.append("")
     return "\n".join(lines)
 
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool]) -> str:
     symbol = str(row["symbol"])
-    lines = ["schema_name=l8_symbol_rank", "schema_version=4", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
+    lines = ["schema_name=l8_symbol_rank", "schema_version=5", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"rank_index={rank_index}", f"symbol={symbol}", f"symbol_rank_filename_mode={L8_SYMBOL_RANK_FILENAME_MODE}", f"symbol_rank_filename={_symbol_rank_filename(symbol)}", f"symbol_rank_checksum={_symbol_checksum(symbol)}"]
     for key in OUTPUT_FIELDS:
         if key in {"rank_index", "symbol", "layer_id", "layer_name"}:
             continue
         if key in row:
             lines.append(f"{key}={_format_value(row[key])}")
-    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", f"scoring_owner={L8_OWNER}", f"gateway_role={L8_GATEWAY_ROLE}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority Windows/<TF>.window.csv", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
+    lines += ["authority=calculation_support_only", f"gateway_role={L8_GATEWAY_ROLE}", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
@@ -580,15 +631,15 @@ def _manifest(summary: L8RankSummary, input_path: Path, store_root: Path) -> str
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_files_ok = summary.symbol_rank_files_written == summary.row_count and summary.symbol_rank_files_actual == summary.row_count
     return "\n".join([
-        "schema_name=layer_ranked_symbols_manifest", "schema_version=4", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
-        f"input_csv_path={input_path}", f"shared_ohlc_store_root={store_root}", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority Windows/<TF>.window.csv", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
+        "schema_name=layer_ranked_symbols_manifest", "schema_version=5", "layer_id=8", f"layer_name={L8_LAYER_NAME}", f"owner_name={L8_OWNER}", f"job_type={L8_JOB_TYPE}", f"l8_model_version={L8_MODEL_VERSION}", f"status={summary.status}", f"reason={summary.reason}",
+        f"input_csv_path={input_path}", f"shared_ohlc_store_root={store_root}", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}", f"source_input_manifest_row_count={summary.source_input_manifest_row_count}", f"source_l5_gate_pass={summary.source_l5_gate_pass}",
         f"source_input_payload_checksum={summary.source_input_payload_checksum}", f"input_payload_checksum={summary.input_payload_checksum}", f"input_payload_checksum_after_rank={summary.input_payload_checksum_after_rank}", f"input_generation_stable={'true' if summary.input_generation_stable else 'false'}",
         f"input_payload_checksum_matches_source_manifest={'true' if input_manifest_checksum_ok else 'false'}", f"input_csv_count_matches_input_manifest={'true' if source_counts_ok else 'false'}", f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
-        f"ohlc_priority_window_payload_checksum={summary.ohlc_priority_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}",
+        f"ohlc_priority_window_payload_checksum={summary.ohlc_priority_window_payload_checksum}", f"ohlc_window_files_seen={summary.ohlc_window_files_seen}", f"ohlc_window_files_missing={summary.ohlc_window_files_missing}", f"ohlc_window_stale_count={summary.ohlc_window_stale_count}", f"ohlc_core_window_stale_count={summary.ohlc_core_window_stale_count}", f"ohlc_window_min_freshness_score={summary.ohlc_window_min_freshness_score}",
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_risk_review_count={summary.ranked_risk_review_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", f"scoring_owner={L8_OWNER}", f"gateway_role={L8_GATEWAY_ROLE}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", f"gateway_role={L8_GATEWAY_ROLE}", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"freshness_threshold_seconds_m5={L8_STALE_SECONDS_BY_TF['M5']}", f"freshness_threshold_seconds_m15={L8_STALE_SECONDS_BY_TF['M15']}", f"freshness_threshold_seconds_h1={L8_STALE_SECONDS_BY_TF['H1']}", f"freshness_threshold_seconds_h4={L8_STALE_SECONDS_BY_TF['H4']}", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
@@ -641,12 +692,16 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     summary.ohlc_priority_window_payload_checksum = payload_checksum([str(row["symbol"]) + "=" + str(row["ohlc_priority_window_checksum"]) for row in scored])
     summary.ohlc_window_files_seen = sum(int(row["ohlc_window_files_seen"]) for row in scored)
     summary.ohlc_window_files_missing = sum(int(row["ohlc_window_files_missing"]) for row in scored)
+    summary.ohlc_window_stale_count = sum(int(row["ohlc_window_stale_count"]) for row in scored)
+    summary.ohlc_core_window_stale_count = sum(int(row["ohlc_core_window_stale_count"]) for row in scored)
+    if scored:
+        summary.ohlc_window_min_freshness_score = f"{min(float(row['ohlc_window_freshness_score']) for row in scored):.6f}"
 
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "recomputed true-range model rows from stable L8 metadata and current Runtime 1 priority-window OHLC files"
+    summary.reason = "recomputed true-range model rows from stable L8 metadata and current Runtime 1 priority-window OHLC files with timeframe-aware freshness guard"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_partial_count = sum(1 for row in scored if row["rank_state"] == "ranked_partial")
@@ -668,6 +723,9 @@ def publish_l8_movement_range_rankings(outbox: Path) -> L8RankSummary:
     if summary.ohlc_window_files_missing > 0 and summary.status == "complete":
         summary.status = "input_degraded"
         summary.reason = f"OHLC priority-window files missing for L8 calculation; missing={summary.ohlc_window_files_missing}; seen={summary.ohlc_window_files_seen}"
+    if summary.ohlc_window_stale_count > 0 and summary.status == "complete":
+        summary.status = "input_degraded"
+        summary.reason = f"OHLC priority-window files stale for L8 calculation; stale={summary.ohlc_window_stale_count}; core_stale={summary.ohlc_core_window_stale_count}; min_freshness_score={summary.ohlc_window_min_freshness_score}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
     top20_ok = atomic_write_text(top20_path, _top20_text(scored))
