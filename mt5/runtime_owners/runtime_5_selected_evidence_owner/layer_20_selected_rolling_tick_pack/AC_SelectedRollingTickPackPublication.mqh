@@ -1,6 +1,8 @@
 #ifndef AC_SELECTED_ROLLING_TICK_PACK_PUBLICATION_MQH
 #define AC_SELECTED_ROLLING_TICK_PACK_PUBLICATION_MQH
 
+#include "AC_SelectedRollingTickPack.mqh"
+
 // Layer 20 publication scaffold.
 // Depends on the active Route/FileIO owner functions when included deliberately after L1-L19 stability.
 // This file must not become a duplicate FileIO or route owner.
