@@ -103,12 +103,15 @@ void AC_BuildLayer2Texts()
    AC_L2_BOARD_SECTION += "Server Time Source:   TimeTradeServer first; TimeCurrent then TimeGMT fallback\r\n";
    AC_L2_BOARD_SECTION += "Worst Blocker:        " + AC_L2TitleText(AC_L2_WORST_FAILURE_REASON) + "\r\n";
    AC_L2_BOARD_SECTION += "Trade Permission:     FALSE\r\n";
-   AC_L2_BOARD_SECTION += "Cutoff Rule:          Closed symbols stop deeper layer publication until the next recheck\r\n";
+   AC_L2_BOARD_SECTION += "Downstream Cutoff:    Closed/unknown symbols block eligibility for deeper layers; publication continues\r\n";
 
    AC_L2_WORKBENCH_SECTION = "\r\nL2_MARKET_OPEN_CLOSED_SCAN\r\n";
    AC_L2_WORKBENCH_SECTION += "----------------------------------------\r\n";
    AC_L2_WORKBENCH_SECTION += "scan_status=" + layer_status + "\r\n";
    AC_L2_WORKBENCH_SECTION += "scan_duration_ms=" + IntegerToString((int)AC_L2_SCAN_DURATION_MS) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "symbols_per_second=" + StringFormat("%.1f", AC_L2_SYMBOLS_PER_SECOND) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "speed_target_symbols_per_second=200\r\n";
+   AC_L2_WORKBENCH_SECTION += "speed_target_met=" + (AC_L2_SYMBOLS_PER_SECOND >= 200.0 ? "true" : "false") + "\r\n";
    AC_L2_WORKBENCH_SECTION += "symbols_seen=" + IntegerToString(AC_L2_SYMBOLS_TOTAL) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "symbols_scanned=" + IntegerToString(AC_L2_SYMBOLS_SCANNED) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "open_count=" + IntegerToString(AC_L2_OPEN_COUNT) + "\r\n";
@@ -128,7 +131,7 @@ void AC_BuildLayer2Texts()
    AC_L2_WORKBENCH_SECTION += "duplicate_cleanup_failure_count=" + IntegerToString(AC_L2_DUPLICATE_CLEANUP_FAILURE_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "session_time_basis=server_session_time_of_day\r\n";
    AC_L2_WORKBENCH_SECTION += "server_time_source=TimeTradeServer_then_TimeCurrent_then_TimeGMT_fallback\r\n";
-   AC_L2_WORKBENCH_SECTION += "cutoff_rule=closed_symbol_blocks_deeper_layer_publication_until_next_recheck_due\r\n";
+   AC_L2_WORKBENCH_SECTION += "downstream_cutoff_rule=closed_or_unknown_blocks_deeper_layer_eligibility_publication_continues\r\n";
    AC_L2_WORKBENCH_SECTION += "worst_failure_reason=" + AC_L2_WORST_FAILURE_REASON + "\r\n";
    AC_L2_WORKBENCH_SECTION += "trade_permission=false\r\n";
 }
@@ -154,7 +157,8 @@ string AC_Layer2DossierSection(const string symbol)
    {
       text += "Market State: Unknown\r\n";
       text += "Reason: Layer 2 packet missing for this symbol\r\n";
-      text += "Deeper Layer Cutoff: Yes\r\n";
+      text += "Deeper Layer Eligibility Cutoff: Yes\r\n";
+      text += "Publication Cutoff: No\r\n";
       text += "Trade Permission: FALSE\r\n";
       return text;
    }
@@ -182,7 +186,8 @@ string AC_Layer2DossierSection(const string symbol)
    text += "Tick Support: " + AC_L2TitleText(s.tick_support_state) + "\r\n";
    text += "Source Quality: " + AC_L2TitleText(s.source_quality) + "\r\n";
    text += "Next Recheck Due: " + AC_L2TimeText(s.next_recheck_due) + "\r\n";
-   text += "Deeper Layer Cutoff: " + (s.market_state == "open" ? "No" : "Yes") + "\r\n";
+   text += "Deeper Layer Eligibility Cutoff: " + (s.market_state == "open" ? "No" : "Yes") + "\r\n";
+   text += "Publication Cutoff: No\r\n";
    text += "Cutoff Reason: " + (s.market_state == "open" ? "Market session is open" : "Market is not confirmed open") + "\r\n";
    text += "Trade Permission: FALSE\r\n";
    return text;
@@ -196,6 +201,7 @@ string AC_Layer2StatusRow()
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|layer_status=" + (AC_L2_READY ? AC_L2_SCAN_STATUS : "pending")
       + "|symbols_total=" + IntegerToString(AC_L2_SYMBOLS_TOTAL)
+      + "|symbols_per_second=" + StringFormat("%.1f", AC_L2_SYMBOLS_PER_SECOND)
       + "|open_count=" + IntegerToString(AC_L2_OPEN_COUNT)
       + "|closed_count=" + IntegerToString(AC_L2_CLOSED_COUNT)
       + "|unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
@@ -203,7 +209,7 @@ string AC_Layer2StatusRow()
       + "|trade_session_failure=" + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT)
       + "|route_write_counter_semantics=attempts_not_unique_final_files"
       + "|route_write_failures=" + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT)
-      + "|cutoff_rule=closed_symbols_block_deeper_layers"
+      + "|cutoff_rule=closed_or_unknown_symbols_block_deeper_layer_eligibility_publication_continues"
       + "|trade_permission=false";
 }
 

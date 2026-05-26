@@ -396,6 +396,7 @@ void AC_RefreshLayer2MarketSessionTruth()
       AC_L2_UNKNOWN_COUNT = 0;
       AC_L2_READY = true;
       AC_L2_SCAN_DURATION_MS = GetTickCount() - AC_L2_SCAN_STARTED_MS;
+      AC_L2_SYMBOLS_PER_SECOND = 0.0;
       AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|symbols=0|open=0|closed=0|unknown=0|time_source=TimeTradeServerFirst";
       AC_BuildLayer2Texts();
       return;
@@ -418,6 +419,10 @@ void AC_RefreshLayer2MarketSessionTruth()
    if(AC_L2_UNKNOWN_COUNT > 0 || AC_L2_SYMBOL_INFO_FAILURE_COUNT > 0 || AC_L2_TRADE_SESSION_FAILURE_COUNT > 0 || AC_L2_QUOTE_SESSION_FAILURE_COUNT > 0)
       AC_L2_SCAN_STATUS = "complete_with_degraded";
    AC_L2_SCAN_DURATION_MS = GetTickCount() - AC_L2_SCAN_STARTED_MS;
+   if(AC_L2_SCAN_DURATION_MS > 0)
+      AC_L2_SYMBOLS_PER_SECOND = ((double)AC_L2_SYMBOLS_SCANNED * 1000.0) / (double)AC_L2_SCAN_DURATION_MS;
+   else
+      AC_L2_SYMBOLS_PER_SECOND = (double)AC_L2_SYMBOLS_SCANNED;
    AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION
       + "|server_day=" + IntegerToString(day_of_week)
       + "|symbols=" + IntegerToString(total)
