@@ -244,6 +244,28 @@ string AC_BoardTraderSelectionOverviewSection()
    return text;
 }
 
+string AC_BoardVisualCockpitCoverageSection()
+{
+   string text = "";
+   text += "\r\nCOCKPIT WARNING COVERAGE CHECK\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "Purpose: compact readback for worker chain stages not named in the older Primary Warning line.\r\n";
+   text += "L11 Symbol Rank:       " + AC_BoardHealthTag(AC_L11_STATUS) + " | " + AC_L11_STATUS + "\r\n";
+   text += "L12 Group Heat:        " + AC_BoardHealthTag(AC_L12_STATUS) + " | " + AC_L12_STATUS + "\r\n";
+   text += "L13 Group Selection:   " + AC_BoardHealthTag(AC_L13_STATUS) + " | " + AC_L13_STATUS + "\r\n";
+   text += "L14 Candidate Pool:    " + AC_BoardHealthTag(AC_L14_STATUS) + " | " + AC_L14_STATUS + "\r\n";
+   text += "Shared OHLC Store:     " + AC_BoardHealthTag(AC_SHARED_OHLC_STATUS) + " | " + AC_SHARED_OHLC_STATUS + "\r\n";
+   text += "Meaning: readback only; no layer truth calculation, no selection authority, no trade permission.\r\n";
+   return text;
+}
+
+string AC_BoardVisualCockpitPostProcess(string text)
+{
+   StringReplace(text, "\r\nTRADING READINESS\r\n", "\r\nPERMISSION / REVIEW STATE - TRADING BLOCKED\r\n");
+   StringReplace(text, "Permission Active:  No\r\n", "Permission Active:  No - trade_allowed=false; auto_trade_allowed=false; entry_signal=false\r\n");
+   return text;
+}
+
 string AC_BoardTraderChatExportGuideSection()
 {
    string text = "";
@@ -263,6 +285,8 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
                                const AC_Layer0StatusPacket &status)
 {
    string text = AC_BuildTraderBoardText_Base(snapshot, status);
+   text = AC_BoardVisualCockpitPostProcess(text);
+   text += AC_BoardVisualCockpitCoverageSection();
    text += AC_BoardTraderChatExportGuideSection();
    return text;
 }
