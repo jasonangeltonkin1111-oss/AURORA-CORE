@@ -2,7 +2,7 @@
 #define AC_FILEIO_MQH
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Publication / FileIO / Route Service owns atomic file writes and safe file cleanup only.
+// Publication / FileIO / Route Service owns atomic file writes, unchanged-skip writes, and safe file cleanup only.
 // It does not own routes, types, or trading truth.
 
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
@@ -24,6 +24,47 @@ string AC_WriteStatusFromResult(const AC_WriteResult &result)
    if(result.status != "")
       return result.status;
    return "failed";
+}
+
+AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
+                                           const bool ok,
+                                           const string status,
+                                           const ulong final_size,
+                                           const string detail)
+{
+   AC_WriteResult result;
+   result.attempted = true;
+   result.ok = ok;
+   result.temp_open_ok = ok;
+   result.temp_write_ok = ok;
+   result.move_ok = ok;
+   result.final_exists = ok;
+   result.final_size = final_size;
+   result.error_code = 0;
+   result.status = status;
+   result.detail = detail;
+   result.final_path = surface_path;
+   result.temp_path = "";
+   return result;
+}
+
+string AC_ReadTextFileBounded(const string path, const int max_chars = 300000)
+{
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(!FileIsExist(path, common_flag)) return "";
+   ResetLastError();
+   int handle = FileOpen(path, AC_FileFlags() | FILE_READ);
+   if(handle == INVALID_HANDLE) return "";
+   string text = "";
+   while(!FileIsEnding(handle) && StringLen(text) < max_chars)
+   {
+      string line = FileReadString(handle);
+      text += line;
+      if(!FileIsEnding(handle)) text += "\r\n";
+   }
+   FileClose(handle);
+   if(StringLen(text) > max_chars) text = StringSubstr(text, 0, max_chars);
+   return text;
 }
 
 AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
@@ -189,26 +230,18 @@ AC_WriteResult AC_WriteTextFileFastAtomic(const string final_path, const string 
    return result;
 }
 
-AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
-                                           const bool ok,
-                                           const string status,
-                                           const ulong final_size,
-                                           const string detail)
+AC_WriteResult AC_WriteTextFileFastAtomicIfChanged(const string final_path,
+                                                   const string content,
+                                                   const string reason = "content_compare")
 {
-   AC_WriteResult result;
-   result.attempted = true;
-   result.ok = ok;
-   result.temp_open_ok = ok;
-   result.temp_write_ok = ok;
-   result.move_ok = ok;
-   result.final_exists = ok;
-   result.final_size = final_size;
-   result.error_code = 0;
-   result.status = status;
-   result.detail = detail;
-   result.final_path = surface_path;
-   result.temp_path = "";
-   return result;
+   int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
+   if(FileIsExist(final_path, common_flag))
+   {
+      string existing = AC_ReadTextFileBounded(final_path, MathMax(300000, StringLen(content) + 4096));
+      if(existing == content)
+         return AC_MakeSyntheticWriteResult(final_path, true, "unchanged_no_write", (ulong)StringLen(content), reason + "|existing_content_identical_atomic_move_skipped");
+   }
+   return AC_WriteTextFileFastAtomic(final_path, content);
 }
 
 AC_WriteResult AC_WriteTextFileIfChanged(const string final_path,
@@ -258,62 +291,8 @@ AC_WriteResult AC_DeleteFileIfExists(const string final_path)
    result.ok = !result.final_exists;
    result.move_ok = result.ok;
    result.status = result.ok ? "deleted" : "delete_verify_failed";
-   result.detail = result.ok ? "safe_file_cleanup_complete" : "file_still_exists_after_delete";
+   result.detail = result.ok ? "file_deleted" : "file_still_exists_after_delete";
    return result;
-}
-
-string AC_CleanupLegacyPlaceholderFiles()
-{
-   string targets[8];
-   targets[0] = AC_PlaceholderPath(AC_DossiersFolder());
-   targets[1] = AC_PlaceholderPath(AC_DossiersOpenFolder());
-   targets[2] = AC_PlaceholderPath(AC_DossiersClosedFolder());
-   targets[3] = AC_PlaceholderPath(AC_DossiersUnknownFolder());
-   targets[4] = AC_PlaceholderPath(AC_SelectionDeskFolder());
-   targets[5] = AC_PlaceholderPath(AC_SelectionGroupsFolder());
-   targets[6] = AC_PlaceholderPath(AC_SelectionGlobalFolder());
-   targets[7] = AC_PlaceholderPath(AC_WorkbenchFolder());
-
-   int deleted = 0;
-   int failed = 0;
-   string failed_paths = "";
-   for(int i = 0; i < 8; i++)
-   {
-      AC_WriteResult result = AC_DeleteFileIfExists(targets[i]);
-      if(result.status == "deleted") deleted++;
-      else if(!result.ok)
-      {
-         failed++;
-         failed_paths += targets[i] + "|error=" + IntegerToString(result.error_code) + ";";
-      }
-   }
-
-   string status = failed == 0 ? "complete" : "degraded";
-   return "placeholder_cleanup_status=" + status
-      + "|deleted=" + IntegerToString(deleted)
-      + "|failed=" + IntegerToString(failed)
-      + "|failed_paths=" + failed_paths;
-}
-
-string AC_DiagnosticSafeText(const string value)
-{
-   string text = value;
-   StringReplace(text, "|", ";");
-   StringReplace(text, "\r", " ");
-   StringReplace(text, "\n", " ");
-   return text;
-}
-
-string AC_WriteResultLine(const string surface, const AC_WriteResult &result)
-{
-   return surface
-      + "|status=" + AC_WriteStatusFromResult(result)
-      + "|ok=" + (result.ok ? "true" : "false")
-      + "|final_exists=" + (result.final_exists ? "true" : "false")
-      + "|final_size=" + AC_UlongToText(result.final_size)
-      + "|error=" + IntegerToString(result.error_code)
-      + "|detail=" + AC_DiagnosticSafeText(result.detail)
-      + "|final_path=" + result.final_path;
 }
 
 #endif
