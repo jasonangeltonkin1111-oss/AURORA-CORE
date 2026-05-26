@@ -81,9 +81,6 @@ L9_LOCATION_CONTEXT_FIELDS = [
     "available_surface_room_pips",
     "surface_geometry_confidence",
     "surface_geometry_confidence_reason",
-    # Deprecated compatibility aliases. L9 owns surface/location geometry, not L22 liquidity.
-    "nearest_liquidity_reference",
-    "nearest_liquidity_distance_pips",
 ]
 
 L9_OUTPUT_FIELDS = [
