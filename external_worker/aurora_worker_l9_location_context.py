@@ -14,7 +14,7 @@ NEW_YORK_SESSION_HOURS = range(13, 22)
 LOCATION_CONTEXT_TIME_BASIS = "broker_server_bar_time_hour_heuristic_from_priority_windows"
 
 
-def _not_available_context() -> Dict[str, object]:
+def _not_available_context(reason: str = "missing_price_or_point_or_surface_windows") -> Dict[str, object]:
     return {
         "location_context_time_basis": LOCATION_CONTEXT_TIME_BASIS,
         "distance_to_previous_day_high": "not_available",
@@ -25,8 +25,11 @@ def _not_available_context() -> Dict[str, object]:
         "distance_to_london_low": "not_available",
         "position_in_session_range_pct": "not_available",
         "position_in_daily_range_pct": "not_available",
-        "nearest_liquidity_reference": "not_available",
-        "nearest_liquidity_distance_pips": "not_available",
+        "nearest_surface_reference": "not_available",
+        "nearest_surface_obstacle_distance_pips": "not_available",
+        "available_surface_room_pips": "not_available",
+        "surface_geometry_confidence": 0.0,
+        "surface_geometry_confidence_reason": reason,
     }
 
 
@@ -107,12 +110,35 @@ def _nearest_reference(price_i: int, point: float, references: Dict[str, int]) -
     return best_name, best_distance
 
 
+def _available_room_pips(price_i: int, point: float, references: Dict[str, int]) -> object:
+    distances: List[float] = []
+    for level_i in references.values():
+        distance = _distance_pips(price_i, level_i, point)
+        if not isinstance(distance, str):
+            distances.append(float(distance))
+    return max(distances) if distances else "not_available"
+
+
+def _surface_confidence(packet: L9WindowPacket, reference_count: int) -> Tuple[float, str]:
+    total_required = max(1, packet.required_seen + packet.required_missing)
+    required_ratio = max(0.0, min(1.0, packet.required_seen / float(total_required)))
+    reference_ratio = max(0.0, min(1.0, reference_count / 6.0))
+    confidence = max(0.0, min(1.0, required_ratio * 0.70 + reference_ratio * 0.30))
+    reason = (
+        f"required_windows_seen={packet.required_seen};"
+        f"required_windows_missing={packet.required_missing};"
+        f"surface_reference_count={reference_count};"
+        "confidence_is_geometry_data_quality_not_trade_probability"
+    )
+    return confidence, reason
+
+
 def calculate_l9_location_context(packet: L9WindowPacket, price_i: int, point: float) -> Dict[str, object]:
     """Return plain L9 location context fields.
 
     This deliberately reports distance/range context only. It must not infer
     sweep confirmation, CHOCH, BOS, FVG, order blocks, setup candidates,
-    direction, selection, trade permission, or execution permission.
+    direction, selection, trade permission, execution permission, or a liquidity map.
     """
     context = _not_available_context()
     if price_i <= 0 or point <= 0.0:
@@ -154,6 +180,12 @@ def calculate_l9_location_context(packet: L9WindowPacket, price_i: int, point: f
             context["position_in_session_range_pct"] = _position_pct(price_i, session_low, session_high)
 
     nearest_name, nearest_distance = _nearest_reference(price_i, point, references)
-    context["nearest_liquidity_reference"] = nearest_name
-    context["nearest_liquidity_distance_pips"] = nearest_distance
+    available_room = _available_room_pips(price_i, point, references)
+    confidence, confidence_reason = _surface_confidence(packet, len(references))
+
+    context["nearest_surface_reference"] = nearest_name
+    context["nearest_surface_obstacle_distance_pips"] = nearest_distance
+    context["available_surface_room_pips"] = available_room
+    context["surface_geometry_confidence"] = confidence
+    context["surface_geometry_confidence_reason"] = confidence_reason
     return context
