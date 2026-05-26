@@ -1,8 +1,51 @@
 #ifndef AC_EXTERNAL_WORKER_RENDER_MQH
 #define AC_EXTERNAL_WORKER_RENDER_MQH
 
+string AC_ExternalWorkerRuntimeProofStatus()
+{
+   if(AC_EXTERNAL_WORKER_STATUS.accepted_result
+      && AC_EXTERNAL_WORKER_STATUS.result_validation_status == "Accepted"
+      && AC_EXTERNAL_WORKER_STATUS.job_bus_validation_status == "Accepted")
+      return "runtime_proven_by_mt5_readback";
+
+   return "not_runtime_proven";
+}
+
+string AC_ExternalWorkerRuntimeProofReason()
+{
+   if(AC_EXTERNAL_WORKER_STATUS.result_validation_reason != "")
+      return AC_EXTERNAL_WORKER_STATUS.result_validation_reason;
+   if(AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason != "")
+      return AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason;
+   if(AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason != "")
+      return AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_reason;
+   if(AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason != "")
+      return AC_EXTERNAL_WORKER_STATUS.lifecycle_validation_reason;
+   if(AC_EXTERNAL_WORKER_STATUS.install_validation_reason != "")
+      return AC_EXTERNAL_WORKER_STATUS.install_validation_reason;
+
+   return "no_accepted_result_readback";
+}
+
+string AC_ExternalWorkerCompactValue(const string raw_value)
+{
+   string value = raw_value;
+   StringReplace(value, "\r", " ");
+   StringReplace(value, "\n", " ");
+   StringReplace(value, "|", "/");
+   StringReplace(value, "=", ":");
+   StringTrimLeft(value);
+   StringTrimRight(value);
+   if(value == "") return "not_available";
+   return value;
+}
+
 void AC_BuildExternalWorkerTexts()
 {
+   string runtime_proof_status = AC_ExternalWorkerRuntimeProofStatus();
+   string runtime_proof_reason = AC_ExternalWorkerRuntimeProofReason();
+   string runtime_proof_reason_compact = AC_ExternalWorkerCompactValue(runtime_proof_reason);
+
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION = "\r\nEXTERNAL_CALCULATION_WORKER\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "----------------------------------------\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "owner=" + AC_RUNTIME3_OWNER + "\r\n";
@@ -16,6 +59,9 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "popup_alerts=false\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "authority=" + AC_EXTERNAL_WORKER_STATUS.authority + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_proof_status=" + runtime_proof_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_readback_proof_status=" + runtime_proof_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_proof_reason=" + runtime_proof_reason + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status_source=" + AC_EXTERNAL_WORKER_STATUS.install_status_source + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status_file_present=" + (AC_EXTERNAL_WORKER_STATUS.install_status_file_present ? "true" : "false") + "\r\n";
@@ -124,6 +170,9 @@ void AC_BuildExternalWorkerTexts()
       + "|launch_implementation=" + AC_EXTERNAL_WORKER_STATUS.launch_implementation
       + "|launch_status=" + AC_EXTERNAL_WORKER_STATUS.launch_status
       + "|worker_status=" + AC_EXTERNAL_WORKER_STATUS.worker_status
+      + "|runtime_proof_status=" + runtime_proof_status
+      + "|mt5_readback_proof_status=" + runtime_proof_status
+      + "|runtime_proof_reason=" + runtime_proof_reason_compact
       + "|install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status
       + "|worker_installed=" + (AC_EXTERNAL_WORKER_STATUS.worker_installed ? "true" : "false")
       + "|install_validation_status=" + AC_EXTERNAL_WORKER_STATUS.install_validation_status
@@ -169,7 +218,7 @@ string AC_ExternalWorkerWorkbenchSection()
 string AC_ExternalWorkerStatusRow()
 {
    if(AC_EXTERNAL_WORKER_STATUS_ROW == "")
-      return "schema_name=external_worker_status|schema_version=v1.0|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|trade_permission=false";
+      return "schema_name=external_worker_status|schema_version=v1.0|source_owner=" + AC_RUNTIME3_OWNER + "|worker_status=not_checked|runtime_proof_status=not_runtime_proven|mt5_readback_proof_status=not_runtime_proven|runtime_proof_reason=not_checked|trade_permission=false";
    return AC_EXTERNAL_WORKER_STATUS_ROW;
 }
 
