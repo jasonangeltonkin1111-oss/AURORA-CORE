@@ -5,15 +5,30 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l19 import L19PublishSummary, publish_l19_candle_geometry_and_structure
-from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
-from aurora_worker_selection_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_root_index
+from aurora_worker_selection_surface_cleanup import (
+    EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY,
+    SelectionSurfaceCleanupSummary,
+    cleanup_legacy_selection_surface_paths,
+)
+from aurora_worker_selection_root_index import (
+    EMPTY_SELECTION_ROOT_INDEX_SUMMARY,
+    SelectionRootIndexSummary,
+    publish_selection_root_index,
+)
 
 
-def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: SelectionSurfaceCleanupSummary = EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY) -> str:
+def l19_result_lines(
+    summary: L19PublishSummary,
+    duration_ms: int,
+    cleanup: SelectionSurfaceCleanupSummary = EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY,
+    root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY,
+) -> str:
     return "\n".join([
+        f"l19_wick_candle_geometry_status={summary.status}",
         f"l19_candle_geometry_status={summary.status}",
+        f"l19_wick_candle_geometry_reason={summary.reason}",
         f"l19_candle_geometry_reason={summary.reason}",
-        f"l19_candle_geometry_duration_ms={duration_ms}",
+        f"l19_wick_candle_geometry_duration_ms={duration_ms}",
         f"l19_selected_dossiers_seen={summary.selected_dossiers_seen}",
         f"l19_selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
         f"l19_selected_route_dossiers_decorated={summary.selected_route_dossiers_decorated}",
@@ -30,8 +45,8 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
         f"l19_valid_geometry_rows={summary.valid_geometry_rows}",
         f"l19_zero_range_rows={summary.zero_range_rows}",
         f"l19_invalid_geometry_rows={summary.invalid_geometry_rows}",
-        f"l19_wave2_rows_tagged={summary.wave2_rows_tagged}",
-        f"l19_wave3_rows_tagged={summary.wave3_rows_tagged}",
+        "l19_wave2_rows_tagged=0",
+        "l19_wave3_rows_tagged=0",
         f"l19_topview_cleanup_count={summary.topview_cleanup_count}",
         f"l19_write_failed_count={summary.write_failed_count}",
         f"l19_latest_bar_age_max_seconds={summary.latest_bar_age_max_seconds}",
@@ -70,18 +85,16 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
         "l19_scope=canonical_selection_shortcut_dossiers_only",
         "l19_source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
         "l19_rows_shown_per_tf=5",
-        "l19_structure_wave=wave_1_single_candle_plus_wave_2_two_candle_plus_wave_3_three_candle_structures",
-        "l19_wave2_current_possible_confirmed=false",
-        "l19_wave3_current_possible_confirmed=false",
-        "l19_wave3_gap_confirmation=false",
-        "l19_wave3_trend_confirmation=false",
+        "l19_geometry_policy=one_to_one_body_range_wicks_percentages_close_position_zero_range_only",
+        "l19_pattern_detection=false",
+        "l19_setup_detection=false",
         "l19_time_basis=OHLC_Store_Unix_Time",
         "l19_copyrates_calls=0",
         "l19_private_ohlc_cache=false",
         "l19_raw_ohlc_store_writes=false",
         "l19_base_dossiers_touched=false",
         "l19_all_symbol_scan=false",
-        "l19_meaning=candle_geometry_and_structure_only_not_signal_not_trade_permission",
+        "l19_meaning=wick_candle_geometry_only_not_pattern_not_signal_not_trade_permission",
         "l19_trade_permission=false",
         "l19_entry_signal=false",
         "l19_execution=false",
@@ -90,9 +103,10 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
 
 
 def _replace_or_append_l19_block(result_text: str, lines: str) -> str:
-    marker = "l19_candle_geometry_status="
     normalized = result_text.replace("\r\n", "\n")
-    if marker not in normalized:
+    markers = ("l19_wick_candle_geometry_status=", "l19_candle_geometry_status=")
+    marker = next((item for item in markers if item in normalized), "")
+    if not marker:
         return normalized.rstrip() + "\n" + lines
     before, _sep, tail = normalized.partition(marker)
     kept_tail = []
@@ -120,7 +134,7 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=22",
+            "schema_version=23",
             "worker_l19_append_status=appended_by_l19_dispatch",
             f"l19_status={summary.status}",
             f"l19_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
@@ -131,8 +145,8 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
             f"l19_valid_geometry_rows={summary.valid_geometry_rows}",
             f"l19_zero_range_rows={summary.zero_range_rows}",
             f"l19_invalid_geometry_rows={summary.invalid_geometry_rows}",
-            f"l19_wave2_rows_tagged={summary.wave2_rows_tagged}",
-            f"l19_wave3_rows_tagged={summary.wave3_rows_tagged}",
+            "l19_wave2_rows_tagged=0",
+            "l19_wave3_rows_tagged=0",
             f"l19_topview_cleanup_count={summary.topview_cleanup_count}",
             f"l19_status_path={summary.status_path}",
             f"l19_board_path={summary.board_path}",
@@ -141,11 +155,9 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
-            "l19_structure_wave=wave_1_single_candle_plus_wave_2_two_candle_plus_wave_3_three_candle_structures",
-            "l19_wave2_current_possible_confirmed=false",
-            "l19_wave3_current_possible_confirmed=false",
-            "l19_wave3_gap_confirmation=false",
-            "l19_wave3_trend_confirmation=false",
+            "l19_geometry_policy=one_to_one_body_range_wicks_percentages_close_position_zero_range_only",
+            "l19_pattern_detection=false",
+            "l19_setup_detection=false",
             "l19_time_basis=OHLC_Store_Unix_Time",
             "l19_copyrates_calls=0",
             "l19_private_ohlc_cache=false",
