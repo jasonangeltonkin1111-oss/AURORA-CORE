@@ -29,7 +29,7 @@ void AC_L4InitPacket(AC_L4SymbolPacket &p, const string symbol)
    p.tick_time_broker = 0;
    p.tick_time_msc = 0;
    p.tick_age_ms = -1;
-   p.tick_age_seconds = 0.0;
+   p.tick_age_seconds = -1.0;
    p.tick_flags = 0;
    p.bid = 0.0;
    p.ask = 0.0;
@@ -163,7 +163,7 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
       else
       {
          AC_L4_SYMBOLS[next].tick_age_ms = -1;
-         AC_L4_SYMBOLS[next].tick_age_seconds = 999999.0;
+         AC_L4_SYMBOLS[next].tick_age_seconds = -1.0;
          if(AC_L4_SYMBOLS[next].failure_reason == "")
             AC_L4_SYMBOLS[next].failure_reason = "Tick time is ahead of current server time or unavailable; quote freshness unsafe.";
       }
@@ -172,7 +172,7 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
       AC_L4_SYMBOLS[next].ask_valid = (AC_L4_SYMBOLS[next].ask > 0.0);
       AC_L4_SYMBOLS[next].last_valid = (AC_L4_SYMBOLS[next].last > 0.0);
       AC_L4_SYMBOLS[next].bid_ask_valid = (AC_L4_SYMBOLS[next].bid_valid && AC_L4_SYMBOLS[next].ask_valid && AC_L4_SYMBOLS[next].ask >= AC_L4_SYMBOLS[next].bid);
-      AC_L4_SYMBOLS[next].quote_valid_flag = AC_L4_SYMBOLS[next].bid_ask_valid;
+      AC_L4_SYMBOLS[next].quote_valid_flag = (AC_L4_SYMBOLS[next].bid_ask_valid && AC_L4_SYMBOLS[next].tick_age_seconds >= 0.0);
       AC_L4_SYMBOLS[next].quote_quality = AC_L4QuoteQuality(AC_L4_SYMBOLS[next].tick_available, AC_L4_SYMBOLS[next].bid_ask_valid, AC_L4_SYMBOLS[next].tick_age_seconds);
 
       if(!AC_L4_SYMBOLS[next].bid_ask_valid && AC_L4_SYMBOLS[next].failure_reason == "")
@@ -183,13 +183,13 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
          double mid = (AC_L4_SYMBOLS[next].bid + AC_L4_SYMBOLS[next].ask) / 2.0;
          AC_L4_SYMBOLS[next].spread_price_live = AC_L4_SYMBOLS[next].ask - AC_L4_SYMBOLS[next].bid;
          AC_L4_SYMBOLS[next].spread_points_live = AC_L4_SYMBOLS[next].spread_price_live / AC_L4_SYMBOLS[next].point;
-         AC_L4_SYMBOLS[next].spread_pips_live = AC_L4_SYMBOLS[next].spread_points_live / 10.0;
+         AC_L4_SYMBOLS[next].spread_pips_live = AC_L4_SYMBOLS[next].spread_points_live / AC_L4PointsPerPip(AC_L4_SYMBOLS[next].digits);
          if(mid > 0.0)
          {
             AC_L4_SYMBOLS[next].spread_pct_live = (AC_L4_SYMBOLS[next].spread_price_live / mid) * 100.0;
             AC_L4_SYMBOLS[next].spread_bps_live = (AC_L4_SYMBOLS[next].spread_price_live / mid) * 10000.0;
          }
-         AC_L4_SYMBOLS[next].spread_source = "Live bid/ask";
+         AC_L4_SYMBOLS[next].spread_source = "Live bid/ask from SymbolInfoTick";
          AC_L4_SYMBOLS[next].spread_score = AC_L4SpreadScore(AC_L4_SYMBOLS[next].spread_bps_live, true);
          if(AC_L4_SYMBOLS[next].spread_points_live == 0.0)
             AC_L4_SYMBOLS[next].zero_spread_state = (AC_L4_SYMBOLS[next].quote_quality == "Fresh" ? "Fresh Zero Spread" : "Zero Spread Not Fresh");
@@ -201,6 +201,10 @@ void AC_L4ScanOneOpenSymbol(const string symbol)
             double diff = MathAbs(AC_L4_SYMBOLS[next].spread_points_live - (double)AC_L4_SYMBOLS[next].spread_spec_points);
             AC_L4_SYMBOLS[next].spread_vs_spec_status = (diff <= 1.0 ? "Live near broker spec" : "Live differs from broker spec");
          }
+      }
+      else if(AC_L4_SYMBOLS[next].bid_ask_valid && AC_L4_SYMBOLS[next].point <= 0.0 && AC_L4_SYMBOLS[next].failure_reason == "")
+      {
+         AC_L4_SYMBOLS[next].failure_reason = "Tick exists but SYMBOL_POINT is unavailable; spread units unsafe.";
       }
    }
    else
@@ -250,8 +254,9 @@ void AC_RefreshLayer4MarketWatchTruth()
    AC_L4Reset();
    int total = SymbolsTotal(false);
    AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
-   // Keep this key stable across ordinary quote refreshes. Refresh timestamps belong in rendered proof, not in the universe Dossier invalidation key.
-   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst";
+   // Refresh key must change on each L4 quote cycle so L5 can detect fresh L4 packet truth.
+   // Stable universe invalidation remains in AC_L4_CACHE_KEY.
+   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst | refresh_time=" + TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
 
    for(int idx=0; idx<total; idx++)
    {

@@ -48,6 +48,8 @@ string AC_L4BpsText(const double value)
 
 double AC_L4PointsPerPip(const long digits)
 {
+   // Pip labels are operator convenience only. MT5 authoritative spread unit is points.
+   // 5/3 digit FX-style symbols use 10 points per pip; other symbols keep pip=point.
    if(digits == 5 || digits == 3) return 10.0;
    return 1.0;
 }

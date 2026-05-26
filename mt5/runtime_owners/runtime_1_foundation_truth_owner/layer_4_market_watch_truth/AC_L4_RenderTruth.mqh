@@ -17,16 +17,15 @@ void AC_BuildLayer4Texts()
    AC_L4_BOARD_SECTION += "High Spread Warnings:       " + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_BOARD_SECTION += "Daily Change Available:     " + AC_L4Ratio(AC_L4_DAILY_CHANGE_AVAILABLE, AC_L4_ELIGIBLE_OPEN) + "\r\n";
    AC_L4_BOARD_SECTION += "Dossier Refresh:            Open quote packets every " + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + " sec\r\n";
-   AC_L4_BOARD_SECTION += "Layer Authority:            Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
    AC_L4_BOARD_SECTION += "Scan Duration:              " + IntegerToString((int)AC_L4_SCAN_DURATION_MS) + " ms\r\n";
    AC_L4_BOARD_SECTION += "Worst Blocker:              " + AC_L4_WORST_FAILURE_REASON + "\r\n";
-   AC_L4_BOARD_SECTION += "Trade Permission:           FALSE\r\n";
 
    AC_L4_WORKBENCH_SECTION = "\r\nL4_MARKETWATCH_TRUTH\r\n";
    AC_L4_WORKBENCH_SECTION += "----------------------------------------\r\n";
    AC_L4_WORKBENCH_SECTION += "scan_status=" + AC_L4_SCAN_STATUS + "\r\n";
    AC_L4_WORKBENCH_SECTION += "scan_duration_ms=" + IntegerToString((int)AC_L4_SCAN_DURATION_MS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "cache_key=" + AC_L4_CACHE_KEY + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "refresh_key=" + AC_L4_REFRESH_KEY + "\r\n";
    AC_L4_WORKBENCH_SECTION += "eligible_open=" + IntegerToString(AC_L4_ELIGIBLE_OPEN) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "scanned=" + IntegerToString(AC_L4_SCANNED) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "fresh_quotes=" + IntegerToString(AC_L4_FRESH_QUOTES) + "\r\n";
@@ -39,6 +38,9 @@ void AC_BuildLayer4Texts()
    AC_L4_WORKBENCH_SECTION += "high_spread_warnings=" + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_success=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_SUCCESS) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "symbolinfotick_failure=" + IntegerToString(AC_L4_SYMBOLINFO_TICK_FAILURE) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_cache_last_index=" + IntegerToString(AC_L4_FIND_LAST_INDEX) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_cache_hits=" + IntegerToString(AC_L4_FIND_CACHE_HITS) + "\r\n";
+   AC_L4_WORKBENCH_SECTION += "find_full_scan_count=" + IntegerToString(AC_L4_FIND_FULL_SCAN_COUNT) + "\r\n";
    AC_L4_WORKBENCH_SECTION += "authority=quote_truth_only_no_ranking_no_selection_no_direction_no_entry_no_permission\r\n";
    AC_L4_WORKBENCH_SECTION += "trade_permission=false\r\n";
 }
@@ -68,7 +70,6 @@ string AC_Layer4DossierSection(const string symbol)
       text += "Status: Cut Off\r\n";
       text += "Reason: Layer 2 market state is not Open\r\n";
       text += "Live Quote Truth: Not refreshed while market is closed or unknown\r\n";
-      text += "Trade Permission: FALSE\r\n";
       return text;
    }
 
@@ -77,7 +78,6 @@ string AC_Layer4DossierSection(const string symbol)
    {
       text += "Status: Pending\r\n";
       text += "Reason: Layer 4 packet has not scanned this open symbol yet\r\n";
-      text += "Trade Permission: FALSE\r\n";
       return text;
    }
 
@@ -94,17 +94,19 @@ string AC_Layer4DossierSection(const string symbol)
 
    text += "Status: " + p.scan_status + "\r\n";
    text += "Quote Quality: " + p.quote_quality + "\r\n";
+   text += "Quote Valid Flag: " + AC_L4BoolText(p.quote_valid_flag) + "\r\n";
    text += "Surface Quality: " + p.surface_quality + "\r\n";
    text += "Tick Source: SymbolInfoTick\r\n";
    text += "Tick Time: " + (p.tick_available ? AC_L4DateTimeText(p.tick_time_broker) + " broker/server" : "Not available") + "\r\n";
+   text += "Tick Time MSC: " + (p.tick_time_msc > 0 ? IntegerToString(p.tick_time_msc) : "Not available") + "\r\n";
    text += "Tick Age: " + (tick_safe ? AC_L4NumberText(p.tick_age_seconds, 1) + " sec" : "Not available") + "\r\n";
    text += "Bid: " + (bid_safe ? AC_L4PriceText(p.bid, p.digits) : "Not available") + "\r\n";
    text += "Ask: " + (ask_safe ? AC_L4PriceText(p.ask, p.digits) : "Not available") + "\r\n";
    text += "Last: " + (last_safe ? AC_L4PriceText(p.last, p.digits) : "Not available") + "\r\n";
-   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
+   text += "Spread: " + (spread_safe ? AC_L4NumberText(p.spread_points_live, 1) + " points / " + AC_L4PipsText(p.spread_points_live, p.digits) + " / " + AC_L4BpsText(p.spread_bps_live) : "Not available") + "\r\n";
    text += "Spread Cost Band: " + p.spread_score + "\r\n";
    text += "Spread Source: " + p.spread_source + "\r\n";
-   text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
+   text += "Broker Spread Spec: " + (p.spread_spec_points >= 0 ? IntegerToString((int)p.spread_spec_points) + " points / " + AC_L4PipsText((double)p.spread_spec_points, p.digits) + " / " + (p.spread_float ? "Floating" : "Fixed or unspecified") : "Not available") + "\r\n";
    text += "Spread Check: " + p.spread_vs_spec_status + "\r\n";
    text += "Zero Spread State: " + p.zero_spread_state + "\r\n";
 
@@ -117,21 +119,19 @@ string AC_Layer4DossierSection(const string symbol)
    text += "Daily High Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_high_ask, p.digits) : "Not available") + "\r\n";
    text += "Daily Low Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_low_ask, p.digits) : "Not available") + "\r\n";
    text += "Daily Range Position: " + (daily_position_safe ? AC_L4PctText(p.daily_range_position_pct) : "Not available") + "\r\n";
-   text += "Daily Change Source: Broker Market Watch property; zero OHLC values rendered as Not available\r\n";
+   text += "Daily Source: Broker Market Watch; zero=NA\r\n";
 
    text += "\r\nActivity\r\n";
    text += "----------------------------------------\r\n";
    text += "Session Average Weighted Price: " + (p.session_aw > 0.0 ? AC_L4PriceText(p.session_aw, p.digits) : "Not available") + "\r\n";
-   text += "Session Volume: " + AC_L4NumberText(p.session_volume, 2) + "\r\n";
-   text += "Session Turnover: " + AC_L4NumberText(p.session_turnover, 2) + "\r\n";
-   text += "Session Deals: " + IntegerToString((int)p.session_deals) + "\r\n";
+   text += "Session Volume: " + (p.activity_status == "Broker Not Providing" ? "Not available" : AC_L4NumberText(p.session_volume, 2)) + "\r\n";
+   text += "Session Turnover: " + (p.activity_status == "Broker Not Providing" ? "Not available" : AC_L4NumberText(p.session_turnover, 2)) + "\r\n";
+   text += "Session Deals: " + (p.activity_status == "Broker Not Providing" ? "Not available" : IntegerToString((int)p.session_deals)) + "\r\n";
    text += "Activity Status: " + p.activity_status + "\r\n";
 
    text += "\r\nQuality\r\n";
    text += "----------------------------------------\r\n";
    text += "Failure Reason: " + AC_L4TextOrNA(p.failure_reason) + "\r\n";
-   text += "Authority: Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
-   text += "Trade Permission: FALSE\r\n";
    return text;
 }
 
@@ -152,6 +152,10 @@ string AC_Layer4StatusRow()
       + "|zero_spread_fresh=" + IntegerToString(AC_L4_ZERO_SPREAD_FRESH)
       + "|daily_change_available=" + IntegerToString(AC_L4_DAILY_CHANGE_AVAILABLE)
       + "|cache_key=" + AC_L4_CACHE_KEY
+      + "|refresh_key=" + AC_L4_REFRESH_KEY
+      + "|find_cache_last_index=" + IntegerToString(AC_L4_FIND_LAST_INDEX)
+      + "|find_cache_hits=" + IntegerToString(AC_L4_FIND_CACHE_HITS)
+      + "|find_full_scan_count=" + IntegerToString(AC_L4_FIND_FULL_SCAN_COUNT)
       + "|trade_permission=false";
 }
 
