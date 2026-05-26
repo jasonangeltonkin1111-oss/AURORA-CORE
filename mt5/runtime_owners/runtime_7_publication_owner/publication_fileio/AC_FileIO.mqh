@@ -5,6 +5,11 @@
 // Publication / FileIO / Route Service owns atomic file writes, unchanged-skip writes, and safe file cleanup only.
 // It does not own routes, types, or trading truth.
 
+string AC_FileIOBoolText(const bool value)
+{
+   return value ? "true" : "false";
+}
+
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
 {
    if(result.ok)
@@ -24,6 +29,22 @@ string AC_WriteStatusFromResult(const AC_WriteResult &result)
    if(result.status != "")
       return result.status;
    return "failed";
+}
+
+string AC_WriteResultLine(const string surface, const AC_WriteResult &result)
+{
+   return "surface=" + surface
+      + "|attempted=" + AC_FileIOBoolText(result.attempted)
+      + "|ok=" + AC_FileIOBoolText(result.ok)
+      + "|status=" + AC_WriteStatusFromResult(result)
+      + "|temp_open_ok=" + AC_FileIOBoolText(result.temp_open_ok)
+      + "|temp_write_ok=" + AC_FileIOBoolText(result.temp_write_ok)
+      + "|move_ok=" + AC_FileIOBoolText(result.move_ok)
+      + "|final_exists=" + AC_FileIOBoolText(result.final_exists)
+      + "|final_size=" + AC_UlongToText(result.final_size)
+      + "|error_code=" + IntegerToString(result.error_code)
+      + "|detail=" + result.detail
+      + "|final_path=" + result.final_path;
 }
 
 AC_WriteResult AC_MakeSyntheticWriteResult(const string surface_path,
@@ -292,12 +313,85 @@ AC_WriteResult AC_DeleteFileIfExists(const string final_path)
       return result;
    }
 
-   result.final_exists = FileIsExist(final_path, common_flag);
+   result.final_exists = FileIsExist(result.final_path, common_flag);
    result.ok = !result.final_exists;
    result.move_ok = result.ok;
    result.status = result.ok ? "deleted" : "delete_verify_failed";
    result.detail = result.ok ? "file_deleted" : "file_still_exists_after_delete";
    return result;
+}
+
+void AC_AccumulateLegacyPlaceholderCleanup(const string folder_path,
+                                           int &checked_count,
+                                           int &deleted_count,
+                                           int &not_present_count,
+                                           int &failed_count,
+                                           string &first_failure)
+{
+   checked_count++;
+   AC_WriteResult cleanup = AC_DeleteFileIfExists(AC_PlaceholderPath(folder_path));
+   if(cleanup.status == "deleted")
+      deleted_count++;
+   else if(cleanup.status == "not_present_no_delete")
+      not_present_count++;
+   else if(!cleanup.ok)
+   {
+      failed_count++;
+      if(first_failure == "")
+         first_failure = AC_WriteResultLine("legacy_placeholder_cleanup", cleanup);
+   }
+}
+
+string AC_CleanupLegacyPlaceholderFiles()
+{
+   int checked_count = 0;
+   int deleted_count = 0;
+   int not_present_count = 0;
+   int failed_count = 0;
+   string first_failure = "";
+
+   AC_AccumulateLegacyPlaceholderCleanup(AC_RootFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_WorkbenchFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SharedExternalWorkerFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SharedExternalWorkerPackageFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SharedExternalWorkerStatusFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerControlFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerInboxFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerOutboxFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerStatusFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerLogsFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_ExternalWorkerQuarantineFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_DossiersFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_DossiersOpenFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_DossiersClosedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_DossiersUnknownFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionDeskFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGroupsFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionCanonicalGlobalFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalTop10Folder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalDeepEvidenceFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionAssetClassesFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionSystemIndexesFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionLayerSummariesFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeJournalImportFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeJournalInboxFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeJournalAcceptedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeJournalRejectedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeJournalOrphanedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeHistoryFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeHistoryBeforeAuroraFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+   AC_AccumulateLegacyPlaceholderCleanup(AC_TradeHistoryAuroraCapturedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
+
+   string status = failed_count > 0 ? "cleanup_degraded" : (deleted_count > 0 ? "cleanup_complete_deleted" : "cleanup_complete_no_legacy_placeholders");
+   status += "|checked=" + IntegerToString(checked_count)
+      + "|deleted=" + IntegerToString(deleted_count)
+      + "|not_present=" + IntegerToString(not_present_count)
+      + "|failed=" + IntegerToString(failed_count);
+   if(first_failure != "")
+      status += "|first_failure=" + first_failure;
+   return status;
 }
 
 #endif
