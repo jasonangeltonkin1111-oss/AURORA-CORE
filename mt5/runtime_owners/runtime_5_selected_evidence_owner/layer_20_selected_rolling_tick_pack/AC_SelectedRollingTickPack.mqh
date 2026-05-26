@@ -108,6 +108,11 @@ double AC_L20_TICK_VOLUME_REAL[AC_L20_MAX_SELECTED_SYMBOLS][AC_L20_MAX_TICKS_PER
 uint   AC_L20_TICK_FLAGS[AC_L20_MAX_SELECTED_SYMBOLS][AC_L20_MAX_TICKS_PER_SYMBOL];
 double AC_L20_TICK_SPREAD_POINTS[AC_L20_MAX_SELECTED_SYMBOLS][AC_L20_MAX_TICKS_PER_SYMBOL];
 
+ulong AC_L20SecondsToMsc(const int seconds)
+{
+   return (ulong)seconds * (ulong)1000;
+}
+
 string AC_L20BoundaryText()
 {
    return "MT5 tick proxy evidence only; directional_validity=false; institutional_order_flow_claim=false; trade_permission=false; entry_signal=false; execution=false";
@@ -198,7 +203,7 @@ bool AC_L20SelectSymbol(const string symbol, const ulong now_msc, string &reason
    return true;
 }
 
-void AC_L20RetireMissingSelections(const string selected_symbols[], const int selected_count, const ulong now_msc)
+void AC_L20RetireMissingSelections(const string &selected_symbols[], const int selected_count, const ulong now_msc)
 {
    for(int slot = 0; slot < AC_L20_MAX_SELECTED_SYMBOLS; slot++)
    {
@@ -219,7 +224,7 @@ void AC_L20RetireMissingSelections(const string selected_symbols[], const int se
       {
          AC_L20_ACTIVE[slot] = false;
          AC_L20_RETIRED_GRACE[slot] = true;
-         AC_L20_RETIRED_UNTIL[slot] = now_msc + (ulong)AC_L20_RETIRED_GRACE_SECONDS * 1000ULL;
+         AC_L20_RETIRED_UNTIL[slot] = now_msc + AC_L20SecondsToMsc(AC_L20_RETIRED_GRACE_SECONDS);
          AC_L20_RESET_REASONS[slot] = "retired_grace_symbol_left_selected_set";
       }
       else if(now_msc > AC_L20_RETIRED_UNTIL[slot])
@@ -231,7 +236,7 @@ void AC_L20RetireMissingSelections(const string selected_symbols[], const int se
 
 ulong AC_L20NowMsc()
 {
-   return (ulong)TimeCurrent() * 1000ULL;
+   return (ulong)TimeCurrent() * (ulong)1000;
 }
 
 bool AC_L20ValidQuote(const MqlTick &tick, const double point)
@@ -324,7 +329,7 @@ int AC_L20UpdateSlotFromCopyTicksRange(const int slot, const ulong now_msc, int 
       copy_error = -1;
       return 0;
    }
-   ulong from_msc = AC_L20_LAST_TICK_MSC[slot] > 0 ? AC_L20_LAST_TICK_MSC[slot] + 1ULL : now_msc - (ulong)AC_L20_ROLLING_WINDOW_SECONDS * 1000ULL;
+   ulong from_msc = AC_L20_LAST_TICK_MSC[slot] > 0 ? AC_L20_LAST_TICK_MSC[slot] + (ulong)1 : now_msc - AC_L20SecondsToMsc(AC_L20_ROLLING_WINDOW_SECONDS);
    MqlTick ticks[];
    ResetLastError();
    int copied = CopyTicksRange(symbol, ticks, COPY_TICKS_ALL, from_msc, now_msc);
@@ -413,186 +418,8 @@ void AC_L20SummarizeSlot(const int slot, const ulong now_msc, AC_L20SymbolSummar
       summary.proxy_confidence = "none";
       return;
    }
-   ulong cutoff_1m = now_msc - 60000ULL;
-   ulong cutoff_5m = now_msc - 300000ULL;
-   ulong cutoff_10m = now_msc - (ulong)AC_L20_ROLLING_WINDOW_SECONDS * 1000ULL;
+   ulong cutoff_1m = now_msc - AC_L20SecondsToMsc(60);
+   ulong cutoff_5m = now_msc - AC_L20SecondsToMsc(300);
+   ulong cutoff_10m = now_msc - AC_L20SecondsToMsc(AC_L20_ROLLING_WINDOW_SECONDS);
    double spread_sum = 0.0;
    double spread_sq_sum = 0.0;
-   double mid_min = 0.0;
-   double mid_max = 0.0;
-   bool mid_seeded = false;
-   bool spread_seeded = false;
-   uint flags_seen = 0;
-   double point = SymbolInfoDouble(summary.symbol, SYMBOL_POINT);
-   for(int i = 0; i < count; i++)
-   {
-      ulong t = AC_L20_TICK_TIME_MSC[slot][i];
-      if(t >= cutoff_1m) summary.tick_count_1m++;
-      if(t >= cutoff_5m) summary.tick_count_5m++;
-      if(t >= cutoff_10m) summary.tick_count_10m++;
-      if(t < cutoff_10m) continue;
-      double spread = AC_L20_TICK_SPREAD_POINTS[slot][i];
-      if(!spread_seeded)
-      {
-         summary.spread_min_points_10m = spread;
-         summary.spread_max_points_10m = spread;
-         spread_seeded = true;
-      }
-      else
-      {
-         if(spread < summary.spread_min_points_10m) summary.spread_min_points_10m = spread;
-         if(spread > summary.spread_max_points_10m) summary.spread_max_points_10m = spread;
-      }
-      spread_sum += spread;
-      spread_sq_sum += spread * spread;
-      double mid = (AC_L20_TICK_BID[slot][i] + AC_L20_TICK_ASK[slot][i]) * 0.5;
-      if(!mid_seeded)
-      {
-         mid_min = mid;
-         mid_max = mid;
-         mid_seeded = true;
-      }
-      else
-      {
-         if(mid < mid_min) mid_min = mid;
-         if(mid > mid_max) mid_max = mid;
-      }
-      flags_seen |= AC_L20_TICK_FLAGS[slot][i];
-      if(i > 0)
-      {
-         ulong prev_t = AC_L20_TICK_TIME_MSC[slot][i - 1];
-         if(prev_t >= cutoff_10m && t >= prev_t)
-         {
-            double gap = (double)(t - prev_t) / 1000.0;
-            summary.tick_gap_avg_seconds += gap;
-            if(gap > summary.tick_gap_max_seconds) summary.tick_gap_max_seconds = gap;
-         }
-         uint flags = AC_L20_TICK_FLAGS[slot][i];
-         if((flags & TICK_FLAG_BID) != 0) summary.bid_change_count_10m++;
-         if((flags & TICK_FLAG_ASK) != 0) summary.ask_change_count_10m++;
-         if((flags & TICK_FLAG_LAST) != 0) summary.last_change_count_10m++;
-         if((flags & TICK_FLAG_VOLUME) != 0) summary.volume_change_count_10m++;
-         if(AC_L20_TICK_BID[slot][i] > AC_L20_TICK_BID[slot][i - 1]) summary.bid_up_count_10m++;
-         if(AC_L20_TICK_BID[slot][i] < AC_L20_TICK_BID[slot][i - 1]) summary.bid_down_count_10m++;
-         if(AC_L20_TICK_ASK[slot][i] > AC_L20_TICK_ASK[slot][i - 1]) summary.ask_up_count_10m++;
-         if(AC_L20_TICK_ASK[slot][i] < AC_L20_TICK_ASK[slot][i - 1]) summary.ask_down_count_10m++;
-         double prev_mid = (AC_L20_TICK_BID[slot][i - 1] + AC_L20_TICK_ASK[slot][i - 1]) * 0.5;
-         if(mid != prev_mid) summary.mid_change_count_10m++;
-      }
-   }
-   int n = summary.tick_count_10m;
-   if(n > 0)
-   {
-      summary.spread_avg_points_10m = spread_sum / (double)n;
-      double variance = (spread_sq_sum / (double)n) - (summary.spread_avg_points_10m * summary.spread_avg_points_10m);
-      if(variance < 0.0) variance = 0.0;
-      summary.spread_stddev_points_10m = MathSqrt(variance);
-      double major_threshold = MathMax(1.0, summary.spread_avg_points_10m * AC_L20_SPREAD_SPIKE_MULTIPLIER);
-      double minor_threshold = MathMax(1.0, summary.spread_avg_points_10m * 2.0);
-      double severe_threshold = MathMax(1.0, summary.spread_avg_points_10m * AC_L20_SPREAD_SPIKE_SEVERE_MULT);
-      for(int i = 0; i < count; i++)
-      {
-         if(AC_L20_TICK_TIME_MSC[slot][i] < cutoff_10m) continue;
-         double spread = AC_L20_TICK_SPREAD_POINTS[slot][i];
-         if(spread >= minor_threshold) summary.spread_spike_minor_count_10m++;
-         if(spread >= major_threshold) summary.spread_spike_major_count_10m++;
-         if(spread >= severe_threshold) summary.spread_spike_severe_count_10m++;
-      }
-      summary.spread_spike_count_10m = summary.spread_spike_major_count_10m;
-      if(n > 1) summary.tick_gap_avg_seconds = summary.tick_gap_avg_seconds / (double)(n - 1);
-      if(mid_seeded && point > 0.0) summary.mid_range_points_10m = (mid_max - mid_min) / point;
-   }
-   summary.oldest_tick_msc = AC_L20_TICK_TIME_MSC[slot][0];
-   summary.newest_tick_msc = AC_L20_TICK_TIME_MSC[slot][count - 1];
-   summary.latest_tick_age_seconds = summary.newest_tick_msc > 0 && now_msc >= summary.newest_tick_msc ? (int)((now_msc - summary.newest_tick_msc) / 1000ULL) : -1;
-   summary.flags_decode_status = flags_seen == 0 ? "degraded_flags_unclear" : "decoded";
-   if(summary.tick_count_10m <= 0)
-   {
-      summary.status = "UNAVAILABLE_NO_TICKS";
-      summary.reason = "no_ticks_in_rolling_window";
-      summary.sample_quality = "none";
-      summary.proxy_confidence = "none";
-   }
-   else if(summary.latest_tick_age_seconds > 60)
-   {
-      summary.status = "DEGRADED_STALE_TICKS";
-      summary.reason = "latest_tick_too_old";
-      summary.sample_quality = "stale";
-      summary.proxy_confidence = "low";
-   }
-   else if(summary.tick_gap_max_seconds > 30.0)
-   {
-      summary.status = "DEGRADED_GAPPY_FEED";
-      summary.reason = "tick_gap_max_seconds_over_30";
-      summary.sample_quality = "gappy";
-      summary.proxy_confidence = "medium_low";
-   }
-   else if(summary.spread_spike_severe_count_10m > 0)
-   {
-      summary.status = "DEGRADED_SPREAD_UNSTABLE";
-      summary.reason = "severe_spread_spike_seen";
-      summary.sample_quality = "spread_unstable";
-      summary.proxy_confidence = "medium";
-   }
-   else
-   {
-      summary.status = "ACTIVE_ROLLING";
-      summary.reason = "rolling_tick_proxy_active";
-      summary.sample_quality = "usable";
-      summary.proxy_confidence = summary.flags_decode_status == "decoded" ? "medium" : "low";
-   }
-}
-
-string AC_L20CsvHeader()
-{
-   return "symbol,status,reason,selected_scope_source,tick_count_1m,tick_count_5m,tick_count_10m,spread_min_points_10m,spread_avg_points_10m,spread_max_points_10m,spread_stddev_points_10m,spread_spike_count_10m,tick_gap_avg_seconds,tick_gap_max_seconds,bid_change_count_10m,ask_change_count_10m,last_change_count_10m,volume_change_count_10m,bid_up_count_10m,bid_down_count_10m,ask_up_count_10m,ask_down_count_10m,mid_change_count_10m,mid_range_points_10m,latest_tick_age_seconds,buffer_count,oldest_tick_msc,newest_tick_msc,flags_decode_status,sample_quality,proxy_confidence,directional_validity,institutional_order_flow_claim,trade_permission,entry_signal,execution";
-}
-
-string AC_L20BoolText(const bool value)
-{
-   return value ? "true" : "false";
-}
-
-string AC_L20SummaryCsvRow(const AC_L20SymbolSummary &s)
-{
-   return s.symbol + "," + s.status + "," + s.reason + "," + s.selected_scope_source + ","
-      + IntegerToString(s.tick_count_1m) + "," + IntegerToString(s.tick_count_5m) + "," + IntegerToString(s.tick_count_10m) + ","
-      + DoubleToString(s.spread_min_points_10m, 2) + "," + DoubleToString(s.spread_avg_points_10m, 2) + "," + DoubleToString(s.spread_max_points_10m, 2) + "," + DoubleToString(s.spread_stddev_points_10m, 2) + ","
-      + IntegerToString(s.spread_spike_count_10m) + "," + DoubleToString(s.tick_gap_avg_seconds, 2) + "," + DoubleToString(s.tick_gap_max_seconds, 2) + ","
-      + IntegerToString(s.bid_change_count_10m) + "," + IntegerToString(s.ask_change_count_10m) + "," + IntegerToString(s.last_change_count_10m) + "," + IntegerToString(s.volume_change_count_10m) + ","
-      + IntegerToString(s.bid_up_count_10m) + "," + IntegerToString(s.bid_down_count_10m) + "," + IntegerToString(s.ask_up_count_10m) + "," + IntegerToString(s.ask_down_count_10m) + ","
-      + IntegerToString(s.mid_change_count_10m) + "," + DoubleToString(s.mid_range_points_10m, 2) + "," + IntegerToString(s.latest_tick_age_seconds) + "," + IntegerToString(s.buffer_count) + ","
-      + StringFormat("%I64u", s.oldest_tick_msc) + "," + StringFormat("%I64u", s.newest_tick_msc) + ","
-      + s.flags_decode_status + "," + s.sample_quality + "," + s.proxy_confidence + ",false,"
-      + AC_L20BoolText(s.institutional_order_flow_claim) + "," + AC_L20BoolText(s.trade_permission) + "," + AC_L20BoolText(s.entry_signal) + "," + AC_L20BoolText(s.execution);
-}
-
-string AC_L20DossierSection(const AC_L20SymbolSummary &s)
-{
-   string text = "\r\nL20 SELECTED ROLLING TICK PACK\r\n";
-   text += "----------------------------------------\r\n";
-   text += "Status: " + s.status + "\r\n";
-   text += "Reason: " + s.reason + "\r\n";
-   text += "Window: 10m rolling\r\n";
-   text += "Source: MT5 tick proxy only\r\n";
-   text += "Tick Activity: 1m=" + IntegerToString(s.tick_count_1m) + " | 5m=" + IntegerToString(s.tick_count_5m) + " | 10m=" + IntegerToString(s.tick_count_10m) + "\r\n";
-   text += "Spread Points: min=" + DoubleToString(s.spread_min_points_10m, 2) + " | avg=" + DoubleToString(s.spread_avg_points_10m, 2) + " | max=" + DoubleToString(s.spread_max_points_10m, 2) + " | stddev=" + DoubleToString(s.spread_stddev_points_10m, 2) + " | spikes=" + IntegerToString(s.spread_spike_count_10m) + "\r\n";
-   text += "Gaps: avg=" + DoubleToString(s.tick_gap_avg_seconds, 2) + "s | max=" + DoubleToString(s.tick_gap_max_seconds, 2) + "s\r\n";
-   text += "Quote Changes: bid=" + IntegerToString(s.bid_change_count_10m) + " | ask=" + IntegerToString(s.ask_change_count_10m) + " | last=" + IntegerToString(s.last_change_count_10m) + " | volume=" + IntegerToString(s.volume_change_count_10m) + "\r\n";
-   text += "Mid Proxy: changes=" + IntegerToString(s.mid_change_count_10m) + " | range_points=" + DoubleToString(s.mid_range_points_10m, 2) + "\r\n";
-   text += "Sample Quality: " + s.sample_quality + " | Proxy Confidence: " + s.proxy_confidence + " | Flags: " + s.flags_decode_status + "\r\n";
-   text += "Truth Labels: directional_validity=false; institutional_order_flow_claim=false; trade_permission=false; entry_signal=false; execution=false\r\n";
-   return text;
-}
-
-string AC_L20BoardLine(const AC_L20SymbolSummary &s)
-{
-   return s.symbol + " | Tick10m " + IntegerToString(s.tick_count_10m)
-      + " | SprAvg " + DoubleToString(s.spread_avg_points_10m, 2)
-      + " | SprMax " + DoubleToString(s.spread_max_points_10m, 2)
-      + " | Spike " + IntegerToString(s.spread_spike_count_10m)
-      + " | GapMax " + DoubleToString(s.tick_gap_max_seconds, 2) + "s"
-      + " | " + s.status;
-}
-
-#endif
