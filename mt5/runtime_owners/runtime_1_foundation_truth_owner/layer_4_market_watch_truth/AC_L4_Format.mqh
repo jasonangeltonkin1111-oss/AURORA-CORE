@@ -6,11 +6,6 @@ string AC_L4BoolText(const bool value)
    return value ? "true" : "false";
 }
 
-string AC_L4YesNo(const bool value)
-{
-   return value ? "Yes" : "No";
-}
-
 string AC_L4TextOrNA(const string value)
 {
    if(value == "") return "Not available";
