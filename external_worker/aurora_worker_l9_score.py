@@ -9,24 +9,10 @@ import io
 from aurora_worker_io import atomic_write_text, payload_checksum, read_text, utc_stamp, unix_time
 from aurora_worker_l9_boundary import calculate_boundary_quality, weighted_boundary_quality
 from aurora_worker_l9_contract import (
-    L9_AUTHORITY,
-    L9_INPUT_MANIFEST_NAME,
-    L9_INPUT_NAME,
-    L9_JOB_TYPE,
-    L9_LAYER_FOLDER,
-    L9_LAYER_NAME,
-    L9_MANIFEST_NAME,
-    L9_MODEL_VERSION,
-    L9_OUTPUT_FIELDS,
-    L9_OWNER,
-    L9_POLICY,
-    L9_RANKED_NAME,
-    L9_SCORE_WEIGHTS,
-    L9_SOURCE_OWNER,
-    L9_SYMBOL_RANK_FILENAME_MODE,
-    L9_SYMBOL_RANK_FOLDER,
-    L9_TF_WEIGHTS,
-    L9_TOP20_NAME,
+    L9_AUTHORITY, L9_INPUT_MANIFEST_NAME, L9_INPUT_NAME, L9_JOB_TYPE, L9_LAYER_FOLDER,
+    L9_LAYER_NAME, L9_MANIFEST_NAME, L9_MODEL_VERSION, L9_OUTPUT_FIELDS, L9_OWNER,
+    L9_POLICY, L9_RANKED_NAME, L9_SCORE_WEIGHTS, L9_SOURCE_OWNER,
+    L9_SYMBOL_RANK_FILENAME_MODE, L9_SYMBOL_RANK_FOLDER, L9_TF_WEIGHTS, L9_TOP20_NAME,
 )
 from aurora_worker_l9_event_zone import classify_l9_event_zone
 from aurora_worker_l9_location_context import calculate_l9_location_context
@@ -95,14 +81,12 @@ def _join_reason(parts: Iterable[str]) -> str:
     seen = set()
     for raw in parts:
         part = str(raw or "").replace("\r", " ").replace("\n", " ").strip()
-        if not part or part in seen:
-            continue
-        seen.add(part)
-        clean.append(part)
+        if part and part not in seen:
+            seen.add(part)
+            clean.append(part)
         if len(clean) >= 24:
             break
-    text = ";".join(clean) if clean else "not_available"
-    return text[:900]
+    return (";".join(clean) if clean else "not_available")[:900]
 
 
 def _sanitize_path_part(value: str) -> str:
@@ -164,10 +148,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
     price_i = int(round(price.price_used / point)) if point > 0.0 and price.price_used > 0.0 else 0
     location_context = calculate_l9_location_context(packet, price_i, point)
 
-    locations = []
-    for tf, weight in L9_TF_WEIGHTS.items():
-        locations.append(calculate_tf_location(tf, packet.windows.get(tf, []), price_i, weight, LOOKBACKS.get(tf, 30)))
-
+    locations = [calculate_tf_location(tf, packet.windows.get(tf, []), price_i, weight, LOOKBACKS.get(tf, 30)) for tf, weight in L9_TF_WEIGHTS.items()]
     boundaries = [calculate_boundary_quality(loc.timeframe, packet.windows.get(loc.timeframe, []), loc.nearest_boundary, LOOKBACKS.get(loc.timeframe, 30)) for loc in locations]
     room = calculate_room_profile(locations)
     event = classify_l9_event_zone(locations, boundaries, room)
@@ -178,15 +159,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
     event_score = event.event_zone_quality_score
     quote_score = 100.0 if price.price_basis == "fresh_mid" else (65.0 if price.price_basis == "stale_mid" else (45.0 if price.price_basis == "ohlc_close_fallback" else 0.0))
     data_score = 100.0 if packet.required_missing == 0 else max(0.0, (packet.required_seen / max(1, len(L9_TF_WEIGHTS))) * 100.0)
-
-    structure_score = max(0.0, min(100.0,
-        event_score * 0.35
-        + location_score * 0.20
-        + boundary_score * 0.15
-        + room_score * 0.15
-        + data_score * 0.10
-        + quote_score * 0.05
-    ))
+    structure_score = max(0.0, min(100.0, event_score * 0.35 + location_score * 0.20 + boundary_score * 0.15 + room_score * 0.15 + data_score * 0.10 + quote_score * 0.05))
 
     rank_state = "ranked"
     if price.price_basis == "unavailable" or packet.required_seen == 0:
@@ -196,22 +169,12 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
     if event.risk_review and rank_state == "ranked":
         rank_state = "ranked_risk_review"
 
-    bucket = _bucket(structure_score)
     primary = {loc.timeframe.lower(): loc for loc in locations}
     d1 = primary.get("d1")
     h4 = primary.get("h4")
     h1 = primary.get("h1")
     m15 = primary.get("m15")
-    nearest_boundary = room.nearest_boundary
-    reason = _join_reason([
-        event.reason,
-        price.reason,
-        packet.reason,
-        f"structure_score={structure_score:.2f}",
-        f"rank_state={rank_state}",
-        "location_context=distance_only_no_sweep_no_direction",
-        L9_POLICY,
-    ])
+    reason = _join_reason([event.reason, price.reason, packet.reason, f"structure_score={structure_score:.2f}", f"rank_state={rank_state}", "distance_only_no_direction"])
 
     def loc_value(loc, attr: str, default=0.0):
         return getattr(loc, attr, default) if loc is not None else default
@@ -222,15 +185,12 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
         "layer_name": L9_LAYER_NAME,
         "l9_model_version": L9_MODEL_VERSION,
         "structure_watchlist_score": structure_score,
-        "structure_bucket": bucket,
+        "structure_bucket": _bucket(structure_score),
         "rank_state": rank_state,
         "score_quality": _score_quality(rank_state, packet, price.price_basis),
         "geometry_regime": event.watchlist_state,
         "event_zone": event.dominant_event_zone,
         "watchlist": event.watchlist,
-        "entry_signal": "false",
-        "trade_permission": "false",
-        "selection_runtime": "false",
         "asset_class": _safe_text(row, "asset_class"),
         "ranking_group": _safe_text(row, "ranking_group"),
         "market_state": _safe_text(row, "market_state"),
@@ -269,7 +229,7 @@ def _score_row(row: Dict[str, str], outbox: Path) -> Dict[str, object]:
         "d1_distance_to_high_atr": loc_value(d1, "distance_to_high_atr"),
         "d1_distance_to_low_atr": loc_value(d1, "distance_to_low_atr"),
         "d1_score_component": loc_value(d1, "component_score"),
-        "nearest_boundary": nearest_boundary,
+        "nearest_boundary": room.nearest_boundary,
         "nearest_boundary_distance_atr": room.nearest_boundary_distance_atr,
         "room_up_atr": room.room_up_atr,
         "room_down_atr": room.room_down_atr,
@@ -306,59 +266,29 @@ def _csv_text(rows: List[Dict[str, object]]) -> str:
 
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, object]) -> str:
-    lines = [
-        "schema_name=l9_symbol_rank",
-        "schema_version=1",
-        "layer_id=9",
-        f"layer_name={L9_LAYER_NAME}",
-        f"owner_name={L9_OWNER}",
-        f"job_type={L9_JOB_TYPE}",
-        f"l9_model_version={L9_MODEL_VERSION}",
-        f"rank_index={rank_index}",
-    ]
+    lines = ["schema_name=l9_symbol_rank", "schema_version=1", "layer_id=9", f"layer_name={L9_LAYER_NAME}", f"owner_name={L9_OWNER}", f"job_type={L9_JOB_TYPE}", f"l9_model_version={L9_MODEL_VERSION}", f"rank_index={rank_index}"]
     for field in L9_OUTPUT_FIELDS:
-        if field == "rank_index":
-            continue
-        if field in row:
+        if field != "rank_index" and field in row:
             lines.append(f"{field}={_format(row[field])}")
-    lines += [
-        f"authority={L9_AUTHORITY}",
-        "trade_permission=false",
-        "selection_runtime=false",
-        "entry_signal=false",
-        f"source_owner={L9_SOURCE_OWNER}",
-        f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
-        "",
-    ]
+    lines += [f"authority={L9_AUTHORITY}", f"source_owner={L9_SOURCE_OWNER}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
 def _top20_text(rows: List[Dict[str, object]]) -> str:
     lines = [
         "LAYER 9 - STRUCTURE / LOCATION GEOMETRY - TOP 20",
-        "----------------------------------------",
         f"Generated UTC: {utc_stamp()}",
-        "Trade Permission: FALSE",
-        "Selection Runtime: FALSE",
-        "Entry Signal: FALSE",
         f"Model Version: {L9_MODEL_VERSION}",
-        f"Policy: {L9_POLICY}",
-        "Source: Runtime 1 Shared OHLC Priority Windows + L9 input primitives",
-        "Context: distance/reference only; no sweep confirmation, no CHOCH, no BOS, no FVG, no OB, no direction",
-        "",
         "rank|symbol|score|bucket|state|event_zone|nearest_surface_reference|nearest_surface_obstacle_distance_pips|available_surface_room_pips|surface_geometry_confidence|reason",
     ]
     for index, row in enumerate(rows[:20], start=1):
-        lines.append(
-            f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row.get('nearest_surface_reference', 'not_available')}|{row.get('nearest_surface_obstacle_distance_pips', 'not_available')}|{row.get('available_surface_room_pips', 'not_available')}|{row.get('surface_geometry_confidence', 'not_available')}|{row['reason']}"
-        )
+        lines.append(f"{index}|{row['symbol']}|{float(row['structure_watchlist_score']):.2f}|{row['structure_bucket']}|{row['rank_state']}|{row['event_zone']}|{row.get('nearest_surface_reference', 'not_available')}|{row.get('nearest_surface_obstacle_distance_pips', 'not_available')}|{row.get('available_surface_room_pips', 'not_available')}|{row.get('surface_geometry_confidence', 'not_available')}|{row['reason']}")
     lines.append("")
     return "\n".join(lines)
 
 
 def _manifest(summary: L9FinalSummary, input_checksum: str, ranked_checksum: str) -> str:
-    return "\n".join([
+    manifest_text = "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
         "schema_version=2",
         "layer_id=9",
@@ -395,12 +325,7 @@ def _manifest(summary: L9FinalSummary, input_checksum: str, ranked_checksum: str
         f"top20_path={summary.top20_path}",
         f"symbol_rank_folder_path={summary.symbol_rank_folder_path}",
         f"authority={L9_AUTHORITY}",
-        "trade_permission=false",
-        "selection_runtime=false",
-        "entry_signal=false",
         f"structure_location_policy={L9_POLICY}",
-        "location_context_policy=distance_reference_only_no_sweep_no_direction_no_setup",
-        "surface_context_policy=surface_reference_distance_only_no_liquidity_map_no_setup",
         f"source_owner={L9_SOURCE_OWNER}",
         f"score_weights={','.join(f'{k}:{v:g}' for k, v in L9_SCORE_WEIGHTS.items())}",
         f"timeframe_weights={','.join(f'{k}:{v:g}' for k, v in L9_TF_WEIGHTS.items())}",
@@ -408,6 +333,7 @@ def _manifest(summary: L9FinalSummary, input_checksum: str, ranked_checksum: str
         f"generated_unix={unix_time()}",
         "",
     ])
+    return manifest_text
 
 
 def publish_l9_structure_scores(outbox: Path) -> L9FinalSummary:
