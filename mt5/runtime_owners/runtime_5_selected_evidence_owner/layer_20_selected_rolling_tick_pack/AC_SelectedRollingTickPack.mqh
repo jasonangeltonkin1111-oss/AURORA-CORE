@@ -86,7 +86,7 @@ ulong AC_L20NowMsc()
 
 string AC_L20BoundaryText()
 {
-   return "MT5 tick proxy evidence only; directional_validity=false; institutional_order_flow_claim=false; trade_permission=false; entry_signal=false; execution=false";
+   return "MT5 tick/spread proxy; review-only; no signal or permission";
 }
 
 string AC_L20BoolText(const bool value)
@@ -521,14 +521,14 @@ string AC_L20DossierSection(const AC_L20SymbolSummary &s)
    text += "Status: " + s.status + "\r\n";
    text += "Reason: " + s.reason + "\r\n";
    text += "Window: 10m rolling\r\n";
-   text += "Source: MT5 tick proxy only\r\n";
+   text += "Source: MT5 tick/spread proxy\r\n";
    text += "Tick Activity: 1m=" + IntegerToString(s.tick_count_1m) + " | 5m=" + IntegerToString(s.tick_count_5m) + " | 10m=" + IntegerToString(s.tick_count_10m) + "\r\n";
    text += "Spread Points: min=" + DoubleToString(s.spread_min_points_10m, 2) + " | avg=" + DoubleToString(s.spread_avg_points_10m, 2) + " | max=" + DoubleToString(s.spread_max_points_10m, 2) + " | stddev=" + DoubleToString(s.spread_stddev_points_10m, 2) + " | spikes=" + IntegerToString(s.spread_spike_count_10m) + "\r\n";
    text += "Gaps: avg=" + DoubleToString(s.tick_gap_avg_seconds, 2) + "s | max=" + DoubleToString(s.tick_gap_max_seconds, 2) + "s\r\n";
    text += "Quote Changes: bid=" + IntegerToString(s.bid_change_count_10m) + " | ask=" + IntegerToString(s.ask_change_count_10m) + " | last=" + IntegerToString(s.last_change_count_10m) + " | volume=" + IntegerToString(s.volume_change_count_10m) + "\r\n";
    text += "Mid Proxy: changes=" + IntegerToString(s.mid_change_count_10m) + " | range_points=" + DoubleToString(s.mid_range_points_10m, 2) + "\r\n";
-   text += "Sample Quality: " + s.sample_quality + " | Proxy Confidence: " + s.proxy_confidence + " | Flags: " + s.flags_decode_status + "\r\n";
-   text += "Truth Labels: directional_validity=false; institutional_order_flow_claim=false; trade_permission=false; entry_signal=false; execution=false\r\n";
+   text += "Quality: sample=" + s.sample_quality + " | confidence=" + s.proxy_confidence + " | flags=" + s.flags_decode_status + "\r\n";
+   text += "Boundary: review-only; no signal or permission\r\n";
    return text;
 }
 
