@@ -209,9 +209,14 @@ AC_WriteResult AC_WriteTextFileFastAtomic_DossierNormalized(const string final_p
    return AC_WriteTextFileFastAtomic(final_path, normalized);
 }
 
-// Wrap the existing board renderer so a compact trader-chat export guide can be appended without rewriting the Board owner.
+// Wrap the existing board/workbench/status renderers so compact operator-truth sections can be appended
+// without rewriting the Board owner or creating a duplicate dashboard/diagnostics system.
 #define AC_BuildTraderBoardText AC_BuildTraderBoardText_Base
+#define AC_Layer0WorkbenchText AC_Layer0WorkbenchText_Base
+#define AC_Layer0StatusRow AC_Layer0StatusRow_Base
 #include "AC_MarketBoardRenderer.mqh"
+#undef AC_Layer0StatusRow
+#undef AC_Layer0WorkbenchText
 #undef AC_BuildTraderBoardText
 #include "AC_TraderChatExportGuideRenderer.mqh"
 
