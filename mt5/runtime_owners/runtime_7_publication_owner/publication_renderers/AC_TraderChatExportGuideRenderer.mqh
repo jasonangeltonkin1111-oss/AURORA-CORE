@@ -4,6 +4,7 @@
 // Compact Board guide for trader-chat export discipline.
 // This is renderer text only. It does not create trade permission, setup permission, packet import, packet matching, or execution authority.
 // Trader overview reads existing layer-owner outputs only. It must not calculate new scores, create routes, write files, permit, alert, or execute.
+// L23 export is allowed as labelled manual-review truth context; L23 permission remains blocked unless a later validation/permission owner upgrades it with proof.
 
 string AC_TCSValueOrNA(string value)
 {
@@ -38,9 +39,9 @@ bool AC_TCSHasTop10Selection(const string symbol)
 
 string AC_TCSReviewText(const string symbol)
 {
-   if(AC_TCSHasQueueSelection(symbol)) return "YES";
-   if(AC_TCSHasTop10Selection(symbol)) return "WATCH";
-   return "NO";
+   if(AC_TCSHasQueueSelection(symbol)) return "MANUAL_REVIEW_PACKET_AVAILABLE";
+   if(AC_TCSHasTop10Selection(symbol)) return "WATCH_ONLY_EXPORT_AVAILABLE";
+   return "NO_CURRENT_EXPORT_PACKET";
 }
 
 string AC_TCSBoardReadinessState()
@@ -48,19 +49,19 @@ string AC_TCSBoardReadinessState()
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
    if(AC_L16_SELECTED_COUNT > 0 && AC_L17_DEEP_SELECTED_COUNT > 0)
-      return "READY_FOR_REVIEW";
+      return "READY_FOR_MANUAL_REVIEW_EXPORT";
    if(AC_L16_SELECTED_COUNT > 0)
-      return "WATCH_ONLY";
-   return "BLOCKED";
+      return "WATCH_ONLY_EXPORT";
+   return "NO_CURRENT_EXPORT";
 }
 
 string AC_TCSBoardReadinessReason()
 {
    string state = AC_TCSBoardReadinessState();
-   if(state == "READY_FOR_REVIEW")
-      return "selection/evidence-budget queue candidates exist, but L23 strategy-risk-permission owner is not active";
-   if(state == "WATCH_ONLY")
-      return "visible Top 10 candidates exist, but no L17 queue selection is ready";
+   if(state == "READY_FOR_MANUAL_REVIEW_EXPORT")
+      return "selection/evidence-budget queue candidates exist; L23 export may be copied as labelled truth context only; permission remains false";
+   if(state == "WATCH_ONLY_EXPORT")
+      return "visible Top 10 candidates exist, but no L17 evidence-budget queue selection is ready; export is watch-only";
    return "no current selected evidence-budget queue candidates available";
 }
 
@@ -123,7 +124,7 @@ string AC_TCSCompactSymbolRow(const string rank_text,
       + " | top10=" + top10_text
       + " | queue=" + queue_text
       + " | review=" + review_text
-      + " | permission=NO\r\n";
+      + " | trade_allowed=false | entry_signal=false\r\n";
 }
 
 string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
@@ -135,8 +136,8 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
    text += "--------------------------------------------------\r\n";
    text += "Purpose: compact inspection order; scores are source-owner values, not board calculations.\r\n";
    text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | queued=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
-   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
-   text += "Inactive future owners: ATR, indicators, liquidity, setup, L23 permission.\r\n";
+   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
+   text += "Inactive future owners: ATR, indicators, liquidity, setup validation, L23 permission upgrade.\r\n";
    text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
    string csv = AC_L16ReadSmallTextFile(AC_L16Top10CsvPath(), 1000000);
@@ -165,7 +166,7 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
-   text += "Meaning: inspection/review queue only; no setup permission, no execution.\r\n";
+   text += "Meaning: inspection/evidence-review export queue only; no setup permission, no execution.\r\n";
    return text;
 }
 
@@ -179,7 +180,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
    text += "--------------------------------------------------\r\n";
    text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
    text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | dynamic selected groups only\r\n";
-   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual trade-review queue, not permission.\r\n";
+   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -238,9 +239,36 @@ string AC_BoardTraderSelectionOverviewSection()
    text += "\r\nSELECTION DESK - TRADER VIEW\r\n";
    text += "==================================================\r\n";
    text += "Purpose: fast symbol quality cockpit for trader chat. Render-only; no score calculation, no new owner.\r\n";
-   text += "Trade lock is declared once at the Board header; rows below are inspection/review queue only.\r\n";
+   text += "Trade lock is declared once at the Board header; rows below are inspection/evidence-review queue only.\r\n";
    text += AC_BoardGlobalTop10TraderOverviewSection(10);
    text += AC_BoardSelectedGroupsTop5TraderOverviewSection(7, 5);
+   return text;
+}
+
+string AC_L23ExportPermissionLockSection()
+{
+   string text = "";
+   text += "\r\nL23 EXPORT / PERMISSION LOCK\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "manual_review_packet_available = true only when copied packet truth is labelled with source, missing, degraded, and stale evidence.\r\n";
+   text += "trader_chat_export_available = true only for truth-context export; it is not an entry instruction.\r\n";
+   text += "class_1_system_alert_allowed=true; class_2_setup_alert_allowed=false; directional_alert_allowed=false.\r\n";
+   text += "entry_signal=false; trade_allowed=false; auto_trade_allowed=false; live_allowed=false; prop_firm_ready=false; edge_validated=false.\r\n";
+   text += "Permission Block Reason: validation_missing; prop_profile_not_runtime_verified; selected evidence may be partial/degraded/stale.\r\n";
+   return text;
+}
+
+string AC_L23ExportPacketSchemaSection()
+{
+   string text = "";
+   text += "\r\nL23 TRADER-CHAT EXPORT PACKET SCHEMA\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "Required Machine Block Name: AURORA_L23_TRADER_REVIEW_EXPORT_PACKET.\r\n";
+   text += "Required Fields: schema_version, packet_created_utc, symbol, source_cycle_id, source_files_or_sections, upstream_layers_present, evidence_completeness_pct, missing_evidence_list, degraded_evidence_list, stale_evidence_list.\r\n";
+   text += "Context Fields: setup_research_candidate, structure_context_summary, liquidity_context_summary, risk_geometry_context_summary, review_warnings, validation_required_reason, permission_block_reason.\r\n";
+   text += "Permission Fields Required: manual_review_packet_available, trader_chat_export_available, class_1_system_alert_allowed, class_2_setup_alert_allowed, directional_alert_allowed, entry_signal, trade_allowed, auto_trade_allowed, live_allowed, prop_firm_ready, edge_validated.\r\n";
+   text += "Forbidden Values Before Validation: entry_signal=true; trade_allowed=true; auto_trade_allowed=true; live_allowed=true; prop_firm_ready=true; edge_validated=true.\r\n";
+   text += "Forbidden Wording: confirmed buy/sell; high probability; guaranteed setup; best trade now; prop-firm safe; institutional order flow confirmed.\r\n";
    return text;
 }
 
@@ -249,13 +277,15 @@ string AC_BoardTraderChatExportGuideSection()
    string text = "";
    text += "\r\nTRADER CHAT EXPORT GUIDE\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Purpose: copy Board + chosen Dossier(s) to trader chat; if a trade idea is produced, its reply must include a machine block for packet export.\r\n";
-   text += "Trader Chat Style: free-form human review is allowed, but export fields below must be present and strict.\r\n";
-   text += "Required Blocks: PROFESSOR SIAM TRADE REVIEW; TRADE_SETUP_REVIEW_CARD; AURORA PACKET DECISION; AURORA CAN CLAIM; AURORA CANNOT CLAIM.\r\n";
-   text += "Required Fields: review_status, trade_action, symbol, side, declared_timeframe, setup_name, setup_proof_level, planned_entry/zone, planned_sl or invalidation_price, planned_tp or target_logic, planned_risk_pct or planned_risk_money, main_reason, main_risk, reason_id, packet_required, packet_status.\r\n";
-   text += "Reason ID Format: RID_YYYYMMDD_HHMMSS_SYMBOL_SIDE. Put the reason_id in the MT5 order comment when placing the trade.\r\n";
-   text += "Safety Locks: trade_permission=false; prop_firm_safe=false; requires_manual_confirmation=true; no approved trade, no guaranteed outcome, no proven edge unless validation evidence exists.\r\n";
-   text += "Packet Meaning: setup packet is journal evidence only. MT5 history must confirm actual execution. Aurora import/matching is not active unless later runtime proof says so.\r\n";
+   text += "Purpose: copy Board + chosen Dossier(s) to trader chat as labelled truth context. Partial/degraded export is allowed when missing/degraded/stale evidence is visible.\r\n";
+   text += "Trader Chat Style: free-form human review is allowed, but the machine block below must stay strict and must not imply Aurora permission.\r\n";
+   text += "Required Blocks: PROFESSOR SIAM TRADE REVIEW; TRADE_SETUP_REVIEW_CARD; AURORA_L23_TRADER_REVIEW_EXPORT_PACKET; AURORA CAN CLAIM; AURORA CANNOT CLAIM.\r\n";
+   text += "Review Fields: review_status, discretionary_review_action, symbol, human_review_side_optional, declared_timeframe, setup_name, setup_proof_level, planned_entry_or_zone_if_human_defined, planned_sl_or_invalidation_if_human_defined, planned_tp_or_target_logic_if_human_defined, planned_risk_if_human_defined, main_reason, main_risk, reason_id, packet_required, packet_status.\r\n";
+   text += "Reason ID Format: RID_YYYYMMDD_HHMMSS_SYMBOL_SIDE. If a human later places a discretionary trade outside Aurora, use the reason_id only as journal linkage.\r\n";
+   text += "Safety Locks: trade_allowed=false; auto_trade_allowed=false; entry_signal=false; prop_firm_ready=false; requires_manual_confirmation=true; no approved trade, no guaranteed outcome, no proven edge unless validation evidence exists.\r\n";
+   text += "Packet Meaning: setup packet is journal/evidence-review evidence only. MT5 history must confirm any actual human execution. Aurora import/matching is not active unless later runtime proof says so.\r\n";
+   text += AC_L23ExportPermissionLockSection();
+   text += AC_L23ExportPacketSchemaSection();
    return text;
 }
 
