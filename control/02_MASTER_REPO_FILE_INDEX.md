@@ -56,6 +56,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 | `docs/34_L15_CORRELATION_DIVERSITY_SELECTION_CONTROL.md` | L15 correlation / diversity scoring control | Active | task-specific | L5 | Current L15 control contract. |
 | `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Current L16 control contract; held visible basket + fallback labels; no trade permission. |
 | `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Current L17 control contract; consumes L16 held visible display rows only; no evidence collection/trade permission. |
+| `docs/37_OPERATOR_WORKFLOW_AND_UX_RUNBOOK.md` | Operator workflow and UX runbook | Active | task-specific | L5 | First-click workflow, export safety, overtrading guardrails, and runtime visual-output test gate. |
 | `docs/27_RUNTIME_5_TO_7_FUTURE_LAYER_PLAYBOOK.md` .. `docs/33_L13_CLOSEOUT_AND_L14_HANDOFF.md` | Runtime/layer implementation notes and handoffs | Active | task-specific | L5 | Check exact file before using as active source; current source/config still outranks docs. |
 
 ## blueprint
