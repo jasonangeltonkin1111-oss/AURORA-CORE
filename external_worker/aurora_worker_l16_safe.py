@@ -183,6 +183,17 @@ def _group_cap(group_count: int, pool_size: int) -> int:
     return 2
 
 
+def _is_deferred_l15(row: Dict[str, str]) -> bool:
+    correlation_state = _text(row, "correlation_state", "").upper()
+    constraint_hint = _text(row, "l16_constraint_hint", "").lower()
+    confidence = _text(row, "correlation_confidence", "").lower()
+    return (
+        correlation_state == "DEFERRED_SOFT_CAP_SLOW_LANE"
+        or "constrained_deferred_slow_lane" in constraint_hint
+        or confidence == "deferred_not_scored_yet"
+    )
+
+
 def _join_candidates(l14_rows: List[Dict[str, str]], l15_rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     l15_by_symbol = {_text(r, "symbol", ""): r for r in l15_rows}
     rows: List[Dict[str, str]] = []
@@ -261,6 +272,15 @@ def _build_top10(candidates: List[Dict[str, str]], pair_corr: Dict[Tuple[str, st
             continue
         group = _text(cand, "ranking_group")
         group_after = group_counts.get(group, 0) + 1
+        if _is_deferred_l15(cand):
+            rejects.append({
+                "candidate_rank": _text(cand, "candidate_pool_rank"), "symbol": symbol, "ranking_group": group,
+                "l16_primary_score": _text(cand, "l16_primary_score"), "reject_stage": "deferred_soft_cap", "reject_reason": "l15_deferred_soft_cap_slow_lane_not_strict_clean",
+                "conflicting_selected_symbol": "not_available", "pairwise_corr_abs": "not_available", "ranking_group_count_if_added": str(group_after),
+                "currency_overlap_score": _text(cand, "currency_overlap_score"), "fallback_eligible": "true", "generated_utc": utc_stamp(),
+            })
+            reject_seen += 1
+            continue
         if group_after > group_limit:
             rejects.append({
                 "candidate_rank": _text(cand, "candidate_pool_rank"), "symbol": symbol, "ranking_group": group,
@@ -305,7 +325,11 @@ def _build_top10(candidates: List[Dict[str, str]], pair_corr: Dict[Tuple[str, st
         if symbol in {_text(r, "symbol") for r in display_rows}:
             continue
         max_corr, max_pair, corr_state, unavailable = _max_corr_to_selected(symbol, display_rows, pair_corr)
-        if unavailable:
+        deferred_l15 = _is_deferred_l15(cand)
+        if deferred_l15:
+            tier = "FALLBACK_DEFERRED_SOFT_CAP"
+            reason = "fallback_fill_l15_deferred_soft_cap_slow_lane_not_strict_clean"
+        elif unavailable:
             tier = "FALLBACK_UNAVAILABLE_CORRELATION"
             reason = "fallback_fill_correlation_unavailable_not_strict_clean"
         elif max_corr <= L16_FALLBACK_SOFT_CORR_ABS:
@@ -318,8 +342,8 @@ def _build_top10(candidates: List[Dict[str, str]], pair_corr: Dict[Tuple[str, st
             tier = "FALLBACK_NEXT_BEST_UNCLEAN"
             reason = "fallback_fill_next_best_unclean_correlation"
         rank = len(display_rows) + 1
-        fallback_reason = f"fill_display_slot_not_clean_diversification;max_corr={max_corr:.6f};pair={max_pair};threshold={L16_MAX_CORR_ABS:.2f}"
-        row = _make_display_row(cand, rank, "not_clean", max_corr, max_pair, corr_state, unavailable, reason, reject_seen, tier, False, fallback_reason)
+        fallback_reason = f"fill_display_slot_not_clean_diversification;reason={reason};max_corr={max_corr:.6f};pair={max_pair};threshold={L16_MAX_CORR_ABS:.2f}"
+        row = _make_display_row(cand, rank, "not_clean", max_corr, max_pair, corr_state, unavailable or deferred_l15, reason, reject_seen, tier, False, fallback_reason)
         display_rows.append(row)
         fallbacks.append({
             "slot": str(rank), "symbol": symbol, "ranking_group": _text(cand, "ranking_group"),
@@ -338,7 +362,7 @@ def _manifest(payload: str, selected_count: int, clean_count: int, fallback_coun
         f"owner={L16_OWNER}", f"authority={L16_AUTHORITY}", f"selected_count={selected_count}", f"clean_selected_count={clean_count}", f"fallback_selected_count={fallback_count}",
         f"payload_checksum={payload_checksum(payload.splitlines())}", f"max_allowed_pairwise_correlation_abs={L16_MAX_CORR_ABS:.2f}",
         f"fallback_soft_correlation_abs={L16_FALLBACK_SOFT_CORR_ABS:.2f}", f"fallback_medium_correlation_abs={L16_FALLBACK_MEDIUM_CORR_ABS:.2f}",
-        "threshold_status=untested_default_not_holy_law", "l16_hold_enabled=true", f"l16_hold_seconds={L16_HOLD_SECONDS}", f"l16_hold_state={hold_state}",
+        "threshold_status=untested_default_not_holy_law", "l15_deferred_soft_cap_policy=deferred_rows_never_strict_clean_may_display_as_fallback_only", "l16_hold_enabled=true", f"l16_hold_seconds={L16_HOLD_SECONDS}", f"l16_hold_state={hold_state}",
         "global_top10_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
@@ -356,6 +380,7 @@ def _summary_text(summary: L16PublishSummary) -> str:
         f"output_path={summary.output_path}", f"summary_path={summary.summary_path}", f"selection_desk_path={summary.selection_desk_path}",
         f"max_allowed_pairwise_correlation_abs={L16_MAX_CORR_ABS:.2f}", f"fallback_soft_correlation_abs={L16_FALLBACK_SOFT_CORR_ABS:.2f}",
         f"fallback_medium_correlation_abs={L16_FALLBACK_MEDIUM_CORR_ABS:.2f}", "threshold_status=untested_default_not_holy_law",
+        "l15_deferred_soft_cap_policy=deferred_rows_never_strict_clean_may_display_as_fallback_only",
         f"l16_hold_enabled={summary.hold_enabled}", f"l16_hold_seconds={summary.hold_seconds}", f"l16_hold_state={summary.hold_state}",
         f"l16_hold_started_unix={summary.hold_started_unix}", f"l16_hold_valid_until_unix={summary.hold_valid_until_unix}",
         f"l16_hold_age_seconds={summary.hold_age_seconds}", f"l16_hold_valid_until_utc={summary.hold_valid_until_utc}",
@@ -373,6 +398,7 @@ def _selection_text(rows: List[Dict[str, str]], rejects: List[Dict[str, str]], s
         f"unfilled_slots_count={summary.unfilled_slots_count}", f"strict_clean_unfilled_slots_count={summary.strict_clean_unfilled_slots_count}",
         f"correlation_reject_count={summary.correlation_reject_count}", f"group_cap_reject_count={summary.group_cap_reject_count}",
         f"max_allowed_pairwise_correlation_abs={L16_MAX_CORR_ABS:.2f}", "threshold_status=untested_default_not_holy_law",
+        "l15_deferred_soft_cap_policy=deferred_rows_never_strict_clean_may_display_as_fallback_only",
         f"hold_state={summary.hold_state}", f"hold_valid_until_utc={summary.hold_valid_until_utc}", "", "TOP 10 DISPLAY SLOTS",
     ]
     for row in rows:
@@ -384,7 +410,7 @@ def _selection_text(rows: List[Dict[str, str]], rejects: List[Dict[str, str]], s
     if summary.unfilled_slots_count > 0:
         lines.append("")
         lines.append(f"UNFILLED_DISPLAY_SLOTS={summary.unfilled_slots_count}")
-        lines.append("unfilled_reason=strict_clean_slots_unfilled_due_to_correlation_cap_group_cap_or_unavailable_correlation")
+        lines.append("unfilled_reason=strict_clean_slots_unfilled_due_to_correlation_cap_group_cap_or_unavailable_correlation_or_deferred_soft_cap")
     lines.append("")
     lines.append("REJECT SNAPSHOT")
     for row in rejects[:20]:
