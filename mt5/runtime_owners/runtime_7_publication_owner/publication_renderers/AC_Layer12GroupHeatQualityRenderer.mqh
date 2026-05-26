@@ -2,13 +2,13 @@
 #define AC_LAYER12_GROUP_HEAT_QUALITY_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 12 Ranking Group Heat / Quality.
-// Reads worker L12 summary and canonical layer summary index outputs only.
+// Reads worker L12 summary and canonical Selection Desk/Groups index outputs only.
 // Must not rank symbols, select groups, build candidates, build Global Top 10, permit, alert, or execute.
 
 static string AC_L12_STATUS = "Pending L12 group heat quality";
 static string AC_L12_VALIDATION_STATUS = "Pending";
 static string AC_L12_VALIDATION_REASON = "l12_group_heat_quality_summary.txt missing or not accepted";
-static string AC_L12_MAIN_BLOCKER = "l12 summary has not been accepted yet";
+static string AC_L12_MAIN_BLOCKER = "l12 summary missing";
 static bool   AC_L12_ACCEPTED = false;
 static int    AC_L12_GROUP_COUNT = 0;
 static int    AC_L12_ACCEPTED_GROUP_COUNT = 0;
@@ -23,7 +23,7 @@ static string AC_L12_GENERATED_UTC = "not_available";
 string AC_L12LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_12_Ranking_Group_Heat_Quality"; }
 string AC_L12SummaryPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality_summary.txt"; }
 string AC_L12HeatCsvPath(){ return AC_L12LayerFolder() + "\\l12_group_heat_quality.csv"; }
-string AC_L12CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L12_Group_Heat_Quality"; }
+string AC_L12CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\Groups"; }
 string AC_L12SelectionDeskIndexPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.txt"; }
 string AC_L12SelectionDeskIndexCsvPath(){ return AC_L12CanonicalSummaryFolder() + "\\00_Group_Heat_Quality_Index.csv"; }
 
@@ -82,7 +82,7 @@ void AC_L12RefreshSummary()
    AC_L12_STATUS = "Pending L12 group heat quality";
    AC_L12_VALIDATION_STATUS = "Pending";
    AC_L12_VALIDATION_REASON = "l12_group_heat_quality_summary.txt missing or unreadable";
-   AC_L12_MAIN_BLOCKER = AC_L12_VALIDATION_REASON;
+   AC_L12_MAIN_BLOCKER = "summary_missing";
    AC_L12_GROUP_COUNT = 0;
    AC_L12_ACCEPTED_GROUP_COUNT = 0;
    AC_L12_THIN_GROUP_COUNT = 0;
@@ -123,7 +123,7 @@ void AC_L12RefreshSummary()
       AC_L12_ACCEPTED = true;
       AC_L12_STATUS = "Accepted";
       AC_L12_VALIDATION_STATUS = "Accepted";
-      AC_L12_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
+      AC_L12_VALIDATION_REASON = "summary/files/counts/selection_desk_groups_index/permission all accepted";
       AC_L12_MAIN_BLOCKER = "none";
       return;
    }
@@ -145,8 +145,6 @@ string AC_Layer12BoardSection()
    text += "\r\nLAYER 12 - RANKING GROUP HEAT / QUALITY\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L12_STATUS + "\r\n";
-   text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L11 guarded ranked groups + Top 5 per ranking_group\r\n";
    text += "Ranking Groups Scored:      " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
    text += "Accepted Groups:            " + IntegerToString(AC_L12_ACCEPTED_GROUP_COUNT) + "\r\n";
    text += "Thin Groups:                " + IntegerToString(AC_L12_THIN_GROUP_COUNT) + "\r\n";
@@ -154,10 +152,6 @@ string AC_Layer12BoardSection()
    text += "Top Heat Group:             " + AC_L12_TOP_HEAT_GROUP + "\r\n";
    text += "Top Quality Group:          " + AC_L12_TOP_QUALITY_GROUP + "\r\n";
    text += "Top Strength Group:         " + AC_L12_TOP_STRENGTH_GROUP + "\r\n";
-   text += "Selection Runtime:          FALSE\r\n";
-   text += "Trade Permission:           FALSE\r\n";
-   text += "Entry Signal:               FALSE\r\n";
-   text += "Execution:                  FALSE\r\n";
    text += "Main Blocker:               " + AC_L12_MAIN_BLOCKER + "\r\n";
    return text;
 }
@@ -202,22 +196,21 @@ string AC_Layer12DossierSection(const string symbol)
    text += "\r\nLAYER 12 - RANKING GROUP HEAT / QUALITY\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L12_STATUS + "\r\n";
-   text += "Owner: Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    if(row == "")
    {
       text += "Ranking Group: " + ranking_group + "\r\n";
       text += "Group State: not_available\r\n";
-      text += "Reason: L12 heat row missing for this symbol's ranking_group or L12 not accepted yet\r\n";
+      text += "Reason: l12_group_row_missing\r\n";
    }
    else
    {
       text += "Ranking Group: " + AC_L12CsvField(row, 0) + "\r\n";
-      text += "Group Heat Rank: #" + AC_L12CsvField(row, 6) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
-      text += "Group Quality Rank: #" + AC_L12CsvField(row, 7) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
-      text += "Group Strength Rank: #" + AC_L12CsvField(row, 8) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
-      text += "Group Heat: " + AC_L12CsvField(row, 9) + "\r\n";
-      text += "Group Quality: " + AC_L12CsvField(row, 10) + "\r\n";
-      text += "Group Strength: " + AC_L12CsvField(row, 11) + "\r\n";
+      text += "Heat Rank: #" + AC_L12CsvField(row, 6) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
+      text += "Quality Rank: #" + AC_L12CsvField(row, 7) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
+      text += "Strength Rank: #" + AC_L12CsvField(row, 8) + " / " + IntegerToString(AC_L12_GROUP_COUNT) + "\r\n";
+      text += "Heat: " + AC_L12CsvField(row, 9) + "\r\n";
+      text += "Quality: " + AC_L12CsvField(row, 10) + "\r\n";
+      text += "Strength: " + AC_L12CsvField(row, 11) + "\r\n";
       text += "Group State: " + AC_L12CsvField(row, 5) + "\r\n";
       text += "Top Symbol: " + AC_L12CsvField(row, 18) + "\r\n";
       text += "Top Symbol Score: " + AC_L12CsvField(row, 19) + "\r\n";
@@ -227,10 +220,6 @@ string AC_Layer12DossierSection(const string symbol)
       text += "Risk Review Count: " + AC_L12CsvField(row, 15) + "\r\n";
    }
    text += "Meaning: group_attention_quality_only\r\n";
-   text += "Selection Runtime: FALSE\r\n";
-   text += "Trade Permission: FALSE\r\n";
-   text += "Entry Signal: FALSE\r\n";
-   text += "Execution: FALSE\r\n";
    return text;
 }
 
@@ -241,7 +230,7 @@ string AC_Layer12WorkbenchSection()
    text += "\r\nL12_RANKING_GROUP_HEAT_QUALITY\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l12_ranking_group_heat_quality\r\n";
-   text += "schema_version=1\r\n";
+   text += "schema_version=2\r\n";
    text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "layer_id=12\r\n";
    text += "input_source=L11_guarded\r\n";

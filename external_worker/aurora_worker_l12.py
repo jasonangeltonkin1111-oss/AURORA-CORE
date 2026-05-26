@@ -16,6 +16,8 @@ L12_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
 L12_SCHEMA_NAME = "l12_ranking_group_heat_quality"
 L12_AUTHORITY = "ranking_group_attention_quality_only"
 L12_FIELDS = ["ranking_group","ranking_group_slug","asset_class","market_group","market_segment","group_state","ranking_group_heat_rank","ranking_group_quality_rank","ranking_group_strength_rank","ranking_group_heat","ranking_group_quality_score","ranking_group_strength","group_symbol_count","rankable_count","not_rankable_count","risk_review_count","top5_symbol_count","backup_depth","top_symbol","top_symbol_score","top5_avg_score","top5_median_score","l6_avg_score","l7_avg_score","l8_avg_score","l9_avg_score","component_completeness_avg","thin_group_flag","thin_group_reason","rank_stability","rank_change","prior_cycle_available","meaning","directional_validity","expectancy_validated","selection_runtime","trade_permission","entry_signal","execution","reason","source_l11_checksum","generated_utc"]
+L12_COMPONENT_FIELDS = ["ranking_group","ranking_group_slug","asset_class","market_group","market_segment","group_state","group_symbol_count","rankable_count","not_rankable_count","risk_review_count","top5_symbol_count","backup_depth","l6_avg_score","l7_avg_score","l8_avg_score","l9_avg_score","component_completeness_avg","generated_utc"]
+L12_THIN_WARNING_FIELDS = ["ranking_group","ranking_group_slug","group_state","group_symbol_count","rankable_count","not_rankable_count","top5_symbol_count","thin_group_flag","thin_group_reason","risk_review_count","reason","generated_utc"]
 
 @dataclass(frozen=True)
 class L12PublishSummary:
@@ -116,6 +118,17 @@ def _visible_rank(row: Dict[str, str], key: str) -> str:
     value = row.get(key, "not_available")
     return f"#{value}" if value != "not_available" else "NA"
 
+def _component_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    return [{field: row.get(field, "not_available") for field in L12_COMPONENT_FIELDS} for row in rows]
+
+def _thin_warning_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    warning_states = {"THIN_GROUP", "NO_TOP5", "NO_RANKABLE_SYMBOLS", "ACCEPTED_WITH_REVIEW"}
+    return [
+        {field: row.get(field, "not_available") for field in L12_THIN_WARNING_FIELDS}
+        for row in rows
+        if row.get("thin_group_flag") == "true" or row.get("group_state") in warning_states or _int_text(row.get("risk_review_count"), 0) > 0
+    ]
+
 def _manifest(name: str, rows: List[Dict[str, str]], payload: str, l11_manifest_checksum: str, l11_ranked_checksum: str) -> str:
     return "\n".join([
         f"schema_name={name}_manifest",
@@ -181,8 +194,10 @@ def _summary(summary: L12PublishSummary) -> str:
 def _build(ranked: List[Dict[str, str]], top5: List[Dict[str, str]], checksum: str) -> List[Dict[str, str]]:
     grouped: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     top_grouped: Dict[str, List[Dict[str, str]]] = defaultdict(list)
-    for row in ranked: grouped[_text(row, "ranking_group", "Unknown")].append(row)
-    for row in top5: top_grouped[_text(row, "ranking_group", "Unknown")].append(row)
+    for row in ranked:
+        grouped[_text(row, "ranking_group", "Unknown")].append(row)
+    for row in top5:
+        top_grouped[_text(row, "ranking_group", "Unknown")].append(row)
     out: List[Dict[str, str]] = []
     for group, members in sorted(grouped.items()):
         rankable = [r for r in members if _rankable(r)]
@@ -223,25 +238,33 @@ def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSumma
     l11 = outbox_root / "Layers" / "Layer_11_Symbol_Ranking_Inside_Ranking_Group"
     needed = [l11/"l11_summary.txt", l11/"ranked_symbols_by_group.csv", l11/"ranking_group_top5.csv", l11/"ranked_symbols_by_group.manifest"]
     missing = [str(p) for p in needed if not p.exists()]
-    if missing: return L12PublishSummary("pending", "missing_required_l12_source: " + ";".join(missing))
+    if missing:
+        return L12PublishSummary("pending", "missing_required_l12_source: " + ";".join(missing))
     try:
         status = _kv(l11/"l11_summary.txt").get("status", "pending")
-        if status not in {"accepted", "write_degraded"}: return L12PublishSummary("pending" if status == "pending" else "degraded", "l11_not_accepted_status=" + status)
+        if status not in {"accepted", "write_degraded"}:
+            return L12PublishSummary("pending" if status == "pending" else "degraded", "l11_not_accepted_status=" + status)
         ranked_text = read_text(l11/"ranked_symbols_by_group.csv")
         l11_ranked_checksum = payload_checksum(ranked_text.splitlines())
-        l11_manifest_kv = _kv(l11/"ranked_symbols_by_group.manifest")
-        l11_manifest_checksum = l11_manifest_kv.get("payload_checksum", "not_available")
+        l11_manifest_checksum = _kv(l11/"ranked_symbols_by_group.manifest").get("payload_checksum", "not_available")
         rows = _build(_csv(l11/"ranked_symbols_by_group.csv"), _csv(l11/"ranking_group_top5.csv"), l11_ranked_checksum)
-        if not rows: return L12PublishSummary("pending", "no_l12_ranking_groups_to_score")
+        if not rows:
+            return L12PublishSummary("pending", "no_l12_ranking_groups_to_score")
         layer = outbox_root / "Layers" / L12_LAYER_FOLDER
         groups = layer / "RankingGroups"
         visible = _select_dir(outbox_root)
-        for d in (layer, groups, visible): d.mkdir(parents=True, exist_ok=True)
+        for d in (layer, groups, visible):
+            d.mkdir(parents=True, exist_ok=True)
         failed: List[Path] = []
         csv_text = _csv_text(rows, L12_FIELDS)
         _write(layer/"l12_group_heat_quality.csv", csv_text, failed)
+        _write(layer/"l12_component_distribution_by_group.csv", _csv_text(_component_rows(rows), L12_COMPONENT_FIELDS), failed)
+        _write(layer/"l12_thin_group_warnings.csv", _csv_text(_thin_warning_rows(rows), L12_THIN_WARNING_FIELDS), failed)
         _write(layer/"l12_group_heat_quality.manifest", _manifest("l12_group_heat_quality", rows, csv_text, l11_manifest_checksum, l11_ranked_checksum), failed)
-        for row in rows: _write(groups/(row["ranking_group_slug"]+".heat_quality.txt"), "\n".join([f"{k}={row.get(k,'not_available')}" for k in L12_FIELDS]+[""]), failed)
+        for row in rows:
+            _write(groups/(row["ranking_group_slug"]+".heat_quality.txt"), "\n".join([f"{k}={row.get(k,'not_available')}" for k in L12_FIELDS]+[""]), failed)
+        _write(visible/"00_Group_Heat_Quality_Index.csv", csv_text, failed)
+        _write(visible/"00_Group_Heat_Quality_Index.txt", "\n".join(["L12 GROUP HEAT / QUALITY INDEX", "----------------------------------------"] + [f"{_visible_rank(r, 'ranking_group_heat_rank')} {r['ranking_group']} heat={r['ranking_group_heat']} quality={r['ranking_group_quality_score']} strength={r['ranking_group_strength']} state={r['group_state']}" for r in sorted(rows, key=lambda x:_rank_sort_value(x, 'ranking_group_heat'))] + ["selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""]), failed)
         top_heat = _top_ranked_group(rows, "ranking_group_heat_rank")
         top_quality = _top_ranked_group(rows, "ranking_group_quality_rank")
         top_strength = _top_ranked_group(rows, "ranking_group_strength_rank")
@@ -250,36 +273,24 @@ def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSumma
         no_rankable_count = sum(1 for r in rows if r["group_state"]=="NO_RANKABLE_SYMBOLS")
         thin_rankable_count = sum(1 for r in rows if r["thin_group_flag"]=="true" and _int_text(r.get("rankable_count"), 0) > 0)
         risk_review_count = sum(1 for r in rows if int(r["risk_review_count"])>0)
+        failed_before_summary = len(failed)
         summary = L12PublishSummary(
-            "accepted" if not failed else "write_degraded",
-            "l12_group_heat_quality_published" if not failed else "one_or_more_l12_outputs_failed",
-            len(rows),
-            accepted_count,
-            thin_count,
-            risk_review_count,
-            len(failed),
-            str(layer/"l12_group_heat_quality.csv"),
-            str(layer/"l12_group_heat_quality_summary.txt"),
-            str(visible/"00_Group_Heat_Quality_Index.txt"),
-            top_heat,
-            top_quality,
-            top_strength,
-            thin_rankable_count,
-            no_rankable_count,
-            l11_manifest_checksum,
-            l11_ranked_checksum,
-            "accepted",
+            "accepted" if failed_before_summary == 0 else "write_degraded",
+            "l12_group_heat_quality_published" if failed_before_summary == 0 else "one_or_more_l12_outputs_failed",
+            len(rows), accepted_count, thin_count, risk_review_count, failed_before_summary,
+            str(layer/"l12_group_heat_quality.csv"), str(layer/"l12_group_heat_quality_summary.txt"), str(visible/"00_Group_Heat_Quality_Index.txt"),
+            top_heat, top_quality, top_strength, thin_rankable_count, no_rankable_count,
+            l11_manifest_checksum, l11_ranked_checksum, "accepted",
         )
         _write(layer/"l12_group_heat_quality_summary.txt", _summary(summary), failed)
-        _write(visible/"00_Group_Heat_Quality_Index.csv", csv_text, failed)
-        _write(visible/"00_Group_Heat_Quality_Index.txt", "\n".join(["L12 GROUP HEAT / QUALITY INDEX", "----------------------------------------"] + [f"{_visible_rank(r, 'ranking_group_heat_rank')} {r['ranking_group']} heat={r['ranking_group_heat']} quality={r['ranking_group_quality_score']} strength={r['ranking_group_strength']} state={r['group_state']}" for r in sorted(rows, key=lambda x:_rank_sort_value(x, 'ranking_group_heat'))] + ["selection_runtime=false", "trade_permission=false", ""]), failed)
-        return summary if not failed else L12PublishSummary(
-            "write_degraded", summary.reason, summary.ranking_group_count, summary.accepted_group_count,
-            summary.thin_group_count, summary.risk_review_group_count, len(failed), summary.heat_quality_path,
-            summary.summary_path, summary.selection_desk_heat_index_path, summary.top_heat_group,
-            summary.top_quality_group, summary.top_strength_group, summary.thin_rankable_group_count,
-            summary.no_rankable_group_count, summary.input_l11_ranked_manifest_checksum,
-            summary.input_l11_ranked_payload_checksum, summary.input_contract_status,
-        )
+        if len(failed) != failed_before_summary:
+            return L12PublishSummary(
+                "write_degraded", "one_or_more_l12_outputs_failed", len(rows), accepted_count,
+                thin_count, risk_review_count, len(failed), str(layer/"l12_group_heat_quality.csv"),
+                str(layer/"l12_group_heat_quality_summary.txt"), str(visible/"00_Group_Heat_Quality_Index.txt"),
+                top_heat, top_quality, top_strength, thin_rankable_count, no_rankable_count,
+                l11_manifest_checksum, l11_ranked_checksum, "accepted",
+            )
+        return summary
     except Exception as exc:
         return L12PublishSummary("exception", f"{type(exc).__name__}: {exc}")
