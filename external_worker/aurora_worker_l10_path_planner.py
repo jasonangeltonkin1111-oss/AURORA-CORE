@@ -93,30 +93,23 @@ def l10_symbol_path_index_text(plans: Iterable[L10SymbolPathPlan], max_rows: int
     lines = [
         "SYMBOL PATH INDEX",
         "----------------------------------------",
-        "Meaning: L10 taxonomy roadmap only; group folder hints are pending downstream processing and are not proof that copied Dossiers exist.",
-        "Selection Runtime: FALSE",
-        "Trade Permission: FALSE",
-        "Entry Signal: FALSE",
-        "Execution: FALSE",
+        "Meaning: L10 taxonomy roadmap only; path hints are not proof that copied Dossiers, Top-N files, selection, signals, or execution exist.",
+        "Layer Permission: selection_runtime=false; trade_permission=false",
         "",
     ]
     for plan in materialized[:max_rows]:
         lines.extend(
             [
                 plan.symbol,
-                f"Taxonomy:                              {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
-                f"State:                                 {plan.taxonomy_state}",
-                f"Rank Allowed For Downstream Ranking:   {'TRUE' if plan.rank_allowed else 'FALSE'}",
-                f"Classification Eligible For Downstream:{'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
-                "Selection Runtime:                     FALSE",
-                "Trade Permission:                       FALSE",
-                "Entry Signal:                           FALSE",
-                "Execution:                              FALSE",
-                f"Dossier Source:                         {plan.dossier_source_path}",
-                f"Future Group Path Hint:                 {plan.future_group_folder}",
-                f"Future L11 Top-5 Copy Hint:             {plan.future_top5_copy_path}",
-                f"Future L16 Top-10 Copy Hint:            {plan.future_top10_copy_path}",
-                f"Reason:                                 {plan.reason}",
+                f"Taxonomy:        {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
+                f"State:           {plan.taxonomy_state}",
+                f"Rank Eligible:   {'TRUE' if plan.rank_allowed else 'FALSE'}",
+                f"Class Eligible:  {'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
+                f"Dossier Source:  {plan.dossier_source_path}",
+                f"Group Hint:      {plan.future_group_folder}",
+                f"L11 Top5 Hint:   {plan.future_top5_copy_path}",
+                f"L16 Top10 Hint:  {plan.future_top10_copy_path}",
+                f"Reason:          {plan.reason}",
                 "",
             ]
         )
