@@ -10,7 +10,9 @@ string AC_L3SymbolUniverseFingerprint(const int total)
       int len = StringLen(symbol);
       hash = (hash * 31) + idx + 1;
       for(int ch = 0; ch < len; ch++)
+      {
          hash = (hash * 31) + StringGetCharacter(symbol, ch);
+      }
    }
    return IntegerToString(hash);
 }
@@ -19,8 +21,8 @@ string AC_L3BuildCacheKey(const int total)
 {
    return AC_DOSSIER_SHELL_SCHEMA_VERSION
       + " | server=" + AccountInfoString(ACCOUNT_SERVER)
-      + " | login=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN))
-      + " | currency=" + AccountInfoString(ACCOUNT_CURRENCY)
+      + " | account=" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN))
+      + " | account_currency=" + AccountInfoString(ACCOUNT_CURRENCY)
       + " | symbols=" + IntegerToString(total)
       + " | universe_fingerprint=" + AC_L3SymbolUniverseFingerprint(total)
       + " | owner=L3BrokerSpecsTruth";
@@ -32,6 +34,9 @@ void AC_RefreshLayer3BrokerSpecsTruth()
    int total = SymbolsTotal(false);
    AC_L3_LAST_SYMBOLS_TOTAL = total;
    AC_L3_LAST_L2_ROUTE_KEY = AC_L2_ROUTE_GENERATION_KEY;
+   // L3 owns static/semi-static broker symbol specs and account-currency value
+   // metadata. Ordinary L2 open/closed route churn must not invalidate L3, but
+   // broker server/account/currency/symbol-universe changes must.
    AC_L3_CACHE_KEY = AC_L3BuildCacheKey(total);
 
    for(int idx = 0; idx < total; idx++)
