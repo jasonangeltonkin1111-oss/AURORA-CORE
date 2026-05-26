@@ -109,6 +109,9 @@ void AC_BuildLayer2Texts()
    AC_L2_WORKBENCH_SECTION += "----------------------------------------\r\n";
    AC_L2_WORKBENCH_SECTION += "scan_status=" + layer_status + "\r\n";
    AC_L2_WORKBENCH_SECTION += "scan_duration_ms=" + IntegerToString((int)AC_L2_SCAN_DURATION_MS) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "symbols_per_second=" + StringFormat("%.1f", AC_L2_SYMBOLS_PER_SECOND) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "speed_target_symbols_per_second=200\r\n";
+   AC_L2_WORKBENCH_SECTION += "speed_target_met=" + (AC_L2_SYMBOLS_PER_SECOND >= 200.0 ? "true" : "false") + "\r\n";
    AC_L2_WORKBENCH_SECTION += "symbols_seen=" + IntegerToString(AC_L2_SYMBOLS_TOTAL) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "symbols_scanned=" + IntegerToString(AC_L2_SYMBOLS_SCANNED) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "open_count=" + IntegerToString(AC_L2_OPEN_COUNT) + "\r\n";
@@ -198,6 +201,7 @@ string AC_Layer2StatusRow()
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|layer_status=" + (AC_L2_READY ? AC_L2_SCAN_STATUS : "pending")
       + "|symbols_total=" + IntegerToString(AC_L2_SYMBOLS_TOTAL)
+      + "|symbols_per_second=" + StringFormat("%.1f", AC_L2_SYMBOLS_PER_SECOND)
       + "|open_count=" + IntegerToString(AC_L2_OPEN_COUNT)
       + "|closed_count=" + IntegerToString(AC_L2_CLOSED_COUNT)
       + "|unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
