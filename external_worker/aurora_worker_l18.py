@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Tuple
 import re
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, unix_time, utc_stamp
@@ -12,9 +12,18 @@ SELECTION_DEEP_END = "========== SELECTION-ONLY DEEP EVIDENCE END =========="
 L18_START = "----- L18 RAW OHLC BAR PACK START -----"
 L18_END = "----- L18 RAW OHLC BAR PACK END -----"
 
-# Enough for MA200-style future reference without dumping 350-750 rows per TF.
-# L18 still reads existing Shared OHLC Store seed files only; these are display caps.
-DISPLAY_BARS: Dict[str, int] = {"M5": 220, "M15": 220, "H1": 220, "H4": 200, "D1": 200}
+# L18 reads existing Runtime 1 Shared OHLC Store seed files only.
+# These are the active L18 display caps from blueprint/03_LOGICAL_LAYER_BLUEPRINT.md.
+DISPLAY_BARS: Dict[str, int] = {
+    "M1": 300,
+    "M5": 300,
+    "M15": 350,
+    "M30": 250,
+    "H1": 300,
+    "H4": 200,
+    "D1": 250,
+    "W1": 104,
+}
 RANKED_DOSSIER_RE = re.compile(r"^\d{2}_(.+)\.txt$")
 
 
@@ -32,12 +41,18 @@ class L18PublishSummary:
     source_decode_errors: int = 0
     rows_printed_to_dossiers: int = 0
     write_failed_count: int = 0
+    m1_completed_symbols: int = 0
+    m1_partial_symbols: int = 0
+    m1_missing_symbols: int = 0
     m5_completed_symbols: int = 0
     m5_partial_symbols: int = 0
     m5_missing_symbols: int = 0
     m15_completed_symbols: int = 0
     m15_partial_symbols: int = 0
     m15_missing_symbols: int = 0
+    m30_completed_symbols: int = 0
+    m30_partial_symbols: int = 0
+    m30_missing_symbols: int = 0
     h1_completed_symbols: int = 0
     h1_partial_symbols: int = 0
     h1_missing_symbols: int = 0
@@ -47,6 +62,9 @@ class L18PublishSummary:
     d1_completed_symbols: int = 0
     d1_partial_symbols: int = 0
     d1_missing_symbols: int = 0
+    w1_completed_symbols: int = 0
+    w1_partial_symbols: int = 0
+    w1_missing_symbols: int = 0
     selected_route_dossiers_seen: int = 0
     selected_route_dossiers_decorated: int = 0
     selected_unique_symbols_seen: int = 0
@@ -57,13 +75,23 @@ class L18PublishSummary:
     freshness_stale_count: int = 0
     freshness_unknown_count: int = 0
     freshness_status: str = "unknown"
-    freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time"
+    freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time_read_once"
     status_path: str = "not_available"
     board_path: str = "not_available"
     layer_folder: str = "not_available"
 
 
 EMPTY_L18_SUMMARY = L18PublishSummary("pending", "l18_not_run")
+
+
+@dataclass(frozen=True)
+class OhlcSeedPacket:
+    path: Path
+    status: str
+    meta: Dict[str, str]
+    rows: List[List[str]]
+    decode_error: bool = False
+    error_text: str = ""
 
 
 def _account_root(root: Path) -> Path:
@@ -95,6 +123,7 @@ def _selected_dossier_paths(root: Path) -> List[Path]:
     candidates.extend((desk / "01_Global" / "Top_10").glob("*.txt"))
     candidates.extend((desk / "02_Asset_Classes").glob("*/01_Top_5_All_*/*.txt"))
     candidates.extend((desk / "02_Asset_Classes").glob("*/02_Groups/*/*.txt"))
+
     unique: List[Path] = []
     seen = set()
     for path in candidates:
@@ -117,7 +146,7 @@ def _ohlc_path(root: Path, symbol: str, timeframe: str) -> Path:
     return _shared_ohlc_symbols(root) / symbol / f"{timeframe}.seed.csv"
 
 
-def _parse_header_and_rows(text: str) -> tuple[Dict[str, str], List[List[str]]]:
+def _parse_header_and_rows(text: str) -> Tuple[Dict[str, str], List[List[str]]]:
     meta: Dict[str, str] = {}
     rows: List[List[str]] = []
     for raw in text.replace("\r\n", "\n").splitlines():
@@ -138,6 +167,18 @@ def _parse_header_and_rows(text: str) -> tuple[Dict[str, str], List[List[str]]]:
     return meta, rows
 
 
+def _read_seed_packet(root: Path, symbol: str, timeframe: str) -> OhlcSeedPacket:
+    path = _ohlc_path(root, symbol, timeframe)
+    if not path.exists():
+        return OhlcSeedPacket(path=path, status="missing", meta={}, rows=[])
+    try:
+        meta, rows = _parse_header_and_rows(read_text(path))
+        return OhlcSeedPacket(path=path, status="present", meta=meta, rows=rows)
+    except Exception as exc:
+        safe_error = str(exc).replace("\n", " ").replace("\r", " ")
+        return OhlcSeedPacket(path=path, status="decode_error", meta={}, rows=[], decode_error=True, error_text=f"{type(exc).__name__}:{safe_error}")
+
+
 def _decode_price(raw_value: str, point: float | None, digits: int | None) -> str:
     try:
         value = int(float(raw_value))
@@ -149,37 +190,49 @@ def _decode_price(raw_value: str, point: float | None, digits: int | None) -> st
         return "decode_error"
 
 
-def _render_timeframe(root: Path, symbol: str, timeframe: str, requested: int) -> tuple[str, str, int, bool]:
-    path = _ohlc_path(root, symbol, timeframe)
-    if not path.exists():
-        return (f"[{timeframe}] source_status=missing path={path}\n", "missing", 0, False)
+def _latest_age_seconds_from_rows(rows: Sequence[Sequence[str]]) -> int:
+    if not rows:
+        return -1
     try:
-        meta, rows = _parse_header_and_rows(read_text(path))
-        point_raw = meta.get("point", "")
-        digits_raw = meta.get("digits", "")
+        bar_time = int(float(rows[-1][0]))
+        if bar_time <= 0:
+            return -1
+        return max(0, unix_time() - bar_time)
+    except Exception:
+        return -1
+
+
+def _render_timeframe_from_packet(packet: OhlcSeedPacket, timeframe: str, requested: int) -> Tuple[str, str, int, bool, int]:
+    if packet.status == "missing":
+        return (f"[{timeframe}] source_status=missing path={packet.path}\n", "missing", 0, False, -1)
+    if packet.status == "decode_error":
+        return (f"[{timeframe}] source_status=decode_error error={packet.error_text} path={packet.path}\n", "decode_error", 0, True, -1)
+    try:
+        point_raw = packet.meta.get("point", "")
+        digits_raw = packet.meta.get("digits", "")
         point = float(point_raw) if point_raw else None
         digits = int(float(digits_raw)) if digits_raw else None
-        selected = rows[-requested:] if len(rows) > requested else rows
+        selected = packet.rows[-requested:] if len(packet.rows) > requested else packet.rows
         selected = list(reversed(selected))
         status = "complete" if len(selected) >= requested else "partial"
         price_fields_label = "open|high|low|close" if point is not None and point > 0 else "open_i|high_i|low_i|close_i"
         price_policy = "decoded_price" if point is not None and point > 0 else "raw_integer_points_no_point_metadata"
         lines = [
-            f"[{timeframe}] source_status={status} rows_shown={len(selected)} requested_display_bars={requested} source_rows_available={len(rows)} price_policy={price_policy} source_path={path}",
-            f"idx | broker_time_unix | {price_fields_label} | tick_volume | spread | complete",
+            f"[{timeframe}] source_status={status} rows_shown={len(selected)} requested_display_bars={requested} source_rows_available={len(packet.rows)} price_policy={price_policy} source_path={packet.path}",
+            f"idx | broker_time_unix | {price_fields_label} | tick_volume | spread | real_volume_if_available | bar_complete_flag",
         ]
         decode_error = False
         for idx, row in enumerate(selected):
-            bar_time, open_i, high_i, low_i, close_i, tick_volume, spread, _real_volume = row
+            bar_time, open_i, high_i, low_i, close_i, tick_volume, spread, real_volume = row
             decoded = [_decode_price(v, point, digits) for v in (open_i, high_i, low_i, close_i)]
             if "decode_error" in decoded:
                 decode_error = True
-            lines.append(f"{idx} | {bar_time} | {decoded[0]} | {decoded[1]} | {decoded[2]} | {decoded[3]} | {tick_volume} | {spread} | true")
+            lines.append(f"{idx} | {bar_time} | {decoded[0]} | {decoded[1]} | {decoded[2]} | {decoded[3]} | {tick_volume} | {spread} | {real_volume} | closed_seed_contract")
         lines.append("")
-        return ("\n".join(lines), status, len(selected), decode_error)
+        return ("\n".join(lines), status, len(selected), decode_error, _latest_age_seconds_from_rows(packet.rows))
     except Exception as exc:
-        safe_error = str(exc).replace(chr(10), " ").replace(chr(13), " ")
-        return (f"[{timeframe}] source_status=decode_error error={type(exc).__name__}:{safe_error} path={path}\n", "decode_error", 0, True)
+        safe_error = str(exc).replace("\n", " ").replace("\r", " ")
+        return (f"[{timeframe}] source_status=decode_error error={type(exc).__name__}:{safe_error} path={packet.path}\n", "decode_error", 0, True, -1)
 
 
 def _extract_block(text: str, start_marker: str, end_marker: str) -> str:
@@ -214,6 +267,10 @@ def _empty_tf_counts() -> Dict[str, Dict[str, int]]:
     return {tf: {"complete": 0, "partial": 0, "missing": 0, "decode_error": 0} for tf in DISPLAY_BARS}
 
 
+def _display_profile_csv(sep: str = ",") -> str:
+    return sep.join(f"{tf}={bars}" for tf, bars in DISPLAY_BARS.items())
+
+
 def _build_l18_block(symbol: str, rendered_sections: Sequence[str], tf_statuses: Dict[str, str], rows_printed: int) -> str:
     lines = [
         L18_START,
@@ -221,14 +278,12 @@ def _build_l18_block(symbol: str, rendered_sections: Sequence[str], tf_statuses:
         "Scope:                  Selection copied dossier only",
         "Source Owner:           Runtime 1 Shared OHLC Raw Storage Owner",
         "Source Policy:          read_existing_shared_ohlc_seed_files_only",
-        "Display Profile:        MA200_support_caps_M5_220_M15_220_H1_220_H4_200_D1_200",
+        f"Display Profile:        {_display_profile_csv(', ')}",
         "Price Policy:           decoded when point metadata exists; otherwise raw integer points",
+        "Bar Complete Policy:    closed_seed_contract_from_shared_ohlc_owner_not_live_forming_bar_claim",
         "CopyRates By L18:       false",
         "Private OHLC Cache:     false",
         "Base Dossier Touched:   false",
-        "Trade Permission:       false",
-        "Entry Signal:           false",
-        "Execution:              false",
         f"Symbol:                 {symbol}",
         f"Rows Printed:           {rows_printed}",
         "",
@@ -242,36 +297,43 @@ def _build_l18_block(symbol: str, rendered_sections: Sequence[str], tf_statuses:
     return "\n".join(lines) + "\n"
 
 
+def _tf_summary_lines(summary: L18PublishSummary) -> List[str]:
+    denom = summary.selected_dossiers_seen
+    return [
+        f"M1:   completed_symbols={summary.m1_completed_symbols}/{denom} partial_symbols={summary.m1_partial_symbols} missing_symbols={summary.m1_missing_symbols}",
+        f"M5:   completed_symbols={summary.m5_completed_symbols}/{denom} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
+        f"M15:  completed_symbols={summary.m15_completed_symbols}/{denom} partial_symbols={summary.m15_partial_symbols} missing_symbols={summary.m15_missing_symbols}",
+        f"M30:  completed_symbols={summary.m30_completed_symbols}/{denom} partial_symbols={summary.m30_partial_symbols} missing_symbols={summary.m30_missing_symbols}",
+        f"H1:   completed_symbols={summary.h1_completed_symbols}/{denom} partial_symbols={summary.h1_partial_symbols} missing_symbols={summary.h1_missing_symbols}",
+        f"H4:   completed_symbols={summary.h4_completed_symbols}/{denom} partial_symbols={summary.h4_partial_symbols} missing_symbols={summary.h4_missing_symbols}",
+        f"D1:   completed_symbols={summary.d1_completed_symbols}/{denom} partial_symbols={summary.d1_partial_symbols} missing_symbols={summary.d1_missing_symbols}",
+        f"W1:   completed_symbols={summary.w1_completed_symbols}/{denom} partial_symbols={summary.w1_partial_symbols} missing_symbols={summary.w1_missing_symbols}",
+    ]
+
+
 def _board_text(summary: L18PublishSummary) -> str:
-    return "\n".join([
+    lines = [
         "L18 — SELECTED RAW OHLC BAR PACK",
         "--------------------------------------------------",
-        "Purpose:                Copy selected raw OHLC from Shared OHLC Store into selected dossiers",
+        "Purpose:                Selected raw OHLC from Shared OHLC Store",
         "Scope:                  Canonical Selection Desk copied dossiers only",
-        "Display Profile:        M5=220, M15=220, H1=220, H4=200, D1=200",
+        f"Display Profile:        {_display_profile_csv(', ')}",
         "Source Owner:           Runtime 1 Shared OHLC Raw Storage Owner",
         "CopyRates By L18:       FALSE",
         "Private OHLC Cache:     FALSE",
         "Base Dossiers Touched:  FALSE",
-        "Trade Permission:       FALSE",
-        "Entry Signal:           FALSE",
-        "Execution:              FALSE",
         "",
         "Selection Coverage",
         f"Selected Dossiers Seen:       {summary.selected_dossiers_seen}",
         f"Selected Dossiers Decorated:  {summary.selected_dossiers_decorated}",
         f"Selected Missing Symbol:      {summary.selected_dossiers_missing_symbol}",
-        f"Route Dossiers Seen:          {summary.selected_route_dossiers_seen}",
-        f"Route Dossiers Decorated:     {summary.selected_route_dossiers_decorated}",
         f"Unique Symbols Seen:          {summary.selected_unique_symbols_seen}",
         f"Duplicate Route Copies:       {summary.selected_duplicate_route_copies}",
         "",
         "OHLC Source Coverage",
-        f"M5:   completed_symbols={summary.m5_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m5_partial_symbols} missing_symbols={summary.m5_missing_symbols}",
-        f"M15:  completed_symbols={summary.m15_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.m15_partial_symbols} missing_symbols={summary.m15_missing_symbols}",
-        f"H1:   completed_symbols={summary.h1_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.h1_partial_symbols} missing_symbols={summary.h1_missing_symbols}",
-        f"H4:   completed_symbols={summary.h4_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.h4_partial_symbols} missing_symbols={summary.h4_missing_symbols}",
-        f"D1:   completed_symbols={summary.d1_completed_symbols}/{summary.selected_dossiers_seen} partial_symbols={summary.d1_partial_symbols} missing_symbols={summary.d1_missing_symbols}",
+    ]
+    lines.extend(_tf_summary_lines(summary))
+    lines.extend([
         "",
         "Latest L18 Update",
         f"Status:                       {summary.status}",
@@ -288,18 +350,20 @@ def _board_text(summary: L18PublishSummary) -> str:
         f"Generated UTC:                {utc_stamp()}",
         "",
     ])
+    return "\n".join(lines)
 
 
 def _status_text(summary: L18PublishSummary) -> str:
-    return "\n".join([
+    lines = [
         "schema_name=l18_selected_raw_ohlc_bar_pack_status",
-        "schema_version=2",
+        "schema_version=3",
         f"status={summary.status}",
         f"reason={summary.reason}",
         "scope=canonical_selection_shortcut_dossiers_only",
         "source_owner=Runtime 1 Shared OHLC Raw Storage Owner",
         "source_policy=read_existing_shared_ohlc_seed_files_only",
-        "display_profile=M5=220,M15=220,H1=220,H4=200,D1=200",
+        f"display_profile={_display_profile_csv()}",
+        "bar_complete_policy=closed_seed_contract_from_shared_ohlc_owner_not_live_forming_bar_claim",
         "copyrates_by_l18=false",
         "private_ohlc_cache=false",
         "base_dossiers_touched=false",
@@ -324,12 +388,18 @@ def _status_text(summary: L18PublishSummary) -> str:
         f"freshness_unknown_count={summary.freshness_unknown_count}",
         f"freshness_status={summary.freshness_status}",
         f"freshness_policy={summary.freshness_policy}",
+        f"m1_completed_symbols={summary.m1_completed_symbols}",
+        f"m1_partial_symbols={summary.m1_partial_symbols}",
+        f"m1_missing_symbols={summary.m1_missing_symbols}",
         f"m5_completed_symbols={summary.m5_completed_symbols}",
         f"m5_partial_symbols={summary.m5_partial_symbols}",
         f"m5_missing_symbols={summary.m5_missing_symbols}",
         f"m15_completed_symbols={summary.m15_completed_symbols}",
         f"m15_partial_symbols={summary.m15_partial_symbols}",
         f"m15_missing_symbols={summary.m15_missing_symbols}",
+        f"m30_completed_symbols={summary.m30_completed_symbols}",
+        f"m30_partial_symbols={summary.m30_partial_symbols}",
+        f"m30_missing_symbols={summary.m30_missing_symbols}",
         f"h1_completed_symbols={summary.h1_completed_symbols}",
         f"h1_partial_symbols={summary.h1_partial_symbols}",
         f"h1_missing_symbols={summary.h1_missing_symbols}",
@@ -339,6 +409,9 @@ def _status_text(summary: L18PublishSummary) -> str:
         f"d1_completed_symbols={summary.d1_completed_symbols}",
         f"d1_partial_symbols={summary.d1_partial_symbols}",
         f"d1_missing_symbols={summary.d1_missing_symbols}",
+        f"w1_completed_symbols={summary.w1_completed_symbols}",
+        f"w1_partial_symbols={summary.w1_partial_symbols}",
+        f"w1_missing_symbols={summary.w1_missing_symbols}",
         f"status_path={summary.status_path}",
         f"board_path={summary.board_path}",
         "trade_permission=false",
@@ -347,13 +420,21 @@ def _status_text(summary: L18PublishSummary) -> str:
         f"generated_utc={utc_stamp()}",
         f"generated_unix={unix_time()}",
         "",
-    ])
-
-
+    ]
+    return "\n".join(lines)
 
 
 def _freshness_bucket(tf: str, age_seconds: int) -> str:
-    caps = {"M5": (900, 1800), "M15": (1800, 3600), "H1": (7200, 14400), "H4": (21600, 43200), "D1": (172800, 345600)}
+    caps = {
+        "M1": (180, 600),
+        "M5": (900, 1800),
+        "M15": (1800, 3600),
+        "M30": (3600, 7200),
+        "H1": (7200, 14400),
+        "H4": (21600, 43200),
+        "D1": (172800, 345600),
+        "W1": (1209600, 2419200),
+    }
     fresh_cap, aging_cap = caps.get(tf, (1800, 3600))
     if age_seconds < 0:
         return "unknown"
@@ -364,20 +445,16 @@ def _freshness_bucket(tf: str, age_seconds: int) -> str:
     return "stale"
 
 
-def _latest_age_seconds(root: Path, symbol: str, timeframe: str) -> int:
-    path = _ohlc_path(root, symbol, timeframe)
-    if not path.exists():
-        return -1
-    try:
-        _meta, rows = _parse_header_and_rows(read_text(path))
-        if not rows:
-            return -1
-        bar_time = int(float(rows[-1][0]))
-        if bar_time <= 0:
-            return -1
-        return max(0, unix_time() - bar_time)
-    except Exception:
-        return -1
+def _tf_summary_kwargs(tf_counts: Dict[str, Dict[str, int]]) -> Dict[str, int]:
+    kwargs: Dict[str, int] = {}
+    for tf in DISPLAY_BARS:
+        prefix = tf.lower()
+        counts = tf_counts[tf]
+        kwargs[f"{prefix}_completed_symbols"] = counts["complete"]
+        kwargs[f"{prefix}_partial_symbols"] = counts["partial"] + counts["decode_error"]
+        kwargs[f"{prefix}_missing_symbols"] = counts["missing"]
+    return kwargs
+
 
 def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
     failed: List[Path] = []
@@ -394,7 +471,6 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
     route_decorated = 0
     unique_symbols = set()
     freshness = {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0}
-    tf_freshness = {tf: {"fresh": 0, "aging": 0, "stale": 0, "unknown": 0} for tf in DISPLAY_BARS}
     latest_max_age = -1
     source_expected = len(dossiers) * len(DISPLAY_BARS)
     source_found = 0
@@ -408,15 +484,18 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         if not symbol:
             missing_symbol += 1
             continue
+
         unique_symbols.add(symbol)
         rendered: List[str] = []
         tf_statuses: Dict[str, str] = {}
         dossier_rows = 0
         for tf, requested in DISPLAY_BARS.items():
-            section, status, rows, decode_error = _render_timeframe(root, symbol, tf, requested)
+            packet = _read_seed_packet(root, symbol, tf)
+            section, status, rows, decode_error, age = _render_timeframe_from_packet(packet, tf, requested)
             rendered.append(section)
             tf_statuses[tf] = status
             dossier_rows += rows
+
             if status == "missing":
                 source_missing += 1
                 tf_counts[tf]["missing"] += 1
@@ -429,14 +508,15 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
                     tf_counts[tf]["partial"] += 1
                 else:
                     tf_counts[tf]["decode_error"] += 1
+
             if decode_error:
                 decode_errors += 1
-            age = _latest_age_seconds(root, symbol, tf)
+
             bucket = _freshness_bucket(tf, age)
             freshness[bucket] += 1
-            tf_freshness[tf][bucket] += 1
             if age > latest_max_age:
                 latest_max_age = age
+
         try:
             existing = read_text(dossier)
             updated = _replace_l18_in_deep_section(existing, _build_l18_block(symbol, rendered, tf_statuses, dossier_rows))
@@ -458,8 +538,9 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         status = "degraded"
     else:
         status = "accepted"
+
     if status == "accepted":
-        reason = "selected_dossiers_decorated_with_freshness_proof"
+        reason = "selected_dossiers_decorated_with_contract_timeframes_and_freshness_proof"
     elif status == "degraded":
         reason = "selected_dossiers_decorated_with_limited_history_or_stale_freshness"
     elif status == "pending":
@@ -494,21 +575,6 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         source_decode_errors=decode_errors,
         rows_printed_to_dossiers=rows_total,
         write_failed_count=len(failed),
-        m5_completed_symbols=tf_counts["M5"]["complete"],
-        m5_partial_symbols=tf_counts["M5"]["partial"] + tf_counts["M5"]["decode_error"],
-        m5_missing_symbols=tf_counts["M5"]["missing"],
-        m15_completed_symbols=tf_counts["M15"]["complete"],
-        m15_partial_symbols=tf_counts["M15"]["partial"] + tf_counts["M15"]["decode_error"],
-        m15_missing_symbols=tf_counts["M15"]["missing"],
-        h1_completed_symbols=tf_counts["H1"]["complete"],
-        h1_partial_symbols=tf_counts["H1"]["partial"] + tf_counts["H1"]["decode_error"],
-        h1_missing_symbols=tf_counts["H1"]["missing"],
-        h4_completed_symbols=tf_counts["H4"]["complete"],
-        h4_partial_symbols=tf_counts["H4"]["partial"] + tf_counts["H4"]["decode_error"],
-        h4_missing_symbols=tf_counts["H4"]["missing"],
-        d1_completed_symbols=tf_counts["D1"]["complete"],
-        d1_partial_symbols=tf_counts["D1"]["partial"] + tf_counts["D1"]["decode_error"],
-        d1_missing_symbols=tf_counts["D1"]["missing"],
         selected_route_dossiers_seen=route_seen,
         selected_route_dossiers_decorated=route_decorated,
         selected_unique_symbols_seen=len(unique_symbols),
@@ -519,10 +585,11 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         freshness_stale_count=freshness["stale"],
         freshness_unknown_count=freshness["unknown"],
         freshness_status=freshness_status,
-        freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time",
+        freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time_read_once",
         status_path=str(status_path),
         board_path=str(board_path),
         layer_folder=str(layer_dir),
+        **_tf_summary_kwargs(tf_counts),
     )
     _write(status_path, _status_text(summary), failed)
     _write(board_path, _board_text(summary), failed)
