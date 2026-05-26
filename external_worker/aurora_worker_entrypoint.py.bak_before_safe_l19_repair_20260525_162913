@@ -180,7 +180,7 @@ def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root: Path, worker_mode:
     if enable_l13_runtime and enable_l14_runtime and enable_l15_runtime and enable_l16_runtime and enable_l17_runtime and enable_l18_runtime:
         try:
             run_l18_after_l17(root)
-            run_l19_after_l18(root)
+        run_l19_after_l18(root)
         except Exception as exc:
             core.gateway_record_exception(root, "l18_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
     return code, res
