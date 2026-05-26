@@ -2,9 +2,17 @@
 
 ## Status
 
-Planning/design control only.
+Design/control only.
 
-This document does not prove L22 runtime, does not wire L22 into the worker chain, does not add MT5 DOM subscriptions, and does not grant trade permission.
+This document defines how Layer 22 — Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack should appear on Aurora surfaces after the upstream selected-evidence chain exists.
+
+It does not implement runtime source.
+
+It does not wire L22 into the worker chain.
+
+It does not add MT5 DOM subscriptions.
+
+It does not request or permit main merge.
 
 Decision default:
 
@@ -14,63 +22,86 @@ TEST FIRST
 
 ---
 
-## Purpose
+## Dependency and merge lock
 
-Define how Layer 22 — Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack should appear on Aurora surfaces once upstream selected evidence packets exist.
+Layer 22 must remain DESIGN ONLY / HOLD MAIN until Layer 21 — Selected Indicator / Reference Pack is confirmed running on main and stable.
 
-L22 is a selected-symbol evidence synthesis layer. It prepares context for manual review and future Layer 23 setup research. It is not a buy/sell system, not a signal seller, not a finished edge, not a permission layer, and not execution authority.
+```text
+L20 cannot merge until L19 is confirmed running on main.
+L21 cannot merge until L20 is confirmed running on main.
+L22 cannot merge until L21 is confirmed running on main.
+L23 cannot merge until L22 is confirmed running on main.
+```
+
+L22 comes before L23. L22 must not depend on L23 for basic evidence. L22 may expose area geometry, liquidity references, value context, tick proxy context, DOM proxy context, evidence freshness, and completeness. L23 may later consume L22 evidence for manual review/export/setup research.
 
 ---
 
-## Core surface law
+## L22 purpose
 
-L22 must preserve the Aurora surface split:
+L22 answers selected-symbol questions:
 
 ```text
-Board = compact operator cockpit
-Dossier = rich per-symbol evidence context
-Workbench = machine proof, status, timing, counters, and failure reasons
+Where is price relative to important areas?
+How much raw and spread-adjusted room exists to nearby areas?
+Is the current area context fresh, stale, partial, or missing?
+Is value/VWAP context available?
+Is tick/DOM proxy context available?
+What is the evidence completeness state?
 ```
 
-L22 must not use the Board as a dumping ground for raw ticks, raw OHLC, raw DOM ladders, or long SMC/liquidity narratives.
+L22 must not answer:
 
-L22 must not use Dossiers as hidden calculation owners.
-
-L22 must not use Workbench proof fields as trading claims.
+```text
+Should I buy?
+Should I sell?
+Is this high probability?
+Is this institutional order flow?
+Is this prop-firm safe?
+Can Aurora execute?
+```
 
 ---
 
-## L22 evidence spine
-
-L22 surfaces should be built around six evidence blocks:
+## Surface split law
 
 ```text
-A. Source readiness
-B. Risk geometry context
-C. Liquidity reference map
-D. VWAP / value context consumed from L21
-E. Tick-flow proxy consumed from L20
-F. Optional MT5 DOM proxy status
+Board = compact trading cockpit.
+Dossier = deeper per-symbol trading/evidence context.
+Workbench = internals, source contracts, schema proof, formula basis, timings, write proof, and failure reasons.
 ```
 
-Every block must carry status and failure reason.
+Board and Dossier must not display upstream source plumbing such as `source_l18_status`, contract versions, worker paths, schema internals, job ids, checksums, or architecture lectures.
 
-Allowed statuses:
+Workbench must carry those internals.
+
+---
+
+## Evidence blocks
+
+L22 surface evidence should be organized into these blocks:
 
 ```text
-accepted
-partial
-degraded
-missing
-not_implemented
-unavailable
-disabled
-blocked_missing_upstream
+1. Evidence state and freshness
+2. Liquidity / area map
+3. Area geometry and spread-aware room
+4. Value context
+5. Tick / DOM proxy context
+6. No-permission boundary
 ```
 
-L22 must show degraded truth instead of hiding files when evidence is partial, stale, missing, unavailable, or not implemented.
+Internal-only blocks:
 
-Physical publication may only be blocked by path/FileIO/write failure.
+```text
+source contract versions
+upstream packet statuses
+source ages
+formula basis
+cost model source
+DOM subscription ledger
+write/timing proof
+schema rows
+```
 
 ---
 
@@ -78,68 +109,67 @@ Physical publication may only be blocked by path/FileIO/write failure.
 
 ### Board purpose
 
-The Board answers:
+The Board should answer quickly:
 
 ```text
-Is L22 present?
-How many selected symbols have usable L22 evidence?
-What is the worst blocker?
-Is DOM enabled or disabled?
-Is any permission accidentally implied?
+Is L22 usable?
+What is the selected evidence state?
+What is the nearest important area context?
+Is spread-aware room usable, partial, or unavailable?
+Is tick/DOM proxy context available?
+Is trade permission false?
 ```
 
-The Board must stay compact and aligned.
-
-### Board section format
+### Board standard
 
 ```text
-LAYER 22 - DEEP MARKET EVIDENCE / LIQUIDITY / MT5 ORDER-FLOW PROXY
-------------------------------------------------------------------
-Status:                       Partial / Blocked / Accepted
-Scope:                        Selected Symbols Only
-Selected Symbols Seen:         10
-Symbols Published:             8
-Worst Blocker:                 upstream_l21_not_implemented
-Evidence Completeness:         62%
-Risk Geometry Ready:           6 / 10
-Liquidity Map Ready:           8 / 10
-VWAP Context Ready:            0 / 10
-Tick Proxy Ready:              0 / 10
-DOM Runtime:                   Disabled
-DOM Subscriptions:             0 / 0
-Order Flow Source:             unavailable
-Trade Permission:              FALSE
-Entry Signal:                  FALSE
-Execution:                     FALSE
-Next Action:                   Implement/prove L20 and L21 before L22 runtime
+LAYER 22 - DEEP MARKET EVIDENCE
+--------------------------------------------------
+Status:                    Partial
+Mode:                      Degraded Reference
+Selected Symbols:           10
+Evidence Freshness:         Mixed
+Worst Issue:                VWAP / tick proxy not ready
+
+Liquidity Areas Ready:      8 / 10
+Area Geometry Ready:        7 / 10
+Value Context Ready:        0 / 10
+Tick/DOM Proxy Ready:       0 / 10
+
+Closest Area:               EURUSD near session high area
+Area State:                 below zone, not touched
+Spread-Aware Room:          partial
+Cost Model:                 partial
+Trade Permission:           FALSE
 ```
 
-### Optional compact Board overview table
+### Optional compact Board table
 
-This table is allowed only if it stays short and operator-readable.
+Only show a tiny top sample if useful. Do not dump the full selected set.
 
 ```text
-L22 SELECTED EVIDENCE OVERVIEW
-------------------------------------------------------------------
-Rank | Symbol | Risk Geometry | Liquidity | VWAP | Tick Proxy | DOM | Status
-01   | EURUSD | ready         | ready     | miss | miss       | off | partial
-02   | XAUUSD | partial       | ready     | miss | miss       | off | partial
-03   | GBPJPY | missing       | partial   | miss | miss       | off | degraded
+Rank | Symbol | Area State       | Room    | Value | Tick/DOM | Status
+01   | EURUSD | near upper area  | partial | miss  | miss     | partial
+02   | XAUUSD | inside zone      | stale   | miss  | off      | degraded
+03   | GBPJPY | middle area      | ready   | miss  | miss     | partial
 ```
 
-### Board must not show
+### Board forbidden content
 
 ```text
-full OHLC rows
-full tick list
-full DOM book ladder
-full VWAP calculation rows
-full liquidity cluster ledger
-full sweep/reclaim/FVG prose
-job ids
-checksums
-long proof ledgers
-trade suggestions
+source layer names
+source contract versions
+worker paths
+raw formula rows
+raw OHLC rows
+raw tick rows
+raw DOM ladders
+full symbol lists
+SMC story text
+setup wording
+entry wording
+edge wording
+permission wording beyond Trade Permission: FALSE
 ```
 
 ---
@@ -148,332 +178,231 @@ trade suggestions
 
 ### Dossier purpose
 
-The selected copied Dossier answers:
+The selected copied Dossier should show rich per-symbol L22 evidence context without turning into Workbench.
+
+Dossier shows what the trader/operator can inspect.
+
+It does not show source-contract plumbing.
+
+### Main Dossier section
 
 ```text
-For this selected symbol, what L22 evidence is available, missing, degraded, or only proxy context?
+LAYER 22 - DEEP MARKET EVIDENCE
+--------------------------------------------------
+Status:                    Partial
+Evidence Freshness:         Mixed
+Evidence Mode:              Degraded Reference
+Trade Permission:           FALSE
+
+Liquidity / Area Map
+--------------------------------------------------
+Nearest High Area:          Current Session High
+Reference Price:            1.08750
+Raw Distance:               11.6 pips
+Spread-Adjusted Room:       10.2 pips
+Distance ATR:               0.42
+Distance % Session Range:   8.4%
+Area Width:                 3.0 pips
+Position vs Area:           Below Zone
+Touch State:                Untouched
+Reaction State:             Unknown
+
+Nearest Low Area:           Prior Day Low
+Reference Price:            1.08120
+Raw Distance:               51.4 pips
+Spread-Adjusted Room:       50.0 pips
+Distance ATR:               1.86
+Distance % Day Range:       41.2%
+Area Width:                 4.0 pips
+Position vs Area:           Above Zone
+Touch State:                Untouched
+Reaction State:             Unknown
 ```
 
-L22 should decorate selected copied dossiers only. It must not touch base Dossiers unless a future source contract explicitly changes this.
-
-### Main Dossier block
+### Area geometry section
 
 ```text
-LAYER 22 - DEEP MARKET EVIDENCE / LIQUIDITY / MT5 ORDER-FLOW PROXY
-------------------------------------------------------------------
-Status:                  Partial
-Scope:                   Selected-symbol evidence only
-Authority:               Evidence proxy context only
-Trade Permission:         FALSE
-Entry Signal:             FALSE
-Execution:                FALSE
-
-Source Inputs
-------------------------------------------------------------------
-L17 Selected Scope:        accepted
-L18 Raw OHLC Pack:         accepted
-L19 Candle Geometry:       accepted
-L20 Tick Proxy:            not_implemented
-L21 VWAP Reference:        not_implemented
-DOM Runtime:              disabled
-Main Failure Reason:       upstream_l20_l21_not_implemented
+Area Geometry
+--------------------------------------------------
+Nearest High Area:          Session High
+Nearest Low Area:           Prior Day Low
+Area Range Width:           63.0 pips
+Price Position In Area:     81%
+Spread To Nearest Area:     0.08
+Geometry State:             Near upper area
+Interpretation:             Context only
 ```
 
-### Risk geometry subsection
-
-Risk geometry is descriptive. It is not risk approval and not edge validation.
-
-If L23 has not supplied a mechanical setup candidate with invalidation/target, L22 must say so.
+### Value context section
 
 ```text
-Risk Geometry Context
-------------------------------------------------------------------
-Status:                   partial
-Invalidation Source:       not_defined_by_L23
-Invalidation Distance:     not_available
-Target Room Source:        nearest_liquidity_reference
-Target Room Pips:          42.3
-Target Room ATR:           1.18
-Spread To Stop Ratio:      not_available
-Expected R After Cost:     not_available
-Confidence:                low
-Note:                      Risk geometry is descriptive only until L23 defines setup/invalidation/target rules.
+Value Context
+--------------------------------------------------
+VWAP State:                 Not Available
+Price vs VWAP:              Not Available
+Value Confidence:           Unavailable
+Interpretation:             Reference only
 ```
 
-Future candidate-aware version:
+If value context is available later:
 
 ```text
-Risk Geometry Context
-------------------------------------------------------------------
-Setup Candidate ID:        SMC_STRUCTURE_RETEST_V1_RESEARCH
-Invalidation Source:       candidate_zone_low
-Invalidation Distance:     12.1 pips
-Target Source:             prior_day_high
-Target Room:               36.4 pips
-Spread To Stop Ratio:      0.08
-Expected R After Cost:     2.64
-Confidence:                medium
-Trade Permission:          FALSE
+Value Context
+--------------------------------------------------
+VWAP State:                 Available
+Price vs VWAP:              Above VWAP
+Distance to VWAP:           9.2 pips
+Distance to VWAP ATR:       0.34
+Value Confidence:           Medium
+Interpretation:             Reference only
 ```
 
-Forbidden upgrade:
+### Tick / DOM proxy section
 
 ```text
-risk_pass=true
-trade_valid=true
-entry_quality=high
+Tick / DOM Proxy Context
+--------------------------------------------------
+Tick Proxy:                 Not Available
+DOM Proxy:                  Disabled
+Visible Book Imbalance:     Not Available
+Order Flow Source:          Unavailable
+Interpretation:             No institutional order-flow claim
 ```
 
-### Liquidity reference subsection
-
-Liquidity references are map context only.
+If DOM proxy is later approved and proven:
 
 ```text
-Liquidity Reference Map
-------------------------------------------------------------------
-Status:                         ready
-Nearest High Reference:          prior_day_high
-Nearest High Distance:           18.4 pips
-Nearest Low Reference:           session_low
-Nearest Low Distance:            27.9 pips
-Equal High Cluster Count:        2
-Equal Low Cluster Count:         0
-Session High Distance:           11.6 pips
-Session Low Distance:            27.9 pips
-Prior Day High Distance:         18.4 pips
-Prior Day Low Distance:          64.2 pips
-Prior Week High Distance:        91.8 pips
-Prior Week Low Distance:         143.5 pips
-Liquidity Map Confidence:        medium
-Interpretation:                  liquidity_reference_only
+Tick / DOM Proxy Context
+--------------------------------------------------
+Tick Proxy:                 Available
+DOM Proxy:                  Available
+Visible Book Imbalance:     1.26
+Order Flow Source:          MT5 DOM proxy
+Order Flow Confidence:      Low
+Interpretation:             Visible broker book proxy only
 ```
 
-Allowed note:
+### Dossier forbidden content
 
 ```text
-Price is closer to the current session high than to the current session low.
-```
-
-Forbidden note:
-
-```text
-Session high likely gets swept; prepare sell.
-```
-
-### VWAP / value context subsection
-
-L22 consumes VWAP context from L21. L22 must not calculate VWAP.
-
-Missing/upstream-not-implemented version:
-
-```text
-VWAP / Value Context
-------------------------------------------------------------------
-Status:                   missing
-Source Owner:              L21 Selected Indicator / Reference Pack
-VWAP Source:               not_available
-Price vs VWAP:             not_available
-Distance to VWAP:          not_available
-Confidence:                unavailable
-Failure Reason:            upstream_l21_not_implemented
-```
-
-Future available version:
-
-```text
-VWAP / Value Context
-------------------------------------------------------------------
-Status:                   ready
-Source Owner:              L21
-VWAP Source:               tick_volume_proxy
-Session VWAP:              1.08432
-Price vs VWAP:             above_vwap
-Distance to VWAP:          9.2 pips
-Distance to VWAP ATR:      0.34
-VWAP Confidence:           medium
-Interpretation:            reference_context_only
-```
-
-Forbidden upgrades:
-
-```text
-above_vwap_buy
-vwap_touch_entry
-below_vwap_sell
-```
-
-### Tick-flow proxy subsection
-
-L22 consumes selected rolling tick proxy from L20. L22 must not call fresh broad CopyTicks.
-
-Missing/upstream-not-implemented version:
-
-```text
-Tick-Flow Proxy
-------------------------------------------------------------------
-Status:                   missing
-Source Owner:              L20 Selected Rolling Tick Pack
-Tick Count 10m:            not_available
-Bid Change Count 10m:      not_available
-Ask Change Count 10m:      not_available
-Spread Spike Count 10m:    not_available
-Confidence:                unavailable
-Failure Reason:            upstream_l20_not_implemented
-```
-
-Future available version:
-
-```text
-Tick-Flow Proxy
-------------------------------------------------------------------
-Status:                   ready
-Source Owner:              L20
-Tick Count 10m:            183
-Bid Change Count 10m:      74
-Ask Change Count 10m:      79
-Spread Spike Count 10m:    2
-Max Tick Gap:              14.2 sec
-Confidence:                medium
-Interpretation:            mt5_tick_proxy_only
-```
-
-Forbidden upgrade:
-
-```text
-real_order_flow_confirmed=true
-```
-
-### MT5 DOM proxy subsection
-
-DOM starts disabled until a later TEST FIRST implementation proves selected-symbol subscription bookkeeping, bounded OnBookEvent behavior, MarketBookGet summary, and MarketBookRelease cleanup.
-
-Initial placeholder version:
-
-```text
-MT5 DOM Proxy
-------------------------------------------------------------------
-Status:                   disabled
-DOM Runtime Enabled:       false
-DOM Available Flag:        false
-Subscription Status:       not_wired
-Bid Levels Count:          not_available
-Ask Levels Count:          not_available
-Bid Visible Volume Total:  not_available
-Ask Visible Volume Total:  not_available
-DOM Imbalance Ratio:       not_available
-Order Flow Source:         unavailable
-Order Flow Confidence:     unavailable
-Interpretation:            no_institutional_order_flow_claim
-```
-
-Future bounded implementation version:
-
-```text
-MT5 DOM Proxy
-------------------------------------------------------------------
-Status:                   partial
-DOM Runtime Enabled:       true
-DOM Available Flag:        true
-Subscription Status:       subscribed
-Bid Levels Count:          5
-Ask Levels Count:          4
-Bid Visible Volume Total:  118.4
-Ask Visible Volume Total:  94.1
-DOM Imbalance Ratio:       1.26
-Order Flow Source:         mt5_dom_proxy
-Order Flow Confidence:     low
-Interpretation:            visible_book_depth_proxy_only
-```
-
-Forbidden upgrades:
-
-```text
-institutional_order_flow_confirmed=true
-smart_money_buying=true
-confirmed_buy=true
-confirmed_sell=true
+source_l18_status
+source_l21_contract_version
+worker result paths
+schema ids
+job ids
+checksums
+upstream source lectures
+confirmed buy
+confirmed sell
+high probability
+smart money confirmed
+institutional order flow confirmed
+setup confirmation
+entry signal
+prop-firm safe
 ```
 
 ---
 
-## Workbench design
+## Workbench / internals design
 
-### Workbench purpose
+Workbench proves the packet. It may be verbose.
 
-Workbench carries proof and failure reasons. It is the correct place for machine fields, timing, source checks, DOM bookkeeping, and rejection reasons.
-
-### Main Workbench block
+### Required Workbench summary
 
 ```text
-L22_DEEP_MARKET_EVIDENCE_LIQUIDITY_PROXY
-------------------------------------------------------------------
+L22_DEEP_MARKET_EVIDENCE
+--------------------------------------------------
 schema_name=aurora_l22_deep_market_evidence_liquidity_proxy
 schema_version=1
 layer=L22
 authority=evidence_proxy_context_only
 scope=selected_symbols_only
-source_l17_status=accepted
-source_l18_status=accepted
-source_l19_status=accepted
-source_l20_status=not_implemented
-source_l21_status=not_implemented
-l22_status=blocked_missing_upstream
-l22_failure_reason=upstream_l20_l21_not_implemented
-selected_symbols_seen=10
-selected_symbols_published=10
-risk_geometry_ready_count=0
-liquidity_map_ready_count=8
-vwap_context_ready_count=0
-tick_proxy_ready_count=0
-dom_runtime_enabled=false
-dom_subscription_count=0
-dom_subscription_limit=0
-dom_release_pending_count=0
-dom_book_get_failed_count=0
+
+source_l17_status=<status>
+source_l17_contract_version=<version>
+source_l18_status=<status>
+source_l18_contract_version=<version>
+source_l19_status=<status>
+source_l19_contract_version=<version>
+source_l20_status=<status>
+source_l20_contract_version=<version>
+source_l21_status=<status>
+source_l21_contract_version=<version>
+
+synthesis_mode=blocked_placeholder|degraded_partial|normal_reference|dom_proxy_enabled
+l22_status=<status>
+l22_failure_reason=<reason>
+
+oldest_source_age_seconds=<n|unknown>
+newest_source_age_seconds=<n|unknown>
+evidence_age_state=fresh|mixed|stale|unknown
+
+selected_symbols_seen=<n>
+selected_symbols_published=<n>
+liquidity_areas_ready_count=<n>
+area_geometry_ready_count=<n>
+value_context_ready_count=<n>
+tick_dom_proxy_ready_count=<n>
+
 trade_permission=false
 entry_signal=false
 execution=false
-generated_utc=<timestamp>
 ```
 
-### Future DOM proof block
-
-Only allowed after real DOM implementation exists.
+### Measurement proof fields
 
 ```text
-L22_DOM_SUBSCRIPTION_PROOF
-------------------------------------------------------------------
-dom_runtime_enabled=true
-subscription_scope=l17_selected_symbols_only
-subscription_limit=10
-marketbook_add_attempted=10
-marketbook_add_success=6
-marketbook_add_failed=4
-marketbook_release_attempted=6
-marketbook_release_success=6
-marketbook_release_failed=0
-onbookevent_seen_count=214
-onbookevent_ignored_other_symbol_count=37
+SYMBOL_POINT
+SYMBOL_DIGITS
+pip_points
+pip_display_status
+spread_points
+spread_source
+spread_age_seconds
+spread_included_in_distance
+cost_model_status
+cost_model_source
+
+liquidity_reference_source
+zone_width_basis
+zone_half_width_points
+raw_distance_to_area_points
+usable_distance_to_area_points
+spread_to_area_distance_ratio
+spread_to_area_range_ratio
+```
+
+### DOM proof fields
+
+```text
+dom_scope_guard=selected_symbols_only
+dom_symbol_limit=<n>
+dom_heavy_work_allowed=false
+dom_file_write_inside_onbookevent=false
+dom_subscription_status=<status>
+dom_book_get_status=<status>
+dom_release_status=<status>
 onbookevent_heavy_work=false
-max_onbookevent_duration_ms=1
-last_dom_cycle_duration_ms=18
 ```
 
-### Workbench must not show
+### Anti-claim proof fields
 
 ```text
-trade recommendations
-prop-firm-safe claims
-confirmed buy/sell claims
-institutional order-flow claims
-edge validation claims
+institutional_order_flow_claim=false
+smart_money_claim=false
+setup_confirmation=false
+directional_forecast=false
+trade_permission=false
+entry_signal=false
+execution=false
 ```
 
 ---
 
-## Output file design
+## Output design
 
-Suggested worker output folder:
+Suggested worker output folder, if source is later approved:
 
 ```text
 Gateway/Outbox/Layers/Layer_22_Deep_Market_Evidence_Liquidity_Proxy/
@@ -484,45 +413,34 @@ Suggested files:
 ```text
 l22_status.txt
 l22_selected_symbols.csv
+l22_liquidity_area_summary.csv
 l22_dom_status.txt
-l22_liquidity_map_summary.csv
 ```
 
-Suggested Dossier decoration target:
+Dossier decoration target:
 
 ```text
-Selection Desk/01_Global/Top_10/<rank>_<symbol>.txt
-Selection Desk/02_Asset_Classes/.../<rank>_<symbol>.txt
+selected copied Dossiers only
 ```
 
-L22 must not create changing-rank parent folders. Rank, order, scores, cycle id, and selected status belong inside files.
+L22 must not write base Dossiers unless a future owner contract explicitly changes that.
+
+L22 must not create changing-rank parent folders.
 
 ---
 
-## CSV schema candidate
+## Runtime scaffold constraints
 
-```csv
-symbol,l22_symbol_status,risk_geometry_status,liquidity_map_status,vwap_context_status,tick_flow_proxy_status,dom_proxy_status,order_flow_source,order_flow_confidence,evidence_synthesis_completeness,failure_reason
-EURUSD,partial,missing,ready,missing,missing,disabled,unavailable,unavailable,35,upstream_l20_l21_not_implemented
-XAUUSD,partial,missing,partial,missing,missing,disabled,unavailable,unavailable,25,liquidity_map_insufficient_bars
-```
-
----
-
-## First runtime scaffold design
-
-The first acceptable L22 source scaffold, when approved, is not a full implementation.
-
-It may:
+First acceptable future source scaffold may:
 
 ```text
-read L17 selected scope
-read L18/L19 status
-mark L20 and L21 as not_implemented when absent
-publish l22_status.txt
-publish l22_selected_symbols.csv with degraded truth
-append compact L22 blocks to selected copied dossiers
-publish Board summary and Workbench proof
+read selected scope
+read upstream packet statuses
+mark missing L20/L21 as not_implemented
+publish degraded truth
+write compact Board summary fields
+append L22 context to selected copied Dossiers
+write Workbench/internal proof
 ```
 
 It must not:
@@ -535,56 +453,28 @@ calculate VWAP
 calculate indicators
 create private OHLC files
 write base Dossiers
-claim accepted runtime without output proof
+claim runtime accepted without output proof
+claim edge or permission
 ```
 
 ---
 
-## Later DOM implementation gates
+## Debloat acceptance checklist
 
-Live DOM subscription is blocked until a separate TEST FIRST patch proves:
-
-```text
-selected-symbol-only subscription set
-subscription cap
-MarketBookAdd success/fail count
-MarketBookGet success/fail count
-MarketBookRelease success/fail count
-release-pending visibility
-OnBookEvent symbol filter
-OnBookEvent minimal-work proof
-no file writes inside OnBookEvent
-bounded cycle synthesis
-Workbench timing proof
-MetaEditor compile proof
-runtime output proof
-```
-
----
-
-## Strong decision
-
-The correct L22 design is:
+Before design is accepted:
 
 ```text
-selected list first
-read upstream packets once
-synthesize compact fields
-decorate selected copied dossiers
-publish compact Board summary
-publish Workbench proof
-feed L23 with evidence context only
-```
-
-The incorrect L22 design is:
-
-```text
-one symbol through all layers before next symbol
-all-symbol DOM
-all-symbol tick pulls
-renderer-side synthesis
-trade wording
-permission wording
+Board is compact.
+Board contains no source plumbing.
+Dossier contains trading context only.
+Dossier contains no source plumbing.
+Workbench contains internals/proof/schema/timing/source contracts.
+No repeated architecture lecture on Board/Dossier.
+No all-symbol deep evidence collection.
+No duplicate owner/cache.
+No permission/edge/execution wording.
+No L23-before-L22 dependency language.
+L22 merge remains blocked until L21 is confirmed running on main.
 ```
 
 ## Decision
