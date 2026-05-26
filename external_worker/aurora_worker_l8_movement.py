@@ -22,6 +22,7 @@ L8_MODEL_VERSION = "true_range_v3_priority_windows_freshness_guard"
 L8_LAYER_NAME = "Layer 8 - Movement / Range Ranking"
 L8_OWNER = "Runtime 4 - Surface Scoring Owner"
 L8_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Priority_Windows"
+L8_GATEWAY_ROLE = "Runtime 3 Gateway support only"
 L8_REASON_MAX_PARTS = 16
 L8_REASON_MAX_CHARS = 640
 L8_STALE_SECONDS_BY_TF = {"M5": 15 * 60, "M15": 45 * 60, "H1": 3 * 60 * 60, "H4": 12 * 60 * 60}
@@ -599,9 +600,14 @@ def _write_ranked_csv(scored: List[Dict[str, str | float | int | bool]]) -> str:
 
 
 def _top20_text(scored: List[Dict[str, str | float | int | bool]]) -> str:
-    lines = ["LAYER 8 - MOVEMENT / RANGE RANKING - TOP 20", "----------------------------------------", f"Generated UTC: {utc_stamp()}", "Trade Permission: FALSE", "Selection Runtime: FALSE", f"Model Version: {L8_MODEL_VERSION}", "Policy: Movement/range ranking only; no direction, entry, selection, or permission.", "Source: Runtime 1 Shared OHLC Priority Windows + L8 symbol metadata", "", "rank|symbol|score|bucket|state|regime|freshness|stale_windows|priority_window_checksum|reason"]
+    lines = [
+        "L8 MOVEMENT / RANGE TOP 20",
+        f"generated_utc={utc_stamp()}",
+        f"model={L8_MODEL_VERSION}",
+        "rank|symbol|score|bucket|state|regime|freshness|stale_windows",
+    ]
     for index, row in enumerate(scored[:20], start=1):
-        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{float(row['ohlc_window_freshness_score']):.1f}|{row['ohlc_window_stale_count']}|{row['ohlc_priority_window_checksum']}|{_bounded_reason(str(row['reason']))}")
+        lines.append(f"{index}|{row['symbol']}|{float(row['movement_score']):.2f}|{row['movement_bucket']}|{row['rank_state']}|{row['movement_regime']}|{float(row['ohlc_window_freshness_score']):.1f}|{row['ohlc_window_stale_count']}")
     lines.append("")
     return "\n".join(lines)
 
@@ -614,7 +620,7 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float | int | bool])
             continue
         if key in row:
             lines.append(f"{key}={_format_value(row[key])}")
-    lines += ["authority=calculation_support_only", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
+    lines += ["authority=calculation_support_only", f"gateway_role={L8_GATEWAY_ROLE}", "trade_permission=false", "selection_runtime=false", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "ohlc_route=OHLC_Store/Symbols/<symbol>/Priority_Windows/<TF>.window.csv", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""]
     return "\n".join(lines)
 
 
@@ -633,7 +639,7 @@ def _manifest(summary: L8RankSummary, input_path: Path, store_root: Path) -> str
         f"ranked_csv_path={summary.ranked_csv_path}", f"ranked_manifest_path={summary.manifest_path}", f"top20_path={summary.top20_path}", f"symbol_rank_folder_path={summary.symbol_rank_folder_path}", f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}", f"symbol_rank_files_actual={summary.symbol_rank_files_actual}", f"symbol_rank_file_count_ok={'true' if symbol_files_ok else 'false'}", f"stale_tmp_files_removed={summary.stale_tmp_files_removed}", f"stale_tmp_files_failed={summary.stale_tmp_files_failed}", f"stale_final_files_removed={summary.stale_final_files_removed}", f"stale_final_files_failed={summary.stale_final_files_failed}",
         f"input_count={summary.input_count}", f"row_count={summary.row_count}", f"ranked_count={summary.ranked_count}", f"ranked_partial_count={summary.ranked_partial_count}", f"ranked_risk_review_count={summary.ranked_risk_review_count}", f"ranked_degraded_count={summary.ranked_degraded_count}", f"not_rankable_quality_count={summary.not_rankable_quality_count}", f"elite_movement_range_count={summary.elite_count}", f"strong_movement_range_count={summary.strong_count}", f"acceptable_movement_range_count={summary.acceptable_count}", f"weak_movement_range_count={summary.weak_count}", f"poor_movement_range_count={summary.poor_count}",
-        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"freshness_threshold_seconds_m5={L8_STALE_SECONDS_BY_TF['M5']}", f"freshness_threshold_seconds_m15={L8_STALE_SECONDS_BY_TF['M15']}", f"freshness_threshold_seconds_h1={L8_STALE_SECONDS_BY_TF['H1']}", f"freshness_threshold_seconds_h4={L8_STALE_SECONDS_BY_TF['H4']}", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
+        f"payload_checksum={summary.payload_checksum}", "authority=calculation_support_only", f"gateway_role={L8_GATEWAY_ROLE}", "trade_permission=false", "ranking_runtime=true", "selection_runtime=false", "publication_order=recompute_from_current_priority_windows_write_outputs_then_manifest_last", "movement_range_policy=ranking_only_no_direction_no_entry_no_selection_no_execution", f"source_owner={L8_SOURCE_OWNER}", "true_range_policy=uses_max_high_low_abs_high_prev_close_abs_low_prev_close", "freshness_policy=timeframe_aware_latest_closed_bar_age_degrades_stale_priority_windows", f"freshness_threshold_seconds_m5={L8_STALE_SECONDS_BY_TF['M5']}", f"freshness_threshold_seconds_m15={L8_STALE_SECONDS_BY_TF['M15']}", f"freshness_threshold_seconds_h1={L8_STALE_SECONDS_BY_TF['H1']}", f"freshness_threshold_seconds_h4={L8_STALE_SECONDS_BY_TF['H4']}", "reuse_policy=disabled_until_priority_window_checksum_exists", f"reason_max_parts={L8_REASON_MAX_PARTS}", f"reason_max_chars={L8_REASON_MAX_CHARS}", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
     ])
 
 
