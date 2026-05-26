@@ -22,6 +22,7 @@ merge_to_main_allowed=false_until_L1_to_L19_stable_and_overseer_approved
 | File | Status | Role |
 |---|---|---|
 | `AC_SelectedRollingTickPack.mqh` | Source-present scaffold | Defines selected-symbol rolling tick buffer, CopyTicksRange update helper, summary metrics, CSV row helper, Dossier section helper, and compact Board row helper. Not included by `mt5/AuroraCore.mq5` yet. |
+| `AC_SelectedRollingTickPackPublication.mqh` | Source-present publication scaffold | Defines L20 runtime output paths, summary/manifest/Selection Desk text builders, and write helper that delegates to existing FileIO owner. Not included by `mt5/AuroraCore.mq5` yet. |
 
 ## Authority Boundary
 
@@ -36,6 +37,7 @@ bid/ask/last/volume change counts
 mid proxy range/change counts
 sample quality
 proxy confidence
+L20 output text/CSV/manifest shape
 ```
 
 Must not own:
@@ -55,11 +57,28 @@ trade permission
 execution
 institutional order-flow claim
 full-universe tick harvest
+FileIO owner
+route owner
+scheduler/timer owner
+```
+
+## Publication Boundary
+
+`AC_SelectedRollingTickPackPublication.mqh` may build L20-specific paths and text only. It must delegate physical writes to the existing FileIO owner and route/folder creation helpers.
+
+Runtime output targets are:
+
+```text
+Workbench/Gateway/Outbox/Layers/Layer_20_Selected_Rolling_Tick_Pack/l20_selected_rolling_tick_pack.csv
+Workbench/Gateway/Outbox/Layers/Layer_20_Selected_Rolling_Tick_Pack/l20_selected_rolling_tick_summary.txt
+Workbench/Gateway/Outbox/Layers/Layer_20_Selected_Rolling_Tick_Pack/l20_selected_rolling_tick.manifest
+Selection Desk/Global/current_selected_rolling_tick_pack.csv
+Selection Desk/Global/Selected Rolling Tick Pack.txt
 ```
 
 ## Activation Gate
 
-Do not include this file in `mt5/AuroraCore.mq5` until:
+Do not include these files in `mt5/AuroraCore.mq5` until:
 
 ```text
 L1-L19 selected-scope chain is stable enough for L20 scope truth
