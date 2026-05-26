@@ -2,6 +2,7 @@
 #define AC_L1_HISTORY_SCAN_MQH
 void AC_L1ScanHistory()
 {
+   AC_L1_HISTORY_SCAN_STARTED_MS = GetTickCount();
    datetime to_time = TimeCurrent();
    if(to_time <= 0) to_time = TimeGMT();
    datetime from_time = 0;
@@ -15,11 +16,12 @@ void AC_L1ScanHistory()
       AC_L1_HISTORY_QUALITY = "unavailable";
       AC_L1_HISTORY_NOTE = "HistorySelect failed; history must not be interpreted as zero";
       AC_L1_SCAN_FAILURE = "HistorySelect_failed_error=" + IntegerToString(GetLastError());
+      AC_L1_HISTORY_SCAN_DURATION_MS = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
       return;
    }
 
    int closed_in_lookback = AC_L1CountSelectedClosedTradeDeals();
-   bool extend_to_minimum = (closed_in_lookback < AC_L1_CLOSED_SCAN_LIMIT);
+   bool extend_to_minimum = (closed_in_lookback < AC_L1_CLOSED_SCAN_LIMIT && AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0);
    if(extend_to_minimum)
    {
       ResetLastError();
@@ -29,6 +31,7 @@ void AC_L1ScanHistory()
          AC_L1_HISTORY_QUALITY = "unavailable";
          AC_L1_HISTORY_NOTE = "HistorySelect extension failed; history must not be interpreted as zero";
          AC_L1_SCAN_FAILURE = "HistorySelect_extend_failed_error=" + IntegerToString(GetLastError());
+         AC_L1_HISTORY_SCAN_DURATION_MS = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
          return;
       }
    }
@@ -43,6 +46,7 @@ void AC_L1ScanHistory()
 
    for(int i = AC_L1_HISTORY_DEALS_TOTAL - 1; i >= 0; i--)
    {
+      if(AC_L1HistoryBudgetExceeded()) break;
       if(extend_to_minimum && ArraySize(AC_L1_CLOSED) >= AC_L1_CLOSED_SCAN_LIMIT) break;
       ulong deal_ticket = HistoryDealGetTicket(i);
       if(deal_ticket == 0) continue;
@@ -70,53 +74,59 @@ void AC_L1ScanHistory()
       AC_L1_CLOSED[next].stop_loss = 0.0;
       AC_L1_CLOSED[next].take_profit = 0.0;
       AC_L1_CLOSED[next].profit = HistoryDealGetDouble(deal_ticket, DEAL_PROFIT);
-      AC_L1AllocatedPositionCostValues(AC_L1_CLOSED[next].position_id, AC_L1_CLOSED[next].volume, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, AC_L1_CLOSED[next].fee);
+      bool costs_complete = AC_L1AllocatedPositionCostValues(AC_L1_CLOSED[next].position_id, AC_L1_CLOSED[next].volume, AC_L1_CLOSED[next].commission, AC_L1_CLOSED[next].swap, AC_L1_CLOSED[next].fee);
       AC_L1_CLOSED[next].net_result = AC_L1_CLOSED[next].profit + AC_L1_CLOSED[next].commission + AC_L1_CLOSED[next].swap + AC_L1_CLOSED[next].fee;
       AC_L1_CLOSED[next].magic = HistoryDealGetInteger(deal_ticket, DEAL_MAGIC);
       AC_L1_CLOSED[next].comment = HistoryDealGetString(deal_ticket, DEAL_COMMENT);
       AC_L1_CLOSED[next].close_reason = HistoryDealGetInteger(deal_ticket, DEAL_REASON);
-      AC_L1_CLOSED[next].source_quality = "partial_core_position_cost_allocated";
+      AC_L1_CLOSED[next].source_quality = costs_complete ? "partial_core_position_cost_allocated" : "partial_core_cost_budget_limited";
       AC_L1_CLOSED[next].entry_reconstruction_status = "unavailable";
       AC_L1_CLOSED[next].paired_entry_status = "paired_entry_unavailable";
       AC_L1_CLOSED[next].order_context_status = "order_context_unavailable";
       AC_L1_CLOSED[next].stop_loss_source = "unavailable";
       AC_L1_CLOSED[next].take_profit_source = "unavailable";
 
-      datetime entry_time = 0;
-      double entry_price = 0.0;
-      string entry_side = "unknown";
-      if(AC_L1FindEntryDealForPosition(AC_L1_CLOSED[next].position_id, i, entry_time, entry_price, entry_side))
+      if(AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0)
       {
-         AC_L1_CLOSED[next].entry_time = entry_time;
-         AC_L1_CLOSED[next].entry_price = entry_price;
-         AC_L1_CLOSED[next].side = entry_side;
-         AC_L1_CLOSED[next].entry_reconstruction_status = "complete";
-         AC_L1_CLOSED[next].paired_entry_status = "paired_entry_found";
-         AC_L1_CLOSED[next].source_quality = "core_complete_position_cost_allocated";
-         AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT++;
+         datetime entry_time = 0;
+         double entry_price = 0.0;
+         string entry_side = "unknown";
+         if(AC_L1FindEntryDealForPosition(AC_L1_CLOSED[next].position_id, i, entry_time, entry_price, entry_side))
+         {
+            AC_L1_CLOSED[next].entry_time = entry_time;
+            AC_L1_CLOSED[next].entry_price = entry_price;
+            AC_L1_CLOSED[next].side = entry_side;
+            AC_L1_CLOSED[next].entry_reconstruction_status = "complete";
+            AC_L1_CLOSED[next].paired_entry_status = "paired_entry_found";
+            AC_L1_CLOSED[next].source_quality = costs_complete ? "core_complete_position_cost_allocated" : "core_complete_cost_budget_limited";
+            AC_L1_CORE_RECONSTRUCTION_COMPLETE_COUNT++;
+         }
       }
 
-      ulong entry_order = 0;
-      double order_entry = 0.0;
-      double sl = 0.0;
-      double tp = 0.0;
-      if(AC_L1FindHistoryOrderForPosition(AC_L1_CLOSED[next].position_id, entry_order, order_entry, sl, tp))
+      if(AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0)
       {
-         AC_L1_CLOSED[next].entry_order_ticket = entry_order;
-         if(AC_L1_CLOSED[next].entry_price <= 0.0 && order_entry > 0.0)
+         ulong entry_order = 0;
+         double order_entry = 0.0;
+         double sl = 0.0;
+         double tp = 0.0;
+         if(AC_L1FindHistoryOrderForPosition(AC_L1_CLOSED[next].position_id, entry_order, order_entry, sl, tp))
          {
-            AC_L1_CLOSED[next].entry_price = order_entry;
-            AC_L1_CLOSED[next].entry_reconstruction_status = "partial_order_entry_only";
-         }
-         if(sl > 0.0)
-         {
-            AC_L1_CLOSED[next].stop_loss = sl;
-            AC_L1_CLOSED[next].stop_loss_source = "history_order_position_id";
-         }
-         if(tp > 0.0)
-         {
-            AC_L1_CLOSED[next].take_profit = tp;
-            AC_L1_CLOSED[next].take_profit_source = "history_order_position_id";
+            AC_L1_CLOSED[next].entry_order_ticket = entry_order;
+            if(AC_L1_CLOSED[next].entry_price <= 0.0 && order_entry > 0.0)
+            {
+               AC_L1_CLOSED[next].entry_price = order_entry;
+               AC_L1_CLOSED[next].entry_reconstruction_status = "partial_order_entry_only";
+            }
+            if(sl > 0.0)
+            {
+               AC_L1_CLOSED[next].stop_loss = sl;
+               AC_L1_CLOSED[next].stop_loss_source = "history_order_position_id";
+            }
+            if(tp > 0.0)
+            {
+               AC_L1_CLOSED[next].take_profit = tp;
+               AC_L1_CLOSED[next].take_profit_source = "history_order_position_id";
+            }
          }
       }
 
@@ -125,9 +135,16 @@ void AC_L1ScanHistory()
       else if(AC_L1_CLOSED[next].entry_order_ticket > 0 || AC_L1_CLOSED[next].stop_loss > 0.0 || AC_L1_CLOSED[next].take_profit > 0.0)
          AC_L1_CLOSED[next].order_context_status = "protective_context_partial";
 
-      if(AC_L1_CLOSED[next].entry_reconstruction_status != "complete")
+      if(AC_L1_HISTORY_BUDGET_ABORT_COUNT > 0)
       {
-         AC_L1_CLOSED[next].source_quality = "partial_core_position_cost_allocated";
+         AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
+         AC_L1_CLOSED[next].entry_reconstruction_status = "budget_limited";
+         AC_L1_CLOSED[next].paired_entry_status = "paired_entry_budget_limited";
+         AC_L1_CLOSED[next].order_context_status = "order_context_budget_limited";
+      }
+      else if(AC_L1_CLOSED[next].entry_reconstruction_status != "complete")
+      {
+         AC_L1_CLOSED[next].source_quality = costs_complete ? "partial_core_position_cost_allocated" : "partial_core_cost_budget_limited";
          AC_L1_PARTIAL_RECONSTRUCTION_COUNT++;
          AC_L1_HISTORY_QUALITY = (extend_to_minimum ? "lookback_plus_minimum_fill_partial_core_position_cost_allocated" : "bounded_lookback_partial_core_position_cost_allocated");
       }
@@ -143,6 +160,7 @@ void AC_L1ScanHistory()
 
    for(int o = AC_L1_HISTORY_ORDERS_TOTAL - 1; o >= 0; o--)
    {
+      if(AC_L1HistoryBudgetExceeded()) break;
       ulong order_ticket = HistoryOrderGetTicket(o);
       if(order_ticket == 0) continue;
       long state = HistoryOrderGetInteger(order_ticket, ORDER_STATE);
@@ -180,8 +198,10 @@ void AC_L1ScanHistory()
    if(ArraySize(AC_L1_CANCELS) >= AC_L1_CANCEL_SCAN_LIMIT)
       AC_L1_HISTORY_QUALITY += "_cancel_rows_capped";
 
-   if(ArraySize(AC_L1_CLOSED) <= 0)
+   if(ArraySize(AC_L1_CLOSED) <= 0 && AC_L1_HISTORY_BUDGET_ABORT_COUNT <= 0)
       AC_L1_HISTORY_NOTE = "selected history; no closed exit deals detected; policy=all 90d rows or minimum-fill to 100 when available; position-cost allocation source";
+
+   AC_L1_HISTORY_SCAN_DURATION_MS = GetTickCount() - AC_L1_HISTORY_SCAN_STARTED_MS;
 }
 
 #endif
