@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "asap_changed_only_publication_recovery";
-static const string AC_BUILD_VERSION      = "1.074";
-static const string AC_UPGRADE_ID         = "ASAP_CHANGED_ONLY_PUBLICATION_RECOVERY";
-static const string AC_UPGRADE_SUMMARY    = "Restores fast publication behavior without artificial symbol caps or time throttles: Dossier publication may scan the full universe as fast as MT5 allows, but unchanged symbol files skip atomic rewrites. This repairs the regression where every pass rewrote all Dossiers and froze Board refresh.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/FileIO and Runtime 0 cadence configuration only. No trade permission, execution, broker polling, FileIO shadow owner, route shadow owner, setup owner, or new worker owner is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.074. Runtime proof must show Market Board refreshes again, Dossier publication detail showing changed-only/no-rewrite behavior, max_symbols_per_pass=0, pass_budget_ms=0, timer_budget_ms=0, and materially lower timer duration after the first changed-only pass. No packet import, matching, live capture, permission, or execution is expected.";
-static const string AC_LOGGING_POLICY     = "event_boundary_asap_changed_only_publication_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "owner_aligned_asap_changed_only_recovery";
+static const string AC_BUILD_VERSION      = "1.075";
+static const string AC_UPGRADE_ID         = "OWNER_ALIGNED_ASAP_CHANGED_ONLY_RECOVERY";
+static const string AC_UPGRADE_SUMMARY    = "Restores fast publication behavior without artificial symbol caps or time throttles, removes the temporary Dossier publication macro override, keeps Dossier ownership in AC_Layer0DossierPublication, and moves changed-only fast atomic publication into the FileIO owner. Dossier publication may scan the full universe as fast as MT5 allows while unchanged symbol files skip atomic rewrites.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/FileIO cleanup and Runtime 0 cadence configuration only. No trade permission, execution, broker polling, FileIO shadow owner, route shadow owner, setup owner, or new worker owner is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.075. Runtime proof must show Market Board refreshes again, FileIO result status unchanged_no_write for stable outputs, no Dossier publication wrapper override, max_symbols_per_pass=0, pass_budget_ms=0, timer_budget_ms=0, and materially lower timer duration after the first changed-only pass. No packet import, matching, live capture, permission, or execution is expected.";
+static const string AC_LOGGING_POLICY     = "event_boundary_owner_aligned_changed_only_publication_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.074_asap_changed_only_publication";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.075_owner_aligned_changed_only_publication";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
