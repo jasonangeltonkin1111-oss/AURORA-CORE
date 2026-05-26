@@ -161,7 +161,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    return result;
 }
 
-AC_WriteResult AC_WriteTextFileFastAtomic(const string final_path, const string content)
+AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const string content)
 {
    AC_WriteResult result;
    result.attempted = true;
@@ -241,7 +241,12 @@ AC_WriteResult AC_WriteTextFileFastAtomicIfChanged(const string final_path,
       if(existing == content)
          return AC_MakeSyntheticWriteResult(final_path, true, "unchanged_no_write", (ulong)StringLen(content), reason + "|existing_content_identical_atomic_move_skipped");
    }
-   return AC_WriteTextFileFastAtomic(final_path, content);
+   return AC_WriteTextFileFastAtomicRaw(final_path, content);
+}
+
+AC_WriteResult AC_WriteTextFileFastAtomic(const string final_path, const string content)
+{
+   return AC_WriteTextFileFastAtomicIfChanged(final_path, content, "fast_atomic_default_changed_only");
 }
 
 AC_WriteResult AC_WriteTextFileIfChanged(const string final_path,
