@@ -282,8 +282,8 @@ def run_repair_light(shared_root: Path, watchdog_mode: bool) -> int:
         action = "cannot_repair_missing_daemon_task"
         restart_result = "failed_daemon_task_missing"
     proof = core.WatchdogProof(utc_stamp(), action, ";".join(reason_bits), attempted, restart_result)
-    probe_mode = "watchdog_light_probe" if watchdog_mode else "repair_light_probe"
-    probe_ok = core.write_probe_status(shared_root, 1, roots, results, proof, repair_success, probe_mode)
+    status_mode = "watchdog_probe" if watchdog_mode else "repair_probe"
+    probe_ok = core.write_probe_status(shared_root, 1, roots, results, proof, repair_success, status_mode)
     return 0 if probe_ok and not write_failed and (restart_result.startswith("not_needed") or repair_success) else 2
 
 
