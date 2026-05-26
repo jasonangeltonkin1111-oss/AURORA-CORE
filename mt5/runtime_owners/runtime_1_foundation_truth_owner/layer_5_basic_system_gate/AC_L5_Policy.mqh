@@ -21,11 +21,14 @@ string AC_L5LayerGateSummary()
 {
    return "scanned=" + IntegerToString(AC_L5_SCANNED)
       + ";pass=" + IntegerToString(AC_L5_GATE_PASS)
+      + ";clean=" + IntegerToString(AC_L5_ELIGIBLE_CLEAN)
+      + ";degraded=" + IntegerToString(AC_L5_ELIGIBLE_DEGRADED)
       + ";blocked=" + IntegerToString(AC_L5_GATE_BLOCKED);
 }
 
 void AC_L5SyncCompatibilityFields()
 {
+   AC_L5_GATE_PASS = AC_L5_ELIGIBLE_CLEAN + AC_L5_ELIGIBLE_DEGRADED;
    int normalized_blocked = AC_L5_SCANNED - AC_L5_GATE_PASS;
    if(normalized_blocked < 0) normalized_blocked = 0;
    AC_L5_GATE_BLOCKED = normalized_blocked;
@@ -35,7 +38,7 @@ void AC_L5SyncCompatibilityFields()
    AC_L5_PENDING_SYMBOLS = AC_L5_GATE_BLOCKED;
    AC_L5_PACKET_STATUS = AC_L5_READY ? "basic_gate_complete" : "basic_gate_not_ready";
    AC_L5_PACKET_BINDING_STATUS = "not_a_gateway_packet_basic_gate_only";
-   AC_L5_PACKET_REASON = "Layer 5 Basic System Gate completed from L2/L3/L4 owner packets; scoring/advisory fields belong to Layer 6+";
+   AC_L5_PACKET_REASON = "Layer 5 Basic System Gate completed from L2/L3/L4 owner packets; clean/degraded pass state is gate hygiene only; scoring/advisory fields belong to Layer 6+";
    AC_L5_KILL_REASON = AC_L5_MAIN_BLOCKER;
    AC_L5_QUALITY_STATE = AC_L5_READY ? "basic_gate_ready" : "basic_gate_not_ready";
 }
@@ -53,6 +56,8 @@ void AC_L5Reset()
    AC_L5_WORKBENCH_SECTION = "";
    AC_L5_SCANNED = 0;
    AC_L5_GATE_PASS = 0;
+   AC_L5_ELIGIBLE_CLEAN = 0;
+   AC_L5_ELIGIBLE_DEGRADED = 0;
    AC_L5_GATE_BLOCKED = 0;
    AC_L5_BLOCK_CLOSED_MARKET = 0;
    AC_L5_BLOCK_STALE_QUOTE = 0;
@@ -66,6 +71,9 @@ void AC_L5Reset()
    AC_L5_BLOCK_L3_NOT_READY = 0;
    AC_L5_BLOCK_L4_NOT_READY = 0;
    AC_L5_BLOCK_L4_SURFACE_NOT_USABLE = 0;
+   AC_L5_DEGRADED_L3_VALUE_OR_MARGIN = 0;
+   AC_L5_DEGRADED_L3_VOLUME_GRID = 0;
+   AC_L5_DEGRADED_L3_SPEC_PARTIAL = 0;
    AC_L5_WORST_BLOCKER = "None";
    AC_L5_FIND_LAST_INDEX = -1;
    AC_L5_FIND_CACHE_HITS = 0;
@@ -141,6 +149,23 @@ bool AC_L5SpreadAbsurd(const AC_L4SymbolPacket &l4)
 {
    if(l4.spread_bps_live <= 0.0) return false;
    return l4.spread_bps_live > AC_L5_ABSURD_SPREAD_BPS_LIMIT;
+}
+
+bool AC_L5SpecsDegraded(const AC_L3SymbolSpecs &l3)
+{
+   return l3.source_quality == "Specs Partial";
+}
+
+bool AC_L5ValueOrMarginDegraded(const AC_L3SymbolSpecs &l3)
+{
+   if(l3.value_quality != "Value Formula Ready") return true;
+   if(l3.margin_quality != "Margin Formula Ready") return true;
+   return false;
+}
+
+bool AC_L5VolumeGridDegraded(const AC_L3SymbolSpecs &l3)
+{
+   return l3.volume_grid_quality != "Volume Grid Ready";
 }
 
 #endif
