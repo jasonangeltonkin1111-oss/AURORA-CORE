@@ -1,6 +1,8 @@
 #ifndef AC_SELECTED_ROLLING_TICK_PACK_HARNESS_MQH
 #define AC_SELECTED_ROLLING_TICK_PACK_HARNESS_MQH
 
+#include "AC_SelectedRollingTickPackPublication.mqh"
+
 // Layer 20 disabled activation harness.
 // This file prepares compile-test and later runtime wiring without calling L20 from AuroraCore.mq5 yet.
 // It must remain inactive until L1-L19 selected-scope truth is stable and overseer approves activation.
