@@ -30,10 +30,6 @@ def _not_available_context(reason: str = "missing_price_or_point_or_surface_wind
         "available_surface_room_pips": "not_available",
         "surface_geometry_confidence": 0.0,
         "surface_geometry_confidence_reason": reason,
-        # Deprecated compatibility aliases only. L9 reports surface references;
-        # L22 owns liquidity-map language later.
-        "nearest_liquidity_reference": "not_available",
-        "nearest_liquidity_distance_pips": "not_available",
     }
 
 
@@ -192,9 +188,4 @@ def calculate_l9_location_context(packet: L9WindowPacket, price_i: int, point: f
     context["available_surface_room_pips"] = available_room
     context["surface_geometry_confidence"] = confidence
     context["surface_geometry_confidence_reason"] = confidence_reason
-
-    # Deprecated compatibility aliases for existing render/index consumers.
-    # Do not treat these as Layer 22 liquidity-map proof.
-    context["nearest_liquidity_reference"] = nearest_name
-    context["nearest_liquidity_distance_pips"] = nearest_distance
     return context
