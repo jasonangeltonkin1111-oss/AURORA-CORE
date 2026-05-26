@@ -107,7 +107,8 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## reports
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| *(folder currently has no markdown files)* | Historical report sink when present | N/A | no | L9 | Add index only if reports are added. |
+| `reports/00_REPORTS_INDEX.md` | Reports navigation index | Active | no | L9 | Source-controlled report router; reports are audit evidence only, not runtime source truth. |
+| `reports/2026-05-25_git_landing_proof_ledger.md` | Git landing proof ledger | Active | task-specific | L9 | Separates branch/PR/main landing/proof classes for worker and overseer reconciliation. |
 
 ## mt5
 | path | role | status | must-read? | source authority level | notes |
