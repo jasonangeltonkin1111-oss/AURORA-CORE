@@ -4,7 +4,6 @@
 // Runtime 1 owner dispatcher.
 // One source owner, split implementation files.
 // Board/Dossier/Workbench render Layer 1 truth from this owner only.
-// This owner is read-only and never grants trade permission.
 
 #include "AC_L1_Types.mqh"
 #include "AC_L1_Format.mqh"
@@ -77,7 +76,6 @@ string AC_L1CompactBoardSection()
    text += AC_L1BoardLine("Prop Rule Profile", "NOT_LOADED / UNKNOWN");
    text += AC_L1BoardLine("Prop Rule Safety", "UNKNOWN - live/funded permission blocked");
    text += AC_L1BoardLine("Health", health);
-   text += AC_L1BoardLine("Trade Permission", "FALSE");
    text += "Note: Account Status carries full trades, maps, cost, tag, quality, drawdown, and prop-rule truth detail.\r\n";
    return text;
 }
@@ -101,7 +99,6 @@ string AC_AccountTruthStatusRow(const AC_WriteResult &account_write)
       + "|live_exposure=enabled|live_exposure_maps=enabled|cost_tag_maps=enabled|data_quality_ledger=enabled"
       + "|equity_drawdown_map=enabled|prop_rule_profile=not_loaded_unknown|prop_rule_safety=unknown_permission_blocked"
       + "|selected_history_scope=manual_review_not_all_time_proof"
-      + "|edge_validated=false|prop_firm_ready=false|trade_permission=false"
       + "|scan_duration_ms=" + IntegerToString((int)AC_L1_SCAN_DURATION_MS)
       + "|history_scan_budget_ms=" + IntegerToString(AC_L1_HISTORY_SCAN_BUDGET_MS)
       + "|history_scan_duration_ms=" + IntegerToString((int)AC_L1_HISTORY_SCAN_DURATION_MS)
