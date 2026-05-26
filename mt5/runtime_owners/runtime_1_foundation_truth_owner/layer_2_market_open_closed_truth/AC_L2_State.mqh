@@ -4,6 +4,7 @@
 static bool     AC_L2_READY = false;
 static uint     AC_L2_SCAN_STARTED_MS = 0;
 static uint     AC_L2_SCAN_DURATION_MS = 0;
+static double   AC_L2_SYMBOLS_PER_SECOND = 0.0;
 static string   AC_L2_SCAN_STATUS = "not_started";
 static string   AC_L2_SCAN_FAILURE = "";
 static datetime AC_L2_LAST_FULL_SCAN_TIME = 0;
@@ -39,6 +40,7 @@ void AC_L2Reset()
    AC_L2_READY = false;
    AC_L2_SCAN_STARTED_MS = GetTickCount();
    AC_L2_SCAN_DURATION_MS = 0;
+   AC_L2_SYMBOLS_PER_SECOND = 0.0;
    AC_L2_SCAN_STATUS = "scanning";
    AC_L2_SCAN_FAILURE = "";
    ArrayResize(AC_L2_SYMBOLS, 0);
