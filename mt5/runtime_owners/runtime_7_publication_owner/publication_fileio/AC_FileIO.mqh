@@ -303,6 +303,7 @@ string AC_WriteResultLine(const string surface, const AC_WriteResult &result)
       + "|final_exists=" + (result.final_exists ? "true" : "false")
       + "|final_size=" + AC_UlongToText(result.final_size)
       + "|error=" + IntegerToString(result.error_code)
+      + "|detail=" + result.detail
       + "|final_path=" + result.final_path;
 }
 
