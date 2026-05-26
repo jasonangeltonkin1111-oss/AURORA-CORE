@@ -72,6 +72,14 @@ def _runtime2_payload_rows(input_text: str) -> Tuple[str, ...]:
     return rows
 
 
+def _runtime3_text_payload_checksum(input_text: str) -> str:
+    input_text = input_text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n")
+    checksum = 0
+    for index, ch in enumerate(input_text):
+        checksum = (checksum + (ord(ch) * (index + 1))) % 2147483647
+    return str(checksum)
+
+
 def _manifest_int(manifest: dict[str, str], key: str) -> int | None:
     value = str(manifest.get(key, "")).strip()
     if not value:
@@ -105,9 +113,10 @@ def l10_load_runtime2_rows_if_available(outbox_root: Path) -> Tuple[Tuple[str, .
     expected_checksum = str(manifest.get("payload_checksum", "")).strip()
     if not expected_checksum:
         return tuple(), str(input_path), "pending", "missing_l10_runtime2_manifest_payload_checksum"
-    actual_checksum = payload_checksum(rows)
-    if actual_checksum != expected_checksum:
-        return tuple(), str(input_path), "pending", f"l10_runtime2_payload_checksum_mismatch manifest={expected_checksum} actual={actual_checksum}"
+    actual_text_checksum = _runtime3_text_payload_checksum(text)
+    actual_rows_checksum = payload_checksum(rows)
+    if expected_checksum not in {actual_text_checksum, actual_rows_checksum}:
+        return tuple(), str(input_path), "pending", f"l10_runtime2_payload_checksum_mismatch manifest={expected_checksum} actual_text={actual_text_checksum} actual_rows={actual_rows_checksum}"
 
     return rows, str(input_path), "available", "l10_runtime2_universe_rows_manifest_verified"
 

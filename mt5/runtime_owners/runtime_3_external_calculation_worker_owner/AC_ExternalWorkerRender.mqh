@@ -11,8 +11,57 @@ string AC_ExternalWorkerRuntimeProofStatus()
    return "not_runtime_proven";
 }
 
+string AC_ExternalWorkerAppendReasonBit(const string current, const string next)
+{
+   if(next == "")
+      return current;
+   if(current == "")
+      return next;
+   return current + ";" + next;
+}
+
+string AC_ExternalWorkerRuntimeContradictionStatus()
+{
+   string install_version = AC_EXTERNAL_WORKER_STATUS.install_worker_version;
+   string shared_version = AC_EXTERNAL_WORKER_STATUS.shared_status_worker_version;
+   bool version_known = (install_version != "" && install_version != "not_available" && shared_version != "" && shared_version != "not_available");
+   bool shared_accepts_root = ((int)StringToInteger(AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count) > 0);
+   bool account_proof_missing = (!AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present || !AC_EXTERNAL_WORKER_STATUS.heartbeat_present || !AC_EXTERNAL_WORKER_STATUS.result_present || !AC_EXTERNAL_WORKER_STATUS.result_manifest_present);
+
+   if(version_known && install_version != shared_version)
+      return "version_mismatch_shared_daemon_stale_or_not_restarted";
+   if(shared_accepts_root && account_proof_missing)
+      return "shared_acceptance_without_account_result_proof";
+   return "none";
+}
+
+string AC_ExternalWorkerRuntimeContradictionReason()
+{
+   string reason = "";
+   string install_version = AC_EXTERNAL_WORKER_STATUS.install_worker_version;
+   string shared_version = AC_EXTERNAL_WORKER_STATUS.shared_status_worker_version;
+   bool version_known = (install_version != "" && install_version != "not_available" && shared_version != "" && shared_version != "not_available");
+   bool shared_accepts_root = ((int)StringToInteger(AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count) > 0);
+
+   if(version_known && install_version != shared_version)
+      reason = AC_ExternalWorkerAppendReasonBit(reason, "install_worker_version=" + install_version + " shared_status_worker_version=" + shared_version);
+   if(shared_accepts_root && (!AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present || !AC_EXTERNAL_WORKER_STATUS.heartbeat_present || !AC_EXTERNAL_WORKER_STATUS.result_present || !AC_EXTERNAL_WORKER_STATUS.result_manifest_present))
+      reason = AC_ExternalWorkerAppendReasonBit(reason, "shared_status_accepted_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count
+         + " lifecycle_file_present=" + (AC_EXTERNAL_WORKER_STATUS.lifecycle_file_present ? "true" : "false")
+         + " heartbeat_present=" + (AC_EXTERNAL_WORKER_STATUS.heartbeat_present ? "true" : "false")
+         + " result_present=" + (AC_EXTERNAL_WORKER_STATUS.result_present ? "true" : "false")
+         + " result_manifest_present=" + (AC_EXTERNAL_WORKER_STATUS.result_manifest_present ? "true" : "false"));
+
+   if(reason == "")
+      return "none";
+   return reason;
+}
+
 string AC_ExternalWorkerRuntimeProofReason()
 {
+   string contradiction_reason = AC_ExternalWorkerRuntimeContradictionReason();
+   if(contradiction_reason != "none" && !AC_EXTERNAL_WORKER_STATUS.accepted_result)
+      return contradiction_reason;
    if(AC_EXTERNAL_WORKER_STATUS.result_validation_reason != "")
       return AC_EXTERNAL_WORKER_STATUS.result_validation_reason;
    if(AC_EXTERNAL_WORKER_STATUS.job_bus_validation_reason != "")
@@ -45,6 +94,9 @@ void AC_BuildExternalWorkerTexts()
    string runtime_proof_status = AC_ExternalWorkerRuntimeProofStatus();
    string runtime_proof_reason = AC_ExternalWorkerRuntimeProofReason();
    string runtime_proof_reason_compact = AC_ExternalWorkerCompactValue(runtime_proof_reason);
+   string runtime_contradiction_status = AC_ExternalWorkerRuntimeContradictionStatus();
+   string runtime_contradiction_reason = AC_ExternalWorkerRuntimeContradictionReason();
+   string runtime_contradiction_reason_compact = AC_ExternalWorkerCompactValue(runtime_contradiction_reason);
 
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION = "\r\nEXTERNAL_CALCULATION_WORKER\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "----------------------------------------\r\n";
@@ -62,6 +114,8 @@ void AC_BuildExternalWorkerTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_proof_status=" + runtime_proof_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "mt5_readback_proof_status=" + runtime_proof_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_proof_reason=" + runtime_proof_reason + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_contradiction_status=" + runtime_contradiction_status + "\r\n";
+   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "runtime_contradiction_reason=" + runtime_contradiction_reason + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status_source=" + AC_EXTERNAL_WORKER_STATUS.install_status_source + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "install_status_file_present=" + (AC_EXTERNAL_WORKER_STATUS.install_status_file_present ? "true" : "false") + "\r\n";
@@ -173,6 +227,8 @@ void AC_BuildExternalWorkerTexts()
       + "|runtime_proof_status=" + runtime_proof_status
       + "|mt5_readback_proof_status=" + runtime_proof_status
       + "|runtime_proof_reason=" + runtime_proof_reason_compact
+      + "|runtime_contradiction_status=" + runtime_contradiction_status
+      + "|runtime_contradiction_reason=" + runtime_contradiction_reason_compact
       + "|install_status=" + AC_EXTERNAL_WORKER_STATUS.install_status
       + "|worker_installed=" + (AC_EXTERNAL_WORKER_STATUS.worker_installed ? "true" : "false")
       + "|install_validation_status=" + AC_EXTERNAL_WORKER_STATUS.install_validation_status

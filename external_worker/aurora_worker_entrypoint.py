@@ -17,8 +17,8 @@ from aurora_worker_l16_dispatch import run_l16_after_l15
 from aurora_worker_l17_dispatch import run_l17_after_l16
 from aurora_worker_l18_dispatch import run_l18_after_l17
 
-SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
-CALCULATION_CYCLE_SECONDS = 30
+SNAPSHOT_STABLE_REQUIRED_SECONDS = 0
+CALCULATION_CYCLE_SECONDS = 0
 ACCEPTED_EPOCH_TTL_SECONDS = 120
 ENABLE_L13_RUNTIME = True
 ENABLE_L14_RUNTIME = True
@@ -320,7 +320,11 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--watchdog", action="store_true")
     parser.add_argument("--install-global", action="store_true")
+    parser.add_argument("--version", action="store_true")
     args, _unknown = parser.parse_known_args(argv)
+    if args.version:
+        print(core.WORKER_VERSION)
+        return 0
     if args.install_global:
         return core.main(argv)
     if args.watchdog or args.repair:

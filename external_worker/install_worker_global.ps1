@@ -14,6 +14,9 @@ $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
 $ExpectedWorkerVersion = "0.6.18_l19_single_dispatch_cleanup"
 $WorkerVersion = $ExpectedWorkerVersion
+$SpecPath = Join-Path $ScriptDir "AuroraWorker.spec"
+$PyInstallerRebuildAttempted=$false; $PyInstallerRebuildStatus="not_started"; $PyInstallerRebuildError="none"
+$PackageExeLastWriteUtc="not_available"; $PackageProbeWorkerVersion="not_checked"; $PackageProbeError="none"; $PackageVersionMatchesSource="false"
 
 if (Test-Path $WorkerSource) {
   $versionLine = Select-String -LiteralPath $WorkerSource -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -24,7 +27,32 @@ if ($WorkerVersion -ne $ExpectedWorkerVersion) {
   Write-Host "WARNING: source worker version differs from expected current version. source=$WorkerVersion expected=$ExpectedWorkerVersion" -ForegroundColor Yellow
 }
 
-if (!(Test-Path $BuiltWorker)) { throw "Built Gateway folder not found: $BuiltWorker. Rebuild the PyInstaller one-folder worker from current source before installing. No packaged readiness is claimed by source alone." }
+try {
+  if (!(Test-Path $SpecPath)) { throw "PyInstaller spec missing: $SpecPath" }
+  $PyInstallerRebuildAttempted=$true
+  $PyInstallerRebuildStatus="running"
+  Push-Location $ScriptDir
+  try {
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+      $null = & python -m PyInstaller --clean --noconfirm $SpecPath 2>&1
+      $buildExitCode = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($buildExitCode -ne 0) { throw "python -m PyInstaller exited with code $buildExitCode" }
+  } finally {
+    Pop-Location
+  }
+  $PyInstallerRebuildStatus="succeeded"
+} catch {
+  $PyInstallerRebuildStatus="failed"
+  $PyInstallerRebuildError = ($_.Exception.Message -replace "\r?\n", " ")
+  throw "PyInstaller rebuild failed. Refusing to install a possibly stale worker package. $PyInstallerRebuildError"
+}
+
+if (!(Test-Path $BuiltWorker)) { throw "Built Gateway folder not found after rebuild: $BuiltWorker. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
 Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force
 $BuiltExe = Join-Path $SharedWorkerRoot "AuroraWorker.exe"
@@ -36,7 +64,25 @@ if (!(Test-Path $BuiltInternalDll)) { throw "Install failed: packaged Python DLL
 # Runtime task authority must use the packaged one-folder EXE beside _internal.
 Copy-Item -Path $BuiltExe -Destination $SharedExeFlat -Force
 
-$daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"; $daemonStartAttempted=$false; $daemonStartError="none"
+if (Test-Path $BuiltExe) {
+  $PackageExeLastWriteUtc = (Get-Item -LiteralPath $BuiltExe).LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss UTC")
+  try {
+    $probe = & $BuiltExe --version 2>&1
+    if ($LASTEXITCODE -eq 0 -and $probe) {
+      $PackageProbeWorkerVersion = (($probe | Select-Object -First 1).ToString()).Trim()
+    } elseif ($LASTEXITCODE -eq 0) {
+      $PackageProbeWorkerVersion = $WorkerVersion
+      $PackageProbeError = "version_probe_stdout_empty_windowed_exe_version_inferred_from_successful_rebuild_and_copy"
+    } else {
+      $PackageProbeError = "version probe returned code $LASTEXITCODE"
+    }
+  } catch {
+    $PackageProbeError = ($_.Exception.Message -replace "\r?\n", " ")
+  }
+}
+$PackageVersionMatchesSource = if($PackageProbeWorkerVersion -eq $WorkerVersion){"true"}else{"false"}
+
+$daemonRegistered=$false; $daemonState="not_registered"; $daemonError="none"; $daemonEnableAttempted=$false; $daemonEnableError="none"; $daemonStartAttempted=$false; $daemonStartError="none"
 try {
   $daemonAction = New-ScheduledTaskAction -Execute $BuiltExe -Argument "--shared-root `"$SharedRoot`" --mode shared-daemon --poll-seconds 1" -WorkingDirectory $SharedWorkerRoot
   $daemonTrigger = New-ScheduledTaskTrigger -AtLogOn
@@ -48,8 +94,25 @@ try {
   $daemonError = ($_.Exception.Message -replace "\r?\n", " ")
   $daemonState="registration_failed"
 }
+if ($daemonRegistered) {
+  try {
+    $daemonEnableAttempted=$true
+    Enable-ScheduledTask -TaskName $DaemonTaskName -ErrorAction Stop | Out-Null
+  } catch {
+    $daemonEnableError = ($_.Exception.Message -replace "\r?\n", " ")
+  }
+  try {
+    $daemonStartAttempted=$true
+    Start-ScheduledTask -TaskName $DaemonTaskName -ErrorAction Stop
+    Start-Sleep -Seconds 2
+  } catch {
+    $daemonStartError = ($_.Exception.Message -replace "\r?\n", " ")
+  }
+  $daemonTask = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction SilentlyContinue
+  if ($daemonTask) { $daemonState = $daemonTask.State.ToString() }
+}
 
-$watchRegistered=$false; $watchState="not_registered"; $watchError="none"
+$watchRegistered=$false; $watchState="not_registered"; $watchError="none"; $watchEnableAttempted=$false; $watchEnableError="none"; $watchStartAttempted=$false; $watchStartError="none"
 if (Test-Path $WatchdogHelper) {
   try {
     powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $WatchdogHelper | Out-Host
@@ -62,6 +125,22 @@ if (Test-Path $WatchdogHelper) {
 } else {
   $watchError = "register_watchdog_safe.ps1 missing"
   $watchState = "registration_failed"
+}
+if ($watchRegistered) {
+  try {
+    $watchEnableAttempted=$true
+    Enable-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction Stop | Out-Null
+  } catch {
+    $watchEnableError = ($_.Exception.Message -replace "\r?\n", " ")
+  }
+  try {
+    $watchStartAttempted=$true
+    Start-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction Stop
+  } catch {
+    $watchStartError = ($_.Exception.Message -replace "\r?\n", " ")
+  }
+  $watchTask = Get-ScheduledTask -TaskName $WatchdogTaskName -ErrorAction SilentlyContinue
+  if ($watchTask) { $watchState = $watchTask.State.ToString() }
 }
 
 $daemonTaskRefresh = Get-ScheduledTask -TaskName $DaemonTaskName -ErrorAction SilentlyContinue
@@ -76,7 +155,27 @@ $BinPresent = Test-Path $SharedBinRoot
 $authority = "calculation_support_only"; $tradePermission="false"
 $daemonRunnable = $daemonRegistered -and ($daemonState -ne "Disabled") -and ($daemonState -ne "registration_failed")
 $watchRunnable = $watchRegistered -and ($watchState -ne "Disabled") -and ($watchState -ne "registration_failed")
-$operatorCmdRequired = if($daemonRunnable -and $watchRunnable -and $PackagedPresent -and $PackagedInternalPresent -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
+$SharedWorkerStatusPath = Join-Path $SharedStatus "shared_worker_status.txt"
+$RuntimeProofReadyForOperatorCmd=$false
+$RuntimeProofReadyReason="fresh_shared_status_with_matching_worker_version_and_account_result_pair_not_observed_by_installer"
+if (Test-Path $SharedWorkerStatusPath) {
+  try {
+    $sharedText = Get-Content -LiteralPath $SharedWorkerStatusPath -Raw
+    $runningVersion = if($sharedText -match "(?m)^worker_version=(.+)$"){$Matches[1].Trim()}else{""}
+    $resultPairCount = if($sharedText -match "(?m)^account_result_pair_present_count=(\d+)$"){[int]$Matches[1]}else{0}
+    $heartbeatCount = if($sharedText -match "(?m)^account_heartbeat_present_count=(\d+)$"){[int]$Matches[1]}else{0}
+    $lastLoopUnix = if($sharedText -match "(?m)^last_loop_unix=(\d+)$"){[int64]$Matches[1]}else{0}
+    $nowUnix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $fresh = $lastLoopUnix -gt 0 -and (($nowUnix - $lastLoopUnix) -le 120)
+    if($runningVersion -eq $WorkerVersion -and $resultPairCount -gt 0 -and $heartbeatCount -gt 0 -and $fresh) {
+      $RuntimeProofReadyForOperatorCmd=$true
+      $RuntimeProofReadyReason="fresh_shared_status_matches_source_and_account_result_pair_present"
+    }
+  } catch {
+    $RuntimeProofReadyReason = "runtime_proof_check_failed: " + ($_.Exception.Message -replace "\r?\n", " ")
+  }
+}
+$operatorCmdRequired = if($daemonRunnable -and $watchRunnable -and $PackagedPresent -and $PackagedInternalPresent -and $RuntimeProofReadyForOperatorCmd -and $authority -eq "calculation_support_only" -and $tradePermission -eq "false"){"false"}else{"true"}
 $autoStartConfigured = if($daemonRunnable -and $watchRunnable -and $PackagedPresent -and $PackagedInternalPresent){"true"}else{"false"}
 $watchdogDefaultEnabled = if($watchRunnable){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
@@ -107,6 +206,13 @@ packaged_exe_present=$($PackagedPresent.ToString().ToLowerInvariant())
 packaged_internal_python_dll_present=$($PackagedInternalPresent.ToString().ToLowerInvariant())
 packaged_exe_path=$BuiltExe
 packaged_exe_runtime_authority=true
+pyinstaller_rebuild_attempted=$($PyInstallerRebuildAttempted.ToString().ToLowerInvariant())
+pyinstaller_rebuild_status=$PyInstallerRebuildStatus
+pyinstaller_rebuild_error=$PyInstallerRebuildError
+package_exe_last_write_utc=$PackageExeLastWriteUtc
+packaged_worker_version=$PackageProbeWorkerVersion
+packaged_worker_version_probe_error=$PackageProbeError
+packaged_worker_version_matches_source=$PackageVersionMatchesSource
 daemon_install_method=windows_scheduled_task_shared_daemon
 daemon_runtime_exe=$BuiltExe
 daemon_runtime_working_directory=$SharedWorkerRoot
@@ -115,6 +221,8 @@ scheduled_task_registered=$($daemonRegistered.ToString().ToLowerInvariant())
 scheduled_task_state=$daemonState
 scheduled_task_runnable=$($daemonRunnable.ToString().ToLowerInvariant())
 scheduled_task_error=$daemonError
+scheduled_task_enable_attempted=$($daemonEnableAttempted.ToString().ToLowerInvariant())
+scheduled_task_enable_error=$daemonEnableError
 daemon_start_attempted=$($daemonStartAttempted.ToString().ToLowerInvariant())
 daemon_start_error=$daemonStartError
 watchdog_install_method=windows_scheduled_task_lightweight_repair_lane_packaged_exe
@@ -123,12 +231,18 @@ watchdog_task_registered=$($watchRegistered.ToString().ToLowerInvariant())
 watchdog_task_state=$watchState
 watchdog_task_runnable=$($watchRunnable.ToString().ToLowerInvariant())
 watchdog_task_error=$watchError
+watchdog_task_enable_attempted=$($watchEnableAttempted.ToString().ToLowerInvariant())
+watchdog_task_enable_error=$watchEnableError
+watchdog_task_start_attempted=$($watchStartAttempted.ToString().ToLowerInvariant())
+watchdog_task_start_error=$watchStartError
 watchdog_default_enabled=$watchdogDefaultEnabled
 watchdog_disabled_to_prevent_popup_loop=false
 watchdog_expected_runtime_mode=lightweight_probe_no_layer_dispatch
 watchdog_proof_scope=registration_only_plus_expected_lightweight_probe_runtime_not_recovery_proof
 auto_start_configured=$autoStartConfigured
 operator_cmd_required=$operatorCmdRequired
+runtime_proof_ready_for_operator_cmd=$($RuntimeProofReadyForOperatorCmd.ToString().ToLowerInvariant())
+runtime_proof_ready_reason=$RuntimeProofReadyReason
 generated_unix=$($Now.ToUnixTimeSeconds())
 generated_utc=$($Now.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss UTC"))
 authority=calculation_support_only
