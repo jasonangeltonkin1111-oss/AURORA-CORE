@@ -231,6 +231,7 @@ string AC_BoardDossierCoverageSection(const AC_Layer0StatusPacket &status)
    text += "Dossier Pass Duration:      " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "Dossier Layout Contract:    " + AC_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
    text += "Cached Layout Contract:     " + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
+   text += AC_DossierPhysicalCoverageBoardSection();
    return text;
 }
 
@@ -347,6 +348,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
    AC_BoardRefreshSurfacePackets();
+   AC_DossierPhysicalRefreshProof();
    return "schema_name=layer_status|schema_version=v0.20|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
@@ -355,7 +357,18 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total)
       + "|dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready)
       + "|dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing)
-      + "|dossier_physical_missing=not_reconciled_by_generation_counter"
+      + "|dossier_physical_open_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES)
+      + "|dossier_physical_closed_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES)
+      + "|dossier_physical_unknown_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES)
+      + "|dossier_expected_open_files=" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES)
+      + "|dossier_expected_closed_files=" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES)
+      + "|dossier_expected_unknown_files=" + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES)
+      + "|dossier_physical_missing_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS)
+      + "|dossier_physical_wrong_folder_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS)
+      + "|dossier_physical_duplicate_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS)
+      + "|dossier_physical_orphan_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES)
+      + "|dossier_physical_cleanup_pending=" + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "true" : "false")
+      + "|dossier_physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false")
       + "|dossier_counter_truth=current_generation_progress_not_physical_file_count"
       + "|failed_current_write_count=" + IntegerToString(status.failed_symbol_count)
       + "|retry_count_total=" + IntegerToString(status.retry_count_total)
@@ -416,6 +429,7 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 {
    AC_BoardRefreshSurfacePackets();
+   AC_DossierPhysicalRefreshProof();
    string l1_workbench = AC_Layer1WorkbenchSection();
    string l2_workbench = AC_Layer2WorkbenchSection();
    string l3_workbench = AC_Layer3WorkbenchSection();
@@ -447,7 +461,19 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total) + "\r\n";
    text += "dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
    text += "dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
-   text += "dossier_physical_missing=not_reconciled_by_generation_counter\r\n";
+   text += "dossier_physical_open_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + "\r\n";
+   text += "dossier_physical_closed_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + "\r\n";
+   text += "dossier_physical_unknown_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + "\r\n";
+   text += "dossier_expected_open_files=" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + "\r\n";
+   text += "dossier_expected_closed_files=" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + "\r\n";
+   text += "dossier_expected_unknown_files=" + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES) + "\r\n";
+   text += "dossier_physical_missing_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS) + "\r\n";
+   text += "dossier_physical_wrong_folder_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS) + "\r\n";
+   text += "dossier_physical_duplicate_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS) + "\r\n";
+   text += "dossier_physical_orphan_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES) + "\r\n";
+   text += "dossier_physical_cleanup_pending=" + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "true" : "false") + "\r\n";
+   text += "dossier_physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false") + "\r\n";
+   text += "dossier_physical_proof_key=" + AC_DOSSIER_PHYSICAL_LAST_PROOF_KEY + "\r\n";
    text += "dossier_counter_truth=current_generation_progress_not_physical_file_count\r\n";
    text += "failed_current_write_count=" + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "retry_count_total=" + IntegerToString(status.retry_count_total) + "\r\n";

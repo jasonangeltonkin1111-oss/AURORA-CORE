@@ -49,6 +49,7 @@ string AC_RuntimeTelemetryRow(const AC_Runtime0Snapshot &snapshot)
       + "|heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id)
       + "|timer_duration_ms=" + IntegerToString((int)snapshot.timer_duration_ms)
       + "|timer_budget_ms=" + IntegerToString((int)AC_TIMER_BUDGET_MS)
+      + "|timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first"
       + "|over_budget_flag=" + AC_BoolText(snapshot.over_budget)
       + "|runtime_state=" + snapshot.runtime_state
       + "|publication_completed_flag=" + AC_BoolText(!snapshot.file_publication_blocked);
@@ -117,6 +118,7 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
    text += "statistics_contract=each_layer_owner_outputs_own_status_packet_board_reads_packets_only\r\n";
    text += "python_worker_contract=not_used_for_L0_lightweight_stats_future_heavy_trading_calculations_only\r\n";
    text += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
+   text += "timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first\r\n";
    text += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
    text += "dossier_shell_write_retries=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
    text += "scope_guard=no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_alerts_no_strategy_no_execution\r\n";
@@ -145,6 +147,7 @@ string AC_UpgradeLogText(const AC_Runtime0Snapshot &snapshot,
    text += "heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id) + "\r\n";
    text += "timer_duration_ms=" + IntegerToString((int)snapshot.timer_duration_ms) + "\r\n";
    text += "timer_budget_ms=" + IntegerToString((int)AC_TIMER_BUDGET_MS) + "\r\n";
+   text += "timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first\r\n";
    text += "over_budget_flag=" + AC_BoolText(snapshot.over_budget) + "\r\n";
    text += "runtime_status_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    text += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";

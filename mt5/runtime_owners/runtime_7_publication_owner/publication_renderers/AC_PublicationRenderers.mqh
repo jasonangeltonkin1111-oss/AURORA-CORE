@@ -25,6 +25,7 @@
 #include "AC_Layer17DeepEvidenceRenderer.mqh"
 #include "AC_Layer6RankedSidecarRenderer.mqh"
 #include "AC_RenderIndexOptimizedDossierSections.mqh"
+#include "AC_DossierPhysicalReconciliation.mqh"
 
 string AC_FilterLinesContaining(string text, const string needle)
 {
@@ -184,6 +185,10 @@ string AC_NormalizeDossierShellText(string text)
    StringReplace(text, "Gateway Result Accepted: TRUE\r\n", "");
    StringReplace(text, "Validation: Accepted\r\n", "");
    StringReplace(text, "Validation: AcceptedWithDrift\r\n", "Validation: drift accepted\r\n");
+
+   // Trader-facing dossiers should say why data is missing, not repeat placeholder filler.
+   StringReplace(text, "Not available", "Unavailable");
+   StringReplace(text, "not_available", "unavailable");
 
    StringReplace(text, top_trade_lock_marker, "Trade Permission: FALSE\r\n");
    return text;

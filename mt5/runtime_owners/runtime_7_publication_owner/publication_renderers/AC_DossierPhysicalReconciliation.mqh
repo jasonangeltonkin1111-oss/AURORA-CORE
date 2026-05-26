@@ -22,6 +22,9 @@ static string AC_DOSSIER_PHYSICAL_DUPLICATE_SAMPLE = "";
 static string AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SAMPLE = "";
 static string AC_DOSSIER_PHYSICAL_ORPHAN_SAMPLE = "";
 static string AC_DOSSIER_PHYSICAL_LAST_PROOF_KEY = "";
+static string AC_DOSSIER_PHYSICAL_LAST_SOURCE_KEY = "";
+static uint   AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS = 0;
+static uint   AC_DOSSIER_PHYSICAL_CACHE_MS = 1000;
 
 string AC_DossierPhysicalNormalizeState(string state)
 {
@@ -110,9 +113,30 @@ int AC_DossierPhysicalCountOrphansInFolder(const string folder, const string fol
    return orphan_count;
 }
 
+string AC_DossierPhysicalSourceKey(const int total)
+{
+   return "symbols=" + IntegerToString(total)
+      + "|l2_route=" + AC_L2_ROUTE_GENERATION_KEY
+      + "|open=" + IntegerToString(AC_L2_OPEN_COUNT)
+      + "|closed=" + IntegerToString(AC_L2_CLOSED_COUNT)
+      + "|unknown=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
+      + "|writes_open=" + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT)
+      + "|writes_closed=" + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT)
+      + "|writes_unknown=" + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT)
+      + "|write_failures=" + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT)
+      + "|cleanup=" + IntegerToString(AC_L2_DUPLICATE_CLEANUP_COUNT)
+      + "|cleanup_failures=" + IntegerToString(AC_L2_DUPLICATE_CLEANUP_FAILURE_COUNT);
+}
+
 void AC_DossierPhysicalRefreshProof()
 {
    int total = SymbolsTotal(false);
+   uint now_ms = GetTickCount();
+   string source_key = AC_DossierPhysicalSourceKey(total);
+   if(AC_DOSSIER_PHYSICAL_LAST_SOURCE_KEY == source_key
+      && AC_DOSSIER_PHYSICAL_LAST_PROOF_KEY != ""
+      && (now_ms - AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS) < AC_DOSSIER_PHYSICAL_CACHE_MS)
+      return;
 
    AC_DOSSIER_PHYSICAL_OPEN_FILES = AC_DossierPhysicalCountFolderFiles(AC_DossiersOpenFolder());
    AC_DOSSIER_PHYSICAL_CLOSED_FILES = AC_DossierPhysicalCountFolderFiles(AC_DossiersClosedFolder());
@@ -190,6 +214,8 @@ void AC_DossierPhysicalRefreshProof()
       + "|orphan_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES)
       + "|cleanup_pending=" + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "true" : "false")
       + "|physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false");
+   AC_DOSSIER_PHYSICAL_LAST_SOURCE_KEY = source_key;
+   AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS = now_ms;
 }
 
 string AC_DossierPhysicalBlockerText()
