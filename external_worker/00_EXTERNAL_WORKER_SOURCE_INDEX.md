@@ -86,6 +86,7 @@ The following one-shot repair scripts were removed from active `main` because th
 
 - `external_worker/aurora_recovery_hotfix_v2.py`
 - `external_worker/aurora_full_repair_no_install.py`
+- `external_worker/aurora_packaging_path_fix.py`
 
 Do not recreate one-shot repair scripts in this folder unless the task explicitly scopes them, they are clearly marked non-runtime, and they cannot masquerade as active Runtime 3 authority.
 
