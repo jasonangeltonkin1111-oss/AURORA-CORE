@@ -2,7 +2,7 @@
 
 **System:** AURORA CORE  
 **Role:** continuity spine, restart protocol, current decision snapshot, source-state handoff, compile/debug ledger, and next-chat guide.  
-**Status:** ACTIVE HANDOFF - must be read at the start of any new Aurora Core chat after README and the current source truth map.
+**Status:** ACTIVE HANDOFF - must be read at the start of any new Aurora Core chat after README and the current control spine.
 
 ---
 
@@ -38,7 +38,9 @@ Active location rules:
 
 ```text
 docs/ remains the active guidebook folder.
-control/01_CONTROL_GOVERNANCE.md is the current navigation bridge.
+control/02_MASTER_REPO_FILE_INDEX.md is the current master repo map and startup path.
+control/00_CONTROL_INDEX.md is the active control router.
+control/01_CONTROL_GOVERNANCE.md is the governance and contradiction-prevention law.
 Runtime-generated MT5 output files do not belong in Git unless explicitly provided as evidence samples.
 ```
 
@@ -50,13 +52,11 @@ A new chat must read these first, in order:
 
 ```text
 README.md
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
-docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
-docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md
+relevant top-level folder index
+relevant real content/source file
 ```
 
 Then read the relevant guidebook, blueprint, governance contract, research doc, and active MT5 source owner files for the task.
@@ -69,8 +69,9 @@ No serious run may proceed from memory alone.
 
 ```text
 README.md: current repo-level direction
-control/01_CONTROL_GOVERNANCE.md: current navigation and contradiction-prevention bridge
-Super Index / Run Router: CURRENT ROUTER, must be read with current truth map
+control/02_MASTER_REPO_FILE_INDEX.md: current master repo map and startup path
+control/00_CONTROL_INDEX.md: current control router
+control/01_CONTROL_GOVERNANCE.md: current governance and contradiction-prevention law
 Decision State Register: operational but may still need status sync after source changes
 Runtime 0: source exists, governance/status/manifest/diagnostics/micro-log support
 Runtime 1 Layer 1: source exists, account truth snapshot only
@@ -78,7 +79,7 @@ Runtime 2: taxonomy/universe lookup skeleton or contract only unless generated r
 Runtime 7: source exists, FileIO/routes owner
 Selection Desk: structure placeholders only, no selection runtime
 Dossiers: Open/Closed/Unknown structure preserved
-External worker implementation: HOLD / design-stage only
+External worker implementation: source-present where indexed, runtime proof still required
 Directional alerts: HOLD
 Setup strategy layer: QUARANTINE
 Auto-trading: BLOCKED
@@ -350,8 +351,8 @@ Current AURORA CORE contracts are held in:
 
 ```text
 README.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
@@ -399,8 +400,8 @@ Next serious run should start by checking:
 
 ```text
 README.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
 docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md
 docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md
