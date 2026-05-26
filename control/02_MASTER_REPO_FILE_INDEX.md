@@ -159,19 +159,38 @@ Complete navigation index for important repository files, ownership boundaries, 
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
 | `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md` | External worker source index | Active | yes | L1/L4 | Runtime 3 calculation-support source map. |
-| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core -> L11 -> L12 -> L13 -> L14 -> L15 -> L16 -> L17. |
+| `external_worker/aurora_worker.py` | Active worker core | Active | yes | L1 | Runs core snapshot validation plus L6-L10 and RenderIndex support outputs. |
+| `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core then L11-L18; L19 is invoked by L18 dispatch. |
+| `external_worker/aurora_worker_l6_friction.py` | L6 cost/friction worker | Active | task-specific | L1 | Consumes L6 primitives; publishes cost/friction score family only; no permission/execution. |
+| `external_worker/aurora_worker_l7_session.py` | L7 session relevance worker | Active | task-specific | L1 | Session relevance scoring only; no permission/execution. |
+| `external_worker/aurora_worker_l8_movement.py` | L8 movement/range worker | Active | task-specific | L1 | Movement/range scoring only; no permission/execution. |
+| `external_worker/aurora_worker_l9_structure.py` | L9 structure/location worker | Active | task-specific | L1 | Structure/location scoring only; no permission/execution. |
+| `external_worker/aurora_worker_l10.py` | L10 taxonomy worker | Active | task-specific | L1 | Taxonomy/ranking_group classification support; no permission/execution. |
+| `external_worker/aurora_worker_l10_source.py` | L10 source bundle helper | Active | task-specific | L1 | Builds L10 source bundle from upstream packets; no permission/execution. |
+| `external_worker/aurora_worker_render_index.py` | Render index support | Active | task-specific | L1 | Indexes prepared sidecars only; must not calculate owner truth. |
+| `external_worker/aurora_worker_l11.py` | L11 symbol ranking worker | Active | task-specific | L1 | Consumes L6-L10/render-index context; no permission/execution. |
+| `external_worker/aurora_worker_l11_dispatch.py` | L11 result_latest dispatch | Active | task-specific | L1 | Appends `l11_*` fields to worker result output. |
+| `external_worker/aurora_worker_l12.py` | L12 ranking_group heat/quality worker | Active | task-specific | L1 | Consumes L11 outputs; no permission/execution. |
+| `external_worker/aurora_worker_l12_dispatch.py` | L12 result_latest dispatch | Active | task-specific | L1 | Appends `l12_*` fields to worker result output. |
+| `external_worker/aurora_worker_l13.py` | L13 dynamic ranking_group selection worker | Active | task-specific | L1 | Group selection support only; no trade permission/execution. |
+| `external_worker/aurora_worker_l13_dispatch.py` | L13 result_latest dispatch | Active | task-specific | L1 | Appends `l13_*` fields to worker result output. |
+| `external_worker/aurora_worker_l14.py` | L14 candidate pool worker | Active | task-specific | L1 | Candidate pool support only; no trade permission/execution. |
+| `external_worker/aurora_worker_l14_dispatch.py` | L14 result_latest dispatch | Active | task-specific | L1 | Appends `l14_*` fields to worker result output. |
 | `external_worker/aurora_worker_l15.py` | L15 correlation/diversity worker | Active | task-specific | L1 | Consumes L14 candidate pool and Shared OHLC Store if available; no broker polling. |
 | `external_worker/aurora_worker_l15_dispatch.py` | L15 result_latest dispatch | Active | task-specific | L1 | Appends `l15_*` fields to worker result output. |
 | `external_worker/aurora_worker_l16.py` | L16 Global Top 10 worker | Active | task-specific | L1 | Consumes L14/L15 outputs only; held visible basket; fallback labels; no raw OHLC/correlation recompute/trading authority. |
 | `external_worker/aurora_worker_l16_dispatch.py` | L16 result_latest dispatch | Active | task-specific | L1 | Appends `l16_*` fields to worker result output. |
-| `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes L16 held visible display rows only; selected/rejected split; no evidence collection/trading authority. |
+| `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes L16 held visible display rows only; selected/rejected split; no evidence collection/trade permission. |
 | `external_worker/aurora_worker_l17_dispatch.py` | L17 result_latest dispatch | Active | task-specific | L1 | Appends `l17_*` fields to worker result output. |
+| `external_worker/aurora_worker_l18.py` | L18 Selected Raw OHLC Bar Pack worker | Active | task-specific | L1 | Reads existing Shared OHLC Store for selected scope only; no broker polling/permission. |
+| `external_worker/aurora_worker_l18_dispatch.py` | L18 result_latest dispatch | Active | task-specific | L1 | Appends `l18_*` fields to worker result output and invokes L19 dispatch. |
+| `external_worker/aurora_worker_l19.py` | L19 Candle Geometry worker | Active | task-specific | L1 | Selected candle geometry support only; no signals/permission/execution. |
+| `external_worker/aurora_worker_l19_dispatch.py` | L19 result_latest dispatch | Active | task-specific | L1 | Appends `l19_*` fields to worker result output. |
 
 ## Archive (historical context only)
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
 | `archive/00_ARCHIVE_INDEX.md` and sub-indexes | Superseded drafts/prompts/blueprints | Historical | no | L9 | Never outranks current source/control truth. |
-
 
 ## local_inputs
 | path | role | status | must-read? | source authority level | notes |
