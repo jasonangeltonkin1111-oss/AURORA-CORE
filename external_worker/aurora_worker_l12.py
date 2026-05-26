@@ -16,6 +16,8 @@ L12_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
 L12_SCHEMA_NAME = "l12_ranking_group_heat_quality"
 L12_AUTHORITY = "ranking_group_attention_quality_only"
 L12_FIELDS = ["ranking_group","ranking_group_slug","asset_class","market_group","market_segment","group_state","ranking_group_heat_rank","ranking_group_quality_rank","ranking_group_strength_rank","ranking_group_heat","ranking_group_quality_score","ranking_group_strength","group_symbol_count","rankable_count","not_rankable_count","risk_review_count","top5_symbol_count","backup_depth","top_symbol","top_symbol_score","top5_avg_score","top5_median_score","l6_avg_score","l7_avg_score","l8_avg_score","l9_avg_score","component_completeness_avg","thin_group_flag","thin_group_reason","rank_stability","rank_change","prior_cycle_available","meaning","directional_validity","expectancy_validated","selection_runtime","trade_permission","entry_signal","execution","reason","source_l11_checksum","generated_utc"]
+L12_COMPONENT_FIELDS = ["ranking_group","ranking_group_slug","asset_class","market_group","market_segment","group_state","group_symbol_count","rankable_count","not_rankable_count","risk_review_count","top5_symbol_count","backup_depth","l6_avg_score","l7_avg_score","l8_avg_score","l9_avg_score","component_completeness_avg","generated_utc"]
+L12_THIN_WARNING_FIELDS = ["ranking_group","ranking_group_slug","group_state","group_symbol_count","rankable_count","not_rankable_count","top5_symbol_count","thin_group_flag","thin_group_reason","risk_review_count","reason","generated_utc"]
 
 @dataclass(frozen=True)
 class L12PublishSummary:
@@ -115,6 +117,17 @@ def _top_ranked_group(rows: List[Dict[str, str]], rank_key: str) -> str:
 def _visible_rank(row: Dict[str, str], key: str) -> str:
     value = row.get(key, "not_available")
     return f"#{value}" if value != "not_available" else "NA"
+
+def _component_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    return [{field: row.get(field, "not_available") for field in L12_COMPONENT_FIELDS} for row in rows]
+
+def _thin_warning_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    warning_states = {"THIN_GROUP", "NO_TOP5", "NO_RANKABLE_SYMBOLS", "ACCEPTED_WITH_REVIEW"}
+    return [
+        {field: row.get(field, "not_available") for field in L12_THIN_WARNING_FIELDS}
+        for row in rows
+        if row.get("thin_group_flag") == "true" or row.get("group_state") in warning_states or _int_text(row.get("risk_review_count"), 0) > 0
+    ]
 
 def _manifest(name: str, rows: List[Dict[str, str]], payload: str, l11_manifest_checksum: str, l11_ranked_checksum: str) -> str:
     return "\n".join([
@@ -245,6 +258,8 @@ def publish_l12_ranking_group_heat_quality(outbox_root: Path) -> L12PublishSumma
         failed: List[Path] = []
         csv_text = _csv_text(rows, L12_FIELDS)
         _write(layer/"l12_group_heat_quality.csv", csv_text, failed)
+        _write(layer/"l12_component_distribution_by_group.csv", _csv_text(_component_rows(rows), L12_COMPONENT_FIELDS), failed)
+        _write(layer/"l12_thin_group_warnings.csv", _csv_text(_thin_warning_rows(rows), L12_THIN_WARNING_FIELDS), failed)
         _write(layer/"l12_group_heat_quality.manifest", _manifest("l12_group_heat_quality", rows, csv_text, l11_manifest_checksum, l11_ranked_checksum), failed)
         for row in rows:
             _write(groups/(row["ranking_group_slug"]+".heat_quality.txt"), "\n".join([f"{k}={row.get(k,'not_available')}" for k in L12_FIELDS]+[""]), failed)
