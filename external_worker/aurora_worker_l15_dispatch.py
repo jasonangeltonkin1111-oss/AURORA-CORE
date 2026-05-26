@@ -1,17 +1,128 @@
 from __future__ import annotations
 
 from pathlib import Path
+import csv
+import io
 import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l15 import L15PublishSummary, publish_l15_correlation_diversity_selection
 
+L15_LAYER_FOLDER = "Layer_15_Correlation_Diversity_Selection"
+L15_SCORE_FILE = "l15_candidate_diversity_scores.csv"
+L15_PAIR_FILE = "l15_candidate_correlation_matrix.csv"
+L15_GROUP_FILE = "l15_group_diversity_summary.csv"
+L15_MANIFEST_FILE = "l15_correlation_diversity.manifest"
+L15_DEGRADED_SCORE_CAP = 54.99
 
-def l15_result_lines(summary: L15PublishSummary, duration_ms: int) -> str:
+
+def _l15_diversity_state(score: float) -> str:
+    if score >= 75:
+        return "DIVERSITY_CLEAN"
+    if score >= 55:
+        return "DIVERSITY_WARNING"
+    if score >= 35:
+        return "DIVERSITY_CONSTRAINED"
+    return "DIVERSITY_HIGH_RISK"
+
+
+def _l15_float(value: str, default: float = 0.0) -> float:
+    try:
+        return float(str(value or "").strip())
+    except ValueError:
+        return default
+
+
+def _l15_csv_text(rows: list[dict[str, str]], fieldnames: list[str]) -> str:
+    out = io.StringIO(newline="")
+    writer = csv.DictWriter(out, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: row.get(field, "not_available") for field in fieldnames})
+    return out.getvalue()
+
+
+def _replace_manifest_checksum(manifest_text: str, checksum: str) -> str:
+    lines = manifest_text.replace("\r\n", "\n").splitlines()
+    replaced = False
+    out: list[str] = []
+    for line in lines:
+        if line.startswith("payload_checksum="):
+            out.append(f"payload_checksum={checksum}")
+            replaced = True
+        else:
+            out.append(line)
+    if not replaced:
+        out.append(f"payload_checksum={checksum}")
+    return "\n".join(out).rstrip() + "\n"
+
+
+def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
+    """Clamp L15 rows with no usable correlation proof before downstream L16 reads them.
+
+    This is a L15 dispatch safety postcondition, not a new scoring owner. It only lowers
+    rows already labelled degraded/unavailable/deferred and refreshes the existing L15
+    manifest checksum for the already-published L15 payload files.
+    """
+    layer = outbox / "Layers" / L15_LAYER_FOLDER
+    score_path = layer / L15_SCORE_FILE
+    if not score_path.exists():
+        return "score_file_missing", 0
+
+    score_text = read_text(score_path).replace("\r\n", "\n")
+    reader = csv.DictReader(io.StringIO(score_text))
+    fieldnames = list(reader.fieldnames or [])
+    if not fieldnames:
+        return "score_file_no_header", 0
+
+    rows = [{str(k): "" if v is None else str(v) for k, v in row.items()} for row in reader]
+    changed = 0
+    for row in rows:
+        corr_pair_count = str(row.get("corr_pair_count", "0")).strip()
+        confidence = str(row.get("correlation_confidence", "")).strip()
+        state = str(row.get("correlation_state", "")).strip()
+        no_usable_corr = corr_pair_count in {"", "0", "0.0"}
+        degraded = confidence in {"degraded_unavailable", "deferred_not_scored_yet"} or state in {"CORRELATION_UNAVAILABLE", "DEFERRED_SOFT_CAP_SLOW_LANE"}
+        if not (no_usable_corr or degraded):
+            continue
+        old_score = _l15_float(row.get("diversity_score", "0"), 0.0)
+        new_score = min(old_score, L15_DEGRADED_SCORE_CAP)
+        if new_score != old_score or row.get("l16_constraint_hint") == "clean_context":
+            row["diversity_score"] = f"{new_score:.2f}"
+            row["diversity_state"] = _l15_diversity_state(new_score)
+            row["l16_constraint_hint"] = "constrained"
+            if not str(row.get("correlation_reject_reason", "")).strip() or row.get("correlation_reject_reason") == "none":
+                row["correlation_reject_reason"] = "correlation_unavailable_degraded"
+            changed += 1
+
+    if changed <= 0:
+        return "no_change_needed", 0
+
+    updated_score_text = _l15_csv_text(rows, fieldnames)
+    if not atomic_write_text(score_path, updated_score_text):
+        return "score_write_failed", changed
+
+    visible_score_path = outbox.parents[2] / "Selection Desk" / "Groups" / "00_Correlation_Diversity_Summary.csv"
+    if visible_score_path.exists():
+        atomic_write_text(visible_score_path, updated_score_text)
+
+    pair_text = read_text(layer / L15_PAIR_FILE) if (layer / L15_PAIR_FILE).exists() else ""
+    group_text = read_text(layer / L15_GROUP_FILE) if (layer / L15_GROUP_FILE).exists() else ""
+    manifest_path = layer / L15_MANIFEST_FILE
+    if manifest_path.exists():
+        checksum = payload_checksum((updated_score_text + pair_text + group_text).splitlines())
+        atomic_write_text(manifest_path, _replace_manifest_checksum(read_text(manifest_path), checksum))
+
+    return "applied", changed
+
+
+def l15_result_lines(summary: L15PublishSummary, duration_ms: int, clamp_status: str = "not_run", clamp_count: int = 0) -> str:
     return "\n".join([
         f"l15_correlation_diversity_status={summary.status}",
         f"l15_correlation_diversity_reason={summary.reason}",
         f"l15_correlation_diversity_duration_ms={duration_ms}",
+        f"l15_degraded_score_clamp_status={clamp_status}",
+        f"l15_degraded_score_clamp_count={clamp_count}",
         f"l15_candidate_input_count={summary.candidate_input_count}",
         f"l15_candidate_pool_size={summary.candidate_pool_size}",
         f"l15_candidate_scored_count={summary.candidate_scored_count}",
@@ -65,17 +176,20 @@ def run_l15_after_l14(root: Path) -> L15PublishSummary:
     paths.ensure()
     start_ns = time.perf_counter_ns()
     summary = publish_l15_correlation_diversity_selection(paths.outbox)
+    clamp_status, clamp_count = _clamp_l15_degraded_score_outputs(paths.outbox)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms))
+        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms, clamp_status, clamp_count))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
             "schema_version=13",
             "worker_l15_append_status=appended_by_l15_dispatch",
+            f"l15_degraded_score_clamp_status={clamp_status}",
+            f"l15_degraded_score_clamp_count={clamp_count}",
             f"l15_main_lane_candidate_count={summary.main_lane_candidate_count}",
             f"l15_deferred_candidate_count={summary.deferred_candidate_count}",
             f"l15_soft_cap_policy={summary.soft_cap_policy}",
