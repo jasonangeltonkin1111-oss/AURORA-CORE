@@ -6,7 +6,7 @@
 // Active raw OHLC storage belongs to Runtime 1 Shared OHLC Raw Storage Owner.
 // Runtime 3 external worker owns calculation-support outputs.
 // This renderer may publish fallback scaffolds, but must not overwrite accepted canonical worker Selection Desk surfaces.
-// Dossier publication is wrapped here to restore bounded changed-only publication without creating a second Dossier owner.
+// Dossier publication is wrapped here to restore ASAP changed-only publication without creating a second Dossier owner.
 
 #include "../../runtime_1_foundation_truth_owner/shared_ohlc_raw_storage/AC_SharedOhlcActiveBridge.mqh"
 #include "../../runtime_1_foundation_truth_owner/shared_ohlc_raw_storage/AC_SharedOhlcLegacyAliases.mqh"
@@ -144,11 +144,10 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
 
    int start_index = AC_L0_INCREMENTAL_NEXT_INDEX;
    int max_symbols = AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS;
-   if(max_symbols <= 0) max_symbols = 120;
    int budget_ms = AC_DOSSIER_UNIVERSE_PASS_BUDGET_MS;
-   if(budget_ms <= 0) budget_ms = 3500;
-
-   int end_limit = MathMin(total, start_index + max_symbols);
+   bool symbol_limit_active = (max_symbols > 0);
+   bool budget_limit_active = (budget_ms > 0);
+   int end_limit = symbol_limit_active ? MathMin(total, start_index + max_symbols) : total;
    status.batch_start_index = start_index;
    status.batch_end_index = start_index - 1;
 
@@ -159,7 +158,7 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    int retries_total = 0;
    for(int idx = start_index; idx < end_limit; idx++)
    {
-      if(attempted > 0 && (int)(GetTickCount() - start_ms) >= budget_ms)
+      if(budget_limit_active && attempted > 0 && (int)(GetTickCount() - start_ms) >= budget_ms)
          break;
 
       attempted++;
@@ -229,10 +228,11 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    {
       status.status = "Incremental publishing";
       status.trust_state = "Dossiers Updating";
-      status.main_blocker = "Dossier universe pass intentionally bounded so Board can keep refreshing";
+      status.main_blocker = "Dossier universe pass interrupted before all symbols completed";
    }
 
-   string batch_status = status.batch_complete ? ((AC_L0_INCREMENTAL_FAILED_TOTAL == 0) ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded") : "bounded_dossier_universe_pass";
+   string batch_status = status.batch_complete ? ((AC_L0_INCREMENTAL_FAILED_TOTAL == 0) ? "dossier_universe_complete" : "dossier_universe_complete_with_degraded") : "asap_changed_only_dossier_universe_pass";
+   string mode_detail = "|symbol_limit_active=" + (symbol_limit_active ? "true" : "false") + "|budget_limit_active=" + (budget_limit_active ? "true" : "false") + "|max_symbols=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms);
    if(status.batch_complete)
    {
       AC_L0_CACHED_SYMBOLS_TOTAL = total;
@@ -258,12 +258,12 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
       AC_L17RefreshSummary();
       AC_L0_CACHED_PASS_VALID = true;
       AC_L0_CACHED_STATUS = status;
-      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_changed_only_dossier_universe_complete|progress_key=" + progress_key + "|render_key=" + render_key + "|max_symbols=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
+      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "asap_changed_only_dossier_universe_complete|progress_key=" + progress_key + "|render_key=" + render_key + mode_detail);
       return AC_L0_CACHED_RESULT;
    }
 
    AC_L0_CACHED_PASS_VALID = false;
-   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_changed_only_dossier_universe_pass|progress_key=" + progress_key + "|render_key=" + render_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(status.batch_end_index) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
+   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "asap_changed_only_dossier_universe_pass|progress_key=" + progress_key + "|render_key=" + render_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(status.batch_end_index) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + mode_detail);
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
@@ -287,7 +287,6 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
    if(AC_L0_CACHED_PASS_VALID && current_progress_key != AC_L0_INCREMENTAL_SOURCE_KEY)
       AC_L0_CACHED_PASS_VALID = false;
 
-   // Keep the existing cache gate, but the active full-pass is now bounded and changed-only when cache misses.
    if(AC_L0_CACHED_PASS_VALID
       && total == AC_L0_CACHED_SYMBOLS_TOTAL
       && AC_L0_CACHED_DOSSIER_SCHEMA_VERSION == AC_DOSSIER_SHELL_SCHEMA_VERSION
