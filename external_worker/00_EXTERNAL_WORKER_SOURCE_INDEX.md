@@ -7,9 +7,15 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 
 ## Active files
 
-- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes.
+- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes. The core run path publishes L6, L7, L8, L9, L10, and RenderIndex support outputs before the entrypoint dispatches L11+ modules.
 - `aurora_worker_io.py` — active worker-side IO helper source used by worker modules. Owns bounded read retry and durable atomic text writes for worker outputs only.
-- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
+- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation/support outputs, then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
+- `aurora_worker_l6_friction.py` — Layer 6 cost/friction ranking support. Must consume existing L6 input primitives exported from upstream truth, publish cost/friction score family and explicit unavailable/degraded cost truth, and must not own session relevance, movement/range, structure/location, selection, trade permission, execution, or edge validation.
+- `aurora_worker_l7_session.py` — Layer 7 session relevance ranking support. Must not own L6 cost friction, movement/range, structure/location, selection, trade permission, execution, or edge validation.
+- `aurora_worker_l8_movement.py` — Layer 8 movement/range ranking support. Must not own L6 cost friction, L7 session relevance, structure/location, selection, trade permission, execution, or edge validation.
+- `aurora_worker_l9_structure.py` — Layer 9 structure/location geometry support. Must not own L6/L7/L8 scores, selection, trade permission, execution, or edge validation.
+- `aurora_worker_l10.py` / `aurora_worker_l10_source.py` — Layer 10 taxonomy / ranking_group classification support. Must not own L6-L9 surface scoring, L11 ranking, selection, trade permission, execution, or edge validation.
+- `aurora_worker_render_index.py` — shared render-index support for prepared worker sidecars. Must render/index owner outputs only and must not calculate owner truth.
 - `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l12.py` / `aurora_worker_l12_dispatch.py` — Layer 12 ranking_group heat / quality support. Must consume L11 outputs and must not build selected groups, candidate pools, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
@@ -29,6 +35,12 @@ Current source chain:
 
 ```text
 core snapshot validation
+-> L6 cost / friction ranking
+-> L7 session relevance ranking
+-> L8 movement / range ranking
+-> L9 structure / location geometry
+-> L10 taxonomy / ranking_group classification
+-> RenderIndex indexing of prepared sidecars
 -> L11 symbol ranking inside ranking_group
 -> L12 ranking_group heat / quality
 -> L13 dynamic ranking_group selection
@@ -100,7 +112,7 @@ A scheduled task existing is not proof of watchdog recovery. `operator_cmd_requi
 - No V2/shadow repair scripts.
 - No Git-tracked emergency backups treated as source.
 - No generated build/dist/package artifact treated as source truth.
-- No packaged executable readiness claim after source changes unless package rebuild and runtime proof exist.
+- No packaged executable readiness claim after source changes unless package rebuild and runtime proof exists.
 - No PowerShell calls inside the hot shared-daemon loop.
 - No trade permission or execution authority.
 - No broker polling from Python unless explicitly scoped later and still validated by MT5.
