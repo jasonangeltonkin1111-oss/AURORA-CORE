@@ -67,7 +67,9 @@ Layer 4 - Live Quote and Spread Truth
 Layer 5 - Basic System Gate
 Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source
 Runtime 3 - Calculation Gateway Owner
-Layer 6+ - future scoring/ranking/selection layers, not active permission
+Layer 6 - active external-worker cost/friction calculation support; not permission
+Layer 7-L10 - active external-worker surface/taxonomy calculation support; not permission
+Layer 11+ - active/future worker modules by source index; not permission unless explicit validation exists
 Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
 
@@ -79,7 +81,7 @@ Layer 3 is the current broker/spec/value foundation layer. It scans Layer 2 know
 
 Layer 5 is the Basic System Gate. It consumes L2/L3/L4 owner packets and outputs pass/blocked eligibility only. It is not Runtime 5, not advisory scoring, not ranking, not selection, not permission, and not execution.
 
-Runtime 3 owns the Gateway/external-worker relationship, job-bus contract, daemon/watchdog status, and worker-result acceptance/rejection. Runtime 3 is calculation support only and must not own broker truth, ranking, selection, trade permission, execution, FileIO, or Board/Dossier rendering.
+Runtime 3 owns the Gateway/external-worker relationship, job-bus contract, daemon/watchdog status, and worker-result acceptance/rejection. Runtime 3 is calculation support only and must not own broker truth, ranking truth, selection truth, trade permission, execution, FileIO, or Board/Dossier rendering.
 
 `mt5/runtime_owners/runtime_5_deep_inspection_advisory_owner/AC_DeepInspectionOwner.mqh` is a retired compatibility wrapper only. It must not be treated as active Runtime 5 authority.
 
@@ -111,7 +113,7 @@ The current stable parent-folder contract is:
 ```text
 Aurora Core/<server>/<account>/Selection Desk/Groups/
 Aurora Core/<server>/<account>/Selection Desk/Global/
-Aurora Core/<server>/<account>/Selection Desk/Selection Index.txt
+Aurora Core/<server>/<account>/Selection Index.txt
 ```
 
 Ranking numbers, Top-N order, cycle IDs, and selection metadata belong inside child files and sibling index/metadata files, not in parent folder names.
@@ -150,7 +152,8 @@ Layer 2 = Market Open / Closed Truth
 Layer 3 = Symbol + Broker Specs Truth, including calculation mode/spec-validation direction
 Layer 4 = Market Watch Truth
 Layer 5 = Basic System Gate
-Layer 6+ = later cost/friction/scoring/ranking/selection work when explicitly implemented
+Layer 6-L10 = active Runtime 3 external-worker calculation-support outputs; inspection/scoring/classification only, not permission
+Layer 11-L19 = active/future external-worker calculation-support chain by current source index; not permission
 Layer 22 = future Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack, where DOM belongs later
 ```
 
