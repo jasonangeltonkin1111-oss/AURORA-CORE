@@ -90,7 +90,7 @@ def _replace_or_append_l18_block(result_text: str, lines: str) -> str:
     return before.rstrip() + "\n" + lines + (suffix + "\n" if suffix else "")
 
 
-def run_l18_after_l17(root: Path) -> L18PublishSummary:
+def run_l18_after_l17(root: Path, run_l19: bool = True) -> L18PublishSummary:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
     start_ns = time.perf_counter_ns()
@@ -106,7 +106,7 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "schema_name=aurora_worker_result_manifest",
             "schema_version=19",
             "worker_l18_append_status=appended_by_l18_dispatch",
-            "worker_l19_dispatch_policy=l18_dispatch_runs_l19_after_l18",
+            f"worker_l19_dispatch_policy={'l18_dispatch_runs_l19_after_l18' if run_l19 else 'l19_runtime_disabled'}",
             f"l18_status={summary.status}",
             f"l18_display_profile={_display_profile()}",
             f"l18_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
@@ -131,5 +131,6 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
-    run_l19_after_l18(root)
+    if run_l19:
+        run_l19_after_l18(root)
     return summary

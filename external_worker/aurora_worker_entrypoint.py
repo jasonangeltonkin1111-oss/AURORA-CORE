@@ -16,7 +16,6 @@ from aurora_worker_l15_dispatch import run_l15_after_l14
 from aurora_worker_l16_dispatch import run_l16_after_l15
 from aurora_worker_l17_dispatch import run_l17_after_l16
 from aurora_worker_l18_dispatch import run_l18_after_l17
-from aurora_worker_l19_dispatch import run_l19_after_l18
 
 SNAPSHOT_STABLE_REQUIRED_SECONDS = 2
 CALCULATION_CYCLE_SECONDS = 30
@@ -140,7 +139,7 @@ def _poll_snapshot(root: Path) -> Tuple[core.ValidationResult, Dict[str, str], L
     return core.validate_snapshot(WorkerPaths.from_root(root))
 
 
-def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root: Path, worker_mode: str, enable_l13_runtime: bool = ENABLE_L13_RUNTIME, enable_l14_runtime: bool = ENABLE_L14_RUNTIME, enable_l15_runtime: bool = ENABLE_L15_RUNTIME, enable_l16_runtime: bool = ENABLE_L16_RUNTIME, enable_l17_runtime: bool = ENABLE_L17_RUNTIME, enable_l18_runtime: bool = ENABLE_L18_RUNTIME) -> Tuple[int, core.ValidationResult]:
+def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root: Path, worker_mode: str, enable_l13_runtime: bool = ENABLE_L13_RUNTIME, enable_l14_runtime: bool = ENABLE_L14_RUNTIME, enable_l15_runtime: bool = ENABLE_L15_RUNTIME, enable_l16_runtime: bool = ENABLE_L16_RUNTIME, enable_l17_runtime: bool = ENABLE_L17_RUNTIME, enable_l18_runtime: bool = ENABLE_L18_RUNTIME, enable_l19_runtime: bool = ENABLE_L19_RUNTIME) -> Tuple[int, core.ValidationResult]:
     start_ns = time.perf_counter_ns()
     code, res = core.run_once(root, worker_mode)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
@@ -179,15 +178,14 @@ def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root: Path, worker_mode:
             core.gateway_record_exception(root, "l17_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
     if enable_l13_runtime and enable_l14_runtime and enable_l15_runtime and enable_l16_runtime and enable_l17_runtime and enable_l18_runtime:
         try:
-            run_l18_after_l17(root)
-            run_l19_after_l18(root)
+            run_l18_after_l17(root, run_l19=enable_l19_runtime)
         except Exception as exc:
             core.gateway_record_exception(root, "l18_dispatch_exception", exc, {"worker_mode": worker_mode, "worker_version": core.WORKER_VERSION})
     return code, res
 
 
 def _run_core_once_with_l11_l12_l13_l14_l15_l16_l17(root: Path, worker_mode: str, enable_l13_runtime: bool = ENABLE_L13_RUNTIME, enable_l14_runtime: bool = ENABLE_L14_RUNTIME, enable_l15_runtime: bool = ENABLE_L15_RUNTIME, enable_l16_runtime: bool = ENABLE_L16_RUNTIME, enable_l17_runtime: bool = ENABLE_L17_RUNTIME) -> Tuple[int, core.ValidationResult]:
-    return _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root, worker_mode, enable_l13_runtime, enable_l14_runtime, enable_l15_runtime, enable_l16_runtime, enable_l17_runtime, ENABLE_L18_RUNTIME)
+    return _run_core_once_with_l11_l12_l13_l14_l15_l16_l17_l18(root, worker_mode, enable_l13_runtime, enable_l14_runtime, enable_l15_runtime, enable_l16_runtime, enable_l17_runtime, ENABLE_L18_RUNTIME, ENABLE_L19_RUNTIME)
 
 
 def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float) -> int:
