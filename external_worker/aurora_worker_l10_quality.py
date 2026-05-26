@@ -35,12 +35,20 @@ class L10ResolvedTaxonomy:
 
     @property
     def selection_allowed(self) -> bool:
-        # Backward-compatible read alias only. New L10 outputs must use
-        # downstream_classification_eligible so Layer 10 never overclaims
-        # selection authority.
+        # L10 does not select symbols. This compatibility field means the
+        # classification is eligible for downstream selection layers to inspect.
         return self.downstream_classification_eligible
 
+    @property
+    def future_top5_copy_path(self) -> str:
+        return "pending_l11_rank"
+
+    @property
+    def future_top10_copy_path(self) -> str:
+        return "pending_l16_rank"
+
     def as_taxonomy_symbol_row(self) -> dict[str, str]:
+        downstream_text = "true" if self.downstream_classification_eligible else "false"
         return {
             "symbol": self.symbol,
             "canonical_symbol": self.canonical_symbol,
@@ -58,9 +66,12 @@ class L10ResolvedTaxonomy:
             "source_status": self.source_status,
             "block_reason": self.block_reason,
             "rank_allowed": "true" if self.rank_allowed else "false",
-            "downstream_classification_eligible": "true" if self.downstream_classification_eligible else "false",
+            "selection_allowed": downstream_text,
+            "downstream_classification_eligible": downstream_text,
             "dossier_source_path": self.dossier_source_path,
             "future_group_folder": self.future_group_folder,
+            "future_top5_copy_path": self.future_top5_copy_path,
+            "future_top10_copy_path": self.future_top10_copy_path,
             "reason": self.reason,
             "trade_permission": self.trade_permission,
         }
@@ -82,8 +93,8 @@ class L10QualitySummary:
 
     @property
     def selection_allowed_count(self) -> int:
-        # Backward-compatible read alias for older callers. Do not emit this
-        # as L10 schema truth.
+        # Compatibility count only. L10 still owns taxonomy eligibility, not
+        # downstream selection runtime.
         return self.downstream_classification_eligible_count
 
 

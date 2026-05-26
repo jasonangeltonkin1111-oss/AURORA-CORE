@@ -20,13 +20,17 @@ class L10SymbolPathPlan:
     downstream_classification_eligible: bool
     dossier_source_path: str
     future_group_folder: str
+    future_top5_copy_path: str
+    future_top10_copy_path: str
     reason: str
 
     @property
     def selection_allowed(self) -> bool:
+        # CSV compatibility field only. L10 does not own selection runtime.
         return self.downstream_classification_eligible
 
     def as_symbol_path_index_row(self) -> dict[str, str]:
+        downstream_text = "true" if self.downstream_classification_eligible else "false"
         return {
             "symbol": self.symbol,
             "canonical_symbol": self.canonical_symbol,
@@ -36,9 +40,12 @@ class L10SymbolPathPlan:
             "ranking_group": self.ranking_group,
             "taxonomy_state": self.taxonomy_state,
             "rank_allowed": "true" if self.rank_allowed else "false",
-            "downstream_classification_eligible": "true" if self.downstream_classification_eligible else "false",
+            "selection_allowed": downstream_text,
+            "downstream_classification_eligible": downstream_text,
             "dossier_source_path": self.dossier_source_path,
             "future_group_folder": self.future_group_folder,
+            "future_top5_copy_path": self.future_top5_copy_path,
+            "future_top10_copy_path": self.future_top10_copy_path,
             "reason": self.reason,
         }
 
@@ -67,6 +74,8 @@ def l10_build_symbol_path_plan(row: L10ResolvedTaxonomy) -> L10SymbolPathPlan:
         downstream_classification_eligible=row.downstream_classification_eligible,
         dossier_source_path=_text(row.dossier_source_path),
         future_group_folder=_future_group_path_for(row),
+        future_top5_copy_path=row.future_top5_copy_path,
+        future_top10_copy_path=row.future_top10_copy_path,
         reason=row.reason,
     )
 
@@ -84,22 +93,23 @@ def l10_symbol_path_index_text(plans: Iterable[L10SymbolPathPlan], max_rows: int
     lines = [
         "SYMBOL PATH INDEX",
         "----------------------------------------",
-        "Meaning: L10 taxonomy roadmap only; group folder hints are pending downstream processing and are not proof that copied Dossiers exist.",
-        "Runtime Permission: FALSE",
+        "Meaning: L10 taxonomy roadmap only; path hints are not proof that copied Dossiers, Top-N files, selection, signals, or execution exist.",
+        "Layer Permission: selection_runtime=false; trade_permission=false",
         "",
     ]
     for plan in materialized[:max_rows]:
         lines.extend(
             [
                 plan.symbol,
-                f"Taxonomy:          {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
-                f"State:             {plan.taxonomy_state}",
-                f"Rank Allowed:      {'TRUE' if plan.rank_allowed else 'FALSE'}",
-                f"Downstream Classification Eligible: {'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
-                f"Dossier Source:    {plan.dossier_source_path}",
-                f"Future Group Path: {plan.future_group_folder}",
-                f"Reason:            {plan.reason}",
-                "Runtime Permission: FALSE",
+                f"Taxonomy:        {plan.asset_class} > {plan.market_group} > {plan.market_segment} > {plan.ranking_group}",
+                f"State:           {plan.taxonomy_state}",
+                f"Rank Eligible:   {'TRUE' if plan.rank_allowed else 'FALSE'}",
+                f"Class Eligible:  {'TRUE' if plan.downstream_classification_eligible else 'FALSE'}",
+                f"Dossier Source:  {plan.dossier_source_path}",
+                f"Group Hint:      {plan.future_group_folder}",
+                f"L11 Top5 Hint:   {plan.future_top5_copy_path}",
+                f"L16 Top10 Hint:  {plan.future_top10_copy_path}",
+                f"Reason:          {plan.reason}",
                 "",
             ]
         )

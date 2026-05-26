@@ -7,16 +7,11 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 
 ## Active files
 
-- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes. It invokes L6, L7, L8, L9, L10, and render-index support during the core worker pass.
+- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes.
 - `aurora_worker_io.py` — active worker-side IO helper source used by worker modules. Owns bounded read retry and durable atomic text writes for worker outputs only.
 - `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
-- `aurora_worker_l6_friction.py` — Layer 6 cost / friction ranking support. Must consume exported L6 primitives only and must not own trade permission, selection, execution, or broker truth.
-- `aurora_worker_l7_session.py` — Layer 7 session relevance ranking support. Must consume exported L7 primitives only and must not decide open/closed truth, hard-gate symbols, select candidates, permit, alert, or execute.
-- `aurora_worker_l8_movement.py` — Layer 8 movement / range ranking support. Must consume Layer 5 pass-set metadata plus Runtime 1 Shared OHLC Priority Window files only. Must not call MT5, call `CopyRates`, poll brokers, create a private OHLC cache, infer direction, select candidates, permit, alert, or execute. OHLC window freshness must be proved or visibly degraded before L8 movement scores are accepted.
-- `aurora_worker_l9_structure.py` — Layer 9 structure / location geometry support. Must consume exported L9 primitives and shared surface context only. Must not create direction, entries, selection, permission, execution, or deep evidence authority.
-- `aurora_worker_l10.py` / `aurora_worker_l10_source.py` — Layer 10 taxonomy / ranking_group classification support. Must not convert taxonomy into trade permission, selection, execution, or signal authority.
-- `aurora_worker_render_index.py` — render-index support for worker outputs. Must index/read worker sidecars for render surfaces only and must not calculate layer scores, rank, select, permit, alert, or execute.
-- `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
+- `aurora_worker_l10.py` / `aurora_worker_l10_source.py` / `aurora_worker_l10_schema.py` / `aurora_worker_l10_normalize.py` / `aurora_worker_l10_universe_parser.py` / `aurora_worker_l10_matcher.py` / `aurora_worker_l10_quality.py` / `aurora_worker_l10_group_builder.py` / `aurora_worker_l10_path_planner.py` / `aurora_worker_l10_publisher.py` — Layer 10 taxonomy / ranking_group classification support. Must consume Runtime 2 exported lookup rows and broker snapshot symbols, publish taxonomy rows, ranking_group membership/counts, review/unknown/conflict ledgers, and symbol path indexes. Must not rank symbols, build Top 5, build Global Top 10, copy Dossiers, select candidates, permit, alert, execute, or validate an edge.
+- `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must consume L10 taxonomy outputs and L6-L9 render-indexed surface outputs. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l12.py` / `aurora_worker_l12_dispatch.py` — Layer 12 ranking_group heat / quality support. Must consume L11 outputs and must not build selected groups, candidate pools, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l14.py` / `aurora_worker_l14_dispatch.py` — Layer 14 ranking_group leader candidate-pool support. Must consume L13 selected groups and L11 Top 5, preserving L12/L13 context. Must not run correlation, build Global Top 10, permit, alert, or execute.
@@ -35,12 +30,7 @@ Current source chain:
 
 ```text
 core snapshot validation
--> L6 cost / friction ranking
--> L7 session relevance ranking
--> L8 movement / range ranking
--> L9 structure / location geometry
--> L10 taxonomy / ranking_group classification
--> render index
+-> L10 taxonomy / ranking_group classification when Runtime 2 export is available
 -> L11 symbol ranking inside ranking_group
 -> L12 ranking_group heat / quality
 -> L13 dynamic ranking_group selection
@@ -54,15 +44,15 @@ core snapshot validation
 
 This chain remains calculation/file-decoration support. It is not trading runtime authority.
 
-## Shared OHLC rule for L8+
+## L10 taxonomy rule
+
+L10 may publish `asset_class`, `market_group`, `market_segment`, `ranking_group`, classification source/status, review/unknown/conflict ledgers, group membership counts, and future path hints. L10 must not create Top 5 files, Top 10 files, candidate pools, final Selection Desk baskets, copied Dossiers, alerts, signals, or permissions. Generated Runtime 2 lookup presence is not runtime proof; result files and MT5 readback must prove runtime behavior separately.
+
+## Shared OHLC rule for L15+
 
 Shared OHLC Raw Storage belongs to Runtime 1. Worker modules may read shared raw OHLC files only when a layer owns that calculation/display request. They must not call MT5, fetch broker history, or create private OHLC caches.
 
-L8 may read Runtime 1 Shared OHLC Priority Window files for movement/range ranking only. Missing, stale, unreadable, or insufficient OHLC must degrade visibly rather than fake accepted movement quality.
-
-If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted movement, fake correlation, fake L18 completion, or fake L19 structure completion.
-
-L15 may read shared OHLC for candidate-pool correlation/diversity only.
+If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted correlation, fake L18 completion, or fake L19 structure completion.
 
 L16 must not read raw OHLC or recompute correlation. L16 consumes L15 correlation/diversity outputs.
 
@@ -116,7 +106,7 @@ A scheduled task existing is not proof of watchdog recovery. `operator_cmd_requi
 - No V2/shadow repair scripts.
 - No Git-tracked emergency backups treated as source.
 - No generated build/dist/package artifact treated as source truth.
-- No packaged executable readiness claim after source changes unless package rebuild and runtime proof exists.
+- No packaged executable readiness claim after source changes unless package rebuild and runtime proof exist.
 - No PowerShell calls inside the hot shared-daemon loop.
 - No trade permission or execution authority.
 - No broker polling from Python unless explicitly scoped later and still validated by MT5.

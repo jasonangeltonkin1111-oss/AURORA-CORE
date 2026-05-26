@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Tuple
 
-from aurora_worker_io import read_text
+from aurora_worker_io import payload_checksum, read_kv, read_text
 
 
 L10_RUNTIME2_INPUT_NAME = "l10_runtime2_universe_rows.psv"
@@ -65,6 +65,23 @@ def l10_runtime2_manifest_path(outbox_root: Path) -> Path:
     return outbox_root / "Layers" / "Layer_10_Taxonomy_Classification" / L10_RUNTIME2_INPUT_MANIFEST_NAME
 
 
+def _runtime2_payload_rows(input_text: str) -> Tuple[str, ...]:
+    rows = tuple(line for line in input_text.replace("\r\n", "\n").splitlines() if line.strip())
+    if rows and rows[0].lower().startswith("server|broker_file|broker_symbol|"):
+        rows = rows[1:]
+    return rows
+
+
+def _manifest_int(manifest: dict[str, str], key: str) -> int | None:
+    value = str(manifest.get(key, "")).strip()
+    if not value:
+        return None
+    try:
+        return int(float(value))
+    except ValueError:
+        return None
+
+
 def l10_load_runtime2_rows_if_available(outbox_root: Path) -> Tuple[Tuple[str, ...], str, str, str]:
     input_path = l10_runtime2_input_path(outbox_root)
     manifest_path = l10_runtime2_manifest_path(outbox_root)
@@ -72,13 +89,27 @@ def l10_load_runtime2_rows_if_available(outbox_root: Path) -> Tuple[Tuple[str, .
         return tuple(), str(input_path), "pending", "missing_l10_runtime2_universe_rows_input"
     if not manifest_path.exists():
         return tuple(), str(input_path), "pending", "missing_l10_runtime2_universe_rows_manifest"
+
     text = read_text(input_path)
-    rows = tuple(line for line in text.replace("\r\n", "\n").splitlines() if line.strip())
-    if rows and rows[0].lower().startswith("server|broker_file|broker_symbol|"):
-        rows = rows[1:]
+    rows = _runtime2_payload_rows(text)
     if not rows:
         return tuple(), str(input_path), "pending", "l10_runtime2_universe_rows_input_empty"
-    return rows, str(input_path), "available", "l10_runtime2_universe_rows_loaded"
+
+    manifest = read_kv(manifest_path)
+    expected_rows = _manifest_int(manifest, "row_count")
+    if expected_rows is None:
+        return tuple(), str(input_path), "pending", "missing_l10_runtime2_manifest_row_count"
+    if expected_rows != len(rows):
+        return tuple(), str(input_path), "pending", f"l10_runtime2_row_count_mismatch manifest={expected_rows} actual={len(rows)}"
+
+    expected_checksum = str(manifest.get("payload_checksum", "")).strip()
+    if not expected_checksum:
+        return tuple(), str(input_path), "pending", "missing_l10_runtime2_manifest_payload_checksum"
+    actual_checksum = payload_checksum(rows)
+    if actual_checksum != expected_checksum:
+        return tuple(), str(input_path), "pending", f"l10_runtime2_payload_checksum_mismatch manifest={expected_checksum} actual={actual_checksum}"
+
+    return rows, str(input_path), "available", "l10_runtime2_universe_rows_manifest_verified"
 
 
 def l10_build_source_bundle(outbox_root: Path, snapshot_rows: Iterable[str]) -> L10SourceBundle:
@@ -105,5 +136,5 @@ def l10_build_source_bundle(outbox_root: Path, snapshot_rows: Iterable[str]) -> 
         runtime2_rows=runtime2_rows,
         runtime2_input_path=input_path,
         status="available",
-        reason="l10_source_bundle_ready",
+        reason="l10_source_bundle_ready_manifest_verified",
     )

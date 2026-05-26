@@ -15,6 +15,8 @@ from aurora_worker_l10_schema import (
     L10_AUTHORITY,
     L10_BLOCKED_SYMBOLS_NAME,
     L10_CONFLICT_SYMBOLS_NAME,
+    L10_DUPLICATE_UNIVERSE_KEY_FIELDS,
+    L10_DUPLICATE_UNIVERSE_KEYS_NAME,
     L10_GROUPS_FOLDER,
     L10_INVALID_UNIVERSE_ROWS_NAME,
     L10_LAYER_FOLDER,
@@ -67,6 +69,7 @@ class L10PublishSummary:
     symbol_path_index_count: int = 0
     group_member_csv_count: int = 0
     invalid_universe_row_count: int = 0
+    duplicate_universe_key_count: int = 0
     accepted_strict_count: int = 0
     accepted_public_research_count: int = 0
     review_required_count: int = 0
@@ -81,6 +84,8 @@ class L10PublishSummary:
     active_with_review_group_count: int = 0
     review_only_group_count: int = 0
     write_failed_count: int = 0
+    source_payload_checksum: str = "not_available"
+    reused_existing_outputs: bool = False
     taxonomy_symbols_path: str = "not_available"
     ranking_groups_path: str = "not_available"
     symbol_path_index_path: str = "not_available"
@@ -164,9 +169,13 @@ def _summary_text(
     group_summary,
     symbol_path_count: int,
     invalid_count: int,
+    duplicate_key_count: int,
     write_failed_count: int,
     symbol_sidecar_count: int,
     group_member_csv_count: int,
+    status: str,
+    reason: str,
+    source_payload_checksum: str,
 ) -> str:
     return "\n".join(
         [
@@ -176,6 +185,10 @@ def _summary_text(
             f"layer_name={L10_LAYER_NAME}",
             f"owner={L10_OWNER}",
             f"authority={L10_AUTHORITY}",
+            f"status={status}",
+            f"reason={reason}",
+            f"source_payload_checksum={source_payload_checksum}",
+            "reused_existing_outputs=false",
             f"symbol_count={quality.total_symbols}",
             f"accepted_strict_count={quality.accepted_strict_count}",
             f"accepted_public_research_count={quality.accepted_public_research_count}",
@@ -196,6 +209,7 @@ def _summary_text(
             f"symbol_sidecar_count={symbol_sidecar_count}",
             f"group_member_csv_count={group_member_csv_count}",
             f"invalid_universe_row_count={invalid_count}",
+            f"duplicate_universe_key_count={duplicate_key_count}",
             f"write_failed_count={write_failed_count}",
             "selection_runtime=false",
             "trade_permission=false",
@@ -278,6 +292,8 @@ def publish_l10_taxonomy_outputs(
     ranking_groups: Iterable[L10RankingGroupSummary],
     symbol_path_plans: Iterable[L10SymbolPathPlan],
     invalid_universe_rows: Iterable[L10InvalidUniverseRow] = tuple(),
+    duplicate_universe_key_rows: Iterable[dict[str, str]] = tuple(),
+    source_payload_checksum: str = "not_available",
 ) -> L10PublishSummary:
     layer_dir = outbox_root / "Layers" / L10_LAYER_FOLDER
     groups_dir = layer_dir / L10_GROUPS_FOLDER
@@ -290,6 +306,7 @@ def publish_l10_taxonomy_outputs(
     groups = tuple(ranking_groups)
     plans = tuple(symbol_path_plans)
     invalid_rows = tuple(invalid_universe_rows)
+    duplicate_key_rows = tuple(duplicate_universe_key_rows)
     quality = l10_quality_summary(symbols)
     group_summary = l10_group_build_summary(groups)
 
@@ -308,6 +325,7 @@ def publish_l10_taxonomy_outputs(
     blocked_csv = _csv_text(l10_rows_for_state(symbols, "BLOCKED"), L10_TAXONOMY_SYMBOL_FIELDS)
     missing_dossier_csv = _csv_text(l10_rows_for_state(symbols, "MISSING_DOSSIER_SOURCE"), L10_TAXONOMY_SYMBOL_FIELDS)
     invalid_csv = _csv_text(l10_invalid_rows_as_dicts(invalid_rows), ("row_index", "reason", "field_count", "raw_row"))
+    duplicate_keys_csv = _csv_text(duplicate_key_rows, L10_DUPLICATE_UNIVERSE_KEY_FIELDS)
 
     failed_paths: list[Path] = []
     _write(layer_dir / L10_TAXONOMY_SYMBOLS_NAME, taxonomy_csv, failed_paths)
@@ -323,6 +341,7 @@ def publish_l10_taxonomy_outputs(
     _write(layer_dir / L10_BLOCKED_SYMBOLS_NAME, blocked_csv, failed_paths)
     _write(layer_dir / L10_MISSING_DOSSIER_SOURCE_NAME, missing_dossier_csv, failed_paths)
     _write(layer_dir / L10_INVALID_UNIVERSE_ROWS_NAME, invalid_csv, failed_paths)
+    _write(layer_dir / L10_DUPLICATE_UNIVERSE_KEYS_NAME, duplicate_keys_csv, failed_paths)
 
     group_member_csv_count = 0
     for group in groups:
@@ -337,11 +356,26 @@ def publish_l10_taxonomy_outputs(
         _write(symbol_taxonomy_dir / f"{safe_file_slug(row.symbol)}.txt", _symbol_taxonomy_text(row), failed_paths)
         symbol_sidecar_count += 1
 
-    summary_text = _summary_text(quality, group_summary, len(plans), len(invalid_rows), len(failed_paths), symbol_sidecar_count, group_member_csv_count)
-    _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
-
     status = "accepted" if not failed_paths else "write_degraded"
     reason = "l10_taxonomy_outputs_published" if not failed_paths else "one_or_more_l10_outputs_failed_atomic_write"
+    summary_text = _summary_text(
+        quality,
+        group_summary,
+        len(plans),
+        len(invalid_rows),
+        len(duplicate_key_rows),
+        len(failed_paths),
+        symbol_sidecar_count,
+        group_member_csv_count,
+        status,
+        reason,
+        source_payload_checksum,
+    )
+    _write(layer_dir / L10_SUMMARY_NAME, summary_text, failed_paths)
+
+    if failed_paths and status == "accepted":
+        status = "write_degraded"
+        reason = "one_or_more_l10_outputs_failed_atomic_write"
     return L10PublishSummary(
         status=status,
         reason=reason,
@@ -350,6 +384,7 @@ def publish_l10_taxonomy_outputs(
         symbol_path_index_count=len(plans),
         group_member_csv_count=group_member_csv_count,
         invalid_universe_row_count=len(invalid_rows),
+        duplicate_universe_key_count=len(duplicate_key_rows),
         accepted_strict_count=quality.accepted_strict_count,
         accepted_public_research_count=quality.accepted_public_research_count,
         review_required_count=quality.review_required_count,
@@ -364,6 +399,8 @@ def publish_l10_taxonomy_outputs(
         active_with_review_group_count=group_summary.active_with_review_groups,
         review_only_group_count=group_summary.review_only_groups,
         write_failed_count=len(failed_paths),
+        source_payload_checksum=source_payload_checksum,
+        reused_existing_outputs=False,
         taxonomy_symbols_path=str(layer_dir / L10_TAXONOMY_SYMBOLS_NAME),
         ranking_groups_path=str(layer_dir / L10_RANKING_GROUPS_NAME),
         symbol_path_index_path=str(layer_dir / L10_SYMBOL_PATH_INDEX_CSV_NAME),
