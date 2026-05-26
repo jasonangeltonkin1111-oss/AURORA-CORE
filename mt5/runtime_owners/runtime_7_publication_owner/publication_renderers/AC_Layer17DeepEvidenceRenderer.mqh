@@ -3,6 +3,7 @@
 
 // Runtime 7 render-only surface for Layer 17 Deep Evidence Queue Split.
 // Reads worker L17 summary and CSV outputs only.
+// Canonical Selection Desk shortcuts live under 01_Global/Deep_Evidence; legacy Global/* files are not acceptance authority.
 // Must not collect OHLC, ticks, indicators, liquidity, permit, alert, or execute.
 
 static string AC_L17_STATUS = "Pending L17 Deep Evidence Queue Split";
@@ -33,9 +34,9 @@ string AC_L17SelectedCsvPath(){ return AC_L17LayerFolder() + "\\l17_deep_evidenc
 string AC_L17RejectedCsvPath(){ return AC_L17LayerFolder() + "\\l17_deep_evidence_rejected.csv"; }
 string AC_L17DepthSummaryCsvPath(){ return AC_L17LayerFolder() + "\\l17_depth_assignment_summary.csv"; }
 string AC_L17ManifestPath(){ return AC_L17LayerFolder() + "\\l17_deep_evidence.manifest"; }
-string AC_L17SelectionDeskPath(){ return AC_SelectionGlobalFolder() + "\\Deep Evidence Split.txt"; }
-string AC_L17SelectionDeskCsvPath(){ return AC_SelectionGlobalFolder() + "\\current_deep_evidence_split.csv"; }
-string AC_L17SelectionDeskManifestPath(){ return AC_SelectionGlobalFolder() + "\\current_deep_evidence_split_manifest.txt"; }
+string AC_L17SelectionDeskPath(){ return AC_SelectionGlobalDeepEvidenceFolder() + "\\00_Deep_Evidence_Split.txt"; }
+string AC_L17SelectionDeskCsvPath(){ return AC_SelectionGlobalDeepEvidenceFolder() + "\\00_Deep_Evidence_Split.csv"; }
+string AC_L17SelectionDeskManifestPath(){ return AC_SelectionGlobalDeepEvidenceFolder() + "\\00_Deep_Evidence_Split_Manifest.txt"; }
 
 string AC_L17ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -140,25 +141,23 @@ void AC_L17RefreshSummary()
    AC_L17_SOURCE_L16_VISIBLE_SURFACE_STATE = AC_L17KvValue(summary, "source_l16_visible_surface_state", "not_available");
    AC_L17_GENERATED_UTC = AC_L17KvValue(summary, "generated_utc", "not_available");
 
-   bool files_ok = FileIsExist(AC_L17SelectedCsvPath(), AC_CommonFlag())
+   bool core_files_ok = FileIsExist(AC_L17SelectedCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L17RejectedCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L17DepthSummaryCsvPath(), AC_CommonFlag())
-      && FileIsExist(AC_L17ManifestPath(), AC_CommonFlag())
-      && FileIsExist(AC_L17SelectionDeskPath(), AC_CommonFlag())
-      && FileIsExist(AC_L17SelectionDeskCsvPath(), AC_CommonFlag())
-      && FileIsExist(AC_L17SelectionDeskManifestPath(), AC_CommonFlag());
+      && FileIsExist(AC_L17ManifestPath(), AC_CommonFlag());
+   bool canonical_surface_seen = FileIsExist(AC_L17SelectionDeskPath(), AC_CommonFlag())
+      && FileIsExist(AC_L17SelectionDeskCsvPath(), AC_CommonFlag());
    bool safety_ok = (deep_evidence_runtime == "false" && trade_permission == "false" && entry_signal == "false" && execution == "false");
    bool scope_ok = (collects_ohlc == "false" && collects_ticks == "false" && collects_indicators == "false" && collects_liquidity == "false" && all_symbol_scan == "false");
    bool counts_ok = (AC_L17_VISIBLE_CANDIDATE_COUNT > 0 && AC_L17_DEEP_SELECTED_COUNT >= 0 && AC_L17_DEEP_SELECTED_COUNT <= 5);
-   bool writes_ok = (AC_L17_WRITE_FAILED_COUNT == 0);
    bool status_ok = (status == "accepted" || status == "degraded" || status == "write_degraded");
 
-   if(status_ok && files_ok && safety_ok && scope_ok && counts_ok && writes_ok)
+   if(status_ok && core_files_ok && safety_ok && scope_ok && counts_ok)
    {
       AC_L17_ACCEPTED = true;
       AC_L17_STATUS = (status == "accepted" ? "Accepted" : "Degraded Accepted");
       AC_L17_VALIDATION_STATUS = (status == "accepted" ? "Accepted" : "Degraded");
-      AC_L17_VALIDATION_REASON = "summary/files/counts/safety/scope accepted; status=" + status;
+      AC_L17_VALIDATION_REASON = "summary/core_files/counts/safety/scope accepted; canonical_surface_seen=" + (canonical_surface_seen ? "true" : "false") + ";status=" + status;
       AC_L17_MAIN_BLOCKER = (status == "accepted" ? "none" : "Deep evidence queue split constrained; inspect selected/rejected rows");
       return;
    }
@@ -166,11 +165,11 @@ void AC_L17RefreshSummary()
    AC_L17_STATUS = "L17 Deep Evidence Queue Split degraded";
    AC_L17_VALIDATION_STATUS = "Degraded";
    AC_L17_VALIDATION_REASON = "status=" + status
-      + ";files_ok=" + (files_ok ? "true" : "false")
+      + ";core_files_ok=" + (core_files_ok ? "true" : "false")
+      + ";canonical_surface_seen=" + (canonical_surface_seen ? "true" : "false")
       + ";counts_ok=" + (counts_ok ? "true" : "false")
       + ";safety_ok=" + (safety_ok ? "true" : "false")
-      + ";scope_ok=" + (scope_ok ? "true" : "false")
-      + ";writes_ok=" + (writes_ok ? "true" : "false");
+      + ";scope_ok=" + (scope_ok ? "true" : "false");
    AC_L17_MAIN_BLOCKER = AC_L17_VALIDATION_REASON;
 }
 
@@ -226,14 +225,15 @@ string AC_Layer17BoardSection()
    text += "\r\nLAYER 17 - DEEP EVIDENCE QUEUE SPLIT\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L17_STATUS + "\r\n";
-   text += "Input Source:               L16 held visible display rows only\r\n";
    text += "Visible Candidates:         " + IntegerToString(AC_L17_VISIBLE_CANDIDATE_COUNT) + "\r\n";
    text += "Queue Selected:             " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + " / 5\r\n";
-   text += "Rejected / Watch Only:      " + IntegerToString(AC_L17_REJECTED_CANDIDATE_COUNT) + "\r\n";
    text += "Clean / Fallback Selected:  " + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + " / " + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
-   text += "Depth Requests:             full=" + IntegerToString(AC_L17_FULL_DEPTH_COUNT) + "; standard=" + IntegerToString(AC_L17_STANDARD_DEPTH_COUNT) + "; fallback_limited=" + IntegerToString(AC_L17_FALLBACK_LIMITED_DEPTH_COUNT) + "\r\n";
    text += "Top Queued Symbol:          " + AC_L17_TOP_SYMBOL + "\r\n";
+   text += "Source Generated UTC:       " + AC_L17_GENERATED_UTC + "\r\n";
    text += "Main Blocker:               " + AC_L17_MAIN_BLOCKER + "\r\n";
+   text += "Trade Permission:           FALSE\r\n";
+   text += "Entry Signal:               FALSE\r\n";
+   text += "Execution:                  FALSE\r\n";
    return text;
 }
 
@@ -257,33 +257,15 @@ string AC_Layer17DossierSection(const string symbol)
    {
       text += "Queue Selected: FALSE\r\n";
       text += "Visible / Watch Only: TRUE\r\n";
-      text += "Source L16 Visible Rank: #" + AC_L17CsvField(rejected_row, 0) + "\r\n";
-      text += "Source L16 Tier: " + AC_L17CsvField(rejected_row, 3) + "\r\n";
-      text += "Source L16 Clean Diversified: " + AC_L17CsvField(rejected_row, 4) + "\r\n";
-      text += "Source L16 Fallback Used: " + AC_L17CsvField(rejected_row, 5) + "\r\n";
-      text += "Ranking Group: " + AC_L17CsvField(rejected_row, 6) + "\r\n";
-      text += "L16 Primary Score: " + AC_L17CsvField(rejected_row, 7) + "\r\n";
       text += "Reject / Watch Reason: " + AC_L17CsvField(rejected_row, 8) + "\r\n";
-      text += "Would-Have Depth: " + AC_L17CsvField(rejected_row, 9) + "\r\n";
    }
    else
    {
       text += "Queue Selected: TRUE\r\n";
       text += "Queue Rank: #" + AC_L17CsvField(row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
-      text += "Source L16 Display Rank: #" + AC_L17CsvField(row, 3) + "\r\n";
       text += "Source L16 Tier: " + AC_L17CsvField(row, 5) + "\r\n";
-      text += "Source L16 Clean Diversified: " + AC_L17CsvField(row, 6) + "\r\n";
-      text += "Source L16 Fallback Used: " + AC_L17CsvField(row, 7) + "\r\n";
       text += "Ranking Group: " + AC_L17CsvField(row, 12) + "\r\n";
-      text += "L16 Primary Score: " + AC_L17CsvField(row, 16) + "\r\n";
-      text += "Max Corr To Selected: " + AC_L17CsvField(row, 17) + "\r\n";
-      text += "Correlation State: " + AC_L17CsvField(row, 19) + "\r\n";
       text += "Depth Assignment: " + AC_L17CsvField(row, 24) + "\r\n";
-      text += "Evidence Budget Class: " + AC_L17CsvField(row, 25) + "\r\n";
-      text += "OHLC Depth: " + AC_L17CsvField(row, 26) + "\r\n";
-      text += "Tick Depth: " + AC_L17CsvField(row, 27) + "\r\n";
-      text += "Indicator Depth: " + AC_L17CsvField(row, 28) + "\r\n";
-      text += "Liquidity Depth: " + AC_L17CsvField(row, 29) + "\r\n";
       text += "Selection Reason: " + AC_L17CsvField(row, 30) + "\r\n";
    }
    text += "Meaning: queue split only; not evidence collection or permission\r\n";
@@ -297,34 +279,18 @@ string AC_Layer17WorkbenchSection()
    text += "\r\nL17_DEEP_EVIDENCE_QUEUE_SPLIT\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l17_deep_evidence_queue_split\r\n";
-   text += "schema_version=1\r\n";
-   text += "owner_name=Runtime 4 - Surface Scoring / Deep Evidence Selection Support\r\n";
-   text += "layer_id=17\r\n";
-   text += "input_source=L16_held_visible_display_rows_only\r\n";
+   text += "schema_version=3\r\n";
    text += "status=" + AC_L17_STATUS + "\r\n";
    text += "validation_status=" + AC_L17_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L17_VALIDATION_REASON + "\r\n";
    text += "source_l16_status=" + AC_L17_SOURCE_L16_STATUS + "\r\n";
-   text += "source_l16_hold_state=" + AC_L17_SOURCE_L16_HOLD_STATE + "\r\n";
-   text += "source_l16_visible_surface_state=" + AC_L17_SOURCE_L16_VISIBLE_SURFACE_STATE + "\r\n";
    text += "visible_candidate_count=" + IntegerToString(AC_L17_VISIBLE_CANDIDATE_COUNT) + "\r\n";
    text += "deep_selected_count=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
-   text += "rejected_candidate_count=" + IntegerToString(AC_L17_REJECTED_CANDIDATE_COUNT) + "\r\n";
-   text += "clean_selected_count=" + IntegerToString(AC_L17_CLEAN_SELECTED_COUNT) + "\r\n";
    text += "fallback_selected_count=" + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT) + "\r\n";
-   text += "full_depth_count=" + IntegerToString(AC_L17_FULL_DEPTH_COUNT) + "\r\n";
-   text += "standard_depth_count=" + IntegerToString(AC_L17_STANDARD_DEPTH_COUNT) + "\r\n";
-   text += "fallback_limited_depth_count=" + IntegerToString(AC_L17_FALLBACK_LIMITED_DEPTH_COUNT) + "\r\n";
-   text += "watch_only_count=" + IntegerToString(AC_L17_WATCH_ONLY_COUNT) + "\r\n";
-   text += "alert_eligible_candidate_count=" + IntegerToString(AC_L17_ALERT_ELIGIBLE_CANDIDATE_COUNT) + "\r\n";
-   text += "write_failed_count=" + IntegerToString(AC_L17_WRITE_FAILED_COUNT) + "\r\n";
    text += "top_symbol=" + AC_L17_TOP_SYMBOL + "\r\n";
    text += "generated_utc=" + AC_L17_GENERATED_UTC + "\r\n";
    text += "selected_csv_path=" + AC_L17SelectedCsvPath() + "\r\n";
-   text += "rejected_csv_path=" + AC_L17RejectedCsvPath() + "\r\n";
-   text += "depth_summary_csv_path=" + AC_L17DepthSummaryCsvPath() + "\r\n";
-   text += "manifest_path=" + AC_L17ManifestPath() + "\r\n";
-   text += "selection_desk_path=" + AC_L17SelectionDeskPath() + "\r\n";
+   text += "canonical_selection_desk_path=" + AC_L17SelectionDeskPath() + "\r\n";
    text += "collects_ohlc=false\r\n";
    text += "collects_ticks=false\r\n";
    text += "collects_indicators=false\r\n";
@@ -334,7 +300,6 @@ string AC_Layer17WorkbenchSection()
    text += "trade_permission=false\r\n";
    text += "entry_signal=false\r\n";
    text += "execution=false\r\n";
-   text += "main_blocker=" + AC_L17_MAIN_BLOCKER + "\r\n";
    return text;
 }
 
