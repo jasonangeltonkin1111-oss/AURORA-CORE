@@ -14,8 +14,8 @@ It does not replace:
 
 ```text
 README.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
 ```
 
@@ -77,11 +77,11 @@ Every serious run must first read:
 
 ```text
 README.md
+control/02_MASTER_REPO_FILE_INDEX.md
+control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-control/01_CONTROL_GOVERNANCE.md
-docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md
+relevant top-level folder index
+relevant real content/source file
 ```
 
 Then read the relevant guidebook, blueprint, governance contract, research file, and active MT5 source owner files.
@@ -93,12 +93,12 @@ No serious run may proceed from memory alone.
 ## 3. Current Source-of-Truth Order
 
 ```text
-1. Current active MT5 source files for implementation truth
+1. Current active MT5 source files and active external-worker source files for implementation truth
 2. Runtime/generated file evidence supplied by the user for observed behavior
 3. README.md for current repo-level direction
-4. control/01_CONTROL_GOVERNANCE.md for current navigation and contradiction prevention
-5. control/01_CONTROL_GOVERNANCE.md for work routing
-6. control/01_CONTROL_GOVERNANCE.md for decision/evidence gates
+4. control/02_MASTER_REPO_FILE_INDEX.md for current repo map and startup path
+5. control/00_CONTROL_INDEX.md for active control router
+6. control/01_CONTROL_GOVERNANCE.md for governance, contradiction handling, and evidence gates
 7. Active docs/ guidebooks for doctrine
 8. Active blueprint/ contracts for structure
 9. governance/ schemas and ledgers
