@@ -2,7 +2,7 @@
 #define AC_LAYER14_CANDIDATE_POOL_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 14 Ranking Group Leader Candidate Pool.
-// Reads worker L14 summary and canonical layer summary index outputs only.
+// Reads worker L14 summary and stable Selection Desk group outputs only.
 // Must not diversify, run correlation, build Global Top 10, permit, alert, or execute.
 
 static string AC_L14_STATUS = "Pending L14 candidate pool";
@@ -32,9 +32,8 @@ string AC_L14LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\
 string AC_L14SummaryPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool_summary.txt"; }
 string AC_L14CandidateCsvPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool.csv"; }
 string AC_L14CandidateManifestPath(){ return AC_L14LayerFolder() + "\\l14_candidate_pool.manifest"; }
-string AC_L14CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L14_Candidate_Pool"; }
-string AC_L14SelectionDeskPath(){ return AC_L14CanonicalSummaryFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.txt"; }
-string AC_L14SelectionDeskCsvPath(){ return AC_L14CanonicalSummaryFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.csv"; }
+string AC_L14SelectionDeskPath(){ return AC_SelectionGroupsFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.txt"; }
+string AC_L14SelectionDeskCsvPath(){ return AC_SelectionGroupsFolder() + "\\00_Ranking_Group_Leader_Candidate_Pool.csv"; }
 
 string AC_L14ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -159,7 +158,7 @@ void AC_L14RefreshSummary()
       AC_L14_ACCEPTED = true;
       AC_L14_STATUS = AC_L14RenderStatusLabel();
       AC_L14_VALIDATION_STATUS = (AC_L14_QUALITY_STATE == "accepted_clean") ? "Accepted" : "AcceptedWithReview";
-      AC_L14_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission accepted;quality_state=" + AC_L14_QUALITY_STATE;
+      AC_L14_VALIDATION_REASON = "summary/files/counts/stable_selection_desk_group_outputs/permission accepted;quality_state=" + AC_L14_QUALITY_STATE;
       AC_L14_MAIN_BLOCKER = (AC_L14_QUALITY_STATE == "accepted_clean") ? "none" : "none_for_publication_review_or_fallback_visible";
       return;
    }

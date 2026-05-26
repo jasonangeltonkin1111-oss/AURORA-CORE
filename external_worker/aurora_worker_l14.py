@@ -194,6 +194,54 @@ def _summary(summary: L14PublishSummary) -> str:
     ])
 
 
+def _with_write_status(summary: L14PublishSummary, failed: List[Path]) -> L14PublishSummary:
+    if not failed:
+        return L14PublishSummary(
+            status="accepted",
+            reason="l14_candidate_pool_published",
+            selected_group_count=summary.selected_group_count,
+            candidate_pool_size=summary.candidate_pool_size,
+            leader_candidate_count=summary.leader_candidate_count,
+            backup_candidate_count=summary.backup_candidate_count,
+            review_candidate_count=summary.review_candidate_count,
+            thin_fallback_candidate_count=summary.thin_fallback_candidate_count,
+            source_group_fallback_count=summary.source_group_fallback_count,
+            canonical_missing_count=summary.canonical_missing_count,
+            write_failed_count=0,
+            top_candidate=summary.top_candidate,
+            quality_state=summary.quality_state,
+            candidate_pool_path=summary.candidate_pool_path,
+            summary_path=summary.summary_path,
+            selection_desk_candidate_pool_path=summary.selection_desk_candidate_pool_path,
+            source_l11_top5_checksum=summary.source_l11_top5_checksum,
+            source_l11_ranked_symbols_checksum=summary.source_l11_ranked_symbols_checksum,
+            source_l12_checksum=summary.source_l12_checksum,
+            source_l13_checksum=summary.source_l13_checksum,
+        )
+    return L14PublishSummary(
+        status="write_degraded",
+        reason="one_or_more_l14_outputs_failed",
+        selected_group_count=summary.selected_group_count,
+        candidate_pool_size=summary.candidate_pool_size,
+        leader_candidate_count=summary.leader_candidate_count,
+        backup_candidate_count=summary.backup_candidate_count,
+        review_candidate_count=summary.review_candidate_count,
+        thin_fallback_candidate_count=summary.thin_fallback_candidate_count,
+        source_group_fallback_count=summary.source_group_fallback_count,
+        canonical_missing_count=summary.canonical_missing_count,
+        write_failed_count=len(failed),
+        top_candidate=summary.top_candidate,
+        quality_state=summary.quality_state,
+        candidate_pool_path=summary.candidate_pool_path,
+        summary_path=summary.summary_path,
+        selection_desk_candidate_pool_path=summary.selection_desk_candidate_pool_path,
+        source_l11_top5_checksum=summary.source_l11_top5_checksum,
+        source_l11_ranked_symbols_checksum=summary.source_l11_ranked_symbols_checksum,
+        source_l12_checksum=summary.source_l12_checksum,
+        source_l13_checksum=summary.source_l13_checksum,
+    )
+
+
 def _candidate_score(l11_score: float, l13_score: float, l12_strength: float, top_rank: int) -> float:
     if top_rank <= 1:
         rank_adjust = 5.0
@@ -416,7 +464,8 @@ def publish_l14_ranking_group_leader_candidate_pool(outbox_root: Path) -> L14Pub
         )
 
         _write(layer / "l14_candidate_pool.csv", csv_text, failed)
-        _write(layer / "l14_candidate_pool.manifest", _manifest("l14_candidate_pool", rows, csv_text, summary), failed)
+        summary_for_manifest = _with_write_status(summary, failed)
+        _write(layer / "l14_candidate_pool.manifest", _manifest("l14_candidate_pool", rows, csv_text, summary_for_manifest), failed)
 
         grouped: Dict[str, List[Dict[str, str]]] = {}
         for row in rows:
@@ -434,34 +483,18 @@ def publish_l14_ranking_group_leader_candidate_pool(outbox_root: Path) -> L14Pub
             ] + [f"#{m['candidate_pool_rank']} {m['symbol']} canonical={m['canonical_symbol']} source={m['candidate_source']} score={m['l14_candidate_priority_score']} reason={m['candidate_reason']}" for m in members] + ["candidate_pool_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
             _write(groups / (slug + ".candidate_pool.txt"), text, failed)
 
-        # Update write status after all writes are attempted.
-        if failed:
-            summary = L14PublishSummary(
-                status="write_degraded",
-                reason="one_or_more_l14_outputs_failed",
-                selected_group_count=summary.selected_group_count,
-                candidate_pool_size=summary.candidate_pool_size,
-                leader_candidate_count=summary.leader_candidate_count,
-                backup_candidate_count=summary.backup_candidate_count,
-                review_candidate_count=summary.review_candidate_count,
-                thin_fallback_candidate_count=summary.thin_fallback_candidate_count,
-                source_group_fallback_count=summary.source_group_fallback_count,
-                canonical_missing_count=summary.canonical_missing_count,
-                write_failed_count=len(failed),
-                top_candidate=summary.top_candidate,
-                quality_state=summary.quality_state,
-                candidate_pool_path=summary.candidate_pool_path,
-                summary_path=summary.summary_path,
-                selection_desk_candidate_pool_path=summary.selection_desk_candidate_pool_path,
-                source_l11_top5_checksum=summary.source_l11_top5_checksum,
-                source_l11_ranked_symbols_checksum=summary.source_l11_ranked_symbols_checksum,
-                source_l12_checksum=summary.source_l12_checksum,
-                source_l13_checksum=summary.source_l13_checksum,
-            )
-
-        _write(layer / "l14_candidate_pool_summary.txt", _summary(summary), failed)
+        summary_before_final_outputs = _with_write_status(summary, failed)
+        _write(layer / "l14_candidate_pool_summary.txt", _summary(summary_before_final_outputs), failed)
         _write(visible / "00_Ranking_Group_Leader_Candidate_Pool.csv", csv_text, failed)
-        _write(visible / "00_Ranking_Group_Leader_Candidate_Pool.txt", _selection_desk_text(rows, summary), failed)
-        return summary
+        _write(visible / "00_Ranking_Group_Leader_Candidate_Pool.txt", _selection_desk_text(rows, summary_before_final_outputs), failed)
+
+        final_summary = _with_write_status(summary, failed)
+        if final_summary != summary_before_final_outputs:
+            summary_rewrite_failed: List[Path] = []
+            _write(layer / "l14_candidate_pool_summary.txt", _summary(final_summary), summary_rewrite_failed)
+            if summary_rewrite_failed:
+                failed.extend(summary_rewrite_failed)
+                final_summary = _with_write_status(summary, failed)
+        return final_summary
     except Exception as exc:
         return L14PublishSummary("exception", f"{type(exc).__name__}: {exc}")
