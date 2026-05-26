@@ -214,6 +214,244 @@ AC_WriteResult AC_WriteTextFileFastAtomic_DossierNormalized(const string final_p
    return AC_WriteTextFileFastAtomic(final_path, normalized);
 }
 
+string AC_SelectionDeskSafeValue(string value)
+{
+   StringReplace(value, "\r", " ");
+   StringReplace(value, "\n", " ");
+   StringReplace(value, "|", ";");
+   return value;
+}
+
+void AC_SelectionDeskRefreshPipeline()
+{
+   AC_L10RefreshTaxonomySummary();
+   AC_L11RefreshSummary();
+   AC_L12RefreshSummary();
+   AC_L13RefreshSummary();
+   AC_L14RefreshSummary();
+   AC_L15RefreshSummary();
+   AC_L16RefreshSummary();
+   AC_L17RefreshSummary();
+}
+
+string AC_SelectionDeskScaffoldStatus()
+{
+   if(AC_L16_ACCEPTED || AC_L17_ACCEPTED)
+      return "selection_outputs_detected";
+   if(AC_L11_ACCEPTED || AC_L12_ACCEPTED || AC_L13_ACCEPTED || AC_L14_ACCEPTED || AC_L15_ACCEPTED)
+      return "selection_pipeline_partially_available";
+   return "pending_upstream_worker_outputs";
+}
+
+string AC_SelectionDeskBlockerSummary()
+{
+   string blockers = "";
+   if(!AC_L11_ACCEPTED) blockers += "L11=" + AC_SelectionDeskSafeValue(AC_L11_MAIN_BLOCKER) + ";";
+   if(!AC_L12_ACCEPTED) blockers += "L12=" + AC_SelectionDeskSafeValue(AC_L12_MAIN_BLOCKER) + ";";
+   if(!AC_L13_ACCEPTED) blockers += "L13=" + AC_SelectionDeskSafeValue(AC_L13_MAIN_BLOCKER) + ";";
+   if(!AC_L14_ACCEPTED) blockers += "L14=" + AC_SelectionDeskSafeValue(AC_L14_MAIN_BLOCKER) + ";";
+   if(!AC_L15_ACCEPTED) blockers += "L15=" + AC_SelectionDeskSafeValue(AC_L15_MAIN_BLOCKER) + ";";
+   if(!AC_L16_ACCEPTED) blockers += "L16=" + AC_SelectionDeskSafeValue(AC_L16_MAIN_BLOCKER) + ";";
+   if(!AC_L17_ACCEPTED) blockers += "L17=" + AC_SelectionDeskSafeValue(AC_L17_MAIN_BLOCKER) + ";";
+   return blockers == "" ? "none" : blockers;
+}
+
+string AC_SelectionDeskReadMeText()
+{
+   string status = AC_SelectionDeskScaffoldStatus();
+   string text = "";
+   text += "AURORA SELECTION DESK\r\n";
+   text += "----------------------------------------\r\n";
+   text += "status=" + status + "\r\n";
+   text += "meaning=operator_selection_view_and_dossier_shortcut_surface_only\r\n";
+   text += "canonical_surfaces=01_Global;02_Asset_Classes;90_System_Indexes;91_Layer_Summaries\r\n";
+   text += "canonical_global_top10=01_Global/Top_10\r\n";
+   text += "canonical_asset_top5=02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class>\r\n";
+   text += "canonical_group_top5=02_Asset_Classes/<asset_class>/02_Groups/<ranking_group>\r\n";
+   text += "canonical_deep_evidence=01_Global/Deep_Evidence\r\n";
+   text += "legacy_surfaces=Global;Groups\r\n";
+   text += "legacy_surfaces_policy=support_only_not_l18_canonical_targets\r\n";
+   text += "selection_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
+   text += "current_blockers=" + AC_SelectionDeskBlockerSummary() + "\r\n";
+   text += "gateway_status=" + AC_SelectionDeskSafeValue(AC_EXTERNAL_WORKER_STATUS.worker_status) + "\r\n";
+   text += "gateway_install_status=" + AC_SelectionDeskSafeValue(AC_EXTERNAL_WORKER_STATUS.install_status) + "\r\n";
+   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   return text;
+}
+
+string AC_SelectionDeskIndexText()
+{
+   string status = AC_SelectionDeskScaffoldStatus();
+   string text = "";
+   text += "schema_name=selection_desk_root_index\r\n";
+   text += "schema_version=mt5_pending_scaffold_v1\r\n";
+   text += "owner_name=Runtime 7 publication owner pending scaffold\r\n";
+   text += "source_owner=Runtime 3 external worker L10-L17 calculation support outputs\r\n";
+   text += "status=" + status + "\r\n";
+   text += "reason=" + AC_SelectionDeskBlockerSummary() + "\r\n";
+   text += "root_path=" + AC_SelectionDeskFolder() + "\r\n";
+   text += "readme_path=" + AC_SelectionReadMePath() + "\r\n";
+   text += "legacy_index_path=" + AC_SelectionIndexPath() + "\r\n";
+   text += "canonical_index_path=" + AC_SelectionCanonicalIndexPath() + "\r\n";
+   text += "status_path=" + AC_SelectionDeskStatusPath() + "\r\n";
+   text += "global_top10_surface=" + AC_SelectionGlobalTop10Folder() + "\r\n";
+   text += "asset_class_surface=" + AC_SelectionAssetClassesFolder() + "\r\n";
+   text += "system_indexes_surface=" + AC_SelectionSystemIndexesFolder() + "\r\n";
+   text += "layer_summaries_surface=" + AC_SelectionLayerSummariesFolder() + "\r\n";
+   text += "l18_target_scope=canonical_selection_shortcut_dossiers_only\r\n";
+   text += "l18_allowed_surfaces=01_Global/Top_10/*.txt;02_Asset_Classes/*/01_Top_5_All_*/*.txt;02_Asset_Classes/*/02_Groups/*/*.txt\r\n";
+   text += "l18_excluded_surfaces=Selection Desk/Global;Selection Desk/Groups;90_System_Indexes;91_Layer_Summaries;base Dossiers/Open;base Dossiers/Closed;base Dossiers/Unknown\r\n";
+   text += "selection_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
+   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   return text;
+}
+
+string AC_SelectionDeskLayerStatusText()
+{
+   string text = "";
+   text += "schema_name=selection_desk_layer_status\r\n";
+   text += "schema_version=mt5_pending_scaffold_v1\r\n";
+   text += "status=" + AC_SelectionDeskScaffoldStatus() + "\r\n";
+   text += "gateway_status=" + AC_SelectionDeskSafeValue(AC_EXTERNAL_WORKER_STATUS.worker_status) + "\r\n";
+   text += "gateway_install_status=" + AC_SelectionDeskSafeValue(AC_EXTERNAL_WORKER_STATUS.install_status) + "\r\n";
+   text += "l10_status=" + AC_SelectionDeskSafeValue(AC_L10_STATUS) + "\r\n";
+   text += "l11_status=" + AC_SelectionDeskSafeValue(AC_L11_STATUS) + "\r\n";
+   text += "l11_blocker=" + AC_SelectionDeskSafeValue(AC_L11_MAIN_BLOCKER) + "\r\n";
+   text += "l12_status=" + AC_SelectionDeskSafeValue(AC_L12_STATUS) + "\r\n";
+   text += "l12_blocker=" + AC_SelectionDeskSafeValue(AC_L12_MAIN_BLOCKER) + "\r\n";
+   text += "l13_status=" + AC_SelectionDeskSafeValue(AC_L13_STATUS) + "\r\n";
+   text += "l13_blocker=" + AC_SelectionDeskSafeValue(AC_L13_MAIN_BLOCKER) + "\r\n";
+   text += "l14_status=" + AC_SelectionDeskSafeValue(AC_L14_STATUS) + "\r\n";
+   text += "l14_blocker=" + AC_SelectionDeskSafeValue(AC_L14_MAIN_BLOCKER) + "\r\n";
+   text += "l15_status=" + AC_SelectionDeskSafeValue(AC_L15_STATUS) + "\r\n";
+   text += "l15_blocker=" + AC_SelectionDeskSafeValue(AC_L15_MAIN_BLOCKER) + "\r\n";
+   text += "l16_status=" + AC_SelectionDeskSafeValue(AC_L16_STATUS) + "\r\n";
+   text += "l16_selected_count=" + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
+   text += "l16_blocker=" + AC_SelectionDeskSafeValue(AC_L16_MAIN_BLOCKER) + "\r\n";
+   text += "l17_status=" + AC_SelectionDeskSafeValue(AC_L17_STATUS) + "\r\n";
+   text += "l17_deep_selected_count=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "\r\n";
+   text += "l17_blocker=" + AC_SelectionDeskSafeValue(AC_L17_MAIN_BLOCKER) + "\r\n";
+   text += "selection_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
+   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   return text;
+}
+
+string AC_SelectionDeskShortcutStatusText(const string shortcut_type, const string reason)
+{
+   string text = "";
+   text += "schema_name=selection_surface_shortcut_status\r\n";
+   text += "schema_version=mt5_pending_scaffold_v1\r\n";
+   text += "owner_name=Runtime 7 publication owner pending scaffold\r\n";
+   text += "source_owner=Runtime 3 external worker copy bridge\r\n";
+   text += "shortcut_type=" + shortcut_type + "\r\n";
+   text += "status=" + AC_SelectionDeskScaffoldStatus() + "\r\n";
+   text += "reason=" + AC_SelectionDeskSafeValue(reason) + "\r\n";
+   text += "dossier_copies_written=0\r\n";
+   text += "dossier_copies_expected=0\r\n";
+   text += "selection_runtime=false\r\n";
+   text += "trade_permission=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
+   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   return text;
+}
+
+void AC_SelectionDeskMergeWrite(const AC_WriteResult &result,
+                                int &written,
+                                int &failed,
+                                ulong &bytes,
+                                string &failed_paths)
+{
+   if(result.ok)
+   {
+      written++;
+      bytes += result.final_size;
+      return;
+   }
+   failed++;
+   failed_paths += result.final_path + "|status=" + result.status + "|error=" + IntegerToString(result.error_code) + ";";
+}
+
+AC_WriteResult AC_PublishSelectionDeskScaffold()
+{
+   AC_SelectionDeskRefreshPipeline();
+
+   string detail = "";
+   string folder_detail = "";
+   bool folders_ok = true;
+   folders_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), folder_detail) && folders_ok;
+   detail += "selection_desk=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionGroupsFolder(), folder_detail) && folders_ok;
+   detail += "legacy_groups=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionGlobalFolder(), folder_detail) && folders_ok;
+   detail += "legacy_global=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionGlobalTop10Folder(), folder_detail) && folders_ok;
+   detail += "global_top10=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionGlobalDeepEvidenceFolder(), folder_detail) && folders_ok;
+   detail += "deep_evidence=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionAssetClassesFolder(), folder_detail) && folders_ok;
+   detail += "asset_classes=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionSystemIndexesFolder(), folder_detail) && folders_ok;
+   detail += "system_indexes=" + folder_detail + ";";
+   folders_ok = AC_EnsureFolderPath(AC_SelectionLayerSummariesFolder(), folder_detail) && folders_ok;
+   detail += "layer_summaries=" + folder_detail + ";";
+
+   int written = 0;
+   int failed = 0;
+   ulong bytes = 0;
+   string failed_paths = "";
+
+   string readme_text = AC_SelectionDeskReadMeText();
+   string index_text = AC_SelectionDeskIndexText();
+   string layer_text = AC_SelectionDeskLayerStatusText();
+   string global_reason = "missing_or_pending_l16_selection_desk_current_top10_csv:" + AC_L16SelectionDeskCsvPath();
+   string group_reason = "missing_or_pending_l11_to_l15_selection_group_outputs";
+
+   AC_WriteResult r = AC_WriteTextFile(AC_SelectionReadMePath(), readme_text);
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionCanonicalIndexPath(), index_text);
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionIndexPath(), index_text);
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionDeskStatusPath(), index_text);
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionLayerStatusPath(), layer_text);
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionGlobalTop10TextPath(), "L16 GLOBAL TOP 10 DOSSIER SHORTCUTS\r\n----------------------------------------\r\n" + AC_SelectionDeskShortcutStatusText("global_top10_dossier_copy", global_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionGlobalTop10CsvPath(), "global_top10_rank,symbol,canonical_symbol,copy_status,meaning,trade_permission,entry_signal,execution,generated_at\r\n");
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionGlobalTop10CopyStatusPath(), AC_SelectionDeskShortcutStatusText("global_top10_dossier_copy", global_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionAssetClassTop5StatusPath(), AC_SelectionDeskShortcutStatusText("asset_class_top5", group_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionAssetClassTop5IndexPath(), "AURORA SELECTION DESK - ASSET CLASS TOP 5 INDEX\r\n----------------------------------------\r\n" + AC_SelectionDeskShortcutStatusText("asset_class_top5", group_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionShallowGroupTop5StatusPath(), AC_SelectionDeskShortcutStatusText("shallow_group_top5", group_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionLegacyGlobalStatusPath(), AC_SelectionDeskShortcutStatusText("legacy_global_support_surface", global_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+   r = AC_WriteTextFile(AC_SelectionLegacyGroupsStatusPath(), AC_SelectionDeskShortcutStatusText("legacy_groups_support_surface", group_reason));
+   AC_SelectionDeskMergeWrite(r, written, failed, bytes, failed_paths);
+
+   bool ok = folders_ok && failed == 0;
+   string status = ok ? "selection_desk_scaffold_published" : "selection_desk_scaffold_degraded";
+   detail += "files_written=" + IntegerToString(written)
+      + ";files_failed=" + IntegerToString(failed)
+      + ";failed_paths=" + failed_paths
+      + ";scaffold_status=" + AC_SelectionDeskScaffoldStatus();
+   return AC_MakeSyntheticWriteResult(AC_SelectionDeskFolder(), ok, status, bytes, detail);
+}
+
 // Wrap the existing board/workbench/status renderers so compact operator-truth sections can be appended
 // without rewriting the Board owner or creating a duplicate dashboard/diagnostics system.
 #define AC_BuildTraderBoardText AC_BuildTraderBoardText_Base

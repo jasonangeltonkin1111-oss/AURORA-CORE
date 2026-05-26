@@ -112,7 +112,8 @@ void AC_FinalizeState(const AC_WriteResult &runtime_write,
                       const AC_WriteResult &diagnostics_write,
                       const AC_WriteResult &account_write,
                       const AC_WriteResult &board_write,
-                      const AC_WriteResult &dossier_batch_write)
+                      const AC_WriteResult &dossier_batch_write,
+                      const AC_WriteResult &selection_desk_write)
 {
    AC_SNAPSHOT.fileio_status = runtime_write.ok ? runtime_write.status : runtime_write.status;
    AC_SNAPSHOT.telemetry_status = status_write.ok ? status_write.status : status_write.status;
@@ -125,7 +126,8 @@ void AC_FinalizeState(const AC_WriteResult &runtime_write,
    AC_RecordWriteProblem("Account Status", account_write);
    AC_RecordWriteProblem("Market Board", board_write);
    AC_RecordWriteProblem("Dossier Universe", dossier_batch_write);
-   AC_SNAPSHOT.layer_0_4_status = (status_write.ok && manifest_write.ok && diagnostics_write.ok && board_write.ok && dossier_batch_write.ok) ? "complete" : "complete_with_degraded";
+   AC_RecordWriteProblem("Selection Desk", selection_desk_write);
+   AC_SNAPSHOT.layer_0_4_status = (status_write.ok && manifest_write.ok && diagnostics_write.ok && board_write.ok && dossier_batch_write.ok && selection_desk_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
 }
 
@@ -278,6 +280,11 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_RecordWriteProblem("Dossier Universe", dossier_batch_write);
    AC_AddMicroLog("l0_l2_l3_l4_l5_dossier_universe", phase_start, dossier_batch_write.status);
 
+   phase_start = GetTickCount();
+   AC_WriteResult selection_desk_write = AC_PublishSelectionDeskScaffold();
+   AC_RecordWriteProblem("Selection Desk", selection_desk_write);
+   AC_AddMicroLog("selection_desk_scaffold", phase_start, selection_desk_write.status);
+
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.over_budget ? "complete_with_degraded" : "complete";
 
@@ -293,6 +300,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    string manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "trader_board_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_l3_l4_l5_dossier_universe_cached_or_run") + "\r\n";
+   manifest += AC_ManifestRow("Selection Desk", selection_desk_write, AC_SNAPSHOT, "selection_desk_pending_scaffold") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
@@ -319,6 +327,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    diagnostics += "placeholder_status=" + AC_SNAPSHOT.placeholder_status + "\r\n";
    diagnostics += "market_board_write=" + AC_WriteResultLine("Market Board", board_write) + "\r\n";
    diagnostics += "dossier_universe_write=" + AC_WriteResultLine("Dossier Universe", dossier_batch_write) + "\r\n";
+   diagnostics += "selection_desk_write=" + AC_WriteResultLine("Selection Desk", selection_desk_write) + "\r\n";
    diagnostics += "runtime_write=" + AC_WriteResultLine("Runtime Status", runtime_write) + "\r\n";
    diagnostics += "workbench_status_write=" + AC_WriteResultLine("Workbench Status", status_write) + "\r\n";
    diagnostics += "account_status_write=" + AC_WriteResultLine("Account Status", account_write) + "\r\n";
@@ -407,7 +416,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_WriteResult diagnostics_write = AC_WriteTextFile(AC_DiagnosticsPath(), diagnostics);
    AC_AddMicroLog("write_diagnostics", phase_start, diagnostics_write.ok ? "complete" : "degraded");
 
-   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write, account_write, board_write, dossier_batch_write);
+   AC_FinalizeState(runtime_write, status_write, manifest_write, diagnostics_write, account_write, board_write, dossier_batch_write, selection_desk_write);
 
    phase_start = GetTickCount();
    board_write = AC_WriteTextFileIfChanged(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS), AC_LAST_BOARD_TEXT, force_publication);
@@ -423,6 +432,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    manifest = "";
    manifest += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT, "final_status_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Dossier Universe", dossier_batch_write, AC_SNAPSHOT, "l0_l2_l3_l4_l5_dossier_universe_cached_or_run") + "\r\n";
+   manifest += AC_ManifestRow("Selection Desk", selection_desk_write, AC_SNAPSHOT, "selection_desk_pending_scaffold") + "\r\n";
    manifest += AC_ManifestRow("Runtime Status", runtime_write, AC_SNAPSHOT, "final_runtime_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Workbench Status", status_write, AC_SNAPSHOT, "final_workbench_if_changed") + "\r\n";
    manifest += AC_ManifestRow("Account Status", account_write, AC_SNAPSHOT, "account_if_changed") + "\r\n";
@@ -450,7 +460,7 @@ void AC_PublishRuntime0Full(const bool force_publication = false)
    AC_WriteResult manifest_final_write = AC_WriteTextFile(AC_ManifestPath(), manifest);
    AC_ApplyLateWriteStatus("Manifest With Micro Logs", manifest_final_write);
    AC_SNAPSHOT.manifest_status = manifest_final_write.ok ? manifest_final_write.status : manifest_final_write.status;
-   AC_SNAPSHOT.layer_0_4_status = (board_write.ok && runtime_write.ok && status_write.ok && diagnostics_write.ok && manifest_write.ok && manifest_final_write.ok && upgrade_addendum_write.ok && micro_log_write.ok && upgrade_log_write.ok && dossier_batch_write.ok) ? "complete" : "complete_with_degraded";
+   AC_SNAPSHOT.layer_0_4_status = (board_write.ok && runtime_write.ok && status_write.ok && diagnostics_write.ok && manifest_write.ok && manifest_final_write.ok && upgrade_addendum_write.ok && micro_log_write.ok && upgrade_log_write.ok && dossier_batch_write.ok && selection_desk_write.ok) ? "complete" : "complete_with_degraded";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "complete_with_degraded" : "complete";
    AC_WriteResult final_board_write = AC_WriteTextFileIfChanged(AC_MarketBoardPath(), AC_BuildTraderBoardText(AC_SNAPSHOT, AC_L0_STATUS), AC_LAST_BOARD_TEXT, false);
    AC_WriteResult final_runtime_write = AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), AC_BuildRuntimeStatusText(), AC_LAST_RUNTIME_STATUS_TEXT, false);

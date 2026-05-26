@@ -236,6 +236,96 @@ string AC_SelectionGlobalFolder()
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_GLOBAL_FOLDER;
 }
 
+string AC_SelectionCanonicalGlobalFolder()
+{
+   return AC_SelectionDeskFolder() + "\\01_Global";
+}
+
+string AC_SelectionGlobalTop10Folder()
+{
+   return AC_SelectionCanonicalGlobalFolder() + "\\Top_10";
+}
+
+string AC_SelectionGlobalDeepEvidenceFolder()
+{
+   return AC_SelectionCanonicalGlobalFolder() + "\\Deep_Evidence";
+}
+
+string AC_SelectionAssetClassesFolder()
+{
+   return AC_SelectionDeskFolder() + "\\02_Asset_Classes";
+}
+
+string AC_SelectionSystemIndexesFolder()
+{
+   return AC_SelectionDeskFolder() + "\\90_System_Indexes";
+}
+
+string AC_SelectionLayerSummariesFolder()
+{
+   return AC_SelectionDeskFolder() + "\\91_Layer_Summaries";
+}
+
+string AC_SelectionReadMePath()
+{
+   return AC_SelectionDeskFolder() + "\\00_Read_Me.txt";
+}
+
+string AC_SelectionCanonicalIndexPath()
+{
+   return AC_SelectionDeskFolder() + "\\00_Selection_Index.txt";
+}
+
+string AC_SelectionDeskStatusPath()
+{
+   return AC_SelectionSystemIndexesFolder() + "\\00_Selection_Desk_Status.txt";
+}
+
+string AC_SelectionLayerStatusPath()
+{
+   return AC_SelectionLayerSummariesFolder() + "\\00_Selection_Layer_Status.txt";
+}
+
+string AC_SelectionGlobalTop10TextPath()
+{
+   return AC_SelectionGlobalTop10Folder() + "\\00_Global_Top_10.txt";
+}
+
+string AC_SelectionGlobalTop10CsvPath()
+{
+   return AC_SelectionGlobalTop10Folder() + "\\00_Global_Top_10.csv";
+}
+
+string AC_SelectionGlobalTop10CopyStatusPath()
+{
+   return AC_SelectionGlobalTop10Folder() + "\\00_Global_Top_10_Copy_Status.txt";
+}
+
+string AC_SelectionAssetClassTop5StatusPath()
+{
+   return AC_SelectionAssetClassesFolder() + "\\00_Asset_Class_Top5_Status.txt";
+}
+
+string AC_SelectionAssetClassTop5IndexPath()
+{
+   return AC_SelectionAssetClassesFolder() + "\\00_Asset_Class_Top5_Index.txt";
+}
+
+string AC_SelectionShallowGroupTop5StatusPath()
+{
+   return AC_SelectionAssetClassesFolder() + "\\00_Shallow_Group_Top5_Status.txt";
+}
+
+string AC_SelectionLegacyGlobalStatusPath()
+{
+   return AC_SelectionGlobalFolder() + "\\00_Global_Surface_Status.txt";
+}
+
+string AC_SelectionLegacyGroupsStatusPath()
+{
+   return AC_SelectionGroupsFolder() + "\\00_Group_Surface_Status.txt";
+}
+
 string AC_SelectionIndexPath()
 {
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_INDEX_FILE;
@@ -408,6 +498,12 @@ bool AC_EnsureRuntimeFolders(string &detail)
    string selection_desk_detail = "";
    string selection_groups_detail = "";
    string selection_global_detail = "";
+   string selection_canonical_global_detail = "";
+   string selection_global_top10_detail = "";
+   string selection_global_deep_evidence_detail = "";
+   string selection_asset_classes_detail = "";
+   string selection_system_indexes_detail = "";
+   string selection_layer_summaries_detail = "";
    string trade_journal_import_detail = "";
    string trade_journal_inbox_detail = "";
    string trade_journal_accepted_detail = "";
@@ -436,6 +532,12 @@ bool AC_EnsureRuntimeFolders(string &detail)
    bool selection_desk_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), selection_desk_detail);
    bool selection_groups_ok = AC_EnsureFolderPath(AC_SelectionGroupsFolder(), selection_groups_detail);
    bool selection_global_ok = AC_EnsureFolderPath(AC_SelectionGlobalFolder(), selection_global_detail);
+   bool selection_canonical_global_ok = AC_EnsureFolderPath(AC_SelectionCanonicalGlobalFolder(), selection_canonical_global_detail);
+   bool selection_global_top10_ok = AC_EnsureFolderPath(AC_SelectionGlobalTop10Folder(), selection_global_top10_detail);
+   bool selection_global_deep_evidence_ok = AC_EnsureFolderPath(AC_SelectionGlobalDeepEvidenceFolder(), selection_global_deep_evidence_detail);
+   bool selection_asset_classes_ok = AC_EnsureFolderPath(AC_SelectionAssetClassesFolder(), selection_asset_classes_detail);
+   bool selection_system_indexes_ok = AC_EnsureFolderPath(AC_SelectionSystemIndexesFolder(), selection_system_indexes_detail);
+   bool selection_layer_summaries_ok = AC_EnsureFolderPath(AC_SelectionLayerSummariesFolder(), selection_layer_summaries_detail);
    bool trade_journal_import_ok = AC_EnsureFolderPath(AC_TradeJournalImportFolder(), trade_journal_import_detail);
    bool trade_journal_inbox_ok = AC_EnsureFolderPath(AC_TradeJournalInboxFolder(), trade_journal_inbox_detail);
    bool trade_journal_accepted_ok = AC_EnsureFolderPath(AC_TradeJournalAcceptedFolder(), trade_journal_accepted_detail);
@@ -464,6 +566,12 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";selection_desk=" + selection_desk_detail
       + ";selection_groups=" + selection_groups_detail
       + ";selection_global=" + selection_global_detail
+      + ";selection_01_global=" + selection_canonical_global_detail
+      + ";selection_01_global_top10=" + selection_global_top10_detail
+      + ";selection_01_global_deep_evidence=" + selection_global_deep_evidence_detail
+      + ";selection_02_asset_classes=" + selection_asset_classes_detail
+      + ";selection_90_system_indexes=" + selection_system_indexes_detail
+      + ";selection_91_layer_summaries=" + selection_layer_summaries_detail
       + ";trade_journal_import=" + trade_journal_import_detail
       + ";trade_journal_inbox=" + trade_journal_inbox_detail
       + ";trade_journal_accepted=" + trade_journal_accepted_detail
@@ -478,11 +586,13 @@ bool AC_EnsureRuntimeFolders(string &detail)
       + ";shared_worker_install_status_path=" + AC_SharedExternalWorkerInstallStatusPath()
       + ";shared_worker_status_path=" + AC_SharedExternalWorkerStatusPath()
       + ";selection_index_path=" + AC_SelectionIndexPath()
+      + ";selection_canonical_index_path=" + AC_SelectionCanonicalIndexPath()
+      + ";selection_status_path=" + AC_SelectionDeskStatusPath()
       + ";trade_journal_inbox_path=" + AC_TradeJournalInboxFolder()
       + ";trade_history_before_aurora_path=" + AC_TradeHistoryBeforeAuroraFolder()
       + ";trade_history_aurora_captured_path=" + AC_TradeHistoryAuroraCapturedFolder();
 
-   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok && trade_journal_import_ok && trade_journal_inbox_ok && trade_journal_accepted_ok && trade_journal_rejected_ok && trade_journal_orphaned_ok && trade_history_ok && trade_history_before_aurora_ok && trade_history_aurora_captured_ok;
+   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok && selection_canonical_global_ok && selection_global_top10_ok && selection_global_deep_evidence_ok && selection_asset_classes_ok && selection_system_indexes_ok && selection_layer_summaries_ok && trade_journal_import_ok && trade_journal_inbox_ok && trade_journal_accepted_ok && trade_journal_rejected_ok && trade_journal_orphaned_ok && trade_history_ok && trade_history_before_aurora_ok && trade_history_aurora_captured_ok;
 }
 
 #endif
