@@ -23,6 +23,7 @@ merge_to_main_allowed=false_until_L1_to_L19_stable_and_overseer_approved
 |---|---|---|
 | `AC_SelectedRollingTickPack.mqh` | Source-present scaffold | Defines selected-symbol rolling tick buffer, CopyTicksRange update helper, summary metrics, CSV row helper, Dossier section helper, and compact Board row helper. Not included by `mt5/AuroraCore.mq5` yet. |
 | `AC_SelectedRollingTickPackPublication.mqh` | Source-present publication scaffold | Defines L20 runtime output paths, summary/manifest/Selection Desk text builders, and write helper that delegates to existing FileIO owner. Not included by `mt5/AuroraCore.mq5` yet. |
+| `AC_SelectedRollingTickPackHarness.mqh` | Disabled harness scaffold | Defines compile-touch/status helpers and an inactive activation macro. It does not call broker tick capture or wire into `OnTimer`. |
 
 ## Authority Boundary
 
@@ -38,6 +39,7 @@ mid proxy range/change counts
 sample quality
 proxy confidence
 L20 output text/CSV/manifest shape
+compile-touch harness status shape
 ```
 
 Must not own:
@@ -74,6 +76,24 @@ Workbench/Gateway/Outbox/Layers/Layer_20_Selected_Rolling_Tick_Pack/l20_selected
 Workbench/Gateway/Outbox/Layers/Layer_20_Selected_Rolling_Tick_Pack/l20_selected_rolling_tick.manifest
 Selection Desk/Global/current_selected_rolling_tick_pack.csv
 Selection Desk/Global/Selected Rolling Tick Pack.txt
+```
+
+## Harness Boundary
+
+`AC_SelectedRollingTickPackHarness.mqh` may be used for compile-touch/status checks only. It must not be called from `OnTimer` or active publication until:
+
+```text
+L1-L19 selected-scope chain is stable
+selected-scope reader exists
+MetaEditor compile proof exists
+runtime budget plan exists
+Overseer approves active wiring
+```
+
+Current activation macro:
+
+```text
+AC_L20_RUNTIME_ACTIVATION_ENABLED=false
 ```
 
 ## Activation Gate
