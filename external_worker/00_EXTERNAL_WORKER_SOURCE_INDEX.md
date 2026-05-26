@@ -7,9 +7,14 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 
 ## Active files
 
-- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes.
+- `aurora_worker.py` — active Python worker source. Owns snapshot validation, shared daemon loop, watchdog/repair probe modes, heartbeat/result writing, and calculation-support-only result envelopes. It imports and runs L6, L7, L8, L9, L10, and the L11+ dispatch chain.
 - `aurora_worker_io.py` — active worker-side IO helper source used by worker modules. Owns bounded read retry and durable atomic text writes for worker outputs only.
-- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Chains core validation then L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
+- `aurora_worker_entrypoint.py` — daemon/once/shared-daemon entrypoint. Runs core validation through `aurora_worker.py`, which publishes L6-L10 support outputs, then chains L11, L12, L13, L14, L15, L16, L17, and L18 calculation-support modules. L19 is invoked by the L18 dispatch after L18 completes.
+- `aurora_worker_l6_friction.py` — Layer 6 cost / friction ranking support. Must consume MT5-exported L6 input primitives generated from the L5 pass set and L3/L4 packets. Must not consume failed L5 symbols, poll brokers, permit, select, alert, execute, or validate edge.
+- `aurora_worker_l7_session.py` — Layer 7 session relevance ranking support. Must consume MT5-exported primitives and must not decide market-open truth, hard-gate symbols, select, permit, alert, or execute.
+- `aurora_worker_l8_movement.py` — Layer 8 movement / range ranking support. Must consume MT5-exported primitives and must not create private OHLC caches, select, permit, alert, or execute.
+- `aurora_worker_l9_structure.py` — Layer 9 structure / location geometry support. Must consume MT5-exported primitives and must not infer direction, select, permit, alert, or execute.
+- `aurora_worker_l10.py` / `aurora_worker_l10_source.py` — Layer 10 taxonomy / ranking_group support. Must preserve taxonomy truth and must not select, permit, alert, or execute.
 - `aurora_worker_l11.py` / `aurora_worker_l11_dispatch.py` — Layer 11 symbol ranking inside ranking_group support. Must not own taxonomy, group heat, group selection, candidate pool, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l12.py` / `aurora_worker_l12_dispatch.py` — Layer 12 ranking_group heat / quality support. Must consume L11 outputs and must not build selected groups, candidate pools, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
@@ -29,6 +34,11 @@ Current source chain:
 
 ```text
 core snapshot validation
+-> L6 cost / friction ranking
+-> L7 session relevance ranking
+-> L8 movement / range ranking
+-> L9 structure / location geometry
+-> L10 taxonomy / ranking_group support
 -> L11 symbol ranking inside ranking_group
 -> L12 ranking_group heat / quality
 -> L13 dynamic ranking_group selection
@@ -47,6 +57,8 @@ This chain remains calculation/file-decoration support. It is not trading runtim
 Shared OHLC Raw Storage belongs to Runtime 1. Worker modules may read shared raw OHLC files only when a layer owns that calculation/display request. They must not call MT5, fetch broker history, or create private OHLC caches.
 
 If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted correlation, fake L18 completion, or fake L19 structure completion.
+
+L6 consumes MT5-exported L6 input primitives and must not fetch broker data from Python. L7-L10 consume exported or already-prepared support inputs and must not bypass upstream source owners.
 
 L16 must not read raw OHLC or recompute correlation. L16 consumes L15 correlation/diversity outputs.
 
