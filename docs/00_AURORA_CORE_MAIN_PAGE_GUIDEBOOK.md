@@ -481,6 +481,7 @@ docs/13_EXTERNAL_WORKER_CALCULATION_BRIDGE_GUIDEBOOK.md external worker
 docs/14_MT5_FUNCTION_GUIDEBOOK.md MT5 API constraints
 docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md source truth / anti-drift
 docs/26_TRADE_JOURNAL_SYSTEM.md trade journal setup packet and one-file-per-trade forensic contract
+docs/37_OPERATOR_WORKFLOW_AND_UX_RUNBOOK.md operator first-click workflow, trader-chat export safety, and runtime visual-output test gate
 ```
 
 If older guidebooks still use bucket-era language, treat it as stale unless explicitly marked historical.
