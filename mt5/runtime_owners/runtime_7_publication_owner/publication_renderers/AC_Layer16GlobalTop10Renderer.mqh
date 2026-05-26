@@ -3,6 +3,7 @@
 
 // Runtime 7 render-only surface for Layer 16 Global Top 10 Builder.
 // Reads worker L16 summary and CSV outputs only.
+// Canonical Selection Desk shortcuts live under 01_Global/Top_10; legacy Global/* files are not acceptance authority.
 // Must not build the basket, calculate correlation, permit, alert, or execute.
 
 static string AC_L16_STATUS = "Pending L16 Global Top 10";
@@ -34,9 +35,9 @@ string AC_L16Top10CsvPath(){ return AC_L16LayerFolder() + "\\l16_global_top10.cs
 string AC_L16RejectsCsvPath(){ return AC_L16LayerFolder() + "\\l16_global_top10_rejects.csv"; }
 string AC_L16FallbacksCsvPath(){ return AC_L16LayerFolder() + "\\l16_global_top10_fallbacks.csv"; }
 string AC_L16ManifestPath(){ return AC_L16LayerFolder() + "\\l16_global_top10.manifest"; }
-string AC_L16SelectionDeskPath(){ return AC_SelectionGlobalFolder() + "\\Global Top 10.txt"; }
-string AC_L16SelectionDeskCsvPath(){ return AC_SelectionGlobalFolder() + "\\current_top10.csv"; }
-string AC_L16SelectionDeskManifestPath(){ return AC_SelectionGlobalFolder() + "\\current_top10_manifest.txt"; }
+string AC_L16SelectionDeskPath(){ return AC_SelectionGlobalTop10TextPath(); }
+string AC_L16SelectionDeskCsvPath(){ return AC_SelectionGlobalTop10CsvPath(); }
+string AC_L16SelectionDeskManifestPath(){ return AC_SelectionGlobalTop10CopyStatusPath(); }
 
 string AC_L16ReadSmallTextFile(const string path, const int max_chars = 50000)
 {
@@ -122,7 +123,7 @@ void AC_L16RefreshSummary()
    string execution = AC_L16KvValue(summary, "execution", "not_available");
    AC_L16_CANDIDATE_POOL_SIZE = AC_L16KvInt(summary, "candidate_pool_size", 0);
    AC_L16_L15_CANDIDATE_COUNT = AC_L16KvInt(summary, "l15_candidate_count", 0);
-   AC_L16_SELECTED_COUNT = AC_L16KvInt(summary, "selected_count", 0);
+   AC_L16_SELECTED_COUNT = AC_L16KvInt(summary, "display_slot_count", AC_L16KvInt(summary, "selected_count", 0));
    AC_L16_UNFILLED_SLOTS_COUNT = AC_L16KvInt(summary, "unfilled_slots_count", 10);
    AC_L16_REJECT_COUNT = AC_L16KvInt(summary, "reject_count", 0);
    AC_L16_CORRELATION_REJECT_COUNT = AC_L16KvInt(summary, "correlation_reject_count", 0);
@@ -138,35 +139,33 @@ void AC_L16RefreshSummary()
    AC_L16_VISIBLE_SURFACE_STATE = AC_L16KvValue(summary, "l16_visible_surface_state", "not_available");
    AC_L16_HOLD_AGE_SECONDS = AC_L16KvInt(summary, "l16_hold_age_seconds", 0);
 
-   bool files_ok = FileIsExist(AC_L16Top10CsvPath(), AC_CommonFlag())
+   bool core_files_ok = FileIsExist(AC_L16Top10CsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L16RejectsCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L16FallbacksCsvPath(), AC_CommonFlag())
-      && FileIsExist(AC_L16ManifestPath(), AC_CommonFlag())
-      && FileIsExist(AC_L16SelectionDeskPath(), AC_CommonFlag())
-      && FileIsExist(AC_L16SelectionDeskCsvPath(), AC_CommonFlag())
-      && FileIsExist(AC_L16SelectionDeskManifestPath(), AC_CommonFlag());
+      && FileIsExist(AC_L16ManifestPath(), AC_CommonFlag());
+   bool canonical_surface_seen = FileIsExist(AC_L16SelectionDeskPath(), AC_CommonFlag())
+      && FileIsExist(AC_L16SelectionDeskCsvPath(), AC_CommonFlag());
    bool permission_ok = (global_top10_runtime == "false" && trade_permission == "false" && entry_signal == "false" && execution == "false");
-   bool counts_ok = (AC_L16_CANDIDATE_POOL_SIZE > 0 && AC_L16_L15_CANDIDATE_COUNT > 0 && AC_L16_SELECTED_COUNT >= 0);
-   bool writes_ok = (AC_L16_WRITE_FAILED_COUNT == 0);
+   bool counts_ok = (AC_L16_CANDIDATE_POOL_SIZE > 0 && AC_L16_L15_CANDIDATE_COUNT > 0 && AC_L16_SELECTED_COUNT > 0);
    bool status_ok = (status == "accepted" || status == "degraded" || status == "write_degraded");
 
-   if(status_ok && files_ok && permission_ok && counts_ok && writes_ok)
+   if(status_ok && core_files_ok && permission_ok && counts_ok)
    {
       AC_L16_ACCEPTED = true;
       AC_L16_STATUS = (status == "accepted" ? "Accepted" : "Degraded Accepted");
       AC_L16_VALIDATION_STATUS = (status == "accepted" ? "Accepted" : "Degraded");
-      AC_L16_VALIDATION_REASON = "summary/files/counts/permission accepted; status=" + status;
-      AC_L16_MAIN_BLOCKER = (status == "accepted" ? "none" : "Global Top 10 constrained; unfilled slots visible");
+      AC_L16_VALIDATION_REASON = "summary/core_files/counts/permission accepted; canonical_surface_seen=" + (canonical_surface_seen ? "true" : "false") + ";status=" + status;
+      AC_L16_MAIN_BLOCKER = (status == "accepted" ? "none" : "Global Top 10 constrained; fallback/hold state visible");
       return;
    }
 
    AC_L16_STATUS = "L16 Global Top 10 degraded";
    AC_L16_VALIDATION_STATUS = "Degraded";
    AC_L16_VALIDATION_REASON = "status=" + status
-      + ";files_ok=" + (files_ok ? "true" : "false")
+      + ";core_files_ok=" + (core_files_ok ? "true" : "false")
+      + ";canonical_surface_seen=" + (canonical_surface_seen ? "true" : "false")
       + ";counts_ok=" + (counts_ok ? "true" : "false")
-      + ";permission_ok=" + (permission_ok ? "true" : "false")
-      + ";writes_ok=" + (writes_ok ? "true" : "false");
+      + ";permission_ok=" + (permission_ok ? "true" : "false");
    AC_L16_MAIN_BLOCKER = AC_L16_VALIDATION_REASON;
 }
 
@@ -177,30 +176,16 @@ string AC_Layer16BoardSection()
    text += "\r\nLAYER 16 - GLOBAL TOP 10 INSPECTION BASKET\r\n";
    text += "----------------------------------------\r\n";
    text += "Status:                     " + AC_L16_STATUS + "\r\n";
-   text += "Owner:                      Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "Input Source:               L14 candidate pool + L15 correlation/diversity\r\n";
    text += "Visible Surface State:      " + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
    text += "Hold State:                 " + AC_L16_HOLD_STATE + "\r\n";
-   text += "Hold Age Seconds:           " + IntegerToString(AC_L16_HOLD_AGE_SECONDS) + "\r\n";
-   text += "Hold Valid Until UTC:       " + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
-   text += "Visible Basket Meaning:     held display basket; latest calculation files may differ inside worker layer until hold expiry\r\n";
-   text += "Candidate Pool Size:        " + IntegerToString(AC_L16_CANDIDATE_POOL_SIZE) + "\r\n";
-   text += "L15 Candidate Count:        " + IntegerToString(AC_L16_L15_CANDIDATE_COUNT) + "\r\n";
    text += "Selected Count:             " + IntegerToString(AC_L16_SELECTED_COUNT) + " / 10\r\n";
-   text += "Unfilled Slots:             " + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
-   text += "Reject Count:               " + IntegerToString(AC_L16_REJECT_COUNT) + "\r\n";
-   text += "Correlation Rejects:        " + IntegerToString(AC_L16_CORRELATION_REJECT_COUNT) + "\r\n";
-   text += "Group Cap Rejects:          " + IntegerToString(AC_L16_GROUP_CAP_REJECT_COUNT) + "\r\n";
    text += "Fallback Count:             " + IntegerToString(AC_L16_FALLBACK_COUNT) + "\r\n";
-   text += "Groups Represented:         " + IntegerToString(AC_L16_GROUP_COUNT) + "\r\n";
    text += "Top Symbol:                 " + AC_L16_TOP_SYMBOL + "\r\n";
-   text += "Threshold Status:           " + AC_L16_THRESHOLD_STATUS + "\r\n";
    text += "Source Generated UTC:       " + AC_L16_GENERATED_UTC + "\r\n";
-   text += "Global Top10 Runtime:       FALSE\r\n";
+   text += "Main Blocker:               " + AC_L16_MAIN_BLOCKER + "\r\n";
    text += "Trade Permission:           FALSE\r\n";
    text += "Entry Signal:               FALSE\r\n";
    text += "Execution:                  FALSE\r\n";
-   text += "Main Blocker:               " + AC_L16_MAIN_BLOCKER + "\r\n";
    return text;
 }
 
@@ -241,11 +226,8 @@ string AC_Layer16DossierSection(const string symbol)
    text += "\r\nLAYER 16 - GLOBAL TOP 10 INSPECTION BASKET\r\n";
    text += "----------------------------------------\r\n";
    text += "Status: " + AC_L16_STATUS + "\r\n";
-   text += "Owner: Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
    text += "Visible Surface State: " + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
    text += "Hold State: " + AC_L16_HOLD_STATE + "\r\n";
-   text += "Hold Valid Until UTC: " + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
-   text += "Visible Basket Meaning: held display basket; latest calculation files may differ until hold expiry\r\n";
    text += "Source Generated UTC: " + AC_L16_GENERATED_UTC + "\r\n";
    if(row == "")
    {
@@ -258,23 +240,10 @@ string AC_Layer16DossierSection(const string symbol)
       text += "Global Rank: #" + AC_L16CsvField(row, 0) + " / " + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
       text += "Ranking Group: " + AC_L16CsvField(row, 3) + "\r\n";
       text += "L16 Primary Score: " + AC_L16CsvField(row, 7) + "\r\n";
-      text += "L14 Candidate Score: " + AC_L16CsvField(row, 8) + "\r\n";
-      text += "L15 Diversity Score: " + AC_L16CsvField(row, 9) + "\r\n";
-      text += "Max Corr To Selected: " + AC_L16CsvField(row, 13) + "\r\n";
-      text += "Max Corr Pair: " + AC_L16CsvField(row, 14) + "\r\n";
-      text += "Correlation Clean: " + AC_L16CsvField(row, 15) + "\r\n";
-      text += "Correlation State: " + AC_L16CsvField(row, 16) + "\r\n";
-      text += "Correlation Confidence: " + AC_L16CsvField(row, 17) + "\r\n";
-      text += "Currency Overlap Score: " + AC_L16CsvField(row, 18) + "\r\n";
-      text += "Ranking Group Overlap Score: " + AC_L16CsvField(row, 19) + "\r\n";
-      text += "Leader / Backup: " + AC_L16CsvField(row, 20) + "\r\n";
-      text += "Candidate Source: " + AC_L16CsvField(row, 21) + "\r\n";
       text += "Selection Reason: " + AC_L16CsvField(row, 22) + "\r\n";
-      text += "Row Hold Visible: " + AC_L16CsvField(row, 38) + "\r\n";
       text += "Row Hold State: " + AC_L16CsvField(row, 39) + "\r\n";
    }
    text += "Meaning: global_top10_inspection_basket_only_not_trade_permission\r\n";
-   text += "Global Top10 Runtime: FALSE\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Entry Signal: FALSE\r\n";
    text += "Execution: FALSE\r\n";
@@ -288,34 +257,19 @@ string AC_Layer16WorkbenchSection()
    text += "\r\nL16_GLOBAL_TOP10_BUILDER\r\n";
    text += "----------------------------------------\r\n";
    text += "schema_name=l16_global_top10_builder\r\n";
-   text += "schema_version=2\r\n";
-   text += "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner\r\n";
-   text += "layer_id=16\r\n";
-   text += "input_source=L14_candidate_pool+L15_correlation_diversity_outputs\r\n";
+   text += "schema_version=3\r\n";
    text += "status=" + AC_L16_STATUS + "\r\n";
    text += "validation_status=" + AC_L16_VALIDATION_STATUS + "\r\n";
    text += "validation_reason=" + AC_L16_VALIDATION_REASON + "\r\n";
    text += "visible_surface_state=" + AC_L16_VISIBLE_SURFACE_STATE + "\r\n";
    text += "hold_state=" + AC_L16_HOLD_STATE + "\r\n";
-   text += "hold_age_seconds=" + IntegerToString(AC_L16_HOLD_AGE_SECONDS) + "\r\n";
-   text += "hold_valid_until_utc=" + AC_L16_HOLD_VALID_UNTIL_UTC + "\r\n";
-   text += "visible_basket_meaning=held_display_basket_latest_calculation_files_may_differ_until_hold_expiry\r\n";
-   text += "candidate_pool_size=" + IntegerToString(AC_L16_CANDIDATE_POOL_SIZE) + "\r\n";
-   text += "l15_candidate_count=" + IntegerToString(AC_L16_L15_CANDIDATE_COUNT) + "\r\n";
    text += "selected_count=" + IntegerToString(AC_L16_SELECTED_COUNT) + "\r\n";
-   text += "unfilled_slots_count=" + IntegerToString(AC_L16_UNFILLED_SLOTS_COUNT) + "\r\n";
-   text += "reject_count=" + IntegerToString(AC_L16_REJECT_COUNT) + "\r\n";
-   text += "correlation_reject_count=" + IntegerToString(AC_L16_CORRELATION_REJECT_COUNT) + "\r\n";
-   text += "group_cap_reject_count=" + IntegerToString(AC_L16_GROUP_CAP_REJECT_COUNT) + "\r\n";
    text += "fallback_count=" + IntegerToString(AC_L16_FALLBACK_COUNT) + "\r\n";
-   text += "group_count=" + IntegerToString(AC_L16_GROUP_COUNT) + "\r\n";
    text += "top_symbol=" + AC_L16_TOP_SYMBOL + "\r\n";
-   text += "threshold_status=" + AC_L16_THRESHOLD_STATUS + "\r\n";
    text += "source_generated_utc=" + AC_L16_GENERATED_UTC + "\r\n";
    text += "summary_path=" + AC_L16SummaryPath() + "\r\n";
    text += "top10_csv_path=" + AC_L16Top10CsvPath() + "\r\n";
-   text += "rejects_csv_path=" + AC_L16RejectsCsvPath() + "\r\n";
-   text += "selection_desk_path=" + AC_L16SelectionDeskPath() + "\r\n";
+   text += "canonical_selection_desk_path=" + AC_L16SelectionDeskPath() + "\r\n";
    text += "global_top10_runtime=false\r\n";
    text += "trade_permission=false\r\n";
    text += "entry_signal=false\r\n";
