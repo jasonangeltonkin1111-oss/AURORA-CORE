@@ -18,10 +18,7 @@ L9_LAYER_NAME = "Layer 9 - Structure / Location Geometry"
 L9_OWNER = "Runtime 4 - Surface Scoring Owner"
 L9_SOURCE_OWNER = "Runtime_1_Shared_OHLC_Priority_Windows"
 L9_AUTHORITY = "calculation_support_only"
-
-# L9 is an independent watchlist-geometry ranker. It may later be consumed by
-# a master surface selector, but it must not consume L6/L7/L8 as authority.
-L9_POLICY = "watchlist_only_no_direction_no_entry_no_selection_no_execution"
+L9_POLICY = "watchlist_only_surface_context"
 
 # Required v1 windows. They must be produced by Runtime 1. L9 only reads them.
 L9_TF_WEIGHTS = {
@@ -86,7 +83,7 @@ L9_LOCATION_CONTEXT_FIELDS = [
 L9_OUTPUT_FIELDS = [
     "rank_index", "symbol", "layer_id", "layer_name", "l9_model_version",
     "structure_watchlist_score", "structure_bucket", "rank_state", "score_quality",
-    "geometry_regime", "event_zone", "watchlist", "entry_signal", "trade_permission", "selection_runtime",
+    "geometry_regime", "event_zone", "watchlist",
     "asset_class", "ranking_group", "market_state", "quote_quality", "surface_quality",
     "tick_age_seconds", "spread_bps", "price_basis", "price_basis_quality", "price_used",
     *L9_LOCATION_CONTEXT_FIELDS,
