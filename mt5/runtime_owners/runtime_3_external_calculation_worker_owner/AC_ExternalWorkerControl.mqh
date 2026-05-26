@@ -6,6 +6,14 @@ void AC_AppendExternalWorkerSharedSupervisorTexts();
 
 static string AC_EXTERNAL_WORKER_LAST_REQUIRED_TEXT = "";
 
+datetime AC_ExternalWorkerCurrentServerTime()
+{
+   datetime server_time = TimeTradeServer();
+   if(server_time <= 0) server_time = TimeCurrent();
+   if(server_time <= 0) server_time = TimeGMT();
+   return server_time;
+}
+
 string AC_ExternalWorkerRequiredText()
 {
    string text = "";
@@ -95,7 +103,7 @@ void AC_RefreshExternalWorkerWorkerStatus()
 void AC_RefreshExternalWorkerStatus()
 {
    AC_ExternalWorkerInitStatus();
-   AC_EXTERNAL_WORKER_LAST_CHECK_TIME = TimeCurrent();
+   AC_EXTERNAL_WORKER_LAST_CHECK_TIME = AC_ExternalWorkerCurrentServerTime();
 
    int common_flag = AC_CommonFlag();
    ResetLastError();
@@ -166,7 +174,7 @@ void AC_RefreshExternalWorkerStatus()
 bool AC_ExternalWorkerShouldCheck()
 {
    if(AC_EXTERNAL_WORKER_LAST_CHECK_TIME <= 0) return true;
-   return (TimeCurrent() - AC_EXTERNAL_WORKER_LAST_CHECK_TIME) >= AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS;
+   return (AC_ExternalWorkerCurrentServerTime() - AC_EXTERNAL_WORKER_LAST_CHECK_TIME) >= AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS;
 }
 
 AC_WriteResult AC_WriteExternalWorkerRequired()
