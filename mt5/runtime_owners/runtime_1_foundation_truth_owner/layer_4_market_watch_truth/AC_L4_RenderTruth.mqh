@@ -17,10 +17,8 @@ void AC_BuildLayer4Texts()
    AC_L4_BOARD_SECTION += "High Spread Warnings:       " + IntegerToString(AC_L4_HIGH_SPREAD_WARNINGS) + "\r\n";
    AC_L4_BOARD_SECTION += "Daily Change Available:     " + AC_L4Ratio(AC_L4_DAILY_CHANGE_AVAILABLE, AC_L4_ELIGIBLE_OPEN) + "\r\n";
    AC_L4_BOARD_SECTION += "Dossier Refresh:            Open quote packets every " + IntegerToString(AC_L4_DOSSIER_REFRESH_SECONDS) + " sec\r\n";
-   AC_L4_BOARD_SECTION += "Layer Authority:            Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
    AC_L4_BOARD_SECTION += "Scan Duration:              " + IntegerToString((int)AC_L4_SCAN_DURATION_MS) + " ms\r\n";
    AC_L4_BOARD_SECTION += "Worst Blocker:              " + AC_L4_WORST_FAILURE_REASON + "\r\n";
-   AC_L4_BOARD_SECTION += "Trade Permission:           FALSE\r\n";
 
    AC_L4_WORKBENCH_SECTION = "\r\nL4_MARKETWATCH_TRUTH\r\n";
    AC_L4_WORKBENCH_SECTION += "----------------------------------------\r\n";
@@ -72,7 +70,6 @@ string AC_Layer4DossierSection(const string symbol)
       text += "Status: Cut Off\r\n";
       text += "Reason: Layer 2 market state is not Open\r\n";
       text += "Live Quote Truth: Not refreshed while market is closed or unknown\r\n";
-      text += "Trade Permission: FALSE\r\n";
       return text;
    }
 
@@ -81,7 +78,6 @@ string AC_Layer4DossierSection(const string symbol)
    {
       text += "Status: Pending\r\n";
       text += "Reason: Layer 4 packet has not scanned this open symbol yet\r\n";
-      text += "Trade Permission: FALSE\r\n";
       return text;
    }
 
@@ -123,7 +119,7 @@ string AC_Layer4DossierSection(const string symbol)
    text += "Daily High Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_high_ask, p.digits) : "Not available") + "\r\n";
    text += "Daily Low Ask: " + (daily_ask_range_safe ? AC_L4PriceText(p.daily_low_ask, p.digits) : "Not available") + "\r\n";
    text += "Daily Range Position: " + (daily_position_safe ? AC_L4PctText(p.daily_range_position_pct) : "Not available") + "\r\n";
-   text += "Daily Change Source: Broker Market Watch property; zero OHLC values rendered as Not available\r\n";
+   text += "Daily Source: Broker Market Watch; zero=NA\r\n";
 
    text += "\r\nActivity\r\n";
    text += "----------------------------------------\r\n";
@@ -136,8 +132,6 @@ string AC_Layer4DossierSection(const string symbol)
    text += "\r\nQuality\r\n";
    text += "----------------------------------------\r\n";
    text += "Failure Reason: " + AC_L4TextOrNA(p.failure_reason) + "\r\n";
-   text += "Authority: Quote truth only; no ranking, selection, direction, entry, or permission\r\n";
-   text += "Trade Permission: FALSE\r\n";
    return text;
 }
 
