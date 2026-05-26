@@ -150,8 +150,6 @@ def _tier(row: Dict[str, str]) -> Tuple[int, str, str, str]:
         return (1, "SELECTED_STRONG", "strong", "strong_clean_group")
     if state in {"ACCEPTED", "ACCEPTED_WITH_REVIEW"} and not thin and rankable >= 3 and top5 >= 1:
         return (2, "SELECTED_WITH_REVIEW", "usable_review", "best_available_non_thin_review_group")
-    if thin and rankable >= 1:
-        return (4, "SELECTED_THIN_FALLBACK", "thin_fallback", "last_resort_thin_group")
     if rankable >= 2 and top5 >= 1:
         return (3, "SELECTED_WEAK_FALLBACK", "weak_fallback", "best_available_weak_group")
     if rankable >= 1:
@@ -188,14 +186,14 @@ def _selection_quality(selected: List[Dict[str, str]]) -> str:
     if not selected:
         return "source_degraded"
     tiers = {row.get("selection_quality_tier", "source_degraded") for row in selected}
+    if "market_segment_fallback" in tiers:
+        return "market_segment_fallback"
     if tiers == {"strong"}:
         return "strong"
     if "thin_fallback" in tiers:
         return "thin_fallback"
     if "weak_fallback" in tiers:
         return "weak_fallback"
-    if "market_segment_fallback" in tiers:
-        return "market_segment_fallback"
     if "usable_review" in tiers:
         return "usable_review"
     return sorted(tiers)[0]
@@ -205,11 +203,13 @@ def _market_note(selection_quality_tier: str, fallback_used: bool) -> str:
     if selection_quality_tier == "strong":
         return "strong_groups_available_selected_best_of_best"
     if selection_quality_tier == "usable_review":
-        return "selected_best_available_groups_because_strong_groups_unavailable_or_review_heavy"
+        return "selected_all_valid_groups_when_valid_count_between_three_and_six_or_review_groups_needed"
     if selection_quality_tier == "weak_fallback":
         return "selected_best_available_weak_groups_for_inspection_only"
     if selection_quality_tier == "thin_fallback":
         return "selected_thin_fallback_groups_included_for_inspection_pipeline_truth"
+    if selection_quality_tier == "market_segment_fallback":
+        return "valid_group_count_two_or_less_market_segment_fallback_required_available_groups_preserved_for_l14_continuity"
     if fallback_used:
         return "fallback_used_to_avoid_empty_group_selection"
     return "source_degraded_no_safe_group_selection"
@@ -222,52 +222,64 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
         base = _base_row(row, checksum)
         candidates.append((tier, -float(base["l13_group_selection_score"]), base, state, quality_tier, reason))
 
+    valid_candidates = [item for item in candidates if item[0] < 99]
+    valid_candidates.sort(key=lambda item: (item[0], item[1], item[2]["ranking_group"]))
+    valid_group_count = len(valid_candidates)
+
+    if valid_group_count >= L13_TARGET_SELECTED_GROUPS:
+        selected_candidates = valid_candidates[:L13_MAX_SELECTED_GROUPS]
+        ladder_reason = "valid_group_count_gte_7_selected_top_7"
+        market_segment_fallback = False
+    elif valid_group_count >= L13_MIN_SELECTED_GROUPS:
+        selected_candidates = valid_candidates
+        ladder_reason = "valid_group_count_3_to_6_selected_all_valid_groups"
+        market_segment_fallback = False
+    elif valid_group_count > 0:
+        selected_candidates = valid_candidates
+        ladder_reason = "valid_group_count_lte_2_market_segment_fallback_required_preserved_available_ranking_groups_for_l14_continuity"
+        market_segment_fallback = True
+    else:
+        selected_candidates = []
+        ladder_reason = "no_rankable_l13_group_rows_available"
+        market_segment_fallback = False
+
     selected: List[Dict[str, str]] = []
     selected_keys: set[str] = set()
+    for _tier_no, _neg_score, base, state, quality_tier, reason in selected_candidates:
+        selected_keys.add(base["ranking_group"])
+        row = dict(base)
+        row.update({
+            "selection_rank": str(len(selected) + 1),
+            "group_selection_state": "FALLBACK_SELECTED_MARKET_SEGMENT" if market_segment_fallback else state,
+            "selection_quality_tier": "market_segment_fallback" if market_segment_fallback else quality_tier,
+            "selected_flag": "true",
+            "selected_reason": ladder_reason + ";" + reason,
+            "fallback_used": "false",
+            "fallback_reason": "not_required",
+            "market_condition_note": "pending_final_selection_quality",
+            "meaning": "ranking_group_selected_for_candidate_sourcing_attention_only",
+            "selection_runtime": "false",
+            "trade_permission": "false",
+            "entry_signal": "false",
+            "execution": "false",
+        })
+        selected.append(row)
+
     fallback_used = False
     fallback_reasons: List[str] = []
-
-    # Fill best-of-best first, then progressively loosen. Target is 7, max is 7.
-    for allowed_tier in (1, 2, 3, 4):
-        tier_rows = [c for c in candidates if c[0] == allowed_tier and c[2]["ranking_group"] not in selected_keys]
-        tier_rows.sort(key=lambda item: (item[0], item[1], item[2]["ranking_group"]))
-        for _tier_no, _neg_score, base, state, quality_tier, reason in tier_rows:
-            if len(selected) >= L13_MAX_SELECTED_GROUPS:
-                break
-            selected_keys.add(base["ranking_group"])
-            row = dict(base)
-            row.update({
-                "selection_rank": str(len(selected) + 1),
-                "group_selection_state": state,
-                "selection_quality_tier": quality_tier,
-                "selected_flag": "true",
-                "selected_reason": reason,
-                "fallback_used": "false",
-                "fallback_reason": "not_required",
-                "market_condition_note": "pending_final_selection_quality",
-                "meaning": "ranking_group_selected_for_candidate_sourcing_attention_only",
-                "selection_runtime": "false",
-                "trade_permission": "false",
-                "entry_signal": "false",
-                "execution": "false",
-            })
-            selected.append(row)
-        if len(selected) >= L13_TARGET_SELECTED_GROUPS:
-            break
-
-    strong_candidate_count = sum(1 for c in candidates if c[0] == 1)
+    strong_candidate_count = sum(1 for c in valid_candidates if c[0] == 1)
     non_strong_selected_count = sum(1 for row in selected if row["selection_quality_tier"] != "strong")
-    if non_strong_selected_count > 0:
+    if market_segment_fallback:
+        fallback_used = True
+        fallback_reasons.append(ladder_reason)
+    elif non_strong_selected_count > 0:
         fallback_used = True
         if strong_candidate_count <= 0:
             fallback_reasons.append("strong_clean_group_count_zero_selected_best_available_non_strong_groups")
         else:
-            fallback_reasons.append("strong_clean_group_count_below_target_filled_with_best_available_non_strong_groups")
-    if len(selected) < L13_MIN_SELECTED_GROUPS and selected:
-        fallback_used = True
-        fallback_reasons.append("selected_group_count_below_minimum_after_group_ladder")
+            fallback_reasons.append("strong_clean_group_count_below_selection_rule_filled_with_best_available_non_strong_groups")
     if not selected:
-        fallback_reasons.append("no_rankable_l13_group_rows_available")
+        fallback_reasons.append(ladder_reason)
 
     quality = _selection_quality(selected)
     note = _market_note(quality, fallback_used)
@@ -283,12 +295,9 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
     for tier_no, _neg_score, base, state, quality_tier, reason in candidates:
         if base["ranking_group"] in selected_keys:
             continue
-        rejected_reason = reason if tier_no == 99 else "not_selected_below_selected_cutoff"
-        # Preserve the true no-rankable failure reason. A group with rankable_count=0 is not a
-        # thin-but-usable group; labeling it as thin_group_below_preferred_depth hides the source
-        # degradation and makes L13 rejection proof dishonest.
+        rejected_reason = reason if tier_no == 99 else "not_selected_by_l13_valid_group_count_ladder"
         if base["thin_group_flag"] == "true" and tier_no >= 3 and _int(base.get("rankable_count")) > 0:
-            rejected_reason = "thin_group_below_preferred_depth"
+            rejected_reason = "thin_group_not_selected_by_l13_valid_group_count_ladder"
         row = dict(base)
         row.update({
             "selection_quality_tier": quality_tier,
@@ -300,7 +309,7 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
 
     fallback_rows = [{
         "fallback_rank": "1",
-        "fallback_scope": "ranking_group_ladder",
+        "fallback_scope": "market_segment" if market_segment_fallback else "ranking_group_ladder",
         "fallback_used": "true" if fallback_used else "false",
         "fallback_reason": fallback_reason,
         "selection_quality_tier": quality,
@@ -314,7 +323,7 @@ def _build(rows: List[Dict[str, str]], checksum: str) -> Tuple[List[Dict[str, st
     summary = L13PublishSummary(
         status="accepted" if selected else "pending",
         reason="l13_dynamic_group_selection_published" if selected else "no_l13_groups_selected_from_l12_source",
-        valid_group_count=sum(1 for c in candidates if c[0] < 99),
+        valid_group_count=valid_group_count,
         selected_ranking_group_count=len(selected),
         rejected_ranking_group_count=len(rejected),
         fallback_used=fallback_used,

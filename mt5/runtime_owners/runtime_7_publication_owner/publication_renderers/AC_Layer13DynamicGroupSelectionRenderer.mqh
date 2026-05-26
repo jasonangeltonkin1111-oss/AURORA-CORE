@@ -2,7 +2,7 @@
 #define AC_LAYER13_DYNAMIC_GROUP_SELECTION_RENDERER_MQH
 
 // Runtime 7 render-only surface for Layer 13 Dynamic Ranking Group Selection.
-// Reads worker L13 summary and canonical layer summary index outputs only.
+// Reads worker L13 summary and stable Selection Desk/Groups outputs only.
 // Must not rank symbols, build candidates, run correlation, build Global Top 10, permit, alert, or execute.
 
 static string AC_L13_STATUS = "Pending L13 dynamic group selection";
@@ -25,7 +25,7 @@ string AC_L13LayerFolder(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\
 string AC_L13SummaryPath(){ return AC_L13LayerFolder() + "\\l13_group_selection_summary.txt"; }
 string AC_L13SelectedCsvPath(){ return AC_L13LayerFolder() + "\\l13_selected_ranking_groups.csv"; }
 string AC_L13RejectedCsvPath(){ return AC_L13LayerFolder() + "\\l13_rejected_ranking_groups.csv"; }
-string AC_L13CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\91_Layer_Summaries\\L13_Selected_Ranking_Groups"; }
+string AC_L13CanonicalSummaryFolder(){ return AC_SelectionDeskFolder() + "\\Groups"; }
 string AC_L13SelectionDeskIndexPath(){ return AC_L13CanonicalSummaryFolder() + "\\00_Selected_Ranking_Groups.txt"; }
 string AC_L13SelectionDeskIndexCsvPath(){ return AC_L13CanonicalSummaryFolder() + "\\00_Selected_Ranking_Groups.csv"; }
 
@@ -128,7 +128,7 @@ void AC_L13RefreshSummary()
       AC_L13_ACCEPTED = true;
       AC_L13_STATUS = "Accepted";
       AC_L13_VALIDATION_STATUS = "Accepted";
-      AC_L13_VALIDATION_REASON = "summary/files/counts/canonical_layer_summary_index/permission all accepted";
+      AC_L13_VALIDATION_REASON = "summary/files/counts/stable_selection_desk_groups/permission all accepted";
       AC_L13_MAIN_BLOCKER = "none";
       return;
    }
