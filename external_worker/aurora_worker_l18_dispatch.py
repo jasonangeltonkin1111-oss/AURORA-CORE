@@ -59,7 +59,7 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
         f"l18_status_path={summary.status_path}",
         f"l18_board_path={summary.board_path}",
         f"l18_layer_folder={summary.layer_folder}",
-        "l18_next_layer=L19_candle_geometry_and_structure_dispatch_owned",
+        "l18_next_layer=L19_wick_candle_geometry_dispatch_owned",
         "l18_scope=canonical_selection_shortcut_dossiers_only",
         "l18_source_owner=Runtime_1_Shared_OHLC_Raw_Storage_Owner",
         "l18_source_policy=read_existing_shared_ohlc_seed_files_only",
