@@ -5,7 +5,6 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l19 import L19PublishSummary, publish_l19_candle_geometry_and_structure
-from aurora_worker_l21_dispatch import run_l21_after_l19
 from aurora_worker_selection_surface_cleanup import EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY, SelectionSurfaceCleanupSummary, cleanup_legacy_selection_surface_paths
 from aurora_worker_selection_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_root_index
 
@@ -16,6 +15,10 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
         f"l19_candle_geometry_reason={summary.reason}",
         f"l19_candle_geometry_duration_ms={duration_ms}",
         f"l19_selected_dossiers_seen={summary.selected_dossiers_seen}",
+        f"l19_selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
+        f"l19_selected_route_dossiers_decorated={summary.selected_route_dossiers_decorated}",
+        f"l19_selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
+        f"l19_selected_duplicate_route_copies={summary.selected_duplicate_route_copies}",
         f"l19_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
         f"l19_selected_dossiers_missing_symbol={summary.selected_dossiers_missing_symbol}",
         f"l19_source_files_expected={summary.source_files_expected}",
@@ -31,6 +34,13 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
         f"l19_wave3_rows_tagged={summary.wave3_rows_tagged}",
         f"l19_topview_cleanup_count={summary.topview_cleanup_count}",
         f"l19_write_failed_count={summary.write_failed_count}",
+        f"l19_latest_bar_age_max_seconds={summary.latest_bar_age_max_seconds}",
+        f"l19_freshness_fresh_count={summary.freshness_fresh_count}",
+        f"l19_freshness_aging_count={summary.freshness_aging_count}",
+        f"l19_freshness_stale_count={summary.freshness_stale_count}",
+        f"l19_freshness_unknown_count={summary.freshness_unknown_count}",
+        f"l19_freshness_status={summary.freshness_status}",
+        f"l19_freshness_policy={summary.freshness_policy}",
         f"l19_m5_completed_symbols={summary.m5_completed_symbols}",
         f"l19_m5_partial_symbols={summary.m5_partial_symbols}",
         f"l19_m5_missing_symbols={summary.m5_missing_symbols}",
@@ -57,7 +67,6 @@ def l19_result_lines(summary: L19PublishSummary, duration_ms: int, cleanup: Sele
         f"l19_root_index_status={root_index.status}",
         f"l19_root_index_reason={root_index.reason}",
         f"l19_root_index_path={root_index.root_index_path}",
-        "l19_next_layer=L21_indicator_reference_dispatch_owned",
         "l19_scope=canonical_selection_shortcut_dossiers_only",
         "l19_source_contract=l18_selected_raw_ohlc_scope_using_existing_shared_ohlc_seed_files",
         "l19_rows_shown_per_tf=5",
@@ -111,13 +120,14 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=23",
+            "schema_version=22",
             "worker_l19_append_status=appended_by_l19_dispatch",
-            "worker_l21_dispatch_policy=l19_dispatch_runs_l21_after_l19",
             f"l19_status={summary.status}",
             f"l19_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
             f"l19_source_files_found={summary.source_files_found}",
             f"l19_source_files_expected={summary.source_files_expected}",
+            f"l19_selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
+            f"l19_freshness_status={summary.freshness_status}",
             f"l19_valid_geometry_rows={summary.valid_geometry_rows}",
             f"l19_zero_range_rows={summary.zero_range_rows}",
             f"l19_invalid_geometry_rows={summary.invalid_geometry_rows}",
@@ -149,5 +159,4 @@ def run_l19_after_l18(root: Path) -> L19PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
-    run_l21_after_l19(root)
     return summary
