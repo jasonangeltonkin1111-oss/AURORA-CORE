@@ -4,15 +4,32 @@ from pathlib import Path
 import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
-from aurora_worker_l18 import L18PublishSummary, publish_l18_selected_raw_ohlc_bar_pack
+from aurora_worker_l18 import DISPLAY_BARS, L18PublishSummary, publish_l18_selected_raw_ohlc_bar_pack
 from aurora_worker_l19_dispatch import run_l19_after_l18
 
 
+def _display_profile() -> str:
+    return ",".join(f"{tf}={bars}" for tf, bars in DISPLAY_BARS.items())
+
+
+def _tf_counter_lines(summary: L18PublishSummary) -> list[str]:
+    lines: list[str] = []
+    for tf in DISPLAY_BARS:
+        prefix = tf.lower()
+        lines.extend([
+            f"l18_{prefix}_completed_symbols={getattr(summary, prefix + '_completed_symbols')}",
+            f"l18_{prefix}_partial_symbols={getattr(summary, prefix + '_partial_symbols')}",
+            f"l18_{prefix}_missing_symbols={getattr(summary, prefix + '_missing_symbols')}",
+        ])
+    return lines
+
+
 def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
-    return "\n".join([
+    lines = [
         f"l18_selected_raw_ohlc_status={summary.status}",
         f"l18_selected_raw_ohlc_reason={summary.reason}",
         f"l18_selected_raw_ohlc_duration_ms={duration_ms}",
+        f"l18_display_profile={_display_profile()}",
         f"l18_selected_dossiers_seen={summary.selected_dossiers_seen}",
         f"l18_selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
         f"l18_selected_route_dossiers_decorated={summary.selected_route_dossiers_decorated}",
@@ -34,21 +51,9 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
         f"l18_freshness_unknown_count={summary.freshness_unknown_count}",
         f"l18_freshness_status={summary.freshness_status}",
         f"l18_freshness_policy={summary.freshness_policy}",
-        f"l18_m5_completed_symbols={summary.m5_completed_symbols}",
-        f"l18_m5_partial_symbols={summary.m5_partial_symbols}",
-        f"l18_m5_missing_symbols={summary.m5_missing_symbols}",
-        f"l18_m15_completed_symbols={summary.m15_completed_symbols}",
-        f"l18_m15_partial_symbols={summary.m15_partial_symbols}",
-        f"l18_m15_missing_symbols={summary.m15_missing_symbols}",
-        f"l18_h1_completed_symbols={summary.h1_completed_symbols}",
-        f"l18_h1_partial_symbols={summary.h1_partial_symbols}",
-        f"l18_h1_missing_symbols={summary.h1_missing_symbols}",
-        f"l18_h4_completed_symbols={summary.h4_completed_symbols}",
-        f"l18_h4_partial_symbols={summary.h4_partial_symbols}",
-        f"l18_h4_missing_symbols={summary.h4_missing_symbols}",
-        f"l18_d1_completed_symbols={summary.d1_completed_symbols}",
-        f"l18_d1_partial_symbols={summary.d1_partial_symbols}",
-        f"l18_d1_missing_symbols={summary.d1_missing_symbols}",
+    ]
+    lines.extend(_tf_counter_lines(summary))
+    lines.extend([
         f"l18_status_path={summary.status_path}",
         f"l18_board_path={summary.board_path}",
         f"l18_layer_folder={summary.layer_folder}",
@@ -67,6 +72,7 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
         "l18_execution=false",
         "",
     ])
+    return "\n".join(lines)
 
 
 def _replace_or_append_l18_block(result_text: str, lines: str) -> str:
@@ -98,10 +104,11 @@ def run_l18_after_l17(root: Path) -> L18PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=18",
+            "schema_version=19",
             "worker_l18_append_status=appended_by_l18_dispatch",
             "worker_l19_dispatch_policy=l18_dispatch_runs_l19_after_l18",
             f"l18_status={summary.status}",
+            f"l18_display_profile={_display_profile()}",
             f"l18_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
             f"l18_source_files_found={summary.source_files_found}",
             f"l18_source_files_expected={summary.source_files_expected}",
