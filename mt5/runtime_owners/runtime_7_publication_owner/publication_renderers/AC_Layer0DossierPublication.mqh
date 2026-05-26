@@ -370,6 +370,20 @@ void AC_CleanupOtherDossierRoutes(const string symbol, const string market_state
    }
 }
 
+void AC_L0ReconcileDossierRouteMembership(const int total)
+{
+   if(total <= 0 || !AC_L2_READY) return;
+   for(int idx = 0; idx < total; idx++)
+   {
+      string symbol = SymbolName(idx, false);
+      if(symbol == "") continue;
+      string market_state = AC_L2MarketStateForSymbol(symbol);
+      if(market_state != "open" && market_state != "closed")
+         market_state = "unknown";
+      AC_CleanupOtherDossierRoutes(symbol, market_state, true);
+   }
+}
+
 bool AC_WriteLayer0ShellWithRetries(const string symbol,
                                     const int broker_index,
                                     const AC_Layer0StatusPacket &status,
@@ -611,8 +625,12 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    status.marketwatch_symbols_total = marketwatch_total;
    AC_L0RefreshDossierSectionDependencies();
    string source_key = AC_L0DossierSourceKey(total);
-   if(source_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total)
+   bool reset_needed = (source_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total);
+   if(reset_needed)
+   {
       AC_L0ResetIncrementalPass(source_key);
+      AC_L0ReconcileDossierRouteMembership(total);
+   }
 
    int max_symbols = AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS;
    if(max_symbols < 1) max_symbols = 1;
