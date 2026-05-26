@@ -220,4 +220,14 @@ AC_WriteResult AC_WriteTextFileFastAtomic_DossierNormalized(const string final_p
 #undef AC_BuildTraderBoardText
 #include "AC_TraderChatExportGuideRenderer.mqh"
 
+string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
+{
+   return AC_Layer0StatusRow_Base(status);
+}
+
+string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
+{
+   return AC_Layer0WorkbenchText_Base(status);
+}
+
 #endif

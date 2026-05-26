@@ -93,6 +93,7 @@ void AC_BuildLayer2Texts()
    AC_L2_BOARD_SECTION += "Open:                " + IntegerToString(AC_L2_OPEN_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Closed:              " + IntegerToString(AC_L2_CLOSED_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Unknown:             " + IntegerToString(AC_L2_UNKNOWN_COUNT) + "\r\n";
+   AC_L2_BOARD_SECTION += "Route Membership:    " + AC_L2_ROUTE_MEMBERSHIP_CHECKSUM + "\r\n";
    AC_L2_BOARD_SECTION += "Known Completion:    " + completion + "\r\n";
    AC_L2_BOARD_SECTION += "Trade Sessions OK:   " + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_BOARD_SECTION += "Quote Sessions OK:   " + IntegerToString(AC_L2_QUOTE_SESSION_SUCCESS_COUNT) + "\r\n";
@@ -117,6 +118,7 @@ void AC_BuildLayer2Texts()
    AC_L2_WORKBENCH_SECTION += "open_count=" + IntegerToString(AC_L2_OPEN_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "closed_count=" + IntegerToString(AC_L2_CLOSED_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT) + "\r\n";
+   AC_L2_WORKBENCH_SECTION += "route_membership_checksum=" + AC_L2_ROUTE_MEMBERSHIP_CHECKSUM + "\r\n";
    AC_L2_WORKBENCH_SECTION += "trade_session_success_count=" + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "trade_session_failure_count=" + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT) + "\r\n";
    AC_L2_WORKBENCH_SECTION += "quote_session_success_count=" + IntegerToString(AC_L2_QUOTE_SESSION_SUCCESS_COUNT) + "\r\n";
@@ -205,6 +207,7 @@ string AC_Layer2StatusRow()
       + "|open_count=" + IntegerToString(AC_L2_OPEN_COUNT)
       + "|closed_count=" + IntegerToString(AC_L2_CLOSED_COUNT)
       + "|unknown_count=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
+      + "|route_membership_checksum=" + AC_L2_ROUTE_MEMBERSHIP_CHECKSUM
       + "|trade_session_success=" + IntegerToString(AC_L2_TRADE_SESSION_SUCCESS_COUNT)
       + "|trade_session_failure=" + IntegerToString(AC_L2_TRADE_SESSION_FAILURE_COUNT)
       + "|route_write_counter_semantics=attempts_not_unique_final_files"

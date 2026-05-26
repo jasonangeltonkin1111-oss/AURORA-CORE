@@ -112,11 +112,26 @@ bool AC_L2FindNextTradeSession(const string symbol,
    return (minutes_until_next_open >= 0);
 }
 
+string AC_L2RouteMembershipChecksum()
+{
+   long checksum = 0;
+   for(int i = 0; i < ArraySize(AC_L2_SYMBOLS); i++)
+   {
+      string row = AC_L2_SYMBOLS[i].symbol + "=" + AC_L2_SYMBOLS[i].market_state + ";";
+      for(int j = 0; j < StringLen(row); j++)
+      {
+         ushort ch = StringGetCharacter(row, j);
+         checksum = (checksum + ((long)ch * (long)(i + 1) * (long)(j + 1))) % 2147483647;
+      }
+   }
+   return IntegerToString((int)checksum);
+}
+
 bool AC_L2FindActivePreviousDayOvernightTradeSession(const string symbol,
-                                                     const int day_of_week,
-                                                     const int seconds_of_day,
-                                                     int &active_from,
-                                                     int &active_to)
+                                                      const int day_of_week,
+                                                      const int seconds_of_day,
+                                                      int &active_from,
+                                                      int &active_to)
 {
    active_from = -1;
    active_to = -1;
@@ -397,7 +412,8 @@ void AC_RefreshLayer2MarketSessionTruth()
       AC_L2_READY = true;
       AC_L2_SCAN_DURATION_MS = GetTickCount() - AC_L2_SCAN_STARTED_MS;
       AC_L2_SYMBOLS_PER_SECOND = 0.0;
-      AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|symbols=0|open=0|closed=0|unknown=0|time_source=TimeTradeServerFirst";
+      AC_L2_ROUTE_MEMBERSHIP_CHECKSUM = "empty";
+      AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + "|server_day=" + IntegerToString(day_of_week) + "|symbols=0|open=0|closed=0|unknown=0|route_membership_checksum=" + AC_L2_ROUTE_MEMBERSHIP_CHECKSUM + "|time_source=TimeTradeServerFirst";
       AC_BuildLayer2Texts();
       return;
    }
@@ -423,12 +439,14 @@ void AC_RefreshLayer2MarketSessionTruth()
       AC_L2_SYMBOLS_PER_SECOND = ((double)AC_L2_SYMBOLS_SCANNED * 1000.0) / (double)AC_L2_SCAN_DURATION_MS;
    else
       AC_L2_SYMBOLS_PER_SECOND = (double)AC_L2_SYMBOLS_SCANNED;
+   AC_L2_ROUTE_MEMBERSHIP_CHECKSUM = AC_L2RouteMembershipChecksum();
    AC_L2_ROUTE_GENERATION_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION
       + "|server_day=" + IntegerToString(day_of_week)
       + "|symbols=" + IntegerToString(total)
       + "|open=" + IntegerToString(AC_L2_OPEN_COUNT)
       + "|closed=" + IntegerToString(AC_L2_CLOSED_COUNT)
       + "|unknown=" + IntegerToString(AC_L2_UNKNOWN_COUNT)
+      + "|route_membership_checksum=" + AC_L2_ROUTE_MEMBERSHIP_CHECKSUM
       + "|time_source=TimeTradeServerFirst";
    AC_L2_READY = true;
    AC_BuildLayer2Texts();

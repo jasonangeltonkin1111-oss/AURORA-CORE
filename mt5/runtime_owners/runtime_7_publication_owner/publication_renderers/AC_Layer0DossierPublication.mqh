@@ -82,6 +82,14 @@ string AC_MarketStateTitle(const string market_state)
    return "Unknown";
 }
 
+string AC_L0DossierRouteStateForSymbol(const string symbol)
+{
+   string market_state = AC_L2MarketStateForSymbol(symbol);
+   if(market_state == "open" || market_state == "closed")
+      return market_state;
+   return "unknown";
+}
+
 void AC_Layer0InitStatus(AC_Layer0StatusPacket &status)
 {
    status.layer_id = "L0";
@@ -315,7 +323,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
                                       const int broker_index,
                                       const AC_Layer0StatusPacket &status)
 {
-   string market_state = AC_L2MarketStateForSymbol(symbol);
+   string market_state = AC_L0DossierRouteStateForSymbol(symbol);
    string text = "";
    text += AC_DossierHeaderSection(symbol, market_state);
    text += AC_DossierSymbolTopViewSection(symbol, market_state);
@@ -377,9 +385,7 @@ void AC_L0ReconcileDossierRouteMembership(const int total)
    {
       string symbol = SymbolName(idx, false);
       if(symbol == "") continue;
-      string market_state = AC_L2MarketStateForSymbol(symbol);
-      if(market_state != "open" && market_state != "closed")
-         market_state = "unknown";
+      string market_state = AC_L0DossierRouteStateForSymbol(symbol);
       AC_CleanupOtherDossierRoutes(symbol, market_state, true);
    }
 }
@@ -394,7 +400,7 @@ bool AC_WriteLayer0ShellWithRetries(const string symbol,
    failure_line = "";
    int max_attempts = AC_DOSSIER_SHELL_WRITE_RETRIES;
    if(max_attempts < 1) max_attempts = 1;
-   string market_state = AC_L2MarketStateForSymbol(symbol);
+   string market_state = AC_L0DossierRouteStateForSymbol(symbol);
    string target_path = AC_DossierSymbolPathByState(symbol, market_state);
    for(int attempt = 1; attempt <= max_attempts; attempt++)
    {
@@ -413,6 +419,65 @@ bool AC_WriteLayer0ShellWithRetries(const string symbol,
    }
    AC_L2_ROUTE_WRITE_FAILURE_COUNT++;
    return false;
+}
+
+int AC_L0RouteTruthCount(const string route_state)
+{
+   if(route_state == "open") return AC_L2_OPEN_COUNT;
+   if(route_state == "closed") return AC_L2_CLOSED_COUNT;
+   return AC_L2_UNKNOWN_COUNT;
+}
+
+bool AC_L0RouteHasCurrentDossier(const int total, const string route_state)
+{
+   if(total <= 0 || AC_L0RouteTruthCount(route_state) <= 0) return true;
+   int common_flag = AC_CommonFlag();
+   for(int idx = 0; idx < total; idx++)
+   {
+      string symbol = SymbolName(idx, false);
+      if(symbol == "") continue;
+      string market_state = AC_L0DossierRouteStateForSymbol(symbol);
+      if(market_state != route_state) continue;
+      if(FileIsExist(AC_DossierSymbolPathByState(symbol, market_state), common_flag))
+         return true;
+   }
+   return false;
+}
+
+bool AC_L0SeedMissingRouteDossier(const int total,
+                                  const string route_state,
+                                  const AC_Layer0StatusPacket &status)
+{
+   if(total <= 0 || !AC_L2_READY || AC_L0RouteTruthCount(route_state) <= 0)
+      return true;
+   if(AC_L0RouteHasCurrentDossier(total, route_state))
+      return true;
+
+   for(int idx = 0; idx < total; idx++)
+   {
+      string symbol = SymbolName(idx, false);
+      if(symbol == "") continue;
+      string market_state = AC_L0DossierRouteStateForSymbol(symbol);
+      if(market_state != route_state) continue;
+
+      int retries_used = 0;
+      string failure_line = "";
+      if(AC_WriteLayer0ShellWithRetries(symbol, idx, status, retries_used, failure_line))
+         return true;
+
+      if(AC_L0_FIRST_FAILURE == "") AC_L0_FIRST_FAILURE = failure_line;
+      AC_L0_FAILURE_ADDENDUM += failure_line + "\r\n";
+      return false;
+   }
+   return false;
+}
+
+void AC_L0SeedMissingRouteDossiers(const int total,
+                                   const AC_Layer0StatusPacket &status)
+{
+   AC_L0SeedMissingRouteDossier(total, "closed", status);
+   AC_L0SeedMissingRouteDossier(total, "unknown", status);
+   AC_L0SeedMissingRouteDossier(total, "open", status);
 }
 
 void AC_L0CacheLayer7Proof()
@@ -603,6 +668,16 @@ string AC_L0DossierSourceKey(const int total)
       + "|ohlc_l8_fast=" + IntegerToString(AC_SHARED_OHLC_L8_FAST_READY);
 }
 
+string AC_L0DossierProgressKey(const int total)
+{
+   return "schema=" + AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + "|layout=" + AC_DOSSIER_RENDER_LAYOUT_KEY
+      + "|total=" + IntegerToString(total)
+      + "|l2_route=" + AC_L2_ROUTE_GENERATION_KEY
+      + "|l3=" + AC_L3_CACHE_KEY
+      + "|l4_universe=" + AC_L4_CACHE_KEY;
+}
+
 void AC_L0ResetIncrementalPass(const string source_key)
 {
    AC_L0_INCREMENTAL_SOURCE_KEY = source_key;
@@ -624,12 +699,14 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    status.broker_symbols_total = total;
    status.marketwatch_symbols_total = marketwatch_total;
    AC_L0RefreshDossierSectionDependencies();
-   string source_key = AC_L0DossierSourceKey(total);
-   bool reset_needed = (source_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total);
+   string render_key = AC_L0DossierSourceKey(total);
+   string progress_key = AC_L0DossierProgressKey(total);
+   bool reset_needed = (progress_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total);
    if(reset_needed)
    {
-      AC_L0ResetIncrementalPass(source_key);
+      AC_L0ResetIncrementalPass(progress_key);
       AC_L0ReconcileDossierRouteMembership(total);
+      AC_L0SeedMissingRouteDossiers(total, status);
    }
 
    int max_symbols = AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS;
@@ -746,12 +823,12 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
       AC_L17RefreshSummary();
       AC_L0_CACHED_PASS_VALID = true;
       AC_L0_CACHED_STATUS = status;
-      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|source_key=" + source_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
+      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), AC_L0_INCREMENTAL_FAILED_TOTAL == 0, batch_status, (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "bounded_dossier_universe_pass_complete|progress_key=" + progress_key + "|render_key=" + render_key + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
       return AC_L0_CACHED_RESULT;
    }
 
    AC_L0_CACHED_PASS_VALID = false;
-   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_dossier_universe_pass_partial|source_key=" + source_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(status.batch_end_index) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
+   return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), all_ok, batch_status, (ulong)written, "bounded_dossier_universe_pass_partial|progress_key=" + progress_key + "|render_key=" + render_key + "|start=" + IntegerToString(start_index) + "|end=" + IntegerToString(status.batch_end_index) + "|next=" + IntegerToString(AC_L0_INCREMENTAL_NEXT_INDEX) + "|max_symbols_per_pass=" + IntegerToString(max_symbols) + "|budget_ms=" + IntegerToString(budget_ms));
 }
 
 AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
@@ -769,8 +846,9 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
    int total = SymbolsTotal(false);
-   string current_source_key = AC_L0DossierSourceKey(total);
-   if(AC_L0_CACHED_PASS_VALID && current_source_key != AC_L0_INCREMENTAL_SOURCE_KEY)
+   string current_render_key = AC_L0DossierSourceKey(total);
+   string current_progress_key = AC_L0DossierProgressKey(total);
+   if(AC_L0_CACHED_PASS_VALID && current_progress_key != AC_L0_INCREMENTAL_SOURCE_KEY)
       AC_L0_CACHED_PASS_VALID = false;
 
    if(AC_L0_CACHED_PASS_VALID
@@ -832,7 +910,7 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
    {
       status = AC_L0_CACHED_STATUS;
       status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|source_key=" + current_source_key);
+      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|progress_key=" + current_progress_key + "|render_key=" + current_render_key);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
