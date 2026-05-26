@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BuiltWorker = Join-Path $ScriptDir "dist\AuroraWorker"
 $WorkerSource = Join-Path $ScriptDir "aurora_worker.py"
@@ -17,6 +17,56 @@ $WorkerVersion = $ExpectedWorkerVersion
 $SpecPath = Join-Path $ScriptDir "AuroraWorker.spec"
 $PyInstallerRebuildAttempted=$false; $PyInstallerRebuildStatus="not_started"; $PyInstallerRebuildError="none"
 $PackageExeLastWriteUtc="not_available"; $PackageProbeWorkerVersion="not_checked"; $PackageProbeError="none"; $PackageVersionMatchesSource="false"
+$PreinstallStopAttempted=$false; $PreinstallStopStatus="not_started"; $PreinstallStopError="none"; $PreinstallStoppedProcessCount=0
+
+function Stop-AuroraGatewayRuntimeForInstall {
+  $script:PreinstallStopAttempted=$true
+  $script:PreinstallStopStatus="running"
+  $errors = @()
+
+  foreach($taskName in @($WatchdogTaskName, $DaemonTaskName)) {
+    try {
+      $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+      if($task -and $task.State.ToString() -eq "Running") {
+        Stop-ScheduledTask -TaskName $taskName -ErrorAction Stop | Out-Null
+      }
+    } catch {
+      $errors += ("stop_task_" + $taskName + ": " + ($_.Exception.Message -replace "\r?\n", " "))
+    }
+  }
+
+  Start-Sleep -Seconds 2
+
+  try {
+    $procs = @(Get-Process -Name "AuroraWorker" -ErrorAction SilentlyContinue)
+    foreach($proc in $procs) {
+      try {
+        $script:PreinstallStoppedProcessCount++
+        Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+      } catch {
+        $errors += ("stop_process_" + $proc.Id + ": " + ($_.Exception.Message -replace "\r?\n", " "))
+      }
+    }
+  } catch {
+    $errors += ("enumerate_processes: " + ($_.Exception.Message -replace "\r?\n", " "))
+  }
+
+  Start-Sleep -Seconds 2
+
+  $remaining = @(Get-Process -Name "AuroraWorker" -ErrorAction SilentlyContinue)
+  if($remaining.Count -gt 0) {
+    $errors += "aurora_worker_process_still_running_after_stop_attempt_count=$($remaining.Count)"
+  }
+
+  if($errors.Count -gt 0) {
+    $script:PreinstallStopStatus="failed"
+    $script:PreinstallStopError=($errors -join "; ")
+    throw "Pre-install Gateway stop failed. Refusing package copy while runtime files may be locked. $script:PreinstallStopError"
+  }
+
+  $script:PreinstallStopStatus="succeeded"
+  $script:PreinstallStopError="none"
+}
 
 if (Test-Path $WorkerSource) {
   $versionLine = Select-String -LiteralPath $WorkerSource -Pattern '^\s*WORKER_VERSION\s*=\s*"([^"]+)"' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -54,7 +104,18 @@ try {
 
 if (!(Test-Path $BuiltWorker)) { throw "Built Gateway folder not found after rebuild: $BuiltWorker. No packaged readiness is claimed by source alone." }
 New-Item -ItemType Directory -Force -Path $SharedWorkerRoot,$SharedStatus | Out-Null
-Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force
+
+# The packaged one-folder worker keeps DLLs loaded while the daemon/watchdog are running.
+# Stop the existing runtime before replacing the live package, then register/start tasks again below.
+Stop-AuroraGatewayRuntimeForInstall
+
+try {
+  Copy-Item -Path (Join-Path $BuiltWorker "*") -Destination $SharedWorkerRoot -Recurse -Force -ErrorAction Stop
+} catch {
+  $copyError = ($_.Exception.Message -replace "\r?\n", " ")
+  throw "Package copy failed after stopping Gateway runtime. No install success is claimed. $copyError"
+}
+
 $BuiltExe = Join-Path $SharedWorkerRoot "AuroraWorker.exe"
 $BuiltInternalDll = Join-Path $SharedWorkerRoot "_internal\python312.dll"
 if (!(Test-Path $BuiltExe)) { throw "Install failed: AuroraWorker.exe missing after copy." }
@@ -181,7 +242,7 @@ $watchdogDefaultEnabled = if($watchRunnable){"true"}else{"false"}
 $Now = [DateTimeOffset]::UtcNow
 $InstallText = @"
 schema_name=aurora_gateway_install_status
-schema_version=8
+schema_version=9
 installed=$((($PackagedPresent -and $PackagedInternalPresent)).ToString().ToLowerInvariant())
 install_method=shared_global_gateway_plus_daemon_and_watchdog_tasks
 worker_version=$WorkerVersion
@@ -189,6 +250,10 @@ expected_worker_version=$ExpectedWorkerVersion
 worker_version_source=external_worker/aurora_worker.py
 package_source=external_worker/dist/AuroraWorker
 package_staleness_policy=rebuild_required_after_worker_source_change_no_source_only_runtime_claim
+preinstall_stop_attempted=$($PreinstallStopAttempted.ToString().ToLowerInvariant())
+preinstall_stop_status=$PreinstallStopStatus
+preinstall_stop_error=$PreinstallStopError
+preinstall_stopped_process_count=$PreinstallStoppedProcessCount
 shared_daemon=true
 shared_root=$SharedRoot
 gateway_root=$SharedExternalWorker
@@ -252,7 +317,6 @@ Set-Content -Path $SharedInstallStatusPath -Value $InstallText -Encoding ASCII
 Write-Host "Installed Gateway and task proofs at $SharedInstallStatusPath"
 Write-Host "Worker version source=$WorkerVersion expected=$ExpectedWorkerVersion"
 Write-Host "Runtime folder authority=$SharedWorkerRoot"
+Write-Host "Preinstall stop status=$PreinstallStopStatus stopped_process_count=$PreinstallStoppedProcessCount"
 Write-Host "Daemon registered=$($daemonRegistered.ToString().ToLowerInvariant()) state=$daemonState"
 Write-Host "Watchdog registered=$($watchRegistered.ToString().ToLowerInvariant()) state=$watchState operator_cmd_required=$operatorCmdRequired lightweight_expected=true"
-
-
