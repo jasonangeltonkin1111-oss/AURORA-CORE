@@ -36,7 +36,7 @@ def _selection_groups_dir(outbox: Path) -> Path:
 def _manifest_text(schema_name: str, payload_path: Path, payload_text: str, reason: str) -> str:
     return "\n".join([
         f"schema_name={schema_name}_manifest",
-        "schema_version=1",
+        "schema_version=2",
         "layer_id=11",
         "layer_name=Layer 11 - Symbol Ranking Inside Ranking Group",
         "owner=Runtime 3 calculation support / L11 intra-group ranking output proof",
@@ -77,6 +77,18 @@ def publish_l11_manifest_guard(root: Path) -> L11ManifestGuardSummary:
     status_path = layer / "l11_manifest_guard_status.txt"
     targets = [
         (
+            layer / "ranked_symbols_by_group.csv",
+            layer / "ranked_symbols_by_group.manifest",
+            "l11_ranked_symbols_by_group",
+            "l11_ranked_symbols_payload_manifested_for_l12_l14_contract",
+        ),
+        (
+            layer / "ranked_symbols_by_group.csv",
+            layer / "ranked_symbols.manifest",
+            "l11_ranked_symbols_compatibility",
+            "compatibility_manifest_for_auditors_expecting_ranked_symbols_manifest",
+        ),
+        (
             layer / "ranking_group_top5.csv",
             layer / "ranking_group_top5.manifest",
             "l11_ranking_group_top5",
@@ -91,9 +103,11 @@ def publish_l11_manifest_guard(root: Path) -> L11ManifestGuardSummary:
     ]
     written = 0
     failed = 0
+    missing_payloads = []
     for payload_path, manifest_path, schema_name, reason in targets:
         if not payload_path.exists():
             failed += 1
+            missing_payloads.append(str(payload_path))
             continue
         if _write_manifest_for_payload(payload_path, manifest_path, schema_name, reason):
             written += 1
@@ -104,12 +118,15 @@ def publish_l11_manifest_guard(root: Path) -> L11ManifestGuardSummary:
     summary = L11ManifestGuardSummary(status, reason, written, len(targets), failed, str(status_path))
     report = "\n".join([
         "schema_name=l11_manifest_guard_status",
-        "schema_version=1",
+        "schema_version=2",
         f"status={summary.status}",
         f"reason={summary.reason}",
         f"manifests_written={summary.manifests_written}",
         f"manifests_expected={summary.manifests_expected}",
         f"write_failed_count={summary.write_failed_count}",
+        f"missing_payloads={';'.join(missing_payloads) if missing_payloads else 'none'}",
+        "ranked_symbols_by_group_manifest_required=true",
+        "ranked_symbols_compatibility_manifest_required=true",
         "authority=manifest_proof_only_no_ranking_authority",
         "selection_runtime=false",
         "trade_permission=false",
@@ -258,35 +275,14 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=15",
+            "schema_version=11",
             "worker_l11_append_status=appended_by_l11_dispatch",
-            f"l11_stale_symbol_rank_sidecars_removed={stale_sidecars_removed}",
-            f"l11_taxonomy_tree_status={tree_summary.status}",
-            f"l11_taxonomy_tree_files_written={tree_summary.taxonomy_tree_files_written}",
-            f"l11_taxonomy_tree_files_expected={tree_summary.taxonomy_tree_files_expected}",
-            f"l11_dossier_copy_status={dossier_copy_summary.status}",
-            f"l11_dossier_copies_written={dossier_copy_summary.dossier_copies_written}",
-            f"l11_dossier_copies_expected={dossier_copy_summary.dossier_copies_expected}",
-            f"l11_dossier_copy_status_path={dossier_copy_summary.status_path}",
-            f"l11_asset_class_shortcut_status={asset_shortcuts_summary.status}",
-            f"l11_asset_class_shortcut_files_written={asset_shortcuts_summary.files_written}",
-            f"l11_asset_class_shortcut_files_expected={asset_shortcuts_summary.files_expected}",
-            f"l11_asset_class_shortcut_status_path={asset_shortcuts_summary.status_path}",
-            f"l11_shallow_group_shortcut_status={shallow_groups_summary.status}",
-            f"l11_shallow_group_shortcut_files_written={shallow_groups_summary.files_written}",
-            f"l11_shallow_group_shortcut_files_expected={shallow_groups_summary.files_expected}",
-            f"l11_shallow_group_shortcut_status_path={shallow_groups_summary.status_path}",
+            f"l11_symbol_ranking_status={summary.status}",
             f"l11_selection_root_index_status={root_index_summary.status}",
-            f"l11_selection_root_index_path={root_index_summary.index_path}",
             f"l11_manifest_guard_status={manifest_guard_summary.status}",
-            f"l11_manifest_guard_manifests_written={manifest_guard_summary.manifests_written}",
-            f"l11_manifest_guard_manifests_expected={manifest_guard_summary.manifests_expected}",
-            f"l11_manifest_guard_write_failed_count={manifest_guard_summary.write_failed_count}",
-            f"l11_manifest_guard_status_path={manifest_guard_summary.status_path}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
-            "selection_runtime=false",
             "trade_permission=false",
             "entry_signal=false",
             "execution=false",
@@ -299,4 +295,4 @@ def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
 
 
 def run_l11_after_render_index(root: Path) -> L11PublishSummary:
-    return run_l11_after_core(root, 0)
+    return run_l11_after_core(root)
