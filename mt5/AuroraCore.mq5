@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.077"
+#property version   "1.078"
 #property description "AURORA CORE - foundation truth and gateway support"
 
 #include "core/AC_Config.mqh"
@@ -201,6 +201,17 @@ void OnTimer()
    AC_WriteResult account_status = AC_PublishAccountStatus();
    AC_AddMicroLog("AC_PublishAccountStatus", start, account_status.status);
    AC_RecordWriteProblem("account_status", account_status);
+
+   // Critical Runtime 1 -> Runtime 7 bridge.
+   // This existing owner invokes L2/L3/L4/L5 dependency refreshes and physically
+   // publishes the per-symbol Dossier files into Dossiers/Open, Dossiers/Closed,
+   // and Dossiers/Unknown. Without this call the EA compiles as a thin Board shell
+   // and the Board can show L2 pending with zero Dossier files.
+   start = GetTickCount();
+   AC_WriteResult dossier_batch = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
+   AC_SNAPSHOT.owner_status = dossier_batch.status;
+   AC_AddMicroLog("AC_PublishLayer0DossierBatch", start, dossier_batch.status);
+   AC_MergeWriteResult("dossier_batch", dossier_batch, detail);
 
    start = GetTickCount();
    AC_WriteResult board = AC_PublishMarketBoard(AC_L0_STATUS);
