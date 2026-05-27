@@ -63,22 +63,24 @@ def _selection_readme_text() -> str:
         "route_law_owner=Runtime 7 publication route owner",
         "score_owner=Runtime 3 calculation support outputs",
         "",
-        "Rich operator surfaces:",
-        "01_Global/Top_10 = Global Top 10 inspection basket with selected dossier shortcuts.",
-        "01_Global/Deep_Evidence = L17 deep-evidence selection split shortcuts.",
-        "02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class> = Top 5 shortcut across the whole asset class.",
-        "02_Asset_Classes/<asset_class>/02_Groups/<compact_ranking_group_key> = shallow Top 5 per ranking_group shortcut.",
-        "90_System_Indexes = worker support indexes, status files, taxonomy proof, cleanup proof.",
-        "91_Layer_Summaries = L12-L15 summary copies for operator review.",
+        "Stable operator routes:",
+        "Selection Desk/Global = stable current L16 Global Top 10 inspection basket source.",
+        "Selection Desk/Groups = stable ranking_group operator route and current group indexes.",
+        "Selection Desk/Selection Index.txt = stable operator navigation surface when published by Runtime 7.",
         "",
-        "Stable parent policy:",
-        "Selection Desk/Global and Selection Desk/Groups are stable parent routes and may remain for compatibility.",
-        "They are not proof of trade permission and they are not L18 canonical targets.",
+        "Compatibility/helper routes:",
+        "01_Global/Top_10 = compatibility shortcut surface with copied dossier files plus current shortcut overlays.",
+        "01_Global/Deep_Evidence = L17 deep-evidence selection split shortcut surface.",
+        "02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class> = helper shortcut across the whole asset class.",
+        "02_Asset_Classes/<asset_class>/02_Groups/<compact_ranking_group_key> = helper Top 5 per ranking_group shortcut.",
+        "90_System_Indexes = pointer/status/helper surfaces only; live group counts must not be stale-copied here.",
+        "91_Layer_Summaries = helper layer-summary copies for operator review.",
         "",
         "L18 target scope:",
-        "l18_target_scope=canonical_selection_shortcut_dossiers_only",
+        "l18_target_scope=selected_copied_dossiers_only_with_source_mode_label",
         "l18_allowed_surfaces=01_Global/Top_10/*.txt;02_Asset_Classes/*/01_Top_5_All_*/*.txt;02_Asset_Classes/*/02_Groups/*/*.txt",
-        "l18_excluded_surfaces=Selection Desk/Global;Selection Desk/Groups;90_System_Indexes;91_Layer_Summaries;base Dossiers/Open;base Dossiers/Closed;base Dossiers/Unknown",
+        "l18_source_manifest=Selection Desk/Global/current_top10.csv when available",
+        "l18_excluded_surfaces=Selection Desk/Global raw files;Selection Desk/Groups raw files;90_System_Indexes;91_Layer_Summaries;base Dossiers/Open;base Dossiers/Closed;base Dossiers/Unknown",
         "l18_rule=decorate_selected_copied_dossiers_only_no_all_symbol_scan_no_ohlc_store_owner_change",
         "",
         "Trading safety:",
@@ -99,20 +101,25 @@ def _selection_index_text(root: Path) -> str:
     group_status = _kv(desk / "02_Asset_Classes" / "00_Shallow_Group_Top5_Status.txt")
     cleanup_status = _kv(desk / "90_System_Indexes" / "00_Legacy_Selection_Surface_Cleanup_Status.txt")
     deep_evidence_exists = (desk / "01_Global" / "Deep_Evidence" / "00_Deep_Evidence_Split.txt").exists()
+    stable_global_current_top10 = (desk / "Global" / "current_top10.csv").exists()
+    stable_groups_index = (desk / "Groups" / "00_Group_Index.csv").exists()
 
     root_ok = all([
+        stable_global_current_top10,
+        stable_groups_index,
         (desk / "01_Global" / "Top_10" / "00_Global_Top_10.txt").exists(),
         (desk / "02_Asset_Classes" / "00_Asset_Class_Top5_Index.txt").exists(),
         (desk / "02_Asset_Classes" / "00_Shallow_Group_Top5_Status.txt").exists(),
         (desk / "90_System_Indexes").exists(),
         (desk / "91_Layer_Summaries").exists(),
     ])
-    legacy_present = (desk / "Global").exists() or (desk / "Groups").exists()
     warning_parts: List[str] = []
-    if legacy_present:
-        warning_parts.append("legacy_surfaces_present")
+    if not stable_global_current_top10:
+        warning_parts.append("stable_global_current_top10_missing")
+    if not stable_groups_index:
+        warning_parts.append("stable_groups_index_missing")
     if _status(global_status) != "accepted":
-        warning_parts.append("global_top10_not_accepted")
+        warning_parts.append("global_top10_shortcuts_not_accepted")
     if _status(asset_status) != "accepted":
         warning_parts.append("asset_class_top5_not_accepted")
     if _status(group_status) != "accepted":
@@ -121,18 +128,20 @@ def _selection_index_text(root: Path) -> str:
         warning_parts.append("deep_evidence_split_not_present_yet")
 
     status = "accepted" if root_ok and not warning_parts else ("accepted_with_runtime_warnings" if root_ok else "pending")
-    reason = "worker_support_selection_navigation_ready" if status == "accepted" else (";".join(warning_parts) if warning_parts else "worker_support_selection_navigation_not_ready")
+    reason = "selection_navigation_ready_stable_routes_and_helper_surfaces_present" if status == "accepted" else (";".join(warning_parts) if warning_parts else "selection_navigation_not_ready")
 
     return "\n".join([
         "schema_name=selection_desk_worker_support_index",
-        "schema_version=3",
+        "schema_version=4",
         "owner_name=Runtime 3 external worker support index publisher",
         "source_owner=Runtime 3 calculation outputs plus Runtime 7 publication surfaces",
         "authority=operator_navigation_only_not_runtime_route_law",
         "route_law_owner=Runtime 7 publication route owner",
         f"status={status}",
         f"reason={reason}",
-        f"global_top10_status={_status(global_status)}",
+        f"stable_global_current_top10_present={_exists_text(desk / 'Global' / 'current_top10.csv')}",
+        f"stable_groups_index_present={_exists_text(desk / 'Groups' / '00_Group_Index.csv')}",
+        f"global_top10_shortcut_status={_status(global_status)}",
         f"global_top10_copies_written={global_status.get('dossier_copies_written', 'not_available')}",
         f"global_top10_copies_expected={global_status.get('dossier_copies_expected', 'not_available')}",
         f"asset_class_top5_status={_status(asset_status)}",
@@ -143,11 +152,9 @@ def _selection_index_text(root: Path) -> str:
         f"group_top5_copies_expected={group_status.get('dossier_copies_expected', 'not_available')}",
         f"deep_evidence_split_present={_exists_text(desk / '01_Global' / 'Deep_Evidence' / '00_Deep_Evidence_Split.txt')}",
         f"legacy_cleanup_status={_status(cleanup_status, 'not_run')}",
-        f"legacy_global_present={_exists_text(desk / 'Global')}",
-        f"legacy_groups_present={_exists_text(desk / 'Groups')}",
-        "rich_operator_surfaces=01_Global;02_Asset_Classes;90_System_Indexes;91_Layer_Summaries",
-        "stable_parent_surfaces=Global;Groups",
-        "stable_parent_surfaces_policy=compatibility_parent_routes_not_l18_targets",
+        "stable_operator_routes=Global;Groups;Selection Index.txt",
+        "compatibility_helper_surfaces=01_Global;02_Asset_Classes;90_System_Indexes;91_Layer_Summaries",
+        "stable_parent_surfaces_policy=stable_operator_routes_not_trade_permission",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
