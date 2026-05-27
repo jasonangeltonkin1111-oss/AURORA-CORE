@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
-from aurora_worker_io import utc_stamp, unix_time
+from aurora_worker_io import payload_checksum, utc_stamp, unix_time, atomic_write_text_if_changed
 from aurora_worker_selection_surface_shortcuts import (
     SelectionShortcutSummary,
     _account_root,
@@ -14,12 +14,10 @@ from aurora_worker_selection_surface_shortcuts import (
     _csv_text,
     _display,
     _find_dossier,
-    _ranked_file_name,
     _ranked_symbols_path,
     _sanitize,
     _selection_desk,
     _shortcut_status_text,
-    _write,
 )
 
 GROUP_TOP5_FIELDS = [
@@ -29,6 +27,25 @@ GROUP_TOP5_FIELDS = [
     "risk_review_flag", "reason", "source_dossier_path", "target_dossier_path", "copy_status",
     "selection_runtime", "trade_permission", "entry_signal", "execution", "generated_utc",
 ]
+
+MAX_ASSET_SLUG_CHARS = 32
+MAX_GROUP_SLUG_CHARS = 48
+
+
+def _compact_slug(value: str, max_chars: int) -> str:
+    raw = _display(value)
+    safe = _sanitize(raw)
+    checksum = payload_checksum([raw])
+    if len(safe) <= max_chars:
+        return safe
+    return f"{safe[:max_chars].rstrip('_')}_{checksum}"
+
+
+def _write_changed(path: Path, text: str, failed: List[Path]) -> bool:
+    ok = atomic_write_text_if_changed(path, text, durable=True)
+    if not ok:
+        failed.append(path)
+    return ok
 
 
 def _rank_value(row: Dict[str, str]) -> int:
@@ -43,7 +60,13 @@ def _is_top5(row: Dict[str, str]) -> bool:
 
 
 def _shallow_group_folder(root: Path, asset_class: str, ranking_group: str) -> Path:
-    return _selection_desk(root) / "02_Asset_Classes" / _sanitize(asset_class) / "02_Groups" / _sanitize(ranking_group)
+    # Keep operator grouping, but cap folder names to avoid Windows MAX_PATH failures.
+    # The full display names stay inside text/CSV rows; route keys are compact and stable.
+    return _selection_desk(root) / "02_Asset_Classes" / _compact_slug(asset_class, MAX_ASSET_SLUG_CHARS) / "02_Groups" / _compact_slug(ranking_group, MAX_GROUP_SLUG_CHARS)
+
+
+def _asset_dir(root: Path, asset_class: str) -> Path:
+    return _selection_desk(root) / "02_Asset_Classes" / _compact_slug(asset_class, MAX_ASSET_SLUG_CHARS)
 
 
 def _group_shortcut_overlay(row: Dict[str, str], rank: int) -> List[str]:
@@ -75,6 +98,7 @@ def _group_text(asset_class: str, ranking_group: str, rows: List[Dict[str, str]]
         f"ranking_group={ranking_group}",
         f"market_groups={';'.join(market_groups) if market_groups else 'not_available'}",
         f"market_segments={';'.join(market_segments) if market_segments else 'not_available'}",
+        f"route_key={folder.name}",
         f"folder={folder}",
         f"selected_count={len(rows)}",
         "selection_runtime=false",
@@ -101,6 +125,7 @@ def _asset_group_index_text(asset_class: str, rows: List[Dict[str, str]]) -> str
         "----------------------------------------",
         "meaning=asset_class_group_shortcut_index_only",
         "source=L11 ranked_symbols_by_group.csv guarded ranks",
+        "route_policy=compact_route_keys_full_names_inside_rows",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
@@ -119,13 +144,13 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
     status_path = _selection_desk(root) / "02_Asset_Classes" / "00_Shallow_Group_Top5_Status.txt"
     if not ranked_path.exists():
         summary = SelectionShortcutSummary("pending", f"missing_ranked_symbols_by_group:{ranked_path}", "shallow_group_top5", 0, 0, 0, 0, 0, 0, len(failed), str(status_path))
-        _write(status_path, _shortcut_status_text(summary), failed)
+        _write_changed(status_path, _shortcut_status_text(summary), failed)
         return summary
 
     rows = [row for row in _csv_rows(ranked_path) if _is_top5(row)]
     if not rows:
         summary = SelectionShortcutSummary("pending", "no_top5_rows_available_for_shallow_group_shortcuts", "shallow_group_top5", 0, 0, 0, 0, 0, 0, len(failed), str(status_path))
-        _write(status_path, _shortcut_status_text(summary), failed)
+        _write_changed(status_path, _shortcut_status_text(summary), failed)
         return summary
 
     account_root = _account_root(root)
@@ -191,7 +216,7 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
             (folder / "00_Top5_Current.csv", _csv_text(output_rows, GROUP_TOP5_FIELDS)),
         ]:
             files_expected += 1
-            if _write(path, text, failed):
+            if _write_changed(path, text, failed):
                 files_written += 1
         by_asset_index[asset_class].append({
             "asset_class": asset_class,
@@ -206,17 +231,17 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
 
     index_fields = ["asset_class", "ranking_group", "folder", "selected_count", "top_symbol", "trade_permission", "entry_signal", "execution"]
     for asset_class, index_rows in sorted(by_asset_index.items()):
-        asset_dir = _selection_desk(root) / "02_Asset_Classes" / _sanitize(asset_class)
+        asset_dir = _asset_dir(root, asset_class)
         for path, text in [
             (asset_dir / "02_Groups" / "00_Group_Top5_Index.txt", _asset_group_index_text(asset_class, index_rows)),
             (asset_dir / "02_Groups" / "00_Group_Top5_Index.csv", _csv_text(index_rows, index_fields)),
         ]:
             files_expected += 1
-            if _write(path, text, failed):
+            if _write_changed(path, text, failed):
                 files_written += 1
 
     status = "accepted" if not failed and missing == 0 and held_unsafe == 0 and copies_written == copies_expected else "write_degraded"
     reason = "shallow_group_top5_shortcuts_published" if status == "accepted" else "one_or_more_shallow_group_top5_shortcuts_missing_unsafe_or_failed"
     summary = SelectionShortcutSummary(status, reason, "shallow_group_top5", files_written, files_expected, copies_written, copies_expected, missing, stale_removed, len(failed), str(status_path), held_unsafe)
-    _write(status_path, _shortcut_status_text(summary), failed)
+    _write_changed(status_path, _shortcut_status_text(summary), failed)
     return summary
