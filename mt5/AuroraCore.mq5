@@ -132,6 +132,18 @@ string AC_EnsureRootFolders()
    return "folder_create_failed|" + detail;
 }
 
+void AC_ServiceTradeJournal()
+{
+   if(!AC_TRADE_JOURNAL_READY)
+   {
+      AC_TradeJournalInit();
+      return;
+   }
+
+   if(AC_L1_READY)
+      AC_TradeJournalPublishOneHistoricalTrade();
+}
+
 string AC_AccountStatusRootMirrorPath()
 {
    return AC_RootFolder() + "\\Account Status.txt";
@@ -173,6 +185,7 @@ AC_WriteResult AC_PublishManifest(const AC_WriteResult &account_status,
    text += AC_ManifestRow("Foundation Dossier Batch", dossier_batch, AC_SNAPSHOT) + "\r\n";
    text += AC_ManifestRow("Gateway worker_required", worker_required, AC_SNAPSHOT) + "\r\n";
    text += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT) + "\r\n";
+   text += AC_TradeJournalStatusText();
    text += AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n";
    text += AC_LayerStatusRows(AC_SNAPSHOT);
    return AC_WriteTextFileFastAtomicIfChanged(AC_ManifestPath(), text, "manifest_changed_only");
@@ -196,6 +209,7 @@ AC_WriteResult AC_PublishDiagnostics(const AC_WriteResult &account_status,
    text += AC_Layer0WorkbenchText(AC_L0_STATUS);
    text += "\r\nRuntime Status\r\n----------------------------------------\r\n";
    text += AC_RuntimeStatusText(AC_SNAPSHOT);
+   text += AC_TradeJournalWorkbenchSection(AC_TRADE_JOURNAL_STATUS);
    text += "\r\nWrite Detail\r\n----------------------------------------\r\n";
    text += AC_WriteResultLine("Account Status", account_status) + "\r\n";
    text += AC_WriteResultLine("Foundation Dossier Batch", dossier_batch) + "\r\n";
@@ -229,6 +243,7 @@ AC_WriteResult AC_PublishRuntimeStatus(const AC_Runtime0Snapshot &snapshot)
 int OnInit()
 {
    AC_EnsureRootFolders();
+   AC_TradeJournalInit();
    ResetLastError();
    EventSetMillisecondTimer(AC_TIMER_MILLISECONDS);
    AC_TIMER_SETUP_ERROR = GetLastError();
@@ -309,6 +324,10 @@ void OnTimer()
    AC_WriteResult account_status = AC_PublishAccountStatus();
    AC_AddMicroLog("AC_PublishAccountStatus", start, account_status.status);
    AC_RecordWriteProblem("account_status", account_status);
+
+   start = GetTickCount();
+   AC_ServiceTradeJournal();
+   AC_AddMicroLog("AC_ServiceTradeJournal", start, AC_TRADE_JOURNAL_STATUS.status + ":" + AC_TRADE_JOURNAL_STATUS.historical_generator_status);
 
    // Critical Runtime 1 -> Runtime 7 bridge.
    // This existing owner invokes L2/L3/L4/L5 dependency refreshes and physically
