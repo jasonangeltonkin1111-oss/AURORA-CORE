@@ -3,7 +3,6 @@
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
 
-string AC_Layer2StatusRow();
 string AC_Layer3StatusRow();
 
 string AC_BoolText(const bool value)
@@ -98,7 +97,6 @@ string AC_LayerStatusRows(const AC_Runtime0Snapshot &snapshot)
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.1|layer_name=" + AC_LAYER_0_1_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_1_status + "\r\n";
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.2|layer_name=" + AC_LAYER_0_2_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_2_status + "\r\n";
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.4|layer_name=" + AC_LAYER_0_4_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_4_status + "\r\n";
-   text += AC_Layer2StatusRow() + "\r\n";
    text += AC_Layer3StatusRow() + "\r\n";
    return text;
 }
