@@ -27,6 +27,10 @@ def _selection_desk(root: Path) -> Path:
     return _account_root(root) / "Selection Desk"
 
 
+def _gateway_result_latest(root: Path) -> Path:
+    return WorkerPaths.from_root(root).outbox / "result_latest.txt"
+
+
 def _write(path: Path, text: str, failed: List[Path]) -> bool:
     ok = atomic_write_text_if_changed(path, text, durable=True)
     if not ok:
@@ -54,6 +58,30 @@ def _exists_text(path: Path) -> str:
     return "true" if path.exists() else "false"
 
 
+def _truthy(data: Dict[str, str], key: str) -> bool:
+    return str(data.get(key, "false")).strip().lower() == "true"
+
+
+def _latest_layer_currentness(result: Dict[str, str]) -> Dict[str, str]:
+    required = ["l16", "l17", "l18", "l19"]
+    values: Dict[str, str] = {}
+    blocked: List[str] = []
+    for layer in required:
+        current_key = f"{layer}_current_chain_valid"
+        downstream_key = f"{layer}_downstream_allowed"
+        current = "true" if _truthy(result, current_key) else "false"
+        downstream = "true" if _truthy(result, downstream_key) else "false"
+        values[current_key] = current
+        values[downstream_key] = downstream
+        if current != "true" or downstream != "true":
+            reason = result.get(f"{layer}_currentness_reason", result.get(f"{layer}_global_top10_reason", result.get(f"{layer}_selected_raw_ohlc_reason", "not_available")))
+            blocked.append(f"{layer}:current={current};downstream={downstream};reason={reason}")
+    values["latest_chain_current_for_downstream"] = "true" if not blocked and result else "false"
+    values["latest_chain_blockers"] = ";".join(blocked) if blocked else "none"
+    values["latest_result_present"] = "true" if result else "false"
+    return values
+
+
 def _selection_readme_text() -> str:
     return "\n".join([
         "AURORA SELECTION DESK",
@@ -75,6 +103,11 @@ def _selection_readme_text() -> str:
         "02_Asset_Classes/<asset_class>/02_Groups/<compact_ranking_group_key> = helper Top 5 per ranking_group shortcut.",
         "90_System_Indexes = pointer/status/helper surfaces only; live group counts must not be stale-copied here.",
         "91_Layer_Summaries = helper layer-summary copies for operator review.",
+        "",
+        "Currentness law:",
+        "visible_for_operator may be true while current_for_downstream is false.",
+        "held_previous surfaces are navigation/history only and must not be treated as current selection truth.",
+        "Selection Desk root status follows latest Gateway currentness, not merely file existence.",
         "",
         "L18 target scope:",
         "l18_target_scope=selected_copied_dossiers_only_with_source_mode_label",
@@ -100,6 +133,8 @@ def _selection_index_text(root: Path) -> str:
     asset_status = _kv(desk / "02_Asset_Classes" / "00_Asset_Class_Top5_Status.txt")
     group_status = _kv(desk / "02_Asset_Classes" / "00_Shallow_Group_Top5_Status.txt")
     cleanup_status = _kv(desk / "90_System_Indexes" / "00_Legacy_Selection_Surface_Cleanup_Status.txt")
+    result_latest = _kv(_gateway_result_latest(root))
+    currentness = _latest_layer_currentness(result_latest)
     deep_evidence_exists = (desk / "01_Global" / "Deep_Evidence" / "00_Deep_Evidence_Split.txt").exists()
     stable_global_current_top10 = (desk / "Global" / "current_top10.csv").exists()
     stable_groups_index = (desk / "Groups" / "00_Group_Index.csv").exists()
@@ -126,19 +161,54 @@ def _selection_index_text(root: Path) -> str:
         warning_parts.append("group_top5_not_accepted")
     if not deep_evidence_exists:
         warning_parts.append("deep_evidence_split_not_present_yet")
+    if currentness["latest_result_present"] != "true":
+        warning_parts.append("gateway_result_latest_missing")
+    if currentness["latest_chain_current_for_downstream"] != "true":
+        warning_parts.append("latest_chain_not_current_for_downstream")
 
-    status = "accepted" if root_ok and not warning_parts else ("accepted_with_runtime_warnings" if root_ok else "pending")
-    reason = "selection_navigation_ready_stable_routes_and_helper_surfaces_present" if status == "accepted" else (";".join(warning_parts) if warning_parts else "selection_navigation_not_ready")
+    if not root_ok:
+        status = "pending"
+    elif currentness["latest_chain_current_for_downstream"] != "true":
+        status = "currentness_blocked_visible_history_only"
+    elif warning_parts:
+        status = "accepted_with_runtime_warnings"
+    else:
+        status = "accepted_current"
+
+    if status == "accepted_current":
+        reason = "selection_navigation_ready_and_latest_chain_current_for_downstream"
+    elif status == "currentness_blocked_visible_history_only":
+        reason = "selection_surfaces_visible_but_latest_chain_not_current_for_downstream;" + currentness["latest_chain_blockers"]
+    else:
+        reason = ";".join(warning_parts) if warning_parts else "selection_navigation_not_ready"
+
+    current_for_downstream = "true" if status == "accepted_current" else "false"
+    visible_for_operator = "true" if root_ok else "false"
+    held_previous = "true" if visible_for_operator == "true" and current_for_downstream != "true" else "false"
 
     return "\n".join([
         "schema_name=selection_desk_worker_support_index",
-        "schema_version=5",
+        "schema_version=6",
         "owner_name=Runtime 3 external worker support index publisher",
         "source_owner=Runtime 3 calculation outputs plus Runtime 7 publication surfaces",
         "authority=operator_navigation_only_not_runtime_route_law",
         "route_law_owner=Runtime 7 publication route owner",
         f"status={status}",
         f"reason={reason}",
+        f"visible_for_operator={visible_for_operator}",
+        f"current_for_downstream={current_for_downstream}",
+        f"held_previous={held_previous}",
+        f"latest_result_present={currentness['latest_result_present']}",
+        f"latest_chain_current_for_downstream={currentness['latest_chain_current_for_downstream']}",
+        f"latest_chain_blockers={currentness['latest_chain_blockers']}",
+        f"l16_current_chain_valid={currentness['l16_current_chain_valid']}",
+        f"l16_downstream_allowed={currentness['l16_downstream_allowed']}",
+        f"l17_current_chain_valid={currentness['l17_current_chain_valid']}",
+        f"l17_downstream_allowed={currentness['l17_downstream_allowed']}",
+        f"l18_current_chain_valid={currentness['l18_current_chain_valid']}",
+        f"l18_downstream_allowed={currentness['l18_downstream_allowed']}",
+        f"l19_current_chain_valid={currentness['l19_current_chain_valid']}",
+        f"l19_downstream_allowed={currentness['l19_downstream_allowed']}",
         f"stable_global_current_top10_present={_exists_text(desk / 'Global' / 'current_top10.csv')}",
         f"stable_groups_index_present={_exists_text(desk / 'Groups' / '00_Group_Index.csv')}",
         f"global_top10_shortcut_status={_status(global_status)}",
