@@ -72,49 +72,49 @@ void AC_L3ApplyTickValueFallback(AC_L3SymbolSpecs &s)
    bool filled_buy = false;
    bool filled_sell = false;
 
-   // Preserve any side already proven by OrderCalcProfit. Tick-value fallback may only
-   // fill missing sides; it must not relabel or overwrite successful OrderCalcProfit truth.
-   if(!s.order_calc_profit_buy_ok)
+   if(!s.order_calc_profit_buy_ok || s.money_per_point_buy_1lot <= 0.0)
    {
+      s.order_calc_profit_buy_ok = false;
       s.money_per_tick_buy_1lot = buy_tick;
       s.money_per_point_buy_1lot = buy_tick * (s.point / s.tick_size);
       s.money_per_price_unit_buy_1lot = s.money_per_point_buy_1lot / s.point;
-      s.value_buy_status = "Fallback used - OrderCalcProfit buy not proven";
+      s.value_buy_status = "Fallback used - OrderCalcProfit buy did not produce positive value";
       filled_buy = true;
    }
 
-   if(!s.order_calc_profit_sell_ok)
+   if(!s.order_calc_profit_sell_ok || s.money_per_point_sell_1lot <= 0.0)
    {
+      s.order_calc_profit_sell_ok = false;
       s.money_per_tick_sell_1lot = sell_tick;
       s.money_per_point_sell_1lot = sell_tick * (s.point / s.tick_size);
       s.money_per_price_unit_sell_1lot = s.money_per_point_sell_1lot / s.point;
-      s.value_sell_status = "Fallback used - OrderCalcProfit sell not proven";
+      s.value_sell_status = "Fallback used - OrderCalcProfit sell did not produce positive value";
       filled_sell = true;
    }
 
    if(!filled_buy && !filled_sell)
    {
-      s.tick_value_fallback_status = "Not used - OrderCalcProfit already supplied both sides";
+      s.tick_value_fallback_status = "Not used - OrderCalcProfit already supplied both positive sides";
       return;
    }
 
    s.value_from_tick_value = true;
    if(filled_buy && filled_sell)
-      s.tick_value_fallback_status = "Used - broker tick value filled both missing sides";
+      s.tick_value_fallback_status = "Used - broker tick value filled both missing or zero sides";
    else if(filled_buy)
-      s.tick_value_fallback_status = "Used - broker tick value filled missing buy side only";
+      s.tick_value_fallback_status = "Used - broker tick value filled missing or zero buy side only";
    else
-      s.tick_value_fallback_status = "Used - broker tick value filled missing sell side only";
+      s.tick_value_fallback_status = "Used - broker tick value filled missing or zero sell side only";
 
    if(s.order_calc_profit_buy_ok || s.order_calc_profit_sell_ok)
    {
-      s.value_source = "Mixed: OrderCalcProfit for proven side; broker tick value fallback for missing side";
-      s.tick_value_crosscheck_status = "Partial fallback used; prefer OrderCalcProfit-proven side where available";
+      s.value_source = "Mixed: OrderCalcProfit for positive side; broker tick value fallback for missing or zero side";
+      s.tick_value_crosscheck_status = "Partial fallback used; prefer OrderCalcProfit-positive side where available";
    }
    else
    {
       s.value_source = "Broker tick value fallback. Confirm with OrderCalcProfit after Layer 4 quote truth.";
-      s.tick_value_crosscheck_status = "Broker tick value used; OrderCalcProfit pending";
+      s.tick_value_crosscheck_status = "Broker tick value used; OrderCalcProfit unavailable or zero";
    }
 }
 
@@ -140,11 +140,21 @@ void AC_L3CalculateValueAndMargin(AC_L3SymbolSpecs &s)
       ResetLastError();
       if(s.point > 0.0 && OrderCalcProfit(ORDER_TYPE_BUY, s.symbol, 1.0, s.value_reference_buy_price, s.value_reference_buy_price + s.point, profit_buy))
       {
-         s.order_calc_profit_buy_ok = true;
-         s.money_per_point_buy_1lot = MathAbs(profit_buy);
-         s.value_source = "OrderCalcProfit using SymbolInfoTick ask reference";
-         s.value_buy_status = "OrderCalcProfit success";
-         AC_L3_ORDERCALC_PROFIT_BUY_SUCCESS++;
+         double abs_profit_buy = MathAbs(profit_buy);
+         if(abs_profit_buy > 0.0)
+         {
+            s.order_calc_profit_buy_ok = true;
+            s.money_per_point_buy_1lot = abs_profit_buy;
+            s.value_source = "OrderCalcProfit using SymbolInfoTick ask reference";
+            s.value_buy_status = "OrderCalcProfit success";
+            AC_L3_ORDERCALC_PROFIT_BUY_SUCCESS++;
+         }
+         else
+         {
+            s.order_calc_profit_buy_ok = false;
+            s.value_buy_status = "OrderCalcProfit returned zero value; broker tick value fallback required";
+            s.failure_reason += "OrderCalcProfit buy returned zero account-currency value; ";
+         }
       }
       else
       {
@@ -202,11 +212,21 @@ void AC_L3CalculateValueAndMargin(AC_L3SymbolSpecs &s)
       ResetLastError();
       if(s.point > 0.0 && OrderCalcProfit(ORDER_TYPE_SELL, s.symbol, 1.0, s.value_reference_sell_price, s.value_reference_sell_price - s.point, profit_sell))
       {
-         s.order_calc_profit_sell_ok = true;
-         s.money_per_point_sell_1lot = MathAbs(profit_sell);
-         s.value_source = "OrderCalcProfit using SymbolInfoTick bid reference";
-         s.value_sell_status = "OrderCalcProfit success";
-         AC_L3_ORDERCALC_PROFIT_SELL_SUCCESS++;
+         double abs_profit_sell = MathAbs(profit_sell);
+         if(abs_profit_sell > 0.0)
+         {
+            s.order_calc_profit_sell_ok = true;
+            s.money_per_point_sell_1lot = abs_profit_sell;
+            s.value_source = "OrderCalcProfit using SymbolInfoTick bid reference";
+            s.value_sell_status = "OrderCalcProfit success";
+            AC_L3_ORDERCALC_PROFIT_SELL_SUCCESS++;
+         }
+         else
+         {
+            s.order_calc_profit_sell_ok = false;
+            s.value_sell_status = "OrderCalcProfit returned zero value; broker tick value fallback required";
+            s.failure_reason += "OrderCalcProfit sell returned zero account-currency value; ";
+         }
       }
       else
       {
@@ -258,17 +278,17 @@ void AC_L3CalculateValueAndMargin(AC_L3SymbolSpecs &s)
       s.margin_min_sell_status = "Not called - no positive bid reference from SymbolInfoTick";
    }
 
-   if(any_reference_ok && (!s.order_calc_profit_buy_ok || !s.order_calc_profit_sell_ok))
+   if(s.money_per_point_buy_1lot <= 0.0 || s.money_per_point_sell_1lot <= 0.0)
       AC_L3ApplyTickValueFallback(s);
 
    if(s.point > 0.0 && s.tick_size > 0.0)
    {
-      if(s.order_calc_profit_buy_ok)
+      if(s.money_per_point_buy_1lot > 0.0)
       {
          s.money_per_tick_buy_1lot = s.money_per_point_buy_1lot * (s.tick_size / s.point);
          s.money_per_price_unit_buy_1lot = s.money_per_point_buy_1lot / s.point;
       }
-      if(s.order_calc_profit_sell_ok)
+      if(s.money_per_point_sell_1lot > 0.0)
       {
          s.money_per_tick_sell_1lot = s.money_per_point_sell_1lot * (s.tick_size / s.point);
          s.money_per_price_unit_sell_1lot = s.money_per_point_sell_1lot / s.point;
@@ -314,7 +334,7 @@ void AC_L3CalculateValueAndMargin(AC_L3SymbolSpecs &s)
    double reference_tick_value = s.tick_value;
    double calc_tick = MathMax(s.money_per_tick_buy_1lot, s.money_per_tick_sell_1lot);
    if(reference_tick_value <= 0.0 || calc_tick <= 0.0) s.tick_value_crosscheck_status = "Not available - broker tick value or calculated tick value was zero";
-   else if(s.value_from_tick_value) s.tick_value_crosscheck_status = "Broker tick value used where OrderCalcProfit was not proven";
+   else if(s.value_from_tick_value) s.tick_value_crosscheck_status = "Broker tick value used where OrderCalcProfit was not positive";
    else
    {
       double delta = MathAbs(reference_tick_value - calc_tick);
