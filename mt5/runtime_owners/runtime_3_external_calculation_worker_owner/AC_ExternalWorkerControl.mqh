@@ -163,8 +163,9 @@ void AC_RefreshExternalWorkerStatus()
       AC_EXTERNAL_WORKER_STATUS.result_validation_reason = "No result files present";
    }
 
-   if(AC_L4_READY)
-      AC_ExportExternalWorkerSnapshot();
+   // Publication law: always export a snapshot envelope when physically possible.
+   // L3/L4 readiness belongs inside the snapshot truth, not as a hard publication gate.
+   AC_ExportExternalWorkerSnapshot();
 
    AC_RefreshExternalWorkerWorkerStatus();
    AC_BuildExternalWorkerTexts();
