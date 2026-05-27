@@ -3,20 +3,26 @@
 ## Purpose
 Complete navigation index for important repository files, ownership boundaries, and current status.
 
+This index maps the AURORA CORE trading-intelligence system. It must not make the repo front door revolve around overseer, parallel worker, or branch-process language.
+
 ## Owns / Does Not Own
 **Owns:** repository navigation, must-read pointers, folder-by-folder file map, authority labels.
 
 **Does not own:** runtime implementation truth, strategy/trading permission, compile/runtime proof claims.
 
 ## Mandatory startup path for new chats
-1. `README.md`
-2. `control/01_CONTROL_GOVERNANCE.md`
-3. Relevant top-level folder index
+1. `AGENTS.md`
+2. `README.md`
+3. `control/02_MASTER_REPO_FILE_INDEX.md`
+4. `control/00_CONTROL_INDEX.md`
+5. `control/01_CONTROL_GOVERNANCE.md`
+6. Relevant top-level folder index
+7. Relevant real content file
 
 ## Source authority levels used here
 - **L1:** Active MT5 source files and active external-worker source files (implementation truth)
 - **L2:** Runtime/generated evidence samples (when explicitly present)
-- **L3:** README + `control/01_CONTROL_GOVERNANCE.md`
+- **L3:** `README.md` + `AGENTS.md`
 - **L4:** Control router/index files
 - **L5:** Docs guidebooks
 - **L6:** Blueprint contracts
@@ -29,7 +35,8 @@ Complete navigation index for important repository files, ownership boundaries, 
 ## Root
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `README.md` | Repo front door and direction | Active | yes | L3 | Must be read before guidebook memory. |
+| `AGENTS.md` | Canonical repo agent law and system identity guardrails | Active | yes | L3 | Trading-system identity, owner law, proof law, chain-flow law. |
+| `README.md` | Repo front door and system-chain overview | Active | yes | L3 | Must describe Aurora as trading-intelligence system, not process-management system. |
 | `.gitignore` | Repository ignore policy baseline | Active | no | L4 | Repo hygiene only; not runtime authority. |
 
 ## control
@@ -44,33 +51,34 @@ Complete navigation index for important repository files, ownership boundaries, 
 |---|---|---|---|---|---|
 | `docs/00_AURORA_CORE_MAIN_PAGE_GUIDEBOOK.md` | Guidebook front door | Active | yes | L5 | Doctrine, not source implementation authority. |
 | `docs/01_AURORA_CORE_HANDOFF_CONTINUITY_GUIDEBOOK.md` | Continuity/handoff | Active | yes | L5 | Startup continuity for new chats. |
-| `docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md` | Taxonomy naming contract (contains historical bucket terminology) | Active | yes | L5 | Active scaffold naming lock uses `ranking_group` in control files. |
+| `docs/09_BUCKET_UNIVERSE_TAXONOMY_GUIDEBOOK.md` | Taxonomy naming contract with historical bucket terminology | Active | yes | L5 | Active EA-facing naming uses `asset_class`, `market_group`, `market_segment`, `ranking_group`, `symbol`. |
 | `docs/10_SELECTION_BASKET_CONSTRUCTION_GUIDEBOOK.md` | Selection Desk parent-route contract doctrine | Active | yes | L5 | Stable parent routes contract. |
 | `docs/15_ANTI_DRIFT_SOURCE_OF_TRUTH_GUIDEBOOK.md` | Source-of-truth anti-drift doctrine | Active | yes | L5 | Authority/boundary doctrine. |
 | `docs/02_TIMING_HEARTBEAT_BREATHING_SPINE_GUIDEBOOK.md` .. `docs/14_MT5_FUNCTION_GUIDEBOOK.md` | Runtime doctrines by domain | Active | no | L5 | Task-specific doctrine set. |
 | `docs/20_SYMBOL_UNIVERSE_IMPORT_CONTRACT.md` .. `docs/25_SHARED_OHLC_RAW_STORAGE_OWNER.md` | Quality/import/OHLC contracts | Active | no | L5 | Contract and process addenda. |
-| `docs/26_L10_TAXONOMY_CLASSIFICATION_CONTROL.md` | L10 active taxonomy / ranking_group map control | Active | task-specific | L5 | Current L10 control contract. |
+| `docs/26_L10_TAXONOMY_CLASSIFICATION_CONTROL.md` | L10 taxonomy / ranking_group map control | Active | task-specific | L5 | Current L10 control contract. |
 | `docs/30_L12_RANKING_GROUP_HEAT_QUALITY_CONTROL.md` | L12 ranking_group heat / quality control | Active | task-specific | L5 | Current L12 control contract. |
 | `docs/32_L13_DYNAMIC_RANKING_GROUP_SELECTION_CONTROL.md` | L13 dynamic ranking_group selection control | Active | task-specific | L5 | Current L13 control contract. |
-| `docs/33_L14_RANKING_GROUP_LEADER_CANDIDATE_POOL_CONTROL.md` | L14 raw candidate pool control | Active | task-specific | L5 | Current L14 control contract. |
+| `docs/33_L14_RANKING_GROUP_LEADER_CANDIDATE_POOL_CONTROL.md` | L14 ranking_group leader candidate pool control | Active | task-specific | L5 | Current L14 control contract. |
 | `docs/34_L15_CORRELATION_DIVERSITY_SELECTION_CONTROL.md` | L15 correlation / diversity scoring control | Active | task-specific | L5 | Current L15 control contract. |
-| `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Current L16 control contract; held visible basket + fallback labels; no trade permission. |
-| `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Current L17 control contract; consumes L16 held visible display rows only; no evidence collection/trade permission. |
+| `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Held visible basket + fallback labels; no trade permission. |
+| `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Consumes L16 held visible display rows only; no evidence collection/trade permission. |
 | `docs/37_OPERATOR_WORKFLOW_AND_UX_RUNBOOK.md` | Operator workflow and UX runbook | Active | task-specific | L5 | First-click workflow, export safety, overtrading guardrails, and runtime visual-output test gate. |
 | `docs/27_RUNTIME_5_TO_7_FUTURE_LAYER_PLAYBOOK.md` .. `docs/33_L13_CLOSEOUT_AND_L14_HANDOFF.md` | Runtime/layer implementation notes and handoffs | Active | task-specific | L5 | Check exact file before using as active source; current source/config still outranks docs. |
 
 ## blueprint
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `blueprint/00_BLUEPRINT_INDEX.md` | Blueprint navigation front door | Active | yes | L6 | Structural contracts router. |
+| `blueprint/00_BLUEPRINT_INDEX.md` | Blueprint navigation front door | Active | yes | L6 | System architecture router, not process-management router. |
 | `blueprint/01_SYSTEM_IDENTITY_AND_MISSION.md` | Identity/mission blueprint | Active | no | L6 | Structure, not runtime proof. |
 | `blueprint/02_RUNTIME_OWNER_BLUEPRINT.md` | Runtime owner + system service boundaries | Active | no | L6 | Architecture map. |
-| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Active 23-layer trading/system layer map | Active | no | L6 | Layer structure contract. |
+| `blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` | Active 23-layer trading/system layer map | Active | yes | L6 | Canonical logical chain from L1 foundation truth to L23 review/permission state. |
 | `blueprint/04_BUILD_PHASE_BLUEPRINT.md` | Build phase contract | Active | no | L6 | Phase/evidence gates. |
-| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Enriched publication surface contract. |
-| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | Enriched permission and validation contract. |
-| `blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md` | Route and FileIO ownership | Active | no | L6 | Runtime 7 ownership contract. |
+| `blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md` | Publication surface blueprint | Active | no | L6 | Board, Dossier, Selection Desk, Workbench surface contract. |
+| `blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md` | Permission/validation structure | Active | no | L6 | Permission and validation contract. |
+| `blueprint/07_FILEIO_ROUTE_OWNERSHIP_CONTRACT.md` | Route and FileIO ownership | Active | no | L6 | Route/FileIO ownership contract. |
 | `blueprint/08_MT5_SOURCE_FOLDER_CONTRACT.md` | MT5 source placement contract | Active | no | L6 | Source folder structure. |
+| `blueprint/09_PARALLEL_WORK_AND_MERGE_CONTROL_BLUEPRINT.md` | Retired process-control blueprint | Historical/process-only | no | L9 | Not active system architecture; do not use as front-door system identity. |
 
 ## governance
 | path | role | status | must-read? | source authority level | notes |
@@ -101,7 +109,7 @@ Complete navigation index for important repository files, ownership boundaries, 
 | `prompts/00_PROMPTS_INDEX.md` | Prompt system index | Active | no | L8 | Prompt navigation. |
 | `prompts/universal/00_UNIVERSAL_PROMPTS_INDEX.md` | Universal prompt index | Active | no | L8 | Generic run templates. |
 | `prompts/universal/01_AURORA_CORE_NEXT_CHAT_HANDOVER_PROMPT.md` | New-chat handover prompt | Active | no | L8 | Must point to active control files first. |
-| `prompts/workers/00_WORKER_PROMPTS_INDEX.md` | Worker prompt index | Active | no | L8 | Worker prompt routing. |
+| `prompts/workers/00_WORKER_PROMPTS_INDEX.md` | Worker prompt index | Historical/task-specific | no | L8 | Prompt history/task routing only; not system architecture. |
 | `prompts/codex/00_CODEX_PROMPTS_INDEX.md` | Codex-specific prompt index | Active | no | L8 | Codex run controls. |
 | `prompts/audits/00_AUDIT_PROMPTS_INDEX.md` | Audit prompt index | Active | no | L8 | Audit-specific prompts. |
 
@@ -152,14 +160,14 @@ Complete navigation index for important repository files, ownership boundaries, 
 |---|---|---|---|---|---|
 | `.../publication_routes/AC_ServerPaths.mqh` | Route builder owner | Active | yes | L1 | Inherited `runtime_7_publication_owner` folder naming; architecture treats this as Publication/FileIO/Route System Service support, not trading truth ownership. |
 | `.../publication_fileio/AC_FileIO.mqh` | FileIO writer owner | Active | yes | L1 | Inherited `runtime_7_publication_owner` folder naming; do not infer trading Runtime Owner status from folder name. |
-| `.../publication_renderers/AC_PublicationRenderers.mqh` | Publication renderer composition bridge | Active | yes | L1 | Includes L11-L16 render surfaces without creating calculation authority. |
+| `.../publication_renderers/AC_PublicationRenderers.mqh` | Publication renderer composition bridge | Active | yes | L1 | Includes render/readback surfaces without creating calculation authority. |
 | `.../publication_renderers/AC_Layer15CorrelationDiversityRenderer.mqh` | L15 render-only readback surface | Active | task-specific | L1 | Reads L15 worker outputs only; no correlation calculation or selection authority. |
 | `.../publication_renderers/AC_Layer16GlobalTop10Renderer.mqh` | L16 render-only readback surface | Active | task-specific | L1 | Reads L16 worker outputs only; no basket calculation or trading authority. |
 
 ## external_worker
 | path | role | status | must-read? | source authority level | notes |
 |---|---|---|---|---|---|
-| `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md` | External worker source index | Active | yes | L1/L4 | Runtime 3 calculation-support source map. |
+| `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md` | External calculation-support source index | Active | yes | L1/L4 | Runtime 3 calculation-support source map. |
 | `external_worker/aurora_worker.py` | Active worker core | Active | yes | L1 | Runs core snapshot validation plus L6-L10 and RenderIndex support outputs. |
 | `external_worker/aurora_worker_entrypoint.py` | Active worker entrypoint | Active | yes | L1 | Chains core then L11-L18; L19 is invoked by L18 dispatch. |
 | `external_worker/aurora_worker_l6_friction.py` | L6 cost/friction worker | Active | task-specific | L1 | Consumes L6 primitives; publishes cost/friction score family only; no permission/execution. |
@@ -209,4 +217,4 @@ Complete navigation index for important repository files, ownership boundaries, 
 - When active source owners/files change.
 - When archive/local_inputs/tools authority boundaries change.
 
-- separate folder governance files were merged into folder indexes (lean scaffold rule).
+- Separate folder governance files were merged into folder indexes (lean scaffold rule).
