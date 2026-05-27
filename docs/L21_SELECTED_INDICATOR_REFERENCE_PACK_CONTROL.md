@@ -14,8 +14,12 @@ execution=false
 expectancy_validated=false
 ```
 
-## Purpose
-Layer 21 builds selected-symbol reference/context indicators only.
+## Current core role
+Layer 21 is the selected-symbol reference context owner.
+
+It gives neutral technical reference values.
+
+It does not create signals.
 
 Core law:
 
@@ -24,9 +28,22 @@ Indicators describe condition.
 They do not grant permission.
 ```
 
-L21 may support manual review by explaining volatility, simple trend context, recent range boundaries, Bollinger location/width, VWAP distance, and volume-source truth.
+## What L21 should answer
+1. What is normal range/volatility?
+2. Where is price relative to simple reference tools?
+3. Is price extended, compressed, or near a reference boundary?
+4. Do reference indicators provide context for L22/L23 risk geometry?
 
-L21 must never create buy/sell signals, auto-trading permission, prop-firm readiness, edge/expectancy claims, or indicator-only permission.
+## Inputs
+L21 may consume:
+
+```text
+selected-symbol OHLC from L18
+optional tick/spread context from L20 once accepted and stable
+timeframe role definitions
+```
+
+L21 must not own the source packets it consumes.
 
 ## Hard upstream gate
 L21 is blocked until L20 is accepted and stable.
@@ -87,52 +104,118 @@ external_worker/l21/
   l21_workbench.py
   l21_no_signal_audit.py
   packs/
-    atr_pack.py
+    atr_range_context_pack.py
     sma_context_pack.py
     donchian_pack.py
-    bollinger_pack.py
-    vwap_pack.py
-    volume_source_pack.py
+    bollinger_context_pack.py
+    vwap_context_pack.py
+    volume_label_pack.py
 ```
 
-## Realistic L21 field set
+## Final L21 reference tools and fields
 Keep L21 simple, objective, and explainable.
 
+### 1. ATR / range context
 ```text
 atr_value
 atr_percentile
-sma_50_value
-sma_200_value
-sma_context_state
-donchian_period
-donchian_high
-donchian_low
-donchian_breakout_candidate
-bollinger_width
-bollinger_position
-vwap_value
-vwap_session_basis
-vwap_distance_pips
-volume_source_type
+range_percentile
+movement_context_state
 ```
 
-Field meanings:
+Meaning:
 
 ```text
 atr_value=volatility reference
-atr_percentile=relative volatility context
-sma_50_value=medium trend reference
-sma_200_value=longer trend reference
-sma_context_state=above/below/cross-zone/compressed context only
+atr_percentile=relative ATR context
+range_percentile=recent range context
+movement_context_state=normal|quiet|expanded|compressed|unavailable
+```
+
+### 2. SMA 50 / SMA 200
+```text
+sma_50_value
+sma_200_value
+price_vs_sma50
+price_vs_sma200
+sma_context_state=above|below|between|unavailable
+```
+
+Meaning:
+
+```text
+sma_50_value=medium reference line
+sma_200_value=longer reference line
+price_vs_sma50=price location relative to SMA50
+price_vs_sma200=price location relative to SMA200
+sma_context_state=simple trend/location context only
+```
+
+### 3. Donchian channel
+```text
+donchian_period
+donchian_high
+donchian_low
+donchian_position_percent
+donchian_breakout_candidate
+```
+
+Meaning:
+
+```text
 donchian_high=recent upper boundary
 donchian_low=recent lower boundary
+donchian_position_percent=location inside recent boundary range
 donchian_breakout_candidate=boundary-proximity context only, not breakout permission
-bollinger_width=volatility compression/expansion context
+```
+
+### 4. Bollinger context
+```text
+bollinger_width
+bollinger_position
+compression_state
+expansion_state
+```
+
+Meaning:
+
+```text
+bollinger_width=volatility envelope width
 bollinger_position=location inside volatility envelope
+compression_state=compressed|normal|not_compressed|unavailable
+expansion_state=expanded|normal|not_expanded|unavailable
+```
+
+### 5. VWAP context
+VWAP may be used only if time/source basis is correct.
+
+```text
+vwap_value
+vwap_session_basis
+vwap_distance_pips
+vwap_data_status
+```
+
+Meaning:
+
+```text
 vwap_value=benchmark/fair-value reference
-vwap_session_basis=session/day/week/rolling basis label
+vwap_session_basis=session|day|week|rolling|unavailable
 vwap_distance_pips=distance from VWAP reference
-volume_source_type=real_volume|tick_volume_proxy|partial|unavailable
+vwap_data_status=real_volume|tick_volume_proxy|partial|unavailable|not_wired
+```
+
+### 6. Volume label only
+```text
+volume_source_type=real_volume|tick_volume_proxy|unavailable
+volume_context_state
+```
+
+Meaning:
+
+```text
+volume_source_type=data source truth only
+volume_context_state=normal|elevated|thin|unavailable
 ```
 
 ## Universal packet guardrails
@@ -154,20 +237,27 @@ expectancy_validated=false
 Pack-specific wording must remain descriptive:
 
 ```text
-atr_meaning=volatility_reference_only_not_signal
-sma_context_meaning=simple_trend_context_only_not_entry
+atr_range_meaning=volatility_and_range_reference_only_not_signal
+sma_context_meaning=simple_reference_location_only_not_entry
 donchian_meaning=recent_boundary_context_only_not_breakout_permission
 bollinger_meaning=volatility_location_envelope_only_not_buy_sell
 vwap_meaning=benchmark_context_only_not_entry
-volume_source_meaning=source_truth_only_not_institutional_confirmation
+volume_label_meaning=source_truth_only_not_institutional_confirmation
 ```
 
+## How L21 output may be used
+L22 may use ATR/range/VWAP/Donchian context for target room and level quality.
+
+L23 may use reference values as filters only after validation.
+
+Dossier may show compact reference context.
+
+These downstream uses do not upgrade L21 into signal authority.
+
 ## Do not add
-Do not add indicator stacking nonsense.
+Do not add RSI/MACD strategy by default.
 
-Do not add MACD crossover trading.
-
-Do not add RSI overbought/oversold trade interpretation.
+Do not add indicator stacking.
 
 Do not add indicator-only permission.
 
@@ -181,24 +271,36 @@ SMA 50 above SMA 200 = buy
 SMA 50 below SMA 200 = sell
 Donchian high break = confirmed buy
 Donchian low break = confirmed sell
+Donchian breakout candidate = setup permission
 BB lower = buy
 BB upper = sell
 BB squeeze = guaranteed breakout
 VWAP touch = entry
 VWAP reclaim = confirmed buy
+VWAP institutional reaction claim
 High tick volume = institutional confirmation
 Low spread = edge
+indicator-only setup candidate
 ```
 
 Correct wording:
 
 ```text
-ATR = volatility reference
-SMA context = simple trend reference
+ATR/range = volatility and movement context
+SMA context = simple reference location
 Donchian = recent boundary context
 Bollinger = volatility/location envelope
-VWAP = benchmark/fair-value reference
-Volume source = data-source truth
+VWAP = benchmark/fair-value reference when basis is valid
+Volume label = data-source truth
+```
+
+## Acceptance checks
+```text
+every indicator has timeframe label
+every indicator has data-status label
+indicator output says context only
+missing data degrades honestly
+no indicator-only setup candidate
 ```
 
 ## Board surface
@@ -218,7 +320,8 @@ L20 gate status
 selected symbols seen
 selected symbols decorated
 reference fields complete/partial/missing counts
-VWAP volume-source counts
+VWAP data-status counts
+volume-source counts
 top blocking reasons
 no_signal_audit_status
 trade_permission=false
@@ -246,7 +349,7 @@ Before L20 acceptance/stability, Dossier should print blocked truth only, not ca
 Future Dossier rows should stay compact:
 
 ```text
-tf | status | atr | atr_pctile | sma50 | sma200 | sma_state | donchian_high | donchian_low | donchian_candidate | bb_width | bb_position | vwap | vwap_basis | vwap_distance_pips | volume_source | failures
+tf | status | data_status | atr | atr_pctile | range_pctile | movement_state | sma50 | sma200 | price_vs_sma50 | price_vs_sma200 | sma_state | donchian_high | donchian_low | donchian_pos_pct | donchian_candidate | bb_width | bb_position | compression | expansion | vwap | vwap_basis | vwap_distance_pips | vwap_status | volume_source | volume_state | failures
 ```
 
 ## Workbench surface
@@ -269,8 +372,9 @@ L21 may consume:
 ```text
 L18 selected OHLC
 L19 candle geometry references
-L20 selected rolling tick status/context once accepted and stable
-Shared OHLC Raw Storage Owner outputs
+L20 selected rolling tick/spread context once accepted and stable
+timeframe role definitions
+Shared OHLC Raw Storage Owner outputs through L18 contract
 ```
 
 L21 must not own:
@@ -282,6 +386,9 @@ CopyTicks
 DOM
 execution
 trade permission
+raw OHLC source truth
+candle geometry source truth
+rolling tick source truth
 ```
 
 ## Per-module research requirements
@@ -293,6 +400,8 @@ formula
 input source owner
 output schema
 minimum bars
+timeframe label policy
+data-status label policy
 current-forming-bar vs closed-bar policy
 failure states
 no-signal wording
