@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 import csv
 import io
 import math
@@ -14,7 +14,8 @@ L6_INPUT_NAME = "l6_input_primitives.csv"
 L6_INPUT_MANIFEST_NAME = "l6_input_primitives.manifest"
 L6_RANKED_NAME = "ranked_symbols.csv"
 L6_MANIFEST_NAME = "ranked_symbols.manifest"
-L6_TOP20_NAME = "ranked_symbols_top20.txt"
+# Compatibility/debug preview only. This is not selection authority and is not an acceptance dependency.
+L6_PREVIEW_NAME = "ranked_symbols_top20.txt"
 L6_SYMBOL_RANK_FOLDER = "SymbolRanks"
 L6_SYMBOL_RANK_FILENAME_MODE = "sanitized_symbol__payload_checksum"
 L6_JOB_TYPE = "L6_COST_FRICTION_RANKING_V1"
@@ -24,6 +25,7 @@ L6_SCORE_MEANING = "surface_cost_friction_only_not_edge_not_permission"
 L6_RANGE_RATIO_UNAVAILABLE = "not_available_no_owner_approved_range_input"
 L6_ATR_RATIO_UNAVAILABLE = "not_available_no_owner_approved_atr_input"
 L6_SWAP_MODEL_STATUS = "not_modelled_v1"
+L6_STATIC_HOLD_SECONDS = 300
 
 BUCKET_ORDER = {
     "hostile_friction": 0,
@@ -78,7 +80,6 @@ OUTPUT_FIELDS = [
     "selection_runtime",
 ]
 
-
 @dataclass
 class L6RankSummary:
     status: str
@@ -115,27 +116,21 @@ class L6RankSummary:
 
 
 def _safe_float(value: str | None, default: float = 0.0) -> float:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
-        return default
     try:
-        number = float(text)
-        if math.isnan(number) or math.isinf(number):
+        text = str(value if value is not None else "").strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
             return default
-        return number
+        number = float(text)
+        return default if math.isnan(number) or math.isinf(number) else number
     except ValueError:
         return default
 
 
 def _safe_int(value: str | None, default: int = 0) -> int:
-    if value is None:
-        return default
-    text = str(value).strip()
-    if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
-        return default
     try:
+        text = str(value if value is not None else "").strip()
+        if text == "" or text.lower() in {"nan", "inf", "-inf", "not_available", "pending"}:
+            return default
         return int(float(text))
     except ValueError:
         return default
@@ -175,8 +170,7 @@ def _symbol_rank_checksum(symbol: str) -> str:
 
 
 def _symbol_rank_filename(symbol: str) -> str:
-    cleaned = _sanitize_path_part(symbol)
-    return f"{cleaned}__{_symbol_rank_checksum(symbol)}.txt"
+    return f"{_sanitize_path_part(symbol)}__{_symbol_rank_checksum(symbol)}.txt"
 
 
 def _symbol_rank_path(symbol_rank_dir: Path, symbol: str) -> Path:
@@ -199,50 +193,15 @@ def _remove_file_if_exists(path: Path) -> Tuple[int, int]:
         return 0, 1
 
 
-def _cleanup_glob(folder: Path, pattern: str) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
+def _cleanup_tmp(folder: Path) -> Tuple[int, int]:
+    removed = failed = 0
     if not folder.exists():
         return removed, failed
-    for path in folder.glob(pattern):
-        r, f = _remove_file_if_exists(path)
-        removed += r
-        failed += f
-    return removed, failed
-
-
-def _clear_symbol_rank_files(symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    if not symbol_rank_dir.exists():
-        return removed, failed
-    for pattern in ("*.txt", "*.tmp", "*.write_failed.txt"):
-        r, f = _cleanup_glob(symbol_rank_dir, pattern)
-        removed += r
-        failed += f
-    return removed, failed
-
-
-def _clear_layer_transient_files(layer_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
     for pattern in ("*.tmp", "*.write_failed.txt"):
-        r, f = _cleanup_glob(layer_dir, pattern)
-        removed += r
-        failed += f
-    return removed, failed
-
-
-def _clear_final_rank_outputs(ranked_path: Path, top20_path: Path, symbol_rank_dir: Path) -> Tuple[int, int]:
-    removed = 0
-    failed = 0
-    for path in (ranked_path, top20_path):
-        r, f = _remove_file_if_exists(path)
-        removed += r
-        failed += f
-    r, f = _clear_symbol_rank_files(symbol_rank_dir)
-    removed += r
-    failed += f
+        for path in folder.glob(pattern):
+            r, f = _remove_file_if_exists(path)
+            removed += r
+            failed += f
     return removed, failed
 
 
@@ -291,32 +250,23 @@ def _quality_penalty(text: str, good_words: Tuple[str, ...], warning_words: Tupl
         return 8.0, f"warning_{text}"
     if any(word in lower for word in good_words):
         return 0.0, f"ok_{text}"
-    if text in {"not_available", "missing", "pending"}:
+    if lower in {"not_available", "missing", "pending"}:
         return 14.0, f"unknown_{text}"
     return 4.0, f"review_{text}"
 
 
 def _effective_cost_minlot(row: Dict[str, str]) -> Tuple[float, str]:
-    ordercalc = _safe_float(row.get("spread_cost_worst_minlot_account"))
-    value_formula = _safe_float(row.get("value_formula_spread_cost_minlot_account"))
-    tickvalue = _safe_float(row.get("tickvalue_spread_cost_minlot_account"))
-    contract = _safe_float(row.get("contract_spread_cost_minlot_raw")) if row.get("contract_cost_status") == "raw_account_currency_ok" else 0.0
-    candidates = [("ordercalcprofit", ordercalc), ("value_formula", value_formula), ("tickvalue", tickvalue), ("contract_account_currency", contract)]
+    candidates = [
+        ("ordercalcprofit", _safe_float(row.get("spread_cost_worst_minlot_account"))),
+        ("value_formula", _safe_float(row.get("value_formula_spread_cost_minlot_account"))),
+        ("tickvalue", _safe_float(row.get("tickvalue_spread_cost_minlot_account"))),
+    ]
+    if row.get("contract_cost_status") == "raw_account_currency_ok":
+        candidates.append(("contract_account_currency", _safe_float(row.get("contract_spread_cost_minlot_raw"))))
     usable = [(name, value) for name, value in candidates if value > 0.0]
     if not usable:
         return 0.0, "no_positive_cost_model"
-    name, value = max(usable, key=lambda item: item[1])
-    return value, name
-
-
-def _cost_confidence(rank_state: str, score_quality: str, calculation_quality: str, commission_status: str) -> str:
-    if rank_state == "not_rankable_quality":
-        return "unusable"
-    if "degraded" in calculation_quality or "degraded" in score_quality:
-        return "low"
-    if commission_status != "known_machine_verified" or "uncertainty" in score_quality or "warning" in calculation_quality:
-        return "medium"
-    return "high"
+    return max(usable, key=lambda item: item[1])
 
 
 def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
@@ -333,10 +283,18 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     commission_status = _safe_text(row, "commission_model_status")
 
     spread_penalty, bucket_cap, spread_reason = _spread_penalty_and_cap(spread_bps)
-    score = 100.0 - spread_penalty
+    account_cost_penalty = 0.0
+    tick_age_penalty = 0.0
+    commission_unknown_penalty = 0.0
+    slippage_unknown_penalty = 2.0
+    cost_model_mismatch_penalty = 0.0
+    zero_cost_suspicious_penalty = 0.0
+    volume_model_penalty = 0.0
+    calculation_quality = "complete_cost_model"
     reasons: List[str] = [spread_reason, f"effective_cost_source={effective_cost_source}"]
 
-    account_cost_penalty = 0.0
+    score = 100.0 - spread_penalty
+
     if effective_cost <= 0.0 and spread_bps > 0.0:
         account_cost_penalty = 8.0
         reasons.append("effective_minlot_cost_unavailable")
@@ -348,7 +306,6 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         reasons.append("moderate_minlot_account_cost")
     score -= account_cost_penalty
 
-    tick_age_penalty = 0.0
     if tick_age > 20.0:
         tick_age_penalty = 10.0
         reasons.append("tick_age_gt_20s")
@@ -364,67 +321,43 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     score -= quote_quality_penalty + surface_quality_penalty + value_quality_penalty + margin_quality_penalty
     reasons += [quote_reason, surface_reason, value_reason, margin_reason]
 
-    commission_unknown_penalty = 0.0
     commission_uncertain = commission_status != "known_machine_verified"
     if commission_uncertain:
         commission_unknown_penalty = 4.0
         bucket_cap = _apply_bucket_cap(bucket_cap, "good_friction")
         reasons.append("commission_not_machine_verified_penalty_only")
-    score -= commission_unknown_penalty
-
-    slippage_unknown_penalty = 2.0
-    score -= slippage_unknown_penalty
+    score -= commission_unknown_penalty + slippage_unknown_penalty
     reasons.append("slippage_not_modelled_v1_penalty_only")
 
-    cost_model_mismatch_penalty = 0.0
-    calculation_quality = "complete_cost_model"
     cost_model_degraded = False
     cost_model_warning = False
     if compare_status == "mismatch_gt_25pct":
-        if spread_bps < 1.0 and effective_cost > 0.0:
-            cost_model_mismatch_penalty = 5.0
-            calculation_quality = "warning_micro_spread_cost_model_mismatch"
-            cost_model_warning = True
-            reasons.append("cost_model_mismatch_gt_25pct_micro_spread_penalty_only")
-        else:
-            cost_model_mismatch_penalty = 15.0
-            calculation_quality = "degraded_cost_model_mismatch"
-            cost_model_degraded = True
-            reasons.append("cost_model_mismatch_gt_25pct")
+        cost_model_mismatch_penalty = 15.0
+        calculation_quality = "degraded_cost_model_mismatch"
+        cost_model_degraded = True
+        reasons.append("cost_model_mismatch_gt_25pct")
     elif compare_status == "warning_gt_10pct":
         cost_model_mismatch_penalty = 6.0
         calculation_quality = "warning_cost_model_mismatch"
         cost_model_warning = True
         reasons.append("cost_model_warning_gt_10pct")
     elif compare_status == "primary_unavailable_or_zero":
-        if effective_cost > 0.0:
-            cost_model_mismatch_penalty = 4.0
-            calculation_quality = "usable_fallback_cost_model_primary_unavailable"
-            cost_model_warning = True
-            reasons.append("primary_cost_zero_or_unavailable_using_fallback")
-        else:
-            cost_model_mismatch_penalty = 8.0
-            calculation_quality = "degraded_primary_cost_zero_or_unavailable"
-            cost_model_degraded = True
-            reasons.append("primary_cost_zero_or_unavailable")
+        cost_model_mismatch_penalty = 4.0 if effective_cost > 0.0 else 8.0
+        calculation_quality = "usable_fallback_cost_model_primary_unavailable" if effective_cost > 0.0 else "degraded_primary_cost_zero_or_unavailable"
+        cost_model_warning = effective_cost > 0.0
+        cost_model_degraded = effective_cost <= 0.0
+        reasons.append("primary_cost_zero_or_unavailable")
     score -= cost_model_mismatch_penalty
 
-    zero_cost_suspicious_penalty = 0.0
     if zero_suspicious:
-        if effective_cost > 0.0:
-            zero_cost_suspicious_penalty = 5.0
-            calculation_quality = "warning_primary_cost_zero_fallback_positive"
-            cost_model_warning = True
-            reasons.append("primary_cost_zero_but_positive_fallback_cost")
-        else:
-            zero_cost_suspicious_penalty = 22.0
-            bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
-            calculation_quality = "account_cost_zero_suspicious"
-            cost_model_degraded = True
-            reasons.append("zero_account_cost_with_nonzero_spread")
+        zero_cost_suspicious_penalty = 5.0 if effective_cost > 0.0 else 22.0
+        bucket_cap = _apply_bucket_cap(bucket_cap, "acceptable_friction")
+        calculation_quality = "warning_primary_cost_zero_fallback_positive" if effective_cost > 0.0 else "account_cost_zero_suspicious"
+        cost_model_warning = effective_cost > 0.0
+        cost_model_degraded = effective_cost <= 0.0
+        reasons.append("zero_account_cost_with_nonzero_spread")
     score -= zero_cost_suspicious_penalty
 
-    volume_model_penalty = 0.0
     volume_model_degraded = volume_model != "normal"
     if volume_model_degraded:
         volume_model_penalty = 12.0
@@ -434,7 +367,6 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 
     score = max(0.0, min(100.0, score))
     bucket = _apply_bucket_cap(_bucket_from_score(score), bucket_cap)
-
     rank_state = "ranked"
     score_quality = "clean"
     if effective_cost <= 0.0 and spread_bps > 0.0 and zero_suspicious:
@@ -443,11 +375,10 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
     elif cost_model_degraded or volume_model_degraded:
         rank_state = "ranked_degraded"
         score_quality = "degraded_rank_usability"
-    elif cost_model_warning or commission_uncertain or slippage_unknown_penalty > 0.0:
-        rank_state = "ranked"
+    elif cost_model_warning or commission_uncertain:
         score_quality = "usable_with_cost_uncertainty"
 
-    cost_score_confidence = _cost_confidence(rank_state, score_quality, calculation_quality, commission_status)
+    confidence = "unusable" if rank_state == "not_rankable_quality" else ("low" if "degraded" in score_quality or "degraded" in calculation_quality else ("medium" if score_quality != "clean" else "high"))
     friction_penalty = max(0.0, min(100.0, 100.0 - score))
     round_trip_cost_estimate = effective_cost * 2.0 if effective_cost > 0.0 else 0.0
     reasons += [
@@ -465,7 +396,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
         "rank_state": rank_state,
         "score_quality": score_quality,
         "calculation_quality": calculation_quality,
-        "cost_score_confidence": cost_score_confidence,
+        "cost_score_confidence": confidence,
         "spread_bps": spread_bps,
         "spread_points": spread_points,
         "spread_to_recent_range_pct": L6_RANGE_RATIO_UNAVAILABLE,
@@ -502,8 +433,7 @@ def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
 def _format_value(value: str | float) -> str:
     if isinstance(value, float):
         return f"{value:.6f}"
-    text = str(value)
-    return text.replace("\r", " ").replace("\n", " ").replace(",", "_")
+    return str(value).replace("\r", " ").replace("\n", " ").replace(",", "_")
 
 
 def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
@@ -520,11 +450,12 @@ def _write_ranked_csv(scored: List[Dict[str, str | float]]) -> str:
     return output.getvalue().replace("\r\n", "\n").replace("\n", "\r\n")
 
 
-def _top20_text(scored: List[Dict[str, str | float]]) -> str:
+def _preview_text(scored: List[Dict[str, str | float]]) -> str:
     lines = [
-        "LAYER 6 - COST / FRICTION RANKING - TOP 20",
+        "LAYER 6 - COST / FRICTION RANKING - PREVIEW ONLY",
         "----------------------------------------",
         f"Generated UTC: {utc_stamp()}",
+        "Meaning: preview_only_not_selection_not_top10_not_top5_not_trade_permission",
         "Trade Permission: FALSE",
         "Selection Runtime: FALSE",
         "",
@@ -542,9 +473,9 @@ def _top20_text(scored: List[Dict[str, str | float]]) -> str:
 
 def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
     symbol = str(row["symbol"])
-    lines = [
+    return "\n".join([
         "schema_name=l6_symbol_rank",
-        "schema_version=3",
+        "schema_version=4",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
@@ -584,24 +515,30 @@ def _symbol_rank_text(rank_index: int, row: Dict[str, str | float]) -> str:
         f"generated_utc={utc_stamp()}",
         f"generated_unix={unix_time()}",
         "",
-    ]
-    return "\n".join(lines)
+    ])
 
 
-def _manifest(summary: L6RankSummary, input_path: Path) -> str:
+def _manifest(summary: L6RankSummary, input_path: Path, calculation_mode: str) -> str:
+    now = unix_time()
+    generated = now
+    hold_until = now + L6_STATIC_HOLD_SECONDS if summary.status == "complete" else 0
     source_counts_ok = summary.source_input_manifest_present and summary.input_count == summary.source_input_manifest_row_count
     source_l5_ok = summary.source_l5_gate_pass <= 0 or summary.input_count == summary.source_l5_gate_pass
     input_manifest_checksum_ok = summary.source_input_payload_checksum in {"not_available", ""} or summary.source_input_payload_checksum == summary.input_payload_checksum
     symbol_rank_count_ok = summary.symbol_rank_files_actual == summary.row_count and summary.symbol_rank_files_written == summary.row_count
     return "\n".join([
         "schema_name=layer_ranked_symbols_manifest",
-        "schema_version=6",
+        "schema_version=7",
         "layer_id=6",
         f"layer_name={L6_LAYER_NAME}",
         f"owner_name={L6_OWNER}",
         f"job_type={L6_JOB_TYPE}",
         f"status={summary.status}",
         f"reason={summary.reason}",
+        f"calculation_mode={calculation_mode}",
+        f"static_hold_seconds={L6_STATIC_HOLD_SECONDS}",
+        f"static_hold_state={'active' if summary.status == 'complete' else 'not_active'}",
+        f"static_hold_until_unix={hold_until}",
         f"input_csv_path={input_path}",
         f"source_input_manifest_present={'true' if summary.source_input_manifest_present else 'false'}",
         f"source_input_manifest_row_count={summary.source_input_manifest_row_count}",
@@ -617,7 +554,8 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         f"input_csv_count_matches_source_l5_gate_pass={'true' if source_l5_ok else 'false'}",
         f"ranked_csv_path={summary.ranked_csv_path}",
         f"ranked_manifest_path={summary.manifest_path}",
-        f"top20_path={summary.top20_path}",
+        f"ranked_preview_path={summary.top20_path}",
+        "ranked_preview_policy=compatibility_debug_only_not_acceptance_not_selection",
         f"symbol_rank_folder_path={summary.symbol_rank_folder_path}",
         f"symbol_rank_filename_mode={summary.symbol_rank_filename_mode}",
         f"symbol_rank_files_written={summary.symbol_rank_files_written}",
@@ -648,14 +586,14 @@ def _manifest(summary: L6RankSummary, input_path: Path) -> str:
         "selection_runtime=false",
         "execution=false",
         f"generated_utc={utc_stamp()}",
-        f"generated_unix={unix_time()}",
+        f"generated_unix={generated}",
         "",
     ])
 
 
-def _summary_from_ranked_manifest(manifest_text: str, fallback: L6RankSummary) -> L6RankSummary:
-    data = _parse_kv_text(manifest_text)
-    summary = L6RankSummary(
+def _summary_from_existing_manifest(text: str, fallback: L6RankSummary) -> L6RankSummary:
+    data = _parse_kv_text(text)
+    return L6RankSummary(
         status=data.get("status", fallback.status),
         reason=data.get("reason", fallback.reason),
         input_count=_safe_int(data.get("input_count"), fallback.input_count),
@@ -666,8 +604,6 @@ def _summary_from_ranked_manifest(manifest_text: str, fallback: L6RankSummary) -
         input_payload_checksum=data.get("input_payload_checksum", fallback.input_payload_checksum),
         input_payload_checksum_after_rank=data.get("input_payload_checksum_after_rank", fallback.input_payload_checksum_after_rank),
         input_generation_stable=data.get("input_generation_stable", "false").lower() == "true",
-        stale_tmp_files_removed=fallback.stale_tmp_files_removed,
-        stale_tmp_files_failed=fallback.stale_tmp_files_failed,
         row_count=_safe_int(data.get("row_count"), fallback.row_count),
         ranked_count=_safe_int(data.get("ranked_count"), fallback.ranked_count),
         ranked_degraded_count=_safe_int(data.get("ranked_degraded_count"), fallback.ranked_degraded_count),
@@ -680,7 +616,7 @@ def _summary_from_ranked_manifest(manifest_text: str, fallback: L6RankSummary) -
         zero_cost_suspicious_count=_safe_int(data.get("zero_cost_nonzero_spread_suspicious_count"), fallback.zero_cost_suspicious_count),
         mismatch_count=_safe_int(data.get("cost_model_mismatch_count"), fallback.mismatch_count),
         symbol_rank_files_written=_safe_int(data.get("symbol_rank_files_written"), fallback.symbol_rank_files_written),
-        symbol_rank_files_actual=_safe_int(data.get("symbol_rank_files_actual"), fallback.symbol_rank_files_actual),
+        symbol_rank_files_actual=fallback.symbol_rank_files_actual,
         symbol_rank_filename_mode=data.get("symbol_rank_filename_mode", fallback.symbol_rank_filename_mode),
         payload_checksum=data.get("payload_checksum", fallback.payload_checksum),
         ranked_csv_path=fallback.ranked_csv_path,
@@ -688,52 +624,47 @@ def _summary_from_ranked_manifest(manifest_text: str, fallback: L6RankSummary) -
         top20_path=fallback.top20_path,
         symbol_rank_folder_path=fallback.symbol_rank_folder_path,
     )
-    return summary
 
 
-def _try_reuse_unchanged_rank_outputs(
-    summary: L6RankSummary,
-    manifest_path: Path,
-    ranked_path: Path,
-    top20_path: Path,
-    symbol_rank_dir: Path,
-) -> L6RankSummary | None:
-    if not summary.source_input_manifest_present:
+def _reuse_static_hold_if_valid(summary: L6RankSummary, manifest_path: Path, ranked_path: Path, preview_path: Path, symbol_rank_dir: Path) -> L6RankSummary | None:
+    if not manifest_path.exists() or not ranked_path.exists():
         return None
-    if summary.source_input_payload_checksum in {"", "not_available"}:
+    existing_text = read_text(manifest_path)
+    data = _parse_kv_text(existing_text)
+    if data.get("status") != "complete":
         return None
-    if summary.input_payload_checksum != summary.source_input_payload_checksum:
+    if data.get("authority") != "calculation_support_only" or data.get("trade_permission") != "false" or data.get("selection_runtime") != "false":
         return None
-    if not manifest_path.exists() or not ranked_path.exists() or not top20_path.exists():
+    if data.get("input_payload_checksum") != summary.input_payload_checksum:
         return None
-
-    ranked_manifest_text = read_text(manifest_path)
-    existing = _summary_from_ranked_manifest(ranked_manifest_text, summary)
-    actual_symbol_rank_files = _final_symbol_rank_txt_count(symbol_rank_dir)
-    if existing.status not in {"complete", "input_degraded"}:
+    if data.get("source_input_payload_checksum") not in {summary.source_input_payload_checksum, "not_available", ""}:
         return None
-    if existing.symbol_rank_filename_mode != L6_SYMBOL_RANK_FILENAME_MODE:
+    hold_until = _safe_int(data.get("static_hold_until_unix"), 0)
+    if hold_until <= unix_time():
         return None
-    if not existing.input_generation_stable:
+    existing = _summary_from_existing_manifest(existing_text, summary)
+    existing.reason = "static_hold_reuse_accepted_snapshot;" + existing.reason
+    existing.symbol_rank_files_actual = _final_symbol_rank_txt_count(symbol_rank_dir)
+    if existing.row_count <= 0 or existing.row_count != existing.input_count:
         return None
-    if existing.input_payload_checksum != summary.input_payload_checksum:
+    if existing.symbol_rank_files_actual != existing.row_count:
         return None
-    if existing.input_payload_checksum_after_rank != summary.input_payload_checksum:
-        return None
-    if existing.source_input_payload_checksum != summary.source_input_payload_checksum:
-        return None
-    if existing.input_count <= 0 or existing.row_count != existing.input_count:
-        return None
-    if existing.symbol_rank_files_written != existing.row_count:
-        return None
-    if actual_symbol_rank_files != existing.row_count:
-        return None
-
-    existing.reason = "skipped_unchanged_input_reused_existing_ranked_outputs;" + existing.reason
-    existing.stale_tmp_files_removed = summary.stale_tmp_files_removed
-    existing.stale_tmp_files_failed = summary.stale_tmp_files_failed
-    existing.symbol_rank_files_actual = actual_symbol_rank_files
+    if not preview_path.exists():
+        atomic_write_text(preview_path, "LAYER 6 PREVIEW ONLY\nstatic hold active; preview file recreated for compatibility only\n")
     return existing
+
+
+def _remove_stale_symbol_rank_files(symbol_rank_dir: Path, valid_filenames: set[str]) -> Tuple[int, int]:
+    removed = failed = 0
+    if not symbol_rank_dir.exists():
+        return removed, failed
+    for path in symbol_rank_dir.glob("*.txt"):
+        if path.name in valid_filenames:
+            continue
+        r, f = _remove_file_if_exists(path)
+        removed += r
+        failed += f
+    return removed, failed
 
 
 def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
@@ -742,7 +673,7 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     input_manifest_path = layer_dir / L6_INPUT_MANIFEST_NAME
     ranked_path = layer_dir / L6_RANKED_NAME
     manifest_path = layer_dir / L6_MANIFEST_NAME
-    top20_path = layer_dir / L6_TOP20_NAME
+    preview_path = layer_dir / L6_PREVIEW_NAME
     symbol_rank_dir = layer_dir / L6_SYMBOL_RANK_FOLDER
     layer_dir.mkdir(parents=True, exist_ok=True)
     symbol_rank_dir.mkdir(parents=True, exist_ok=True)
@@ -752,9 +683,10 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         reason="l6_input_primitives.csv missing",
         ranked_csv_path=str(ranked_path),
         manifest_path=str(manifest_path),
-        top20_path=str(top20_path),
+        top20_path=str(preview_path),
         symbol_rank_folder_path=str(symbol_rank_dir),
     )
+
     if input_manifest_path.exists():
         input_manifest = _parse_kv_text(read_text(input_manifest_path))
         summary.source_input_manifest_present = True
@@ -762,28 +694,30 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         summary.source_l5_gate_pass = _safe_int(input_manifest.get("l5_gate_pass"), 0)
         summary.source_input_payload_checksum = input_manifest.get("payload_checksum", "not_available")
 
-    removed, failed = _clear_layer_transient_files(layer_dir)
-    sr_removed, sr_failed = _cleanup_glob(symbol_rank_dir, "*.tmp")
+    removed, failed = _cleanup_tmp(layer_dir)
+    sr_removed, sr_failed = _cleanup_tmp(symbol_rank_dir)
     summary.stale_tmp_files_removed += removed + sr_removed
     summary.stale_tmp_files_failed += failed + sr_failed
 
     if not input_path.exists():
-        removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-        summary.stale_tmp_files_removed += removed
-        summary.stale_tmp_files_failed += failed
-        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        atomic_write_text(manifest_path, _manifest(summary, input_path, "missing_input"))
         return summary
 
-    text = read_text(input_path)
-    summary.input_payload_checksum = _csv_payload_checksum(text)
+    input_text = read_text(input_path)
+    summary.input_payload_checksum = _csv_payload_checksum(input_text)
 
-    reused = _try_reuse_unchanged_rank_outputs(summary, manifest_path, ranked_path, top20_path, symbol_rank_dir)
-    if reused is not None:
-        return reused
+    static_reuse = _reuse_static_hold_if_valid(summary, manifest_path, ranked_path, preview_path, symbol_rank_dir)
+    if static_reuse is not None:
+        return static_reuse
 
-    reader = csv.DictReader(io.StringIO(text.replace("\r\n", "\n")))
+    reader = csv.DictReader(io.StringIO(input_text.replace("\r\n", "\n")))
     rows = [row for row in reader]
     summary.input_count = len(rows)
+    if summary.input_count <= 0:
+        summary.status = "empty_input"
+        summary.reason = "l6_input_primitives.csv has no data rows"
+        atomic_write_text(manifest_path, _manifest(summary, input_path, "empty_input"))
+        return summary
 
     scored = [_score_row(row) for row in rows]
     scored.sort(key=lambda row: (
@@ -794,32 +728,24 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         str(row["symbol"]),
     ), reverse=True)
 
-    text_after_rank = read_text(input_path)
-    summary.input_payload_checksum_after_rank = _csv_payload_checksum(text_after_rank)
-    after_rows = [row for row in csv.DictReader(io.StringIO(text_after_rank.replace("\r\n", "\n")))]
-    summary.input_generation_stable = (
-        summary.input_payload_checksum == summary.input_payload_checksum_after_rank
-        and summary.input_count == len(after_rows)
-    )
+    input_after_rank = read_text(input_path)
+    summary.input_payload_checksum_after_rank = _csv_payload_checksum(input_after_rank)
+    after_rows = [row for row in csv.DictReader(io.StringIO(input_after_rank.replace("\r\n", "\n")))]
+    summary.input_generation_stable = summary.input_payload_checksum == summary.input_payload_checksum_after_rank and summary.input_count == len(after_rows)
     if not summary.input_generation_stable:
         summary.status = "input_changed_during_rank"
         summary.reason = (
             f"l6 input changed while ranking; before_count={summary.input_count}; after_count={len(after_rows)}; "
-            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; "
-            "current ranked outputs preserved; replacement generation not promoted"
+            f"before_checksum={summary.input_payload_checksum}; after_checksum={summary.input_payload_checksum_after_rank}; current accepted outputs preserved"
         )
-        atomic_write_text(manifest_path, _manifest(summary, input_path))
+        atomic_write_text(manifest_path, _manifest(summary, input_path, "input_changed_during_rank"))
         return summary
-
-    removed, failed = _clear_final_rank_outputs(ranked_path, top20_path, symbol_rank_dir)
-    summary.stale_tmp_files_removed += removed
-    summary.stale_tmp_files_failed += failed
 
     ranked_csv = _write_ranked_csv(scored)
     ranked_lines = [line for line in ranked_csv.replace("\r\n", "\n").splitlines() if line.strip()]
     summary.payload_checksum = payload_checksum(ranked_lines)
     summary.status = "complete"
-    summary.reason = "ranked all rows present in stable L6 input generation"
+    summary.reason = "ranked all stable L6 input rows and entered static hold"
     summary.row_count = len(scored)
     summary.ranked_count = sum(1 for row in scored if row["rank_state"] == "ranked")
     summary.ranked_degraded_count = sum(1 for row in scored if row["rank_state"] == "ranked_degraded")
@@ -843,20 +769,29 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
         summary.reason = f"input CSV checksum {summary.input_payload_checksum} differs from source input manifest payload_checksum {summary.source_input_payload_checksum}"
 
     ranked_ok = atomic_write_text(ranked_path, ranked_csv)
-    top20_ok = atomic_write_text(top20_path, _top20_text(scored))
+    preview_ok = atomic_write_text(preview_path, _preview_text(scored))
+
+    valid_symbol_files: set[str] = set()
     write_success_count = 0
     for index, row in enumerate(scored, start=1):
-        symbol_path = _symbol_rank_path(symbol_rank_dir, str(row["symbol"]))
-        if atomic_write_text(symbol_path, _symbol_rank_text(index, row)):
+        symbol = str(row["symbol"])
+        filename = _symbol_rank_filename(symbol)
+        valid_symbol_files.add(filename)
+        if atomic_write_text(symbol_rank_dir / filename, _symbol_rank_text(index, row)):
             write_success_count += 1
+
+    removed, failed = _remove_stale_symbol_rank_files(symbol_rank_dir, valid_symbol_files)
+    summary.stale_tmp_files_removed += removed
+    summary.stale_tmp_files_failed += failed
     summary.symbol_rank_files_written = write_success_count
     summary.symbol_rank_files_actual = _final_symbol_rank_txt_count(symbol_rank_dir)
 
-    if not ranked_ok or not top20_ok or summary.symbol_rank_files_written != len(scored) or summary.symbol_rank_files_actual != len(scored):
+    if not ranked_ok or summary.symbol_rank_files_written != len(scored) or summary.symbol_rank_files_actual != len(scored):
         summary.status = "write_degraded"
         summary.reason = (
-            "ranked CSV, top20, or per-symbol rank write failed; sidecar proof may be partial"
-            f";write_success_count={summary.symbol_rank_files_written};actual_symbol_rank_files={summary.symbol_rank_files_actual};row_count={len(scored)}"
+            "ranked CSV or per-symbol rank write failed; previous accepted snapshot not promoted as complete"
+            f";preview_ok={preview_ok};write_success_count={summary.symbol_rank_files_written};actual_symbol_rank_files={summary.symbol_rank_files_actual};row_count={len(scored)}"
         )
-    atomic_write_text(manifest_path, _manifest(summary, input_path))
+
+    atomic_write_text(manifest_path, _manifest(summary, input_path, "fresh_rank" if summary.status == "complete" else summary.status))
     return summary
