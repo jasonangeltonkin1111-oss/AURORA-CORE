@@ -6,7 +6,7 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 ## Current status
 - MT5 source exists and is active in limited scope (Runtime 0 orchestrator + identity/heartbeat/governance rows, Runtime 1 Layer 1 account snapshot, Runtime 1 Layer 2 market open/closed truth, Runtime 1 Layer 3 broker specs/value truth, Runtime 1 Layer 4 live quote/spread truth, Runtime 1 Layer 5 Basic System Gate, Runtime 1 Shared OHLC Raw Storage source scaffold, Runtime 2 generated-row lookup-only source, Runtime 3 Calculation Gateway support surfaces including L6/L7/L8/L9/L10/L11/L12/L13/L14/L15/L16/L17 worker-output readback surfaces, Runtime 4 Layer 7 Session Relevance contract stub, and Publication/FileIO/Route Service source under inherited `runtime_7_publication_owner` folder naming).
 - Layer 1 source is active as account/portfolio/prop-rule truth. It must stay bounded: account status/history surfaces should use a bounded recent operator window. Current rule: retain all selected closed-trade rows inside the last 90 days; if fewer than 100 closed rows exist in that window, extend older history only until 100 closed rows are available when possible. The output must label this selected-history rule honestly. Full all-time `HistorySelect(0, now)` scans are runtime-risky and must not be reintroduced as normal heartbeat behavior without explicit proof/budget.
-- Layer 3 source is active as broker/spec/value foundation. It scans Layer 2 known open and closed symbols, skips unknown symbols, and must render failed value or margin calculations as `Not available`, never fake `0.00`.
+- Layer 3 source is active as broker/spec/value foundation. It scans Layer 2 known open and closed symbols, skips unknown symbols, and must render failed value or margin calculations as `Not available`, never fake `0.00`. Current Layer 3 render/status calls must run the existing Layer 3 scan owner before rendering if the Layer 3 cache is not current.
 - Layer 5 source is active only as Basic System Gate. It consumes L2/L3/L4 owner packets and outputs pass/blocked eligibility. It must not become friction scoring, ranking, selection, permission, execution, or Gateway calculation authority.
 - Shared OHLC Raw Storage source is present as Runtime 1 support service scaffold. It owns raw `CopyRates`/`MqlRates` storage contracts only and must not calculate range, wick/body geometry, ATR, trend, volatility, scoring, ranking, selection, permission, or execution. It is not scheduler-activated for full all-symbol 1500-bar seed until compile/runtime proof is captured.
 - Runtime 4 Layer 7 source is contract-only. It defines Session Relevance Ranking ownership and explicitly forbids duplicate market-open truth, hard gating, OHLC/session-range ownership, VWAP ownership, selection, permission, and execution.
@@ -25,6 +25,16 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_L1_Scan.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_1_account_portfolio_prop_rule_truth/AC_L1_Maps.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_BrokerSpecsTruth.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_Types.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_State.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_ApiGetters.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_SymbolInit.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_Scan.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_ScanOne.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_Refresh.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_ValueFormula.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_BrokerMetadata.mqh`
+- `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_FundamentalLinks.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_RenderTruth.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh`
 - `mt5/runtime_owners/runtime_1_foundation_truth_owner/shared_ohlc_raw_storage/00_SHARED_OHLC_RAW_STORAGE_SOURCE_INDEX.md`
@@ -54,7 +64,6 @@ MT5 source index for active source-tree ownership and implementation-scope guard
 - Layer 1 may read account balances, equity, floating P/L, open positions, pending orders, and selected recent history.
 - Layer 1 must not become a strategy, signal, execution, ranking, or permission owner.
 - Account status history should use the current selected-history rule: keep all closed rows inside the last 90 days; if that set has fewer than 100 rows, fill with older closed rows up to 100 when available. This is a minimum-fill rule, not a hard cap against the 90-day window.
-- Layer 1 portfolio maps are numeric read-only account-history maps. They may summarize selected closed history by risk budget, asset class, currency touch, symbol, time window, holding time, and cluster grouping. They must not become trade permission, ranking, selection, or execution authority.
 - If a broader all-time report is needed later, build it as a deliberate slow-lane/report task with explicit timer budget and runtime proof, not inside normal heartbeat/full-publication cadence.
 
 ## Shared OHLC raw storage boundary
