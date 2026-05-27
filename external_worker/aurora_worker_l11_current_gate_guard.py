@@ -251,19 +251,59 @@ def _summary_text(summary: L11PublishSummary, guard_blocked: int, guard_passed: 
     ])
 
 
-def guard_l11_with_current_dossier_gate(outbox_root: Path, summary: L11PublishSummary) -> L11PublishSummary:
+def _fallback_summary(layer_dir: Path, ranked_path: Path, ranked: List[Dict[str, str]], inputs: List[Dict[str, str]]) -> L11PublishSummary:
+    top5_rows = [row for row in ranked if row.get("in_top5_per_ranking_group") == "true"]
+    ranked_count = sum(1 for row in ranked if row.get("rank_state") in {"ranked", "ranked_partial", "risk_review"})
+    return L11PublishSummary(
+        "accepted",
+        "l11_current_gate_guard_legacy_summary_reconstructed",
+        len(inputs),
+        len(set(row.get("ranking_group", "Unknown") for row in ranked)),
+        ranked_count,
+        sum(1 for row in ranked if row.get("rank_state") == "ranked_partial"),
+        sum(1 for row in ranked if row.get("rank_state") == "risk_review" or row.get("risk_review_flag") == "true"),
+        sum(1 for row in ranked if row.get("rank_state") == "not_rankable_taxonomy"),
+        sum(1 for row in ranked if row.get("rank_state") == "not_rankable_quality"),
+        sum(1 for row in ranked if row.get("ranking_group") in {"Unknown", "not_available"}),
+        len(set(row.get("ranking_group", "Unknown") for row in top5_rows)),
+        len(top5_rows),
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        str(ranked_path),
+        str(layer_dir / "ranking_group_top5.csv"),
+        str(_account_root_from_outbox(layer_dir.parents[2]) / "Selection Desk" / "Groups" / "00_Group_Index.txt") if len(layer_dir.parents) >= 3 else "not_available",
+        str(layer_dir / "l11_summary.txt"),
+    )
+
+
+def guard_l11_with_current_dossier_gate(outbox_root: Path, summary: L11PublishSummary | None = None) -> L11PublishSummary:
     layer_dir = outbox_root / "Layers" / L11_LAYER_FOLDER
     ranked_path = layer_dir / "ranked_symbols_by_group.csv"
     input_path = layer_dir / "l11_input_surface_scores.csv"
     summary_path = layer_dir / "l11_summary.txt"
     if not ranked_path.exists() or not input_path.exists():
-        return summary
+        return summary if summary is not None else L11PublishSummary(
+            "pending",
+            "l11_current_gate_guard_skipped_missing_l11_payloads",
+            summary_path=str(summary_path),
+        )
 
     account_root = _account_root_from_outbox(outbox_root)
     ranked = _csv_rows(ranked_path)
     inputs = _csv_rows(input_path)
     if not ranked:
-        return summary
+        return summary if summary is not None else L11PublishSummary(
+            "pending",
+            "l11_current_gate_guard_skipped_empty_ranked_payload",
+            summary_path=str(summary_path),
+        )
+    if summary is None:
+        summary = _fallback_summary(layer_dir, ranked_path, ranked, inputs)
 
     gate_by_symbol: Dict[str, Tuple[bool, str, str, str]] = {}
     for row in ranked:
@@ -339,11 +379,12 @@ def guard_l11_with_current_dossier_gate(outbox_root: Path, summary: L11PublishSu
     atomic_write_text(summary_path, _summary_text(guarded_summary, guard_blocked, guard_passed))
     report = "\n".join([
         "schema_name=l11_current_dossier_gate_guard",
-        "schema_version=1",
+        "schema_version=2",
         "status=applied" if guarded_summary.status == "accepted" else "status=write_degraded",
         f"input_symbols={len(gate_by_symbol)}",
         f"current_l5_gate_pass_count={guard_passed}",
         f"not_rankable_current_l5_gate_count={guard_blocked}",
+        f"legacy_one_argument_compatible={'true' if summary.reason == 'l11_current_gate_guard_legacy_summary_reconstructed' else 'false'}",
         "rule=only_symbols_with_current_open_nonblocked_nonstale_dossier_remain_rankable",
         "authority=safety_filter_inside_l11_dispatch_not_trade_permission",
         "duplicate_dossier_policy=fail_closed_for_rankability",
