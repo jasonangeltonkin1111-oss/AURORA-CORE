@@ -85,6 +85,7 @@ def _pending_manifest(summary: L9FinalSummary, input_path: Path, input_manifest_
         "ranking_runtime=false",
         "selection_runtime=false",
         "entry_signal=false",
+        "execution=false",
         f"structure_location_policy={L9_POLICY}",
         f"source_owner={L9_SOURCE_OWNER}",
         "publication_order=score_when_l9_input_exists_else_pending_manifest_only",

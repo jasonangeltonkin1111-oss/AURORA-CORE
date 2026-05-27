@@ -245,7 +245,7 @@ def run_repair_light(shared_root: Path, watchdog_mode: bool) -> int:
     for idx, root in enumerate(roots):
         res, _header, _rows = _poll_snapshot(root)
         code = 0 if res.ok else 2
-        mode = "watchdog_light_probe" if watchdog_mode else "repair_light_probe"
+        mode = "watchdog_probe" if watchdog_mode else "repair_probe"
         process_ok = core.write_process_status(root, mode, 1, code, res, len(roots), idx)
         if not process_ok:
             res = core.mark_write_failure(res, [WorkerPaths.from_root(root).status / "worker_process_status.txt"])
