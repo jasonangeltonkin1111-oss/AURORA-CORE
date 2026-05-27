@@ -8,6 +8,14 @@ string AC_BoolText(const bool value)
    return value ? "true" : "false";
 }
 
+string AC_Runtime0FreshnessState(const AC_Runtime0Snapshot &snapshot)
+{
+   if(snapshot.timer_busy_stale_flag) return "stale_busy";
+   if(snapshot.file_publication_blocked) return "degraded_publication_problem";
+   if(snapshot.timer_duration_gt_period_flag) return "degraded_timer_over_period";
+   return "fresh";
+}
+
 string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
 {
    string text = "";
@@ -33,23 +41,37 @@ string AC_RuntimeStatusText(const AC_Runtime0Snapshot &snapshot)
    text += "layer_0_1_startup_runtime_identity_status=" + snapshot.layer_0_1_status + "\r\n";
    text += "layer_0_2_scheduler_heartbeat_breathing_status=" + snapshot.layer_0_2_status + "\r\n";
    text += "layer_0_4_governance_manifest_telemetry_status=" + snapshot.layer_0_4_status + "\r\n";
+   text += "timer_started_ms=" + IntegerToString((int)snapshot.timer_started_ms) + "\r\n";
+   text += "timer_finished_ms=" + IntegerToString((int)snapshot.timer_finished_ms) + "\r\n";
+   text += "timer_duration_ms=" + IntegerToString((int)snapshot.timer_duration_ms) + "\r\n";
+   text += "timer_period_ms=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
+   text += "timer_busy_skip_count=" + IntegerToString(snapshot.timer_busy_skip_count) + "\r\n";
+   text += "timer_busy_age_ms=" + IntegerToString((int)snapshot.timer_busy_age_ms) + "\r\n";
+   text += "timer_busy_stale_flag=" + AC_BoolText(snapshot.timer_busy_stale_flag) + "\r\n";
+   text += "timer_duration_gt_period_flag=" + AC_BoolText(snapshot.timer_duration_gt_period_flag) + "\r\n";
+   text += "timer_pressure_state=" + snapshot.timer_pressure_state + "\r\n";
    text += "file_publication_blocked=" + AC_BoolText(snapshot.file_publication_blocked) + "\r\n";
    text += "degraded_reason=" + snapshot.degraded_reason + "\r\n";
    text += "blocked_reason=" + snapshot.blocked_reason + "\r\n";
-   text += "next_allowed_step=Compile AuroraCore.mq5, then runtime-smoke Market Board and Dossiers/Unknown shell output before Layer 1/2 expansion\r\n";
+   text += "next_allowed_step=inspect_current_layer_blockers_and_runtime_outputs_before_patch_or_permission\r\n";
    return text;
 }
 
 string AC_RuntimeTelemetryRow(const AC_Runtime0Snapshot &snapshot)
 {
-   return "schema_name=runtime_telemetry|schema_version=v0.1|source_owner=" + AC_RUNTIME0_OWNER
+   return "schema_name=runtime_telemetry|schema_version=v0.2|source_owner=" + AC_RUNTIME0_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|source_layer=" + AC_LAYER_0_2_NAME
       + "|heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id)
       + "|timer_duration_ms=" + IntegerToString((int)snapshot.timer_duration_ms)
+      + "|timer_period_ms=" + IntegerToString(AC_TIMER_MILLISECONDS)
       + "|timer_budget_ms=" + IntegerToString((int)AC_TIMER_BUDGET_MS)
       + "|timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first"
+      + "|timer_busy_skip_count=" + IntegerToString(snapshot.timer_busy_skip_count)
+      + "|timer_duration_gt_period_flag=" + AC_BoolText(snapshot.timer_duration_gt_period_flag)
+      + "|timer_busy_stale_flag=" + AC_BoolText(snapshot.timer_busy_stale_flag)
+      + "|timer_pressure_state=" + snapshot.timer_pressure_state
       + "|over_budget_flag=" + AC_BoolText(snapshot.over_budget)
       + "|runtime_state=" + snapshot.runtime_state
       + "|publication_completed_flag=" + AC_BoolText(!snapshot.file_publication_blocked);
@@ -57,12 +79,14 @@ string AC_RuntimeTelemetryRow(const AC_Runtime0Snapshot &snapshot)
 
 string AC_OwnerStatusRow(const AC_Runtime0Snapshot &snapshot)
 {
-   return "schema_name=owner_status|schema_version=v0.1|owner_id=runtime_0_governance_internal_control|owner_name=" + AC_RUNTIME0_OWNER
+   return "schema_name=owner_status|schema_version=v0.2|owner_id=runtime_0_governance_internal_control|owner_name=" + AC_RUNTIME0_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
       + "|owner_status=" + snapshot.owner_status
       + "|heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id)
-      + "|freshness_state=fresh|primary_output_available=" + AC_BoolText(!snapshot.file_publication_blocked);
+      + "|freshness_state=" + AC_Runtime0FreshnessState(snapshot)
+      + "|timer_pressure_state=" + snapshot.timer_pressure_state
+      + "|primary_output_available=" + AC_BoolText(!snapshot.file_publication_blocked);
 }
 
 string AC_LayerStatusRows(const AC_Runtime0Snapshot &snapshot)
@@ -105,23 +129,23 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
 {
    string text = "";
    text += "schema_name=upgrade_addendum\r\n";
-   text += "schema_version=v0.3\r\n";
+   text += "schema_version=v0.4\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    text += "generated_at=" + snapshot.generated_at + "\r\n";
-   text += "addendum_reason=L0_near_instant_board_cached_universe_and_write_if_changed_publication\r\n";
+   text += "addendum_reason=runtime0_spine_identity_gateway_timer_repair\r\n";
    text += "logging_contract=" + AC_LOGGING_POLICY + "\r\n";
    text += "board_contract=trading_side_summary_atomic_update_only_when_content_changes\r\n";
    text += "workbench_contract=developer_status_layer_packets_slower_refresh_without_trader_bloat\r\n";
-   text += "dossier_contract=one_dossier_per_broker_symbol_under_unknown_until_layer2_moves_classifies_later\r\n";
+   text += "dossier_contract=foundation_dossier_publication_called_by_timer_but_truth_owned_by_runtime1\r\n";
    text += "statistics_contract=each_layer_owner_outputs_own_status_packet_board_reads_packets_only\r\n";
-   text += "python_worker_contract=not_used_for_L0_lightweight_stats_future_heavy_trading_calculations_only\r\n";
+   text += "gateway_contract=runtime0_calls_existing_runtime3_control_snapshot_status_owner_no_new_worker_owner\r\n";
    text += "timer_milliseconds=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
    text += "timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first\r\n";
    text += "workbench_interval_heartbeats=" + IntegerToString(AC_WORKBENCH_INTERVAL_HEARTBEATS) + "\r\n";
    text += "dossier_shell_write_retries=" + IntegerToString(AC_DOSSIER_SHELL_WRITE_RETRIES) + "\r\n";
-   text += "scope_guard=no_open_closed_no_specs_no_quotes_no_ranking_no_selection_no_alerts_no_strategy_no_execution\r\n";
+   text += "scope_guard=no_strategy_no_execution_no_trade_permission_no_scheduler_v2_no_gateway_v2\r\n";
    text += "compile_proof=pending_external_metaeditor_output\r\n";
    text += "runtime_smoke=pending_user_generated_files_review\r\n";
    return text;
@@ -135,7 +159,7 @@ string AC_UpgradeLogText(const AC_Runtime0Snapshot &snapshot,
 {
    string text = "";
    text += "schema_name=upgrade_log\r\n";
-   text += "schema_version=v0.1\r\n";
+   text += "schema_version=v0.2\r\n";
    text += "system_name=" + AC_SYSTEM_NAME + "\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
@@ -146,6 +170,8 @@ string AC_UpgradeLogText(const AC_Runtime0Snapshot &snapshot,
    text += "generated_at=" + snapshot.generated_at + "\r\n";
    text += "heartbeat_id=" + IntegerToString((int)snapshot.heartbeat_id) + "\r\n";
    text += "timer_duration_ms=" + IntegerToString((int)snapshot.timer_duration_ms) + "\r\n";
+   text += "timer_period_ms=" + IntegerToString(AC_TIMER_MILLISECONDS) + "\r\n";
+   text += "timer_pressure_state=" + snapshot.timer_pressure_state + "\r\n";
    text += "timer_budget_ms=" + IntegerToString((int)AC_TIMER_BUDGET_MS) + "\r\n";
    text += "timer_budget_policy=disabled_no_artificial_throttle_complete_current_task_first\r\n";
    text += "over_budget_flag=" + AC_BoolText(snapshot.over_budget) + "\r\n";
