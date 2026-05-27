@@ -188,7 +188,6 @@ AC_WriteResult AC_PublishManifest(const AC_WriteResult &account_status,
    text += AC_TradeJournalStatusText();
    text += AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n";
    text += AC_LayerStatusRows(AC_SNAPSHOT);
-    text += AC_Layer2StatusRow() + "\r\n";
    return AC_WriteTextFileFastAtomicIfChanged(AC_ManifestPath(), text, "manifest_changed_only");
 }
 
