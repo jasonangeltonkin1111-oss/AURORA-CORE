@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, utc_stamp, unix_time
+from aurora_worker_io import WorkerPaths, atomic_write_text_if_changed, read_text, utc_stamp, unix_time
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ def _selection_desk(root: Path) -> Path:
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> bool:
-    ok = atomic_write_text(path, text)
+    ok = atomic_write_text_if_changed(path, text, durable=True)
     if not ok:
         failed.append(path)
     return ok
@@ -58,17 +58,22 @@ def _selection_readme_text() -> str:
     return "\n".join([
         "AURORA SELECTION DESK",
         "----------------------------------------",
-        "Canonical operator surfaces:",
-        "01_Global/Top_10 = Global Top 10 inspection basket with copied dossier files.",
-        "01_Global/Deep_Evidence = L17 deep-evidence selection split copies preserved from legacy writer output.",
+        "index_type=worker_support_navigation_index",
+        "authority=operator_navigation_only_not_runtime_route_law",
+        "route_law_owner=Runtime 7 publication route owner",
+        "score_owner=Runtime 3 calculation support outputs",
+        "",
+        "Rich operator surfaces:",
+        "01_Global/Top_10 = Global Top 10 inspection basket with selected dossier shortcuts.",
+        "01_Global/Deep_Evidence = L17 deep-evidence selection split shortcuts.",
         "02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class> = Top 5 shortcut across the whole asset class.",
-        "02_Asset_Classes/<asset_class>/02_Groups/<ranking_group> = shallow Top 5 per ranking_group shortcut.",
-        "90_System_Indexes = root indexes, status files, taxonomy proof, cleanup proof.",
+        "02_Asset_Classes/<asset_class>/02_Groups/<compact_ranking_group_key> = shallow Top 5 per ranking_group shortcut.",
+        "90_System_Indexes = worker support indexes, status files, taxonomy proof, cleanup proof.",
         "91_Layer_Summaries = L12-L15 summary copies for operator review.",
         "",
-        "Legacy policy:",
-        "Selection Desk/Global and Selection Desk/Groups are stable parent routes and are preserved; helper shortcut views live under 01_Global and 02_Asset_Classes.",
-        "They are not canonical L18 targets.",
+        "Stable parent policy:",
+        "Selection Desk/Global and Selection Desk/Groups are stable parent routes and may remain for compatibility.",
+        "They are not proof of trade permission and they are not L18 canonical targets.",
         "",
         "L18 target scope:",
         "l18_target_scope=canonical_selection_shortcut_dossiers_only",
@@ -116,13 +121,15 @@ def _selection_index_text(root: Path) -> str:
         warning_parts.append("deep_evidence_split_not_present_yet")
 
     status = "accepted" if root_ok and not warning_parts else ("accepted_with_runtime_warnings" if root_ok else "pending")
-    reason = "canonical_selection_surface_ready" if status == "accepted" else (";".join(warning_parts) if warning_parts else "canonical_selection_surface_not_ready")
+    reason = "worker_support_selection_navigation_ready" if status == "accepted" else (";".join(warning_parts) if warning_parts else "worker_support_selection_navigation_not_ready")
 
     return "\n".join([
-        "schema_name=selection_desk_root_index",
-        "schema_version=2",
-        "owner_name=Runtime 3 external worker root-index publisher",
-        "source_owner=Runtime 7 publication surfaces",
+        "schema_name=selection_desk_worker_support_index",
+        "schema_version=3",
+        "owner_name=Runtime 3 external worker support index publisher",
+        "source_owner=Runtime 3 calculation outputs plus Runtime 7 publication surfaces",
+        "authority=operator_navigation_only_not_runtime_route_law",
+        "route_law_owner=Runtime 7 publication route owner",
         f"status={status}",
         f"reason={reason}",
         f"global_top10_status={_status(global_status)}",
@@ -138,17 +145,9 @@ def _selection_index_text(root: Path) -> str:
         f"legacy_cleanup_status={_status(cleanup_status, 'not_run')}",
         f"legacy_global_present={_exists_text(desk / 'Global')}",
         f"legacy_groups_present={_exists_text(desk / 'Groups')}",
-        "canonical_surfaces=01_Global;02_Asset_Classes;90_System_Indexes;91_Layer_Summaries",
-        "canonical_global_top10=01_Global/Top_10",
-        "canonical_asset_top5=02_Asset_Classes/<asset_class>/01_Top_5_All_<asset_class>",
-        "canonical_group_top5=02_Asset_Classes/<asset_class>/02_Groups/<ranking_group>",
-        "canonical_deep_evidence=01_Global/Deep_Evidence",
+        "rich_operator_surfaces=01_Global;02_Asset_Classes;90_System_Indexes;91_Layer_Summaries",
         "stable_parent_surfaces=Global;Groups",
-        "stable_parent_surfaces_policy=preserved_not_canonical_l18_targets",
-        "l18_target_scope=canonical_selection_shortcut_dossiers_only",
-        "l18_allowed_surfaces=01_Global/Top_10/*.txt;02_Asset_Classes/*/01_Top_5_All_*/*.txt;02_Asset_Classes/*/02_Groups/*/*.txt",
-        "l18_excluded_surfaces=Selection Desk/Global;Selection Desk/Groups;90_System_Indexes;91_Layer_Summaries;base Dossiers/Open;base Dossiers/Closed;base Dossiers/Unknown",
-        "l18_rule=decorate_selected_copied_dossiers_only_no_all_symbol_scan_no_ohlc_store_owner_change",
+        "stable_parent_surfaces_policy=compatibility_parent_routes_not_l18_targets",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
@@ -168,5 +167,5 @@ def publish_selection_root_index(root: Path) -> SelectionRootIndexSummary:
     _write(readme_path, _selection_readme_text(), failed)
     _write(index_path, _selection_index_text(root), failed)
     status = "accepted" if not failed else "write_degraded"
-    reason = "selection_root_index_published" if status == "accepted" else "selection_root_index_write_failed"
+    reason = "selection_worker_support_index_published" if status == "accepted" else "selection_worker_support_index_write_failed"
     return SelectionRootIndexSummary(status, reason, str(index_path), str(readme_path), len(failed))
