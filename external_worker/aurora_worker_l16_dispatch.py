@@ -5,7 +5,7 @@ import time
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 from aurora_worker_l16 import L16PublishSummary, publish_l16_global_top10_builder
-from aurora_worker_selection_surface_shortcuts import EMPTY_SELECTION_SHORTCUT_SUMMARY, SelectionShortcutSummary, publish_l16_global_top10_shortcuts
+from aurora_worker_selection_surface_shortcuts_ux import EMPTY_SELECTION_SHORTCUT_SUMMARY, SelectionShortcutSummary, publish_l16_global_top10_shortcuts
 from aurora_worker_selection_surface_root_index import EMPTY_SELECTION_ROOT_INDEX_SUMMARY, SelectionRootIndexSummary, publish_selection_desk_root_operator_index
 
 
@@ -54,6 +54,7 @@ def l16_result_lines(summary: L16PublishSummary, duration_ms: int, global_shortc
         f"l16_selection_root_index_files_written={root_index.files_written}",
         f"l16_selection_root_index_files_expected={root_index.files_expected}",
         f"l16_selection_root_index_path={root_index.index_path}",
+        "l16_selection_surface_ux_wrapper=active_pointer_over_stale_mirror_and_overlay_trust_rule",
         "l16_max_allowed_pairwise_correlation_abs=0.30",
         "l16_threshold_status=untested_default_not_holy_law",
         "l16_meaning=global_top10_inspection_basket_only_not_trade_permission",
@@ -109,6 +110,7 @@ def run_l16_after_l15(root: Path) -> L16PublishSummary:
             f"l16_global_shortcut_files_written={global_shortcuts_summary.files_written}",
             f"l16_global_shortcut_files_expected={global_shortcuts_summary.files_expected}",
             f"l16_global_shortcut_status_path={global_shortcuts_summary.status_path}",
+            "l16_selection_surface_ux_wrapper=active_pointer_over_stale_mirror_and_overlay_trust_rule",
             f"l16_selection_root_index_status={root_index_summary.status}",
             f"l16_selection_root_index_path={root_index_summary.index_path}",
             f"result_size={len(updated.encode('utf-8'))}",
