@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.078"
+#property version   "1.079"
 #property description "AURORA CORE - foundation truth and gateway support"
 
 #include "core/AC_Config.mqh"
@@ -32,6 +32,7 @@ string AC_LAST_BOARD_TEXT = "";
 string AC_LAST_RUNTIME_STATUS_TEXT = "";
 string AC_LAST_WORKBENCH_STATUS_TEXT = "";
 string AC_LAST_ACCOUNT_STATUS_TEXT = "";
+string AC_LAST_ACCOUNT_ROOT_STATUS_TEXT = "";
 string AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = "";
 
 void AC_AppendReason(const string reason)
@@ -96,10 +97,18 @@ string AC_EnsureRootFolders()
    return "folder_create_failed|" + detail;
 }
 
+string AC_AccountStatusRootMirrorPath()
+{
+   return AC_RootFolder() + "\\Account Status.txt";
+}
+
 AC_WriteResult AC_PublishAccountStatus()
 {
    string text = AC_AccountTruthText();
-   return AC_WriteTextFileIfChanged(AC_AccountStatusPath(), text, AC_LAST_ACCOUNT_STATUS_TEXT);
+   AC_WriteResult workbench_write = AC_WriteTextFileIfChanged(AC_AccountStatusPath(), text, AC_LAST_ACCOUNT_STATUS_TEXT);
+   AC_WriteResult root_write = AC_WriteTextFileIfChanged(AC_AccountStatusRootMirrorPath(), text, AC_LAST_ACCOUNT_ROOT_STATUS_TEXT);
+   if(!workbench_write.ok) return workbench_write;
+   return root_write;
 }
 
 AC_WriteResult AC_PublishMarketBoard(const AC_Layer0StatusPacket &status)
