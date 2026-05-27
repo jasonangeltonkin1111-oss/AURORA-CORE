@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Iterable
+import csv
+import io
 
 import aurora_worker_selection_surface_shortcuts as base
 from aurora_worker_io import atomic_write_text, read_text, utc_stamp, unix_time
@@ -90,6 +92,36 @@ def _pointer_text(filename: str, authoritative_path: str) -> str:
     ])
 
 
+def _pointer_csv(filename: str, authoritative_path: str) -> str:
+    fields = ["schema_name", "schema_version", "status", "pointer_file", "authoritative_path", "reason", "authority", "selection_runtime", "trade_permission", "entry_signal", "execution", "generated_utc", "generated_unix"]
+    row = {
+        "schema_name": "selection_desk_pointer",
+        "schema_version": "1",
+        "status": "pointer_only",
+        "pointer_file": filename,
+        "authoritative_path": authoritative_path,
+        "reason": "avoid_stale_duplicate_live_truth_in_90_System_Indexes",
+        "authority": "pointer_only_no_live_count_authority",
+        "selection_runtime": "false",
+        "trade_permission": "false",
+        "entry_signal": "false",
+        "execution": "false",
+        "generated_utc": utc_stamp(),
+        "generated_unix": str(unix_time()),
+    }
+    buffer = io.StringIO(newline="")
+    writer = csv.DictWriter(buffer, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(row)
+    return buffer.getvalue()
+
+
+def _pointer_payload(filename: str, authoritative_path: str) -> str:
+    if filename.lower().endswith(".csv"):
+        return _pointer_csv(filename, authoritative_path)
+    return _pointer_text(filename, authoritative_path)
+
+
 def _write_pointer_files(root: Path) -> int:
     system = _system_indexes_dir(root)
     system.mkdir(parents=True, exist_ok=True)
@@ -98,8 +130,8 @@ def _write_pointer_files(root: Path) -> int:
         pointer_name = filename.rsplit(".", 1)[0] + "_POINTER.txt"
         if atomic_write_text(system / pointer_name, _pointer_text(pointer_name, authoritative)):
             written += 1
-        # Replace stale mirror text/csv with a pointer card using the same filename so old readers do not consume stale counts.
-        if atomic_write_text(system / filename, _pointer_text(filename, authoritative)):
+        # Replace stale mirror text/csv with a pointer payload using the same filename so old readers do not consume stale counts.
+        if atomic_write_text(system / filename, _pointer_payload(filename, authoritative)):
             written += 1
     return written
 
