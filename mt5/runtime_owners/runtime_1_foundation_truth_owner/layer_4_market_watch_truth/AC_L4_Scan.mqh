@@ -19,6 +19,14 @@ bool AC_L4GetInteger(const string symbol, const ENUM_SYMBOL_INFO_INTEGER prop, l
    return false;
 }
 
+string AC_L4BuildCacheKey(const int total)
+{
+   return AC_DOSSIER_SHELL_SCHEMA_VERSION
+      + " | L2 " + AC_L2_ROUTE_GENERATION_KEY
+      + " | L3 " + AC_L3_CACHE_KEY
+      + " | symbols " + IntegerToString(total);
+}
+
 void AC_L4InitPacket(AC_L4SymbolPacket &p, const string symbol)
 {
    p.symbol = symbol;
@@ -253,7 +261,7 @@ void AC_RefreshLayer4MarketWatchTruth()
 {
    AC_L4Reset();
    int total = SymbolsTotal(false);
-   AC_L4_CACHE_KEY = AC_DOSSIER_SHELL_SCHEMA_VERSION + " | L2 " + AC_L2_ROUTE_GENERATION_KEY + " | L3 " + AC_L3_CACHE_KEY + " | symbols " + IntegerToString(total);
+   AC_L4_CACHE_KEY = AC_L4BuildCacheKey(total);
    // Refresh key must change on each L4 quote cycle so L5 can detect fresh L4 packet truth.
    // Stable universe invalidation remains in AC_L4_CACHE_KEY.
    AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst | refresh_time=" + TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
@@ -276,9 +284,11 @@ void AC_RefreshLayer4MarketWatchTruth()
 
 bool AC_L4ShouldRunFullScan()
 {
+   int total = SymbolsTotal(false);
    if(!AC_L4_READY) return true;
-   if(AC_L2CurrentSessionServerTime() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
    if(AC_L4_CACHE_KEY == "not_scanned") return true;
+   if(AC_L4_CACHE_KEY != AC_L4BuildCacheKey(total)) return true;
+   if(AC_L2CurrentSessionServerTime() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
    return false;
 }
 
