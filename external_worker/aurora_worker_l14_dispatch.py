@@ -54,6 +54,36 @@ def l14_result_lines(summary: L14PublishSummary, duration_ms: int) -> str:
     ])
 
 
+def _degraded_result_latest_stub(reason: str) -> str:
+    return "\n".join([
+        "schema_name=aurora_worker_result",
+        "schema_version=7",
+        "worker_version=unknown_l14_dispatch_survivor",
+        "worker_mode=l14_dispatch_survivor",
+        "authority=calculation_support_only",
+        "trade_permission=false",
+        "job_status=rejected",
+        "result_status=degraded",
+        f"result_reason={reason}",
+        "source_snapshot_id=not_available",
+        "job_bus_schema_version=not_available",
+        "job_id=not_available",
+        "job_type=not_available",
+        "job_resource_class=not_available",
+        "job_max_runtime_ms=not_available",
+        "row_count=0",
+        "open_count=0",
+        "closed_count=0",
+        "l4_ready_count=0",
+        "stale_or_missing_quote_rows=0",
+        "payload_checksum=not_available",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "notes=degraded_truth_file_created_by_l14_dispatch_because_result_latest_was_missing_no_trade_permission",
+        "",
+    ])
+
+
 def _replace_or_append_l14_block(result_text: str, lines: str) -> str:
     marker = "l14_candidate_pool_status="
     normalized = result_text.replace("\r\n", "\n")
@@ -76,32 +106,33 @@ def run_l14_after_l13(root: Path) -> L14PublishSummary:
     summary = publish_l14_ranking_group_leader_candidate_pool(paths.outbox)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
-    if result_path.exists():
-        text = read_text(result_path)
-        updated = _replace_or_append_l14_block(text, l14_result_lines(summary, duration_ms))
-        atomic_write_text(result_path, updated)
-        current_valid, visible_source, downstream_allowed, current_reason = _currentness_state(summary)
-        manifest_path = paths.outbox / "result_latest.manifest"
-        manifest = "\n".join([
-            "schema_name=aurora_worker_result_manifest",
-            "schema_version=11",
-            "worker_l14_append_status=appended_by_l14_dispatch",
-            f"l14_current_chain_valid={current_valid}",
-            f"l14_latest_current={current_valid}",
-            f"l14_downstream_allowed={downstream_allowed}",
-            f"l14_visible_output_source={visible_source}",
-            f"l14_currentness_reason={current_reason}",
-            f"result_size={len(updated.encode('utf-8'))}",
-            f"payload_checksum={payload_checksum(updated.splitlines())}",
-            "authority=calculation_support_only",
-            "candidate_pool_runtime=false",
-            "selection_runtime=false",
-            "trade_permission=false",
-            "entry_signal=false",
-            "execution=false",
-            f"generated_utc={utc_stamp()}",
-            f"generated_unix={unix_time()}",
-            "",
-        ])
-        atomic_write_text(manifest_path, manifest)
+    base_missing = not result_path.exists()
+    text = read_text(result_path) if not base_missing else _degraded_result_latest_stub("base_result_latest_missing_before_l14_dispatch_created_degraded_truth")
+    updated = _replace_or_append_l14_block(text, l14_result_lines(summary, duration_ms))
+    atomic_write_text(result_path, updated)
+    current_valid, visible_source, downstream_allowed, current_reason = _currentness_state(summary)
+    manifest_path = paths.outbox / "result_latest.manifest"
+    manifest = "\n".join([
+        "schema_name=aurora_worker_result_manifest",
+        "schema_version=12",
+        "worker_l14_append_status=appended_by_l14_dispatch",
+        f"base_result_latest_survivor_created={'true' if base_missing else 'false'}",
+        f"l14_current_chain_valid={current_valid}",
+        f"l14_latest_current={current_valid}",
+        f"l14_downstream_allowed={downstream_allowed}",
+        f"l14_visible_output_source={visible_source}",
+        f"l14_currentness_reason={current_reason}",
+        f"result_size={len(updated.encode('utf-8'))}",
+        f"payload_checksum={payload_checksum(updated.splitlines())}",
+        "authority=calculation_support_only",
+        "candidate_pool_runtime=false",
+        "selection_runtime=false",
+        "trade_permission=false",
+        "entry_signal=false",
+        "execution=false",
+        f"generated_utc={utc_stamp()}",
+        f"generated_unix={unix_time()}",
+        "",
+    ])
+    atomic_write_text(manifest_path, manifest)
     return summary
