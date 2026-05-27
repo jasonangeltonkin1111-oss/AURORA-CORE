@@ -7,10 +7,10 @@ import os
 import time
 
 
-READ_RETRY_ATTEMPTS = 4
-READ_RETRY_BACKOFF_SECONDS = 0.05
-WRITE_REPLACE_RETRY_ATTEMPTS = 12
-WRITE_REPLACE_RETRY_BACKOFF_SECONDS = 0.05
+READ_RETRY_ATTEMPTS = 12
+READ_RETRY_BACKOFF_SECONDS = 0.08
+WRITE_REPLACE_RETRY_ATTEMPTS = 30
+WRITE_REPLACE_RETRY_BACKOFF_SECONDS = 0.08
 GATEWAY_FOLDER_NAME = "Gateway"
 VOLATILE_COMPARE_PREFIXES = (
     "generated_utc=",
@@ -61,6 +61,16 @@ def parse_kv_text(text: str) -> Dict[str, str]:
     return data
 
 
+def _retry_sleep(attempt: int, base_seconds: float) -> None:
+    # Bounded linear backoff. This keeps MT5/Windows lock contention survivable
+    # without hiding a persistent broken writer/reader.
+    time.sleep(base_seconds * (attempt + 1))
+
+
+def dependency_lock_reason(path: Path, exc: BaseException) -> str:
+    return f"dependency_file_locked_or_unreadable:path={path};error_type={type(exc).__name__};error={str(exc).replace(chr(13), ' ').replace(chr(10), ' ')}"
+
+
 def read_text(path: Path) -> str:
     last_error: PermissionError | OSError | None = None
     for attempt in range(READ_RETRY_ATTEMPTS):
@@ -70,7 +80,7 @@ def read_text(path: Path) -> str:
             last_error = exc
             if attempt + 1 >= READ_RETRY_ATTEMPTS:
                 break
-            time.sleep(READ_RETRY_BACKOFF_SECONDS * (attempt + 1))
+            _retry_sleep(attempt, READ_RETRY_BACKOFF_SECONDS)
     assert last_error is not None
     raise last_error
 
@@ -119,6 +129,17 @@ def _cleanup_stale_tmp(path: Path) -> None:
         pass
 
 
+def _clear_write_failure_sidecar(path: Path) -> None:
+    sidecar = path.with_name(path.name + ".write_failed.txt")
+    try:
+        if sidecar.exists():
+            sidecar.unlink()
+    except OSError:
+        # A locked stale failure sidecar must not make a successful authority
+        # write look failed. The next writer can try again.
+        pass
+
+
 def _strip_volatile_lines_for_compare(text: str) -> str:
     normalized = text.replace("\r\n", "\n")
     kept: List[str] = []
@@ -149,12 +170,16 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
         sidecar = path.with_name(path.name + ".write_failed.txt")
         text = "\n".join([
             "schema_name=aurora_gateway_write_failure",
-            "schema_version=2",
+            "schema_version=3",
             f"target_path={path}",
             "write_status=failed",
             "write_ok=false",
+            f"retry_attempts={WRITE_REPLACE_RETRY_ATTEMPTS}",
+            f"retry_backoff_seconds={WRITE_REPLACE_RETRY_BACKOFF_SECONDS}",
             f"error_type={type(exc).__name__}",
             f"error={str(exc).replace(chr(13), ' ').replace(chr(10), ' ')}",
+            "failure_meaning=latest_write_failed_target_may_be_locked_or_permission_blocked",
+            "currentness=false",
             f"generated_utc={utc_stamp()}",
             f"generated_unix={unix_time()}",
             "authority=calculation_support_only",
@@ -183,12 +208,13 @@ def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
         for attempt in range(WRITE_REPLACE_RETRY_ATTEMPTS):
             try:
                 os.replace(tmp, path)
+                _clear_write_failure_sidecar(path)
                 return True
             except (PermissionError, OSError) as exc:
                 last_error = exc
                 if attempt + 1 >= WRITE_REPLACE_RETRY_ATTEMPTS:
                     break
-                time.sleep(WRITE_REPLACE_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                _retry_sleep(attempt, WRITE_REPLACE_RETRY_BACKOFF_SECONDS)
         assert last_error is not None
         _write_atomic_failure_sidecar(path, last_error)
         return False
@@ -215,6 +241,7 @@ def atomic_write_text_if_changed(path: Path, text: str, *, durable: bool = True,
     payload stayed identical.
     """
     if _same_effective_text(path, text, ignore_volatile_lines):
+        _clear_write_failure_sidecar(path)
         return True
     return _atomic_write_text(path, text, durable=durable)
 
