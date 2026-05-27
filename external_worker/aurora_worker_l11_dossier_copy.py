@@ -62,7 +62,7 @@ def _rank_filename(row: Dict[str, str]) -> str:
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).outbox.parents[2]
+    return WorkerPaths.from_root(root).root
 
 
 def _selection_groups_dir(root: Path) -> Path:

@@ -7,7 +7,7 @@ import csv
 import io
 import math
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L13_LAYER_FOLDER = "Layer_13_Dynamic_Ranking_Group_Selection"
 L13_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
@@ -112,7 +112,7 @@ def _safe_slug(value: str) -> str:
 
 
 def _select_dir(outbox: Path) -> Path:
-    return outbox.parents[2] / "Selection Desk" / "Groups"
+    return account_root_from_outbox(outbox) / "Selection Desk" / "Groups"
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> None:

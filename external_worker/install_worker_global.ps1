@@ -12,7 +12,7 @@ $SharedInstallStatusPath = Join-Path $SharedStatus "shared_worker_install_status
 $DaemonTaskName = "AuroraWorker_Global"
 $WatchdogTaskName = "AuroraWorker_Global_Watchdog"
 $WatchdogHelper = Join-Path $ScriptDir "register_watchdog_safe.ps1"
-$ExpectedWorkerVersion = "0.6.18_l19_single_dispatch_cleanup"
+$ExpectedWorkerVersion = "0.6.19_l6_gateway_contract"
 $WorkerVersion = $ExpectedWorkerVersion
 $SpecPath = Join-Path $ScriptDir "AuroraWorker.spec"
 $PyInstallerRebuildAttempted=$false; $PyInstallerRebuildStatus="not_started"; $PyInstallerRebuildError="none"

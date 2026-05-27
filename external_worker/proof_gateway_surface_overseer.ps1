@@ -43,7 +43,7 @@ function Find-AccountRoots($RootPath) {
             Get-ChildItem -LiteralPath $serverDir.FullName -Directory -ErrorAction SilentlyContinue |
                 ForEach-Object {
                     $accountDir = $_
-                    $gateway = Join-Path $accountDir.FullName "Workbench\Gateway"
+                    $gateway = Join-Path $accountDir.FullName "Gateway"
                     if (Test-Path -LiteralPath $gateway -PathType Container) {
                         $roots += $accountDir.FullName
                     }
@@ -61,7 +61,7 @@ PassFail "account_root_discovered" ($accounts.Count -gt 0) "count=$($accounts.Co
 
 foreach ($acct in $accounts) {
     Write-Host "--- account_root=$acct ---"
-    $gateway = Join-Path $acct "Workbench\Gateway"
+    $gateway = Join-Path $acct "Gateway"
     $statusPath = Join-Path $gateway "Status\surface_overseer_status.txt"
     $layersRoot = Join-Path $gateway "Outbox\Layers"
     $l7Manifest = Join-Path $layersRoot "Layer_7_Session_Relevance_Ranking\ranked_symbols.manifest"

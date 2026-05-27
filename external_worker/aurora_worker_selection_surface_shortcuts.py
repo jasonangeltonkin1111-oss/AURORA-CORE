@@ -100,7 +100,7 @@ def _write(path: Path, text: str, failed: List[Path]) -> bool:
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).outbox.parents[2]
+    return WorkerPaths.from_root(root).root
 
 
 def _selection_desk(root: Path) -> Path:

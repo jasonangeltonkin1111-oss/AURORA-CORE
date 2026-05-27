@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $StartedUtc = (Get-Date).ToUniversalTime()
 $TargetWorkerVersion = "0.6.15_l15_correlation_diversity"
@@ -99,7 +99,7 @@ function Find-AccountRoot {
     ForEach-Object {
       Get-ChildItem -LiteralPath $_.FullName -Directory -ErrorAction SilentlyContinue |
         ForEach-Object {
-          $status = Join-Path $_.FullName "Workbench\Gateway\Status\worker_process_status.txt"
+          $status = Join-Path $_.FullName "Gateway\Status\worker_process_status.txt"
           if (Test-Path -LiteralPath $status) {
             [pscustomobject]@{
               AccountRoot = $_.FullName
@@ -288,10 +288,10 @@ Start-ScheduledTask -TaskName "AuroraWorker_Global_Watchdog" -ErrorAction Silent
 Start-Sleep -Seconds 10
 
 $accountRoot = Find-AccountRoot $sharedRoot
-$outbox = Join-Path $accountRoot "Workbench\Gateway\Outbox"
+$outbox = Join-Path $accountRoot "Gateway\Outbox"
 $resultLatest = Join-Path $outbox "result_latest.txt"
-$workerStatus = Join-Path $accountRoot "Workbench\Gateway\Status\worker_process_status.txt"
-$cycleStatus = Join-Path $accountRoot "Workbench\Gateway\Status\gateway_cycle_status.txt"
+$workerStatus = Join-Path $accountRoot "Gateway\Status\worker_process_status.txt"
+$cycleStatus = Join-Path $accountRoot "Gateway\Status\gateway_cycle_status.txt"
 
 for ($i = 0; $i -lt 30; $i++) {
   $l15 = Read-Kv $resultLatest "l15_correlation_diversity_status"
@@ -452,4 +452,3 @@ if ($flags.Count -eq 0) {
   Write-Host "SYSTEM NOT UPDATED" -ForegroundColor Red
   Write-Host "DECISION: HOLD" -ForegroundColor Red
 }
-

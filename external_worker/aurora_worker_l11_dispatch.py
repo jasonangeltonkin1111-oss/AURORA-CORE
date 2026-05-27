@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, payload_checksum, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, WorkerPaths, atomic_write_text, read_text, payload_checksum, unix_time, utc_stamp
 from aurora_worker_l11 import L11PublishSummary, publish_l11_symbol_ranking_inside_group
 from aurora_worker_l11_current_gate_guard import guard_l11_with_current_dossier_gate
 from aurora_worker_l11_cleanup import cleanup_l11_stale_symbol_rank_sidecars
@@ -30,7 +30,7 @@ EMPTY_MANIFEST_GUARD_SUMMARY = L11ManifestGuardSummary("pending", "l11_manifest_
 
 
 def _selection_groups_dir(outbox: Path) -> Path:
-    return outbox.parents[2] / "Selection Desk" / "Groups"
+    return account_root_from_outbox(outbox) / "Selection Desk" / "Groups"
 
 
 def _manifest_text(schema_name: str, payload_path: Path, payload_text: str, reason: str) -> str:

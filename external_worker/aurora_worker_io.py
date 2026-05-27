@@ -48,6 +48,12 @@ class WorkerPaths:
         for folder in (self.control, self.inbox, self.outbox, self.status, self.logs, self.quarantine):
             folder.mkdir(parents=True, exist_ok=True)
 
+def account_root_from_outbox(outbox: Path) -> Path:
+    candidate = outbox.parent.parent
+    if candidate.name == "Workbench":
+        return candidate.parent
+    return candidate
+
 def parse_kv_text(text: str) -> Dict[str, str]:
     data: Dict[str, str] = {}
     for raw_line in text.splitlines():

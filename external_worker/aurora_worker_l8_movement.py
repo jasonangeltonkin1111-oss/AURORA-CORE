@@ -7,7 +7,7 @@ import csv
 import io
 import math
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L8_LAYER_FOLDER = "Layer_8_Movement_Range_Ranking"
 L8_INPUT_NAME = "l8_input_primitives.csv"
@@ -240,8 +240,8 @@ def _delete_stale_symbol_rank_files(symbol_rank_dir: Path, expected_names: Itera
 
 
 def _shared_ohlc_store_root(outbox: Path) -> Path:
-    # outbox = <server>/<account>/Workbench/Gateway/Outbox
-    account_root = outbox.parents[2]
+    # outbox = <server>/<account>/Gateway/Outbox
+    account_root = account_root_from_outbox(outbox)
     server_root = account_root.parent
     return server_root / "Shared Market Data" / "OHLC Store"
 

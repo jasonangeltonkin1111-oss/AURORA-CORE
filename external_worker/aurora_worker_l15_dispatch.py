@@ -5,7 +5,7 @@ import csv
 import io
 import time
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, read_kv, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, WorkerPaths, atomic_write_text, payload_checksum, read_text, read_kv, unix_time, utc_stamp
 from aurora_worker_l15 import L15PublishSummary, publish_l15_correlation_diversity_selection
 
 L15_LAYER_FOLDER = "Layer_15_Correlation_Diversity_Selection"
@@ -148,7 +148,7 @@ def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
     updated_score_text = _l15_csv_text(rows, fieldnames)
     if not atomic_write_text(score_path, updated_score_text):
         return "score_write_failed", changed
-    visible_score_path = outbox.parents[2] / "Selection Desk" / "Groups" / "00_Correlation_Diversity_Summary.csv"
+    visible_score_path = account_root_from_outbox(outbox) / "Selection Desk" / "Groups" / "00_Correlation_Diversity_Summary.csv"
     if visible_score_path.exists():
         atomic_write_text(visible_score_path, updated_score_text)
     pair_text = read_text(layer / L15_PAIR_FILE) if (layer / L15_PAIR_FILE).exists() else ""
@@ -172,7 +172,7 @@ def _write_l15_correlation_diagnostics(outbox: Path, summary: L15PublishSummary,
     layer = outbox / "Layers" / L15_LAYER_FOLDER
     score_rows = _read_csv(layer / L15_SCORE_FILE)
     pair_rows = _read_csv(layer / L15_PAIR_FILE)
-    visible = outbox.parents[2] / "Selection Desk" / "Groups"
+    visible = account_root_from_outbox(outbox) / "Selection Desk" / "Groups"
     diagnostics_path = layer / "l15_ohlc_correlation_diagnostics.txt"
     visible_path = visible / "00_Correlation_Diversity_Diagnostics.txt"
     reason_counts: dict[str, int] = {}

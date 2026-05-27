@@ -8,7 +8,7 @@ import csv
 import io
 import math
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L16_LAYER_FOLDER = "Layer_16_Global_Top10_Builder"
 L16_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
@@ -131,7 +131,7 @@ def _kv(path: Path) -> Dict[str, str]:
 
 
 def _root_from_outbox(outbox: Path) -> Path:
-    return outbox.parents[2]
+    return account_root_from_outbox(outbox)
 
 
 def _global_dir(outbox: Path) -> Path:

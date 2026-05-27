@@ -266,7 +266,8 @@ def _effective_cost_minlot(row: Dict[str, str]) -> Tuple[float, str]:
     usable = [(name, value) for name, value in candidates if value > 0.0]
     if not usable:
         return 0.0, "no_positive_cost_model"
-    return max(usable, key=lambda item: item[1])
+    name, value = max(usable, key=lambda item: item[1])
+    return value, name
 
 
 def _score_row(row: Dict[str, str]) -> Dict[str, str | float]:
@@ -758,7 +759,10 @@ def publish_l6_cost_friction_rankings(outbox: Path) -> L6RankSummary:
     summary.zero_cost_suspicious_count = sum(1 for row in scored if row["account_cost_zero_nonzero_spread_suspicious"] == "true")
     summary.mismatch_count = sum(1 for row in scored if row["cost_model_compare_status"] in {"mismatch_gt_25pct", "warning_gt_10pct"})
 
-    if summary.source_input_manifest_present and summary.source_input_manifest_row_count != summary.input_count:
+    if not summary.source_input_manifest_present:
+        summary.status = "input_degraded"
+        summary.reason = "l6_input_primitives.manifest missing; ranked output written for diagnostics but not accepted"
+    elif summary.source_input_manifest_row_count != summary.input_count:
         summary.status = "input_degraded"
         summary.reason = f"input CSV row count {summary.input_count} differs from source input manifest row_count {summary.source_input_manifest_row_count}"
     elif summary.source_l5_gate_pass > 0 and summary.source_l5_gate_pass != summary.input_count:

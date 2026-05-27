@@ -44,13 +44,12 @@ function Read-KvValue([string]$Path, [string]$Key) {
 function Get-AuroraAccountRoots([string]$Root) {
   if (!(Test-Path -LiteralPath $Root)) { return @() }
   $requiredFiles = Get-ChildItem -LiteralPath $Root -Recurse -Filter 'worker_required.txt' -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -match '\\Workbench\\Gateway\\Control\\worker_required\.txt$' }
+    Where-Object { $_.FullName -match '\\Gateway\\Status\\worker_required\.txt$' }
   $roots = @()
   foreach ($file in $requiredFiles) {
-    $control = Split-Path -Parent $file.FullName
-    $gateway = Split-Path -Parent $control
-    $workbench = Split-Path -Parent $gateway
-    $accountRoot = Split-Path -Parent $workbench
+    $status = Split-Path -Parent $file.FullName
+    $gateway = Split-Path -Parent $status
+    $accountRoot = Split-Path -Parent $gateway
     if ($accountRoot -and ($roots -notcontains $accountRoot)) { $roots += $accountRoot }
   }
   return $roots
@@ -158,7 +157,7 @@ try {
   $allAccountProofOk = $true
   foreach ($root in $roots) {
     Write-Host "root=$root"
-    $gateway = Join-Path $root 'Workbench\Gateway'
+    $gateway = Join-Path $root 'Gateway'
     $checks = @(
       'Status\worker_heartbeat.txt',
       'Status\worker_process_status.txt',

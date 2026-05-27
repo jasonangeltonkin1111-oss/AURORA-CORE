@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List, Tuple
 import csv
 import io
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 RENDER_INDEX_FOLDER = "RenderIndex"
 RENDER_INDEX_MANIFEST_NAME = "render_index.manifest"
@@ -245,7 +245,7 @@ def _build_layer_index(outbox: Path, render_dir: Path, layer_key: str, generated
 
 
 def _shared_ohlc_store_root(outbox: Path) -> Path:
-    account_root = outbox.parents[2]
+    account_root = account_root_from_outbox(outbox)
     server_root = account_root.parent
     return server_root / "Shared Market Data" / "OHLC Store"
 

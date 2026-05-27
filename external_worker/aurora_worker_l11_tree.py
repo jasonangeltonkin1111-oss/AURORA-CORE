@@ -93,7 +93,7 @@ def _write(path: Path, text: str, failed: List[Path]) -> bool:
 
 def _selection_groups_dir(root: Path) -> Path:
     paths = WorkerPaths.from_root(root)
-    account_root = paths.outbox.parents[2]
+    account_root = paths.root
     return account_root / "Selection Desk" / "Groups"
 
 

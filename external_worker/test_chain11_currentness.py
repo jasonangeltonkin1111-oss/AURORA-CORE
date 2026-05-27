@@ -7,6 +7,7 @@ from pathlib import Path
 
 import aurora_worker as core
 import aurora_worker_entrypoint as entrypoint
+from aurora_worker_l6_friction import publish_l6_cost_friction_rankings
 from aurora_worker_l15 import publish_l15_correlation_diversity_selection
 from aurora_worker_l17 import publish_l17_deep_evidence_selection_split
 from aurora_worker_l18 import DISPLAY_BARS as L18_DISPLAY_BARS
@@ -17,8 +18,8 @@ from aurora_worker_l19 import publish_l19_candle_geometry_and_structure
 
 def _account_root(tmp: Path) -> Path:
     root = tmp / "Aurora Core" / "Upcomers-Server" / "18503"
-    (root / "Workbench" / "Gateway" / "Outbox").mkdir(parents=True)
-    (root / "Workbench" / "Gateway" / "Status").mkdir(parents=True)
+    (root / "Gateway" / "Outbox").mkdir(parents=True)
+    (root / "Gateway" / "Status").mkdir(parents=True)
     return root
 
 
@@ -96,10 +97,53 @@ def _complete_result_latest(overrides: dict[str, str] | None = None) -> str:
 
 
 class Chain11CurrentnessTests(unittest.TestCase):
+    def test_shared_daemon_discovers_account_gateway_worker_required(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            shared = Path(td) / "Aurora Core"
+            account_root = shared / "Upcomers-Server" / "18503"
+            _write(account_root / "Gateway" / "Status" / "worker_required.txt", "required=true\n")
+            _write(account_root / "Workbench" / "Gateway" / "Control" / "worker_required.txt", "legacy=true\n")
+
+            self.assertEqual(core.discover_roots(shared), [account_root])
+
+    def test_l6_missing_input_manifest_is_not_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            outbox = Path(td) / "Gateway" / "Outbox"
+            layer = outbox / "Layers" / "Layer_6_Cost_Friction_Ranking"
+            _write(layer / "l6_input_primitives.csv", "symbol,spread_bps,spread_points,trade_permission\nEURUSD,1,1,false\n")
+
+            summary = publish_l6_cost_friction_rankings(outbox)
+            manifest = (layer / "ranked_symbols.manifest").read_text(encoding="utf-8")
+
+            self.assertEqual(summary.status, "input_degraded")
+            self.assertIn("l6_input_primitives.manifest missing", summary.reason)
+            self.assertIn("status=input_degraded", manifest)
+            self.assertTrue((layer / "ranked_symbols.csv").exists())
+
+    def test_l6_positive_effective_cost_scores_without_type_error(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            outbox = Path(td) / "Gateway" / "Outbox"
+            layer = outbox / "Layers" / "Layer_6_Cost_Friction_Ranking"
+            rows = "\n".join([
+                "symbol,spread_bps,spread_points,spread_cost_worst_minlot_account,value_formula_spread_cost_minlot_account,tickvalue_spread_cost_minlot_account,contract_spread_cost_minlot_raw,contract_cost_status,cost_model_compare_status,cost_model_mismatch_ratio,account_cost_zero_nonzero_spread_suspicious,volume_model_quality,commission_model_status,quote_quality,surface_quality,value_quality,margin_quality,trade_permission",
+                "EURUSD,1,1,0.70,0.60,0.65,0.55,raw_account_currency_ok,aligned,1.0,false,normal,known_machine_verified,Fresh,Surface Usable,Value Formula Ready,Margin Formula Ready,false",
+                "",
+            ])
+            checksum = core.payload_checksum([line for line in rows.splitlines() if line.strip()])
+            _write(layer / "l6_input_primitives.csv", rows)
+            _write(layer / "l6_input_primitives.manifest", f"row_count=1\nl5_gate_pass=1\npayload_checksum={checksum}\n")
+
+            summary = publish_l6_cost_friction_rankings(outbox)
+            ranked = (layer / "ranked_symbols.csv").read_text(encoding="utf-8")
+
+            self.assertEqual(summary.status, "complete")
+            self.assertIn("effective_cost_minlot_account", ranked)
+            self.assertIn("0.700000", ranked)
+
     def test_l17_refuses_stale_l16_csv(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", "\n".join([
                 "l16_global_top10_status=accepted",
                 "l16_current_chain_valid=false",
@@ -122,7 +166,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
             dossier = _selected_dossier(root)
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", "\n".join([
                 "l17_deep_evidence_selection_status=accepted",
                 "l17_current_chain_valid=false",
@@ -146,7 +190,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
     def test_static_epoch_rejects_write_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", _complete_result_latest({
                 "l15_correlation_diversity_status": "write_degraded",
                 "l15_current_chain_valid": "false",
@@ -164,7 +208,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
         for state in bad_states:
             with self.subTest(state=state), tempfile.TemporaryDirectory() as td:
                 root = _account_root(Path(td))
-                outbox = root / "Workbench" / "Gateway" / "Outbox"
+                outbox = root / "Gateway" / "Outbox"
                 _write(outbox / "result_latest.txt", _complete_result_latest({
                     "l15_correlation_diversity_status": state,
                     "l15_current_chain_valid": "false",
@@ -180,7 +224,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
     def test_static_epoch_requires_downstream_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", _complete_result_latest({
                 "l17_downstream_allowed": "false",
                 "l17_visible_output_source": "held_previous",
@@ -195,7 +239,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
     def test_static_epoch_accepts_strict_core_and_invalidates_on_snapshot_change(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", _complete_result_latest())
             result = core.ValidationResult(True, "accepted", "ok", snapshot_id="s1", payload_checksum="p1", row_count=2)
 
@@ -215,7 +259,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
     def test_l15_uses_m15_without_h1(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             l13 = outbox / "Layers" / "Layer_13_Dynamic_Ranking_Group_Selection"
             l14 = outbox / "Layers" / "Layer_14_Ranking_Group_Leader_Candidate_Pool"
             _write(l13 / "l13_selected_ranking_groups.csv", "ranking_group\nfx_major\n")
@@ -242,7 +286,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
             _selected_dossier(root)
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", "\n".join([
                 "l17_deep_evidence_selection_status=accepted",
                 "l17_current_chain_valid=true",
@@ -263,7 +307,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
             _selected_dossier(root)
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", "\n".join([
                 "l17_deep_evidence_selection_status=accepted",
                 "l17_current_chain_valid=true",
@@ -289,7 +333,7 @@ class Chain11CurrentnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = _account_root(Path(td))
             _selected_dossier(root)
-            outbox = root / "Workbench" / "Gateway" / "Outbox"
+            outbox = root / "Gateway" / "Outbox"
             _write(outbox / "result_latest.txt", "\n".join([
                 "l17_deep_evidence_selection_status=accepted",
                 "l17_current_chain_valid=true",

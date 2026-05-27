@@ -13,7 +13,7 @@ def _display_profile() -> str:
 
 
 def _selected_source_mode(root: Path) -> str:
-    account_root = WorkerPaths.from_root(root).outbox.parents[2]
+    account_root = WorkerPaths.from_root(root).root
     stable = account_root / "Selection Desk" / "Global" / "current_top10.csv"
     compat = account_root / "Selection Desk" / "01_Global" / "Top_10"
     if stable.exists() and compat.exists():

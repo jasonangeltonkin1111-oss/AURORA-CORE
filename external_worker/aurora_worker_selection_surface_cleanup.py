@@ -22,7 +22,7 @@ EMPTY_SELECTION_SURFACE_CLEANUP_SUMMARY = SelectionSurfaceCleanupSummary("pendin
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).outbox.parents[2]
+    return WorkerPaths.from_root(root).root
 
 
 def _selection_desk(root: Path) -> Path:

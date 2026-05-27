@@ -22,12 +22,12 @@ Aurora Core/Gateway/Status/shared_worker_install_status.txt
 Per-account Gateway IO folder:
 
 ```text
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Control/worker_required.txt
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Inbox/snapshot_latest.txt
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Inbox/snapshot_latest.manifest
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Status/worker_heartbeat.txt
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Outbox/result_latest.txt
-Aurora Core/<SERVER>/<ACCOUNT>/Workbench/Gateway/Outbox/result_latest.manifest
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Status/worker_required.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Inbox/snapshot_latest.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Inbox/snapshot_latest.manifest
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Status/worker_heartbeat.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Outbox/result_latest.txt
+Aurora Core/<SERVER>/<ACCOUNT>/Gateway/Outbox/result_latest.manifest
 ```
 
 Run once:

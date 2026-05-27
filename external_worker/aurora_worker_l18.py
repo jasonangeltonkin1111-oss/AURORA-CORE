@@ -101,7 +101,7 @@ class OhlcSeedPacket:
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).outbox.parents[2]
+    return WorkerPaths.from_root(root).root
 
 
 def _selection_desk(root: Path) -> Path:
@@ -334,7 +334,7 @@ def _tf_summary_lines(summary: L18PublishSummary) -> List[str]:
 
 def _board_text(summary: L18PublishSummary) -> str:
     lines = [
-        "L18 — SELECTED RAW OHLC BAR PACK",
+        "L18 â€” SELECTED RAW OHLC BAR PACK",
         "--------------------------------------------------",
         "Purpose:                Selected raw OHLC from Shared OHLC Store",
         "Scope:                  Canonical Selection Desk copied dossiers only",

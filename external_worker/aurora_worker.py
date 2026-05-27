@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +29,7 @@ from aurora_worker_l10 import EMPTY_L10_SUMMARY, publish_l10_taxonomy_classifica
 from aurora_worker_l10_source import l10_build_source_bundle
 from aurora_worker_render_index import publish_render_index
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
-WORKER_VERSION = "0.6.18_l19_single_dispatch_cleanup"
+WORKER_VERSION = "0.6.19_l6_gateway_contract"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -359,7 +359,10 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         l6_start_ns = time.perf_counter_ns()
         l6_summary = publish_l6_cost_friction_rankings(p.outbox)
         l6_duration_ms = max(0, (time.perf_counter_ns() - l6_start_ns) // 1_000_000)
-        l6_reused_existing_outputs = l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
+        l6_reused_existing_outputs = (
+            l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
+            or l6_summary.reason.startswith("static_hold_reuse_accepted_snapshot;")
+        )
         l7_start_ns = time.perf_counter_ns()
         l7_summary = publish_l7_session_relevance_rankings(p.outbox)
         l7_duration_ms = max(0, (time.perf_counter_ns() - l7_start_ns) // 1_000_000)
@@ -428,7 +431,7 @@ def discover_roots(shared_root: Path) -> List[Path]:
         for server in sorted(shared_root.iterdir()):
             if server.is_dir() and server.name not in {GATEWAY_FOLDER_NAME, "External Worker"}:
                 for account in sorted(server.iterdir()):
-                    if account.is_dir() and (account / "Workbench" / GATEWAY_FOLDER_NAME / "Control" / "worker_required.txt").exists():
+                    if account.is_dir() and (account / GATEWAY_FOLDER_NAME / "Status" / "worker_required.txt").exists():
                         roots.append(account)
     return roots
 
@@ -782,8 +785,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-
-
-

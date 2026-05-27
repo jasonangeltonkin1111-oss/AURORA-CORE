@@ -7,7 +7,7 @@ import csv
 import io
 import math
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L17_LAYER_FOLDER = "Layer_17_Deep_Evidence_Selection_Split"
 L17_OWNER = "Runtime 4 - Surface Scoring / Deep Evidence Selection Support"
@@ -123,7 +123,7 @@ def _kv(path: Path) -> Dict[str, str]:
 
 
 def _root_from_outbox(outbox: Path) -> Path:
-    return outbox.parents[2]
+    return account_root_from_outbox(outbox)
 
 
 def _global_dir(outbox: Path) -> Path:
