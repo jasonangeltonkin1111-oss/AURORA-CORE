@@ -26,6 +26,8 @@ static string AC_DOSSIER_PHYSICAL_LAST_SOURCE_KEY = "";
 static uint   AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS = 0;
 static uint   AC_DOSSIER_PHYSICAL_CACHE_MS = 1000;
 
+#define AC_DOSSIER_CLEANUP_PENDING AC_DOSSIER_PHYSICAL_CLEANUP_PENDING
+
 string AC_DossierPhysicalNormalizeState(string state)
 {
    StringTrimLeft(state);
@@ -33,6 +35,14 @@ string AC_DossierPhysicalNormalizeState(string state)
    if(state == "open") return "open";
    if(state == "closed") return "closed";
    return "unknown";
+}
+
+string AC_DossierSymbolPathByState(const string symbol, const string market_state)
+{
+   string state = AC_DossierPhysicalNormalizeState(market_state);
+   if(state == "open") return AC_DossierOpenSymbolPath(symbol);
+   if(state == "closed") return AC_DossierClosedSymbolPath(symbol);
+   return AC_DossierUnknownSymbolPath(symbol);
 }
 
 void AC_DossierPhysicalAppendSample(string &sample, const string value)
@@ -216,40 +226,6 @@ void AC_DossierPhysicalRefreshProof()
       + "|physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false");
    AC_DOSSIER_PHYSICAL_LAST_SOURCE_KEY = source_key;
    AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS = now_ms;
-}
-
-string AC_DossierPhysicalBlockerText()
-{
-   if(AC_DOSSIER_PHYSICAL_MATCH_OK)
-      return "none";
-   return "Physical Dossier route mismatch: " + AC_DOSSIER_PHYSICAL_LAST_PROOF_KEY;
-}
-
-string AC_DossierPhysicalCoverageBoardSection()
-{
-   AC_DossierPhysicalRefreshProof();
-   string text = "";
-   text += "\r\nDOSSIER PHYSICAL ROUTE PROOF\r\n";
-   text += "--------------------------------------------------\r\n";
-   text += "Open Files / Expected:     " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + " / " + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + "\r\n";
-   text += "Closed Files / Expected:   " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + " / " + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + "\r\n";
-   text += "Unknown Files / Expected:  " + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + " / " + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES) + "\r\n";
-   text += "Missing Symbols:           " + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS) + "\r\n";
-   text += "Duplicate Symbols:         " + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS) + "\r\n";
-   text += "Wrong Folder Symbols:      " + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS) + "\r\n";
-   text += "Orphan Files:              " + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES) + "\r\n";
-   text += "Cleanup Pending:           " + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "TRUE" : "FALSE") + "\r\n";
-   text += "Physical Match Clean:      " + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "TRUE" : "FALSE") + "\r\n";
-   text += "Route Write Attempts:      open=" + IntegerToString(AC_L2_ROUTE_WRITE_OPEN_COUNT) + " | closed=" + IntegerToString(AC_L2_ROUTE_WRITE_CLOSED_COUNT) + " | unknown=" + IntegerToString(AC_L2_ROUTE_WRITE_UNKNOWN_COUNT) + " | failed=" + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT) + "\r\n";
-   text += "Counter Truth:             physical file counts are disk enumeration; generation progress is separate.\r\n";
-   if(!AC_DOSSIER_PHYSICAL_MATCH_OK)
-   {
-      text += "Missing Sample:            " + AC_DOSSIER_PHYSICAL_MISSING_SAMPLE + "\r\n";
-      text += "Duplicate Sample:          " + AC_DOSSIER_PHYSICAL_DUPLICATE_SAMPLE + "\r\n";
-      text += "Wrong Folder Sample:       " + AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SAMPLE + "\r\n";
-      text += "Orphan Sample:             " + AC_DOSSIER_PHYSICAL_ORPHAN_SAMPLE + "\r\n";
-   }
-   return text;
 }
 
 #endif
