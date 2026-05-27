@@ -2,12 +2,77 @@
 #define AC_FILEIO_MQH
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Publication / FileIO / Route Service owns atomic file writes, unchanged-skip writes, and safe file cleanup only.
-// It does not own routes, types, or trading truth.
+// Publication / FileIO / Route Service owns atomic file writes, unchanged-skip writes, safe file cleanup,
+// and lightweight in-session write signatures only.
+// It does not own routes, types, rendering, ranking, selection, permission, or trading truth.
+
+static string AC_FILEIO_CACHE_PATHS[];
+static string AC_FILEIO_CACHE_SIGNATURES[];
+static int    AC_FILEIO_CACHE_COUNT = 0;
 
 string AC_FileIOBoolText(const bool value)
 {
    return value ? "true" : "false";
+}
+
+string AC_FileIOContentSignature(const string content)
+{
+   int len = StringLen(content);
+   uint a = 2166136261;
+   uint b = 0;
+   for(int i = 0; i < len; i++)
+   {
+      uint ch = (uint)StringGetCharacter(content, i);
+      a = (a ^ ch) * 16777619;
+      b = b + (ch * (uint)(i + 1));
+   }
+   return IntegerToString(len) + "|" + IntegerToString((int)a) + "|" + IntegerToString((int)b);
+}
+
+int AC_FileIOCacheFind(const string final_path)
+{
+   for(int i = 0; i < AC_FILEIO_CACHE_COUNT; i++)
+   {
+      if(AC_FILEIO_CACHE_PATHS[i] == final_path)
+         return i;
+   }
+   return -1;
+}
+
+bool AC_FileIOCacheMatches(const string final_path, const string signature)
+{
+   int index = AC_FileIOCacheFind(final_path);
+   return (index >= 0 && AC_FILEIO_CACHE_SIGNATURES[index] == signature);
+}
+
+void AC_FileIOCacheRemember(const string final_path, const string signature)
+{
+   int index = AC_FileIOCacheFind(final_path);
+   if(index >= 0)
+   {
+      AC_FILEIO_CACHE_SIGNATURES[index] = signature;
+      return;
+   }
+   int next = AC_FILEIO_CACHE_COUNT + 1;
+   ArrayResize(AC_FILEIO_CACHE_PATHS, next);
+   ArrayResize(AC_FILEIO_CACHE_SIGNATURES, next);
+   AC_FILEIO_CACHE_PATHS[AC_FILEIO_CACHE_COUNT] = final_path;
+   AC_FILEIO_CACHE_SIGNATURES[AC_FILEIO_CACHE_COUNT] = signature;
+   AC_FILEIO_CACHE_COUNT = next;
+}
+
+void AC_FileIOCacheForget(const string final_path)
+{
+   int index = AC_FileIOCacheFind(final_path);
+   if(index < 0) return;
+   for(int i = index; i < AC_FILEIO_CACHE_COUNT - 1; i++)
+   {
+      AC_FILEIO_CACHE_PATHS[i] = AC_FILEIO_CACHE_PATHS[i + 1];
+      AC_FILEIO_CACHE_SIGNATURES[i] = AC_FILEIO_CACHE_SIGNATURES[i + 1];
+   }
+   AC_FILEIO_CACHE_COUNT--;
+   ArrayResize(AC_FILEIO_CACHE_PATHS, AC_FILEIO_CACHE_COUNT);
+   ArrayResize(AC_FILEIO_CACHE_SIGNATURES, AC_FILEIO_CACHE_COUNT);
 }
 
 string AC_WriteStatusFromResult(const AC_WriteResult &result)
@@ -111,6 +176,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       result.error_code = GetLastError();
       result.status = "temp_open_failed";
       result.detail = "FileOpen temp failed";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.temp_open_ok = true;
@@ -124,6 +190,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       result.status = "temp_write_failed";
       result.detail = "FileWriteString short write";
       FileClose(handle);
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.temp_write_ok = true;
@@ -138,6 +205,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       result.error_code = flush_error;
       result.status = "flush_failed";
       result.detail = "FileFlush reported error";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
 
@@ -149,6 +217,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       result.error_code = GetLastError();
       result.status = "move_failed";
       result.detail = "FileMove temp to final failed";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.move_ok = true;
@@ -160,6 +229,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
       result.error_code = GetLastError();
       result.status = "verify_failed";
       result.detail = "Final file does not exist after move";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
 
@@ -179,6 +249,7 @@ AC_WriteResult AC_WriteTextFile(const string final_path, const string content)
    result.ok = true;
    result.status = "file_written_clean";
    result.detail = "write_verified";
+   AC_FileIOCacheRemember(final_path, AC_FileIOContentSignature(content));
    return result;
 }
 
@@ -205,6 +276,7 @@ AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const stri
       result.error_code = GetLastError();
       result.status = "temp_open_failed";
       result.detail = "Fast atomic FileOpen temp failed";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.temp_open_ok = true;
@@ -218,6 +290,7 @@ AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const stri
       result.status = "temp_write_failed";
       result.detail = "Fast atomic FileWriteString short write";
       FileClose(handle);
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.temp_write_ok = true;
@@ -230,6 +303,7 @@ AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const stri
       result.error_code = GetLastError();
       result.status = "move_failed";
       result.detail = "Fast atomic FileMove temp to final failed";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
    result.move_ok = true;
@@ -241,6 +315,7 @@ AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const stri
       result.error_code = GetLastError();
       result.status = "verify_failed";
       result.detail = "Fast atomic final file missing after move";
+      AC_FileIOCacheForget(final_path);
       return result;
    }
 
@@ -248,6 +323,7 @@ AC_WriteResult AC_WriteTextFileFastAtomicRaw(const string final_path, const stri
    result.status = "file_written_clean";
    result.detail = "fast_atomic_write_verified_exists_no_flush_no_size_probe";
    result.final_size = (ulong)StringLen(content);
+   AC_FileIOCacheRemember(final_path, AC_FileIOContentSignature(content));
    return result;
 }
 
@@ -255,12 +331,19 @@ AC_WriteResult AC_WriteTextFileFastAtomicIfChanged(const string final_path,
                                                    const string content,
                                                    const string reason = "content_compare")
 {
+   string signature = AC_FileIOContentSignature(content);
+   if(AC_FileIOCacheMatches(final_path, signature))
+      return AC_MakeSyntheticWriteResult(final_path, true, "unchanged_no_write", (ulong)StringLen(content), reason + "|memory_signature_match_disk_read_skipped");
+
    int common_flag = AC_USE_COMMON_FILES ? FILE_COMMON : 0;
    if(FileIsExist(final_path, common_flag))
    {
       string existing = AC_ReadTextFileBounded(final_path, MathMax(300000, StringLen(content) + 4096));
       if(existing == content)
+      {
+         AC_FileIOCacheRemember(final_path, signature);
          return AC_MakeSyntheticWriteResult(final_path, true, "unchanged_no_write", (ulong)StringLen(content), reason + "|existing_content_identical_atomic_move_skipped");
+      }
    }
    return AC_WriteTextFileFastAtomicRaw(final_path, content);
 }
@@ -313,7 +396,8 @@ AC_WriteResult AC_DeleteFileIfExists(const string final_path)
       return result;
    }
 
-   result.final_exists = FileIsExist(result.final_path, common_flag);
+   AC_FileIOCacheForget(final_path);
+   result.final_exists = FileIsExist(final_path, common_flag);
    result.ok = !result.final_exists;
    result.move_ok = result.ok;
    result.status = result.ok ? "deleted" : "delete_verify_failed";
@@ -369,7 +453,6 @@ string AC_CleanupLegacyPlaceholderFiles()
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionDeskFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGroupsFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
-   AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionCanonicalGlobalFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalTop10Folder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionGlobalDeepEvidenceFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_SelectionAssetClassesFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
@@ -384,14 +467,12 @@ string AC_CleanupLegacyPlaceholderFiles()
    AC_AccumulateLegacyPlaceholderCleanup(AC_TradeHistoryBeforeAuroraFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
    AC_AccumulateLegacyPlaceholderCleanup(AC_TradeHistoryAuroraCapturedFolder(), checked_count, deleted_count, not_present_count, failed_count, first_failure);
 
-   string status = failed_count > 0 ? "cleanup_degraded" : (deleted_count > 0 ? "cleanup_complete_deleted" : "cleanup_complete_no_legacy_placeholders");
-   status += "|checked=" + IntegerToString(checked_count)
+   string status = failed_count == 0 ? "cleanup_complete_no_legacy_placeholders" : "cleanup_degraded_placeholder_delete_failed";
+   return status + "|checked=" + IntegerToString(checked_count)
       + "|deleted=" + IntegerToString(deleted_count)
       + "|not_present=" + IntegerToString(not_present_count)
-      + "|failed=" + IntegerToString(failed_count);
-   if(first_failure != "")
-      status += "|first_failure=" + first_failure;
-   return status;
+      + "|failed=" + IntegerToString(failed_count)
+      + (first_failure == "" ? "" : "|first_failure=" + first_failure);
 }
 
 #endif
