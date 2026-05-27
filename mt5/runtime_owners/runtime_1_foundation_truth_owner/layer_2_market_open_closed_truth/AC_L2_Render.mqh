@@ -1,6 +1,19 @@
 #ifndef AC_L2_RENDER_MQH
 #define AC_L2_RENDER_MQH
 
+static bool AC_L2_BUILD_REFRESH_BUSY = false;
+
+void AC_L2EnsureFreshBeforeRender()
+{
+   if(AC_L2_BUILD_REFRESH_BUSY)
+      return;
+   if(AC_L2_READY && !AC_L2ShouldRunFullScan())
+      return;
+   AC_L2_BUILD_REFRESH_BUSY = true;
+   AC_RefreshLayer2MarketSessionTruth();
+   AC_L2_BUILD_REFRESH_BUSY = false;
+}
+
 string AC_L2TimeText(const datetime value)
 {
    if(value <= 0) return "Unavailable";
@@ -80,6 +93,7 @@ string AC_L2StatusLine(const AC_L2SymbolState &state)
 
 void AC_BuildLayer2Texts()
 {
+   AC_L2EnsureFreshBeforeRender();
    int known_count = AC_L2_OPEN_COUNT + AC_L2_CLOSED_COUNT;
    string completion = AC_L2PercentText(known_count, AC_L2_SYMBOLS_TOTAL);
    string layer_status = AC_L2_SCAN_STATUS;
@@ -140,18 +154,21 @@ void AC_BuildLayer2Texts()
 
 string AC_Layer2BoardSection()
 {
+   AC_L2EnsureFreshBeforeRender();
    if(!AC_L2_READY) return "\r\nLAYER 2 - MARKET OPEN / CLOSED TRUTH\r\n----------------------------------------\r\nStatus: Pending\r\n";
    return AC_L2_BOARD_SECTION;
 }
 
 string AC_Layer2WorkbenchSection()
 {
+   AC_L2EnsureFreshBeforeRender();
    if(!AC_L2_READY) return "\r\nL2_MARKET_OPEN_CLOSED_SCAN\r\nstatus=pending\r\n";
    return AC_L2_WORKBENCH_SECTION;
 }
 
 string AC_Layer2DossierSection(const string symbol)
 {
+   AC_L2EnsureFreshBeforeRender();
    string text = "\r\nLAYER 2 - MARKET OPEN / CLOSED TRUTH\r\n";
    text += "----------------------------------------\r\n";
    int idx = AC_L2FindIndex(symbol);
@@ -197,7 +214,8 @@ string AC_Layer2DossierSection(const string symbol)
 
 string AC_Layer2StatusRow()
 {
-   return "schema_name=layer_status|schema_version=v2.1|layer_id=2|layer_name=" + AC_LAYER_2_NAME
+   AC_L2EnsureFreshBeforeRender();
+   return "schema_name=layer_status|schema_version=v2.2|layer_id=2|layer_name=" + AC_LAYER_2_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
@@ -213,6 +231,7 @@ string AC_Layer2StatusRow()
       + "|route_write_counter_semantics=attempts_not_unique_final_files"
       + "|route_write_failures=" + IntegerToString(AC_L2_ROUTE_WRITE_FAILURE_COUNT)
       + "|cutoff_rule=closed_or_unknown_symbols_block_deeper_layer_eligibility_publication_continues"
+      + "|render_guard=refresh_before_render_if_pending_or_due"
       + "|trade_permission=false";
 }
 
