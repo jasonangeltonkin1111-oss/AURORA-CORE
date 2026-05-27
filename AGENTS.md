@@ -20,100 +20,44 @@ If a connector blocks writes or cannot safely patch a file, report `BLOCKED` or 
 6. Preserve routes, filenames, and account-safe paths unless current source proves a change is required.
 7. Keep trade permission false unless a later explicit trading-permission task provides sufficient evidence and firm rules.
 8. Do not claim compile, runtime, live, edge, or prop-firm readiness without actual evidence.
-9. For parallel worker/merge work, read `blueprint/09_PARALLEL_WORK_AND_MERGE_CONTROL_BLUEPRINT.md` before commenting, rebasing, integrating, or merging.
 
 If a connector only supports unsafe full-file replacement for a large owner file, stop and report:
 
 `HOLD — use repo-native patch/Codex hunk editor. I inspected the owner but did not safely patch.`
 
-## Parallel work law
+## System identity law
 
-Aurora may run many workers in parallel, but main remains conservative.
+AURORA CORE is a trading-intelligence system, not a process-management system.
 
-```text
-Parallel work is useful.
-Parallel ownership is dangerous.
-Parallel merging without a control queue is forbidden.
-```
-
-Layer workers, specialist workers, design workers, and overseer/integration work have different authorities.
-
-- Layer workers may patch only inside their assigned layer owner unless explicitly scoped otherwise.
-- Specialist workers pressure-test and report/fix inside assigned specialist scope; they do not become mini-overseers.
-- The overseer owns integration sequencing, collision resolution, shared-file decisions, final merge queue, and main protection.
-- L20-L23 are design-stage/draft until the upstream dependency chain is source-integrated and runtime-proven.
-
-Every worker branch must report:
+Docs, indexes, and blueprints must describe the product chain:
 
 ```text
-actual branch
-current main SHA checked
-head SHA
-changed files
-owner class for each changed file
-shared-file collision risk
-proof level
-rollback path
-current decision
+Foundation truth -> basic gate -> surface scoring -> taxonomy/groups -> candidate pool -> diversified basket -> selected evidence -> review/permission state
 ```
 
-Commit SHA is required. If there is no commit SHA or Git branch proof, the work is not eligible for merge review.
-
-## Shared-file control law
-
-These files are overseer-controlled during merge review:
-
-```text
-README.md
-AGENTS.md
-control/*
-blueprint/*
-mt5/00_MT5_SOURCE_INDEX.md
-mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md
-external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md
-mt5/AuroraCore.mq5
-mt5/core/AC_Config.mqh
-FileIO owner files
-route owner files
-scheduler/timer/heartbeat files
-external_worker/aurora_worker_entrypoint.py
-external_worker/aurora_worker_io.py
-publication renderer composition files
-Board/Dossier/Workbench composition files
-```
-
-Changed files must be classified as:
-
-```text
-LAYER_OWNED
-SHARED_SUPPORT
-UPSTREAM_DOWNSTREAM
-LOCKED_GOVERNANCE
-GENERATED_ARTIFACT
-UNKNOWN_RISK
-```
-
-Do not patch shared files casually from a layer branch. If a shared-file change is needed, state the collision and route it through overseer review.
+Do not make README, index, or blueprint front doors revolve around overseers, parallel branch workers, merge lanes, or project-management process. Those may be temporary development workflows, but they are not the system identity.
 
 ## Runtime Owner boundaries
 
 - Runtime 2 taxonomy authority lives in `mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverse*.mqh`.
 - Runtime 1 Layer 3 broker symbol/spec metadata lives in `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_3_broker_symbol_specs_truth/AC_L3_*.mqh`.
 - Runtime 1 Layer 5 Basic System Gate authority lives in `mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_5_basic_system_gate/AC_BasicSystemGate.mqh`.
-- Runtime 3 external calculation worker authority lives in `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/` plus the active files indexed in `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`.
+- Runtime 3 external calculation support lives in `mt5/runtime_owners/runtime_3_external_calculation_worker_owner/` plus the active files indexed in `external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md`.
 - Runtime 7 publication wrappers live in `mt5/runtime_owners/runtime_7_publication_owner/publication_renderers/` as render/readback support, not calculation or trade authority.
 - FileIO/path owners must stay single-owner systems.
 - Dossiers display upstream truth; they must not become hidden truth owners.
 - Broker metadata is advisory evidence only. Broker Country, Exchange, Sector, or Industry must not overwrite final taxonomy/ranking truth.
 
-## Runtime 3 external worker law
+## Runtime 3 external calculation support law
 
-Runtime 3 owns worker relationship, install/status detection, snapshot export, heartbeat/result validation, shared daemon/watchdog status truth, and Workbench diagnostics.
+Runtime 3 owns the support relationship between MT5 and the external calculation process: install/status detection, snapshot export, heartbeat/result validation, shared daemon/watchdog status truth, and Workbench diagnostics.
 
 Runtime 3 must keep:
 
-- `authority=calculation_support_only`
-- `trade_permission=false`
+```text
+authority=calculation_support_only
+trade_permission=false
+```
 
 Runtime 3 must not own broker truth, FileIO internals, Board/Dossier rendering authority, ranking truth, selection truth, strategy, execution, WebRequest, ML, or L5 heavy calculations unless explicitly scoped later.
 
@@ -170,6 +114,18 @@ Do not add or reintroduce without explicit proof:
 
 Prefer cached owner packets, bounded drains, changed-state logging, batch writes, read-once/write-once per cycle where safe, selected-only deep evidence, explicit budget telemetry, and visible degraded states.
 
+## Chain-flow law
+
+Aurora must flow smoother without lying.
+
+- Publish partial truth early and label it honestly.
+- Let upstream layers finish enough truth before downstream recalculations churn.
+- Do not block physical publication just because truth is partial, degraded, stale, or review-unsafe.
+- Do not print false `ACCEPTED`, `static`, `clean`, or `done` states before the current scope is truly accepted.
+- Downstream layers consume upstream packets; they do not repair, reopen, or override upstream truth.
+- Layer 5 is the only broad all-symbol hard gate.
+- L17-L22 are selected-symbol-only evidence layers; they must not collect all-symbol deep evidence.
+
 ## Trading and permission law
 
 Manual review/export is allowed.
@@ -200,9 +156,9 @@ edge proven
 
 Scores, ranks, candidate pools, heat values, candle geometry, Global Top 10, trader-chat export, and manual-review packets are not permission.
 
-## Bucket research law
+## Taxonomy research law
 
-Online research is required when completing or repairing symbol buckets because corporate symbols, listings, sectors, and lifecycle states change. Use source tiers:
+Online research is required when completing or repairing symbol taxonomy because corporate symbols, listings, sectors, and lifecycle states change. Use source tiers:
 
 1. Official issuer pages, exchange pages, SEC filings, and primary company releases.
 2. Reputable financial news/filing summaries for mergers, delistings, and ticker lifecycle changes.
@@ -217,8 +173,10 @@ Every researched symbol row should capture:
 - canonical ticker
 - exchange/listing if known
 - lifecycle state: active / acquired / delisted / renamed / stale-broker-symbol / unknown
-- final broker group
-- final aggregation group
+- asset_class
+- market_group
+- market_segment
+- ranking_group
 - confidence
 - evidence source note
 - trade permission false
@@ -227,25 +185,25 @@ Every researched symbol row should capture:
 
 Use these as prompts for verification, not as blind patch authority. Patch only after inspecting current rows.
 
-- `BA` / `BA.x`: Boeing. Bucket target: `Industrials / Aerospace & Defense`.
-- `JPM` / `JPM.x`: JPMorgan Chase. Bucket target: `Financial / Banks - Diversified` unless the project standard uses a more precise major-bank aggregation group.
-- `UNH` / `UNH.x`: UnitedHealth Group. Bucket target: `Healthcare / Healthcare Plans` unless the project standard uses managed healthcare.
-- `HOLX`: Hologic. Bucket target: `Healthcare / Medical Devices` or `Healthcare / Diagnostics & Research` depending on existing taxonomy vocabulary.
-- `TPH`: Tri Pointe Homes. Bucket target: `Consumer Cyclical / Residential Construction` or existing equivalent.
-- `CTRA`: Coterra Energy. Historical bucket target: `Energy / Oil & Gas E&P` or equivalent. Current lifecycle must be checked.
+- `BA` / `BA.x`: Boeing. Target group likely Industrials / Aerospace & Defense.
+- `JPM` / `JPM.x`: JPMorgan Chase. Target group likely Financial / Banks - Diversified unless project standard uses a more precise major-bank ranking group.
+- `UNH` / `UNH.x`: UnitedHealth Group. Target group likely Healthcare / Healthcare Plans unless project standard uses managed healthcare.
+- `HOLX`: Hologic. Target group likely Healthcare / Medical Devices or Healthcare / Diagnostics & Research depending on current taxonomy vocabulary.
+- `TPH`: Tri Pointe Homes. Target group likely Consumer Cyclical / Residential Construction or existing equivalent.
+- `CTRA`: Coterra Energy. Historical target likely Energy / Oil & Gas E&P or equivalent. Current lifecycle must be checked.
 - `.xhkg` numeric HK symbols: broker Country `USA` / `United States` and Exchange `XNYM` are poisoned for trader-facing Dossiers. Hide from Dossier, count in Workbench diagnostics, and build external Yahoo symbol as zero-padded `.HK` where applicable.
 
-## Bucket-system acceptance checks
+## Taxonomy-system acceptance checks
 
-Before claiming bucket completion, verify or explicitly report missing proof for:
+Before claiming taxonomy completion, verify or explicitly report missing proof for:
 
 - current generated row count and runtime Dossier count
 - missing symbols and explicit lifecycle/source reason for each
 - extra symbols count
-- Unknown bucket count and reason for every unknown
-- Ranking Group mismatch vs taxonomy authority count
+- Unknown classification count and reason for every unknown
+- ranking_group mismatch vs taxonomy authority count
 - JPM, UNH, BA regression probes
-- HOLX, TPH, CTRA lifecycle/bucket probes
+- HOLX, TPH, CTRA lifecycle/group probes
 - `.xhkg` Country USA / Exchange XNYM hidden from trader-facing Dossiers
 - `.xhkg` zero-padded `.HK` external links
 - no ISIN display in trader-facing Dossiers
