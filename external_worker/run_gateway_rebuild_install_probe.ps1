@@ -13,6 +13,21 @@ $WorkerExe = Join-Path $SharedGateway 'AuroraWorker\AuroraWorker.exe'
 $SharedStatus = Join-Path $SharedGateway 'Status\shared_worker_status.txt'
 $InstallStatus = Join-Path $SharedGateway 'Status\shared_worker_install_status.txt'
 
+function Resolve-AuroraGitCommand {
+  $cmd = Get-Command git -ErrorAction SilentlyContinue
+  if ($null -ne $cmd -and $cmd.Source) { return $cmd.Source }
+  $candidates = @(
+    (Join-Path $env:ProgramFiles 'Git\cmd\git.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Git\cmd\git.exe'),
+    'C:\Program Files\Git\cmd\git.exe',
+    'C:\Program Files\Git\bin\git.exe'
+  )
+  foreach ($candidate in $candidates) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { return $candidate }
+  }
+  return $null
+}
+
 function Is-Admin {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -57,9 +72,14 @@ Push-Location $RepoRoot
 try {
   if (!$SkipGitPull -and (Test-Path -LiteralPath (Join-Path $RepoRoot '.git'))) {
     Write-Host 'Updating local main from origin/main...'
-    & git checkout main
-    & git pull --ff-only origin main
-    if ($LASTEXITCODE -ne 0) { Write-Host 'WARNING: git pull failed or repo has local changes. Continuing with current checkout.' -ForegroundColor Yellow }
+    $git = Resolve-AuroraGitCommand
+    if ($null -eq $git) {
+      Write-Host 'WARNING: git executable not found on PATH or standard install locations. Continuing with current checkout.' -ForegroundColor Yellow
+    } else {
+      & $git checkout main
+      & $git pull --ff-only origin main
+      if ($LASTEXITCODE -ne 0) { Write-Host 'WARNING: git pull failed or repo has local changes. Continuing with current checkout.' -ForegroundColor Yellow }
+    }
   }
 
   if (!$SkipPipInstall) {

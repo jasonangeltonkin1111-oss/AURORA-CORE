@@ -11,7 +11,7 @@ SURFACE_OVERSEER_STATUS_NAME = "surface_overseer_status.txt"
 EXPECTED_AUTHORITY = "calculation_support_only"
 
 RANKED_MANIFEST_NAME = "ranked_symbols.manifest"
-STATUS_SURFACE_NAMES = ("l18_status.txt", "l19_status.txt")
+STATUS_SURFACE_NAMES = ("l18_status.txt", "l19_status.txt", "l20_status.txt", "l21_status.txt", "l22_status.txt", "l23_status.txt")
 LAYER_RANKED_MANIFEST_NAMES = (
     "ranked_symbols.manifest",
     "ranked_symbols_by_group.manifest",
@@ -31,6 +31,9 @@ RANKED_OUTPUT_AUTHORITIES = {
     "deep_evidence_selection_split_only",
     "raw_ohlc_bar_pack_only",
     "wick_candle_geometry_pack_only",
+    "rolling_tick_pack_only",
+    "indicator_reference_pack_only",
+    "liquidity_dom_proxy_pack_only",
 }
 RANKED_OUTPUT_ACCEPTED_STATUSES = {"complete", "accepted", "degraded", "write_degraded", "not_available"}
 STATUS_SURFACE_ACCEPTED_STATUSES = {"complete", "accepted", "ready", "fresh", "ok"}
@@ -163,10 +166,9 @@ def _layer_has_symbol_rank_file_contract(data: Dict[str, str], proof: LayerSurfa
 
 def _infer_status_layer_id(layer_dir: Path) -> str:
     name = layer_dir.name.lower().replace("-", "_")
-    if "l18" in name or "layer18" in name or "layer_18" in name:
-        return "18"
-    if "l19" in name or "layer19" in name or "layer_19" in name:
-        return "19"
+    for layer_id in ("18", "19", "20", "21", "22", "23"):
+        if f"l{layer_id}" in name or f"layer{layer_id}" in name or f"layer_{layer_id}" in name:
+            return layer_id
     return "not_available"
 
 

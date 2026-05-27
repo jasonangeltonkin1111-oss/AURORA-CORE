@@ -168,12 +168,20 @@ string AC_L7BuildInputPrimitiveRows()
 
 AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 {
+   string upstream_key = AC_L7InputUpstreamKey();
+   if(AC_L7_LAST_INPUT_UPSTREAM_KEY == upstream_key
+      && AC_L7_LAST_INPUT_EXPORT_STATUS != "not_exported"
+      && AC_L7_LAST_INPUT_MANIFEST_STATUS != "not_exported"
+      && AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM != "not_available")
+   {
+      return AC_MakeSyntheticWriteResult(AC_L7SessionInputCsvPath(), true, "unchanged_cached", AC_L7_LAST_INPUT_SIZE, "l7_input_upstream_unchanged_no_session_row_build_no_csv_rewrite|key=" + upstream_key);
+   }
+
    string folder_detail = "";
    AC_EnsureFolderPath(AC_L7SessionLayerOutboxFolder(), folder_detail);
 
    string rows = AC_L7BuildInputPrimitiveRows();
    string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
-   string upstream_key = AC_L7InputUpstreamKey();
    AC_WriteResult csv_write = AC_WriteTextFile(AC_L7SessionInputCsvPath(), rows);
 
    string manifest = "";
@@ -208,14 +216,19 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "ranking_runtime=false\r\n";
    manifest += "ranked_output_runtime=false\r\n";
    manifest += "selection_runtime=false\r\n";
+   manifest += "entry_signal=false\r\n";
+   manifest += "execution=false\r\n";
    manifest += "generated_unix=" + IntegerToString((int)TimeGMT()) + "\r\n";
 
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_L7SessionInputManifestPath(), manifest);
    AC_L7_LAST_INPUT_EXPORT_STATUS = csv_write.status;
    AC_L7_LAST_INPUT_MANIFEST_STATUS = manifest_write.status;
-   AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
-   AC_L7_LAST_INPUT_UPSTREAM_KEY = upstream_key;
-   AC_L7_LAST_INPUT_SIZE = csv_write.final_size;
+   if(csv_write.ok && manifest_write.ok)
+   {
+      AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
+      AC_L7_LAST_INPUT_UPSTREAM_KEY = upstream_key;
+      AC_L7_LAST_INPUT_SIZE = csv_write.final_size;
+   }
    return csv_write;
 }
 

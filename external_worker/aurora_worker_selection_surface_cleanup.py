@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
-import shutil
 
 from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, utc_stamp, unix_time
 
@@ -46,14 +45,6 @@ def _count_tree(path: Path) -> int:
     return count
 
 
-def _remove_tree(path: Path) -> int:
-    count = _count_tree(path)
-    if count <= 0 and not path.exists():
-        return 0
-    shutil.rmtree(path, ignore_errors=True)
-    return count
-
-
 def _preserve_deep_evidence(root: Path, failed: List[Path]) -> int:
     desk = _selection_desk(root)
     old_global = desk / "Global"
@@ -80,7 +71,7 @@ def _cleanup_status_text(summary: SelectionSurfaceCleanupSummary) -> str:
         "schema_version=1",
         "owner_name=Runtime 3 external worker selection surface cleanup bridge",
         "source_owner=Runtime 7 publication surfaces",
-        "cleanup_scope=legacy_selection_desk_groups_and_global_after_clean_shortcuts_exist",
+        "cleanup_scope=stable_selection_desk_groups_and_global_preserved_after_clean_shortcuts_exist",
         f"status={summary.status}",
         f"reason={summary.reason}",
         f"legacy_groups_removed={summary.legacy_groups_removed}",
@@ -89,6 +80,9 @@ def _cleanup_status_text(summary: SelectionSurfaceCleanupSummary) -> str:
         f"write_failed_count={summary.write_failed_count}",
         "clean_global_path=Selection Desk/01_Global",
         "clean_asset_class_path=Selection Desk/02_Asset_Classes",
+        "stable_global_path=Selection Desk/Global",
+        "stable_groups_path=Selection Desk/Groups",
+        "stable_parent_route_policy=preserve_do_not_delete",
         "system_indexes_path=Selection Desk/90_System_Indexes",
         "layer_summaries_path=Selection Desk/91_Layer_Summaries",
         "selection_runtime=false",
@@ -120,11 +114,11 @@ def cleanup_legacy_selection_surface_paths(root: Path) -> SelectionSurfaceCleanu
         return summary
 
     preserved = _preserve_deep_evidence(root, failed)
-    groups_removed = _remove_tree(desk / "Groups")
-    global_removed = _remove_tree(desk / "Global")
+    groups_removed = 0
+    global_removed = 0
 
     status = "accepted" if not failed else "write_degraded"
-    reason = "legacy_selection_surface_paths_removed" if status == "accepted" else "legacy_paths_removed_but_cleanup_status_or_preservation_write_failed"
+    reason = "clean_selection_shortcuts_ready_stable_parent_routes_preserved" if status == "accepted" else "clean_shortcuts_ready_but_cleanup_status_or_preservation_write_failed"
     summary = SelectionSurfaceCleanupSummary(status, reason, groups_removed, global_removed, preserved, len(failed), str(status_path))
     status_path.parent.mkdir(parents=True, exist_ok=True)
     _write(status_path, _cleanup_status_text(summary), failed)

@@ -13,6 +13,7 @@ from aurora_worker_selection_surface_shortcuts import (
     _csv_rows,
     _csv_text,
     _display,
+    _find_dossier,
     _ranked_file_name,
     _ranked_symbols_path,
     _sanitize,
@@ -69,7 +70,7 @@ def _group_text(asset_class: str, ranking_group: str, rows: List[Dict[str, str]]
         "meaning=ranking_group_inspection_shortcut_only",
         "source=L11 ranked_symbols_by_group.csv guarded ranks",
         "score_owner=Layer 11 Symbol Ranking Inside Ranking Group",
-        "dossier_policy=copy_only_when_source_dossier_is_open_nonblocked_nonstale_else_held_warning_card",
+        "dossier_policy=reference_only_no_full_dossier_copy",
         f"asset_class={asset_class}",
         f"ranking_group={ranking_group}",
         f"market_groups={';'.join(market_groups) if market_groups else 'not_available'}",
@@ -149,24 +150,13 @@ def publish_l11_shallow_group_shortcuts(root: Path) -> SelectionShortcutSummary:
         output_rows: List[Dict[str, str]] = []
         for rank, row in enumerate(group_rows[:5], 1):
             symbol = str(row.get("symbol", "")).strip()
-            target_name = _ranked_file_name(rank, symbol)
-            expected_names.append(target_name)
-            target = folder / target_name
-            copies_expected += 1
-            ok, source_missing, source_path, copy_status = _copy_dossier_or_placeholder(
-                account_root,
-                symbol,
-                target,
-                failed,
-                _group_shortcut_overlay(row, rank),
-                row,
-            )
-            if ok:
-                copies_written += 1
+            source = _find_dossier(account_root, symbol)
+            source_missing = source is None
+            source_path = str(source) if source is not None else "not_available"
+            target = folder / "00_Top5_Current.txt"
+            copy_status = "reference_only_no_full_dossier_copy" if not source_missing else "reference_only_source_dossier_missing"
             if source_missing:
                 missing += 1
-            if copy_status == "source_held_stale_or_unsafe":
-                held_unsafe += 1
             output_rows.append({
                 "group_shortcut_rank": str(rank),
                 "symbol": symbol,

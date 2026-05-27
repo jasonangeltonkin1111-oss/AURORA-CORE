@@ -24,14 +24,14 @@ string AC_BoardHealthTag(const string status)
    if(StringFind(status, "Accepted") >= 0 || StringFind(status, "accepted") >= 0 ||
       StringFind(status, "Complete") >= 0 || StringFind(status, "complete") >= 0 ||
       StringFind(status, "Ready") >= 0 || StringFind(status, "ready") >= 0)
-      return "OK";
+      return "ACCEPTED";
    return "CHECK";
 }
 
 bool AC_BoardStatusNeedsWarning(const string status)
 {
    string tag = AC_BoardHealthTag(status);
-   return !(tag == "OK" || tag == "UPDATING" || tag == "SEEDING");
+   return !(tag == "ACCEPTED" || tag == "UPDATING" || tag == "SEEDING");
 }
 
 string AC_BoardWarningText()
@@ -129,8 +129,10 @@ string AC_BoardUniverseSnapshotSection(const AC_Layer0StatusPacket &status)
 string AC_BoardLayerHealthMatrixSection(const AC_Layer0StatusPacket &status)
 {
    string text = "";
-   text += "\r\nLAYER HEALTH MATRIX\r\n";
+   text += "\r\nSURFACE OVERVIEW\r\n";
    text += "--------------------------------------------------\r\n";
+   text += "Surface | State | Progress | Blocker | Owner | Meaning\r\n";
+   text += "Dossiers Physical Route | " + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "ACCEPTED" : "DEGRADED") + " | open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + ", closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + " | " + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "physical_route_clean" : "physical_route_mismatch") + " | Runtime7 Dossier publication | physical route truth only\r\n";
    text += "L0   Publication / Dossier       " + AC_BoardHealthTag(status.status) + "   " + IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " generated\r\n";
    text += "L1   Account / Portfolio         " + (AC_L1_READY ? "OK" : "PENDING") + "   " + (AC_L1_READY ? "available" : "pending") + "\r\n";
    text += "L2   Market Open / Closed        " + AC_BoardHealthTag(AC_L2_SCAN_STATUS) + "   open " + IntegerToString(AC_L2_OPEN_COUNT) + " / closed " + IntegerToString(AC_L2_CLOSED_COUNT) + "\r\n";
@@ -149,7 +151,15 @@ string AC_BoardLayerHealthMatrixSection(const AC_Layer0StatusPacket &status)
    text += "L15  Correlation / Diversity     " + AC_BoardHealthTag(AC_L15_STATUS) + "   " + AC_L15_STATUS + "\r\n";
    text += "L16  Global Top 10 Basket        " + AC_BoardHealthTag(AC_L16_STATUS) + "   " + AC_L16_STATUS + "\r\n";
    text += "L17  Deep Evidence Split         " + AC_BoardHealthTag(AC_L17_STATUS) + "   " + AC_L17_STATUS + "\r\n";
+   text += "L18  Raw OHLC Bar Pack           PENDING   worker status-only surface; no MT5 calculation owner\r\n";
+   text += "L19  Wick / Candle Geometry      PENDING   worker status-only surface; no setup or permission\r\n";
+   text += "L20  Rolling Tick Pack           NOT_ACTIVE   design/hold; no active permission\r\n";
+   text += "L21  Indicator / Reference Pack  NOT_ACTIVE   design/hold; no active permission\r\n";
+   text += "L22  Liquidity / DOM Proxy       NOT_ACTIVE   design/hold; no active permission\r\n";
+   text += "L23  Setup / Permission State    BLOCKED   trade_permission=false; validation_missing\r\n";
    text += "OHLC Shared Raw Store            " + AC_BoardHealthTag(AC_SHARED_OHLC_STATUS) + "   " + AC_SHARED_OHLC_STATUS + "\r\n";
+   text += "Gateway / External Worker        " + AC_BoardHealthTag(AC_EXTERNAL_WORKER_STATUS.worker_status) + "   " + AC_EXTERNAL_WORKER_STATUS.worker_status + "\r\n";
+   text += "Selection Desk                   " + AC_BoardHealthTag(AC_SelectionDeskScaffoldStatus()) + "   " + AC_SelectionDeskScaffoldStatus() + "\r\n";
    return text;
 }
 

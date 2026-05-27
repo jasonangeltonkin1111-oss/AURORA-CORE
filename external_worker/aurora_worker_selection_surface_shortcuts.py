@@ -507,17 +507,11 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
         expected_names: List[str] = []
         for rank, row in enumerate(selected, 1):
             symbol = str(row.get("symbol", "")).strip()
-            target_name = _ranked_file_name(rank, symbol)
-            expected_names.append(target_name)
-            target = folder / target_name
-            copy_expected += 1
-            ok, source_missing, _source_path, copy_status = _copy_dossier_or_placeholder(account_root, symbol, target, failed, _asset_shortcut_overlay(row, asset, rank), row)
-            if ok:
-                copied += 1
+            source = _find_dossier(account_root, symbol)
+            source_missing = source is None
+            copy_status = "reference_only_no_full_dossier_copy" if not source_missing else "reference_only_source_dossier_missing"
             if source_missing:
                 missing += 1
-            if copy_status == "source_held_stale_or_unsafe":
-                held_unsafe += 1
             output_rows.append({
                 "asset_class_top5_rank": str(rank), "symbol": symbol, "canonical_symbol": row.get("canonical_symbol", symbol),
                 "asset_class": asset, "market_group": row.get("market_group", "Unknown"), "market_segment": row.get("market_segment", "Unknown"),
@@ -554,7 +548,7 @@ def publish_l11_asset_class_shortcuts(root: Path) -> SelectionShortcutSummary:
 
 
 def _asset_index_text(rows: List[Dict[str, str]]) -> str:
-    lines = ["ASSET CLASS TOP 5 INDEX", "----------------------------------------", "meaning=asset_class_review_shortcuts_only", "source=L11 ranked_symbols_by_group.csv guarded scores", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""]
+    lines = ["ASSET CLASS TOP 5 INDEX", "----------------------------------------", "meaning=asset_class_review_shortcuts_only", "source=L11 ranked_symbols_by_group.csv guarded scores", "dossier_policy=reference_only_no_full_dossier_copy", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""]
     for row in rows:
         lines.append(f"{row['asset_class']}/ top5={row['top5_folder']} selected={row['selected_count']} top={row['top_symbol']}")
     lines.extend(["", f"generated_utc={utc_stamp()}", ""])
