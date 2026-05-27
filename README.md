@@ -1,6 +1,6 @@
 # AURORA CORE
 
-**Native MT5 Market Intelligence, Runtime Ownership, and Truth Publication System**
+**Native MT5 Market Intelligence, Runtime Ownership, Truth Publication, Manual Review, and Future Validation System**
 
 AURORA CORE is a native MetaTrader 5 / MQL5 trading-system foundation built to observe broker truth, classify the market universe, route expensive evidence only where it matters, and publish operator truth without fake confidence.
 
@@ -19,6 +19,7 @@ AURORA CORE is the core runtime spine for building a disciplined market-intellig
 Scaffold control startup path (active):
 
 ```text
+AGENTS.md
 control/02_MASTER_REPO_FILE_INDEX.md
 control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
@@ -26,13 +27,14 @@ relevant folder index
 relevant real content file
 ```
 
-All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
+All future Aurora Core work must read these before assigning layers, patching source, updating docs, or changing worker branches:
 
 ```text
-AGENTS.md
 mt5/00_MT5_SOURCE_INDEX.md
+mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md
 external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md
 blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
+blueprint/09_PARALLEL_WORK_AND_MERGE_CONTROL_BLUEPRINT.md
 docs/22_AURORA_QUALITY_7S_LAW.md
 docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
 docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
@@ -40,13 +42,37 @@ docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md
 docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md
 ```
 
-`blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is blueprint context. Current source/config/index files decide the active implementation state when blueprint text and source disagree.
+`blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is the 23-layer logical contract. `blueprint/09_PARALLEL_WORK_AND_MERGE_CONTROL_BLUEPRINT.md` is the parallel branch/worker/merge-control contract. Current source/config/index files decide the active implementation state when blueprint text and source disagree.
 
 The control laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
 
 `docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md` is the active Board/Dossier/Workbench surface standard. It defines the no-repeat data law: later layers consume earlier owner gates and do not duplicate raw previous-layer truth.
 
 `docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md` is the Runtime 3 Gateway/external-worker closeout standard. Runtime 3 is not fully closed until shared install, daemon, watchdog, per-account result acceptance, rejection-path proof, and MT5 Workbench readback are captured.
+
+---
+
+## Current System Shape
+
+Aurora Core now has two active dimensions:
+
+```text
+1. Runtime/source system:
+   MT5 EA + Runtime Owners + Runtime 3 external worker chain + publication/readback surfaces.
+
+2. Parallel work system:
+   Overseer + layer workers + design workers + specialist pressure-test lanes + merge-control queue.
+```
+
+Parallel work is allowed, but parallel ownership is not.
+
+```text
+Parallel work is useful.
+Parallel ownership is dangerous.
+Parallel merging without a control queue is forbidden.
+```
+
+The overseer owns integration sequencing, collision resolution, shared-file decisions, final merge queue, and main protection. Layer workers own their assigned layer only. Specialist workers pressure-test assigned risk areas and do not become mini-overseers.
 
 ---
 
@@ -65,12 +91,13 @@ Layer 2 - Market Open / Closed Truth
 Layer 3 - Broker Specs and Value Truth
 Layer 4 - Live Quote and Spread Truth
 Layer 5 - Basic System Gate
+Runtime 1 - Shared OHLC Raw Storage support service
 Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source
 Runtime 3 - Calculation Gateway Owner
-Layer 6 - active external-worker cost/friction calculation support; not permission
-Layer 7-L10 - active external-worker surface/taxonomy calculation support; not permission
-Layer 11+ - active/future worker modules by source index; not permission unless explicit validation exists
+Runtime 3 worker chain - L6 through L19 calculation/file-decoration support
+Runtime 4 - Surface Scoring Owner contracts where source-present
 Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
+Runtime 7 render/readback surfaces for Board/Dossier/Workbench; not calculation or trading authority
 ```
 
 Do not confuse active source owners with complete logical layers.
@@ -86,6 +113,35 @@ Runtime 3 owns the Gateway/external-worker relationship, job-bus contract, daemo
 `mt5/runtime_owners/runtime_5_deep_inspection_advisory_owner/AC_DeepInspectionOwner.mqh` is a retired compatibility wrapper only. It must not be treated as active Runtime 5 authority.
 
 Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow current source truth and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
+
+---
+
+## Current Runtime 3 Worker Chain
+
+The source-indexed Runtime 3 calculation/file-decoration chain is:
+
+```text
+core snapshot validation
+-> L6 cost / friction ranking
+-> L7 session relevance ranking
+-> L8 movement / range ranking
+-> L9 structure / location geometry
+-> L10 taxonomy / ranking_group classification
+-> render index
+-> L11 symbol ranking inside ranking_group
+-> L12 ranking_group heat / quality
+-> L13 dynamic ranking_group selection
+-> L14 ranking_group leader candidate pool
+-> L15 correlation / diversity scoring
+-> L16 Global Top 10 held visible inspection basket
+-> L17 Deep Evidence Selection Split
+-> L18 Selected Raw OHLC Bar Pack dossier decoration
+-> L19 Candle Geometry and Structure dossier decoration
+```
+
+This chain remains calculation/file-decoration support. It is not trading runtime authority.
+
+L20-L23 are design/dependency-gated until upstream runtime proof supports them. They must not grant setup permission, trade permission, execution, prop-firm readiness, or edge validation.
 
 ---
 
@@ -139,7 +195,7 @@ Aurora Core/<server>/<account>/Dossiers/Closed/
 Aurora Core/<server>/<account>/Dossiers/Unknown/
 ```
 
-Current Selection Desk files are structure placeholders only until a later selection owner exists. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
+Current Selection Desk files are structure placeholders or worker-output readback surfaces only until the relevant selection owner has source/runtime proof. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
 
 ---
 
@@ -153,7 +209,8 @@ Layer 3 = Symbol + Broker Specs Truth, including calculation mode/spec-validatio
 Layer 4 = Market Watch Truth
 Layer 5 = Basic System Gate
 Layer 6-L10 = active Runtime 3 external-worker calculation-support outputs; inspection/scoring/classification only, not permission
-Layer 11-L19 = active/future external-worker calculation-support chain by current source index; not permission
+Layer 11-L19 = active external-worker calculation/file-decoration support chain by current source index; not permission
+Layer 20-L23 = design/dependency-gated future layers unless current source and runtime proof explicitly upgrade them
 Layer 22 = future Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack, where DOM belongs later
 ```
 
@@ -214,6 +271,19 @@ These old names may appear only as historical references. They must not be used 
 - Do not block physical publication just because truth is partial, stale, degraded, or review-unsafe.
 - Broken truth may block review, ranking, selection, trading, and permission; it must not hide expected files.
 - Every placeholder must be honest: structure-only means no runtime truth yet.
+
+---
+
+## Parallel Worker / Merge Control Rules
+
+- Workers may develop in parallel only when they preserve owner boundaries.
+- Main must be protected by dependency-ordered merge waves.
+- Duplicate layer branches must be reconciled before merge.
+- Shared files are overseer-controlled during merge review.
+- L20-L23 must remain draft/design until dependency proof allows promotion.
+- Any branch without a current head SHA, current-main comparison, changed-file list, owner classification, rollback path, and proof statement is not eligible for merge.
+
+See `blueprint/09_PARALLEL_WORK_AND_MERGE_CONTROL_BLUEPRINT.md` for the active control matrix and merge wave contract.
 
 ---
 
