@@ -5,7 +5,7 @@ import csv
 import io
 import time
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, read_kv, unix_time, utc_stamp
 from aurora_worker_l15 import L15PublishSummary, publish_l15_correlation_diversity_selection
 
 L15_LAYER_FOLDER = "Layer_15_Correlation_Diversity_Selection"
@@ -55,6 +55,56 @@ def _replace_manifest_checksum(manifest_text: str, checksum: str) -> str:
     if not replaced:
         out.append(f"payload_checksum={checksum}")
     return "\n".join(out).rstrip() + "\n"
+
+
+def _result_latest_kv(outbox: Path) -> dict[str, str]:
+    result_path = outbox / "result_latest.txt"
+    if not result_path.exists():
+        return {}
+    return read_kv(result_path)
+
+
+def _l14_current_chain_valid(outbox: Path) -> tuple[bool, str]:
+    kv = _result_latest_kv(outbox)
+    value = str(kv.get("l14_current_chain_valid", "unknown")).strip().lower()
+    status = str(kv.get("l14_candidate_pool_status", "unknown")).strip()
+    reason = str(kv.get("l14_currentness_reason", kv.get("l14_candidate_pool_reason", "not_available"))).strip()
+    if value == "true":
+        return True, f"l14_current_chain_valid=true;status={status};reason={reason}"
+    if value == "unknown" and status in {"accepted", "write_degraded"}:
+        # Compatibility for older result_latest files before the currentness flag existed.
+        return True, f"legacy_l14_status_allowed;status={status};reason={reason}"
+    return False, f"l14_current_chain_valid={value};status={status};reason={reason}"
+
+
+def _blocked_l15_summary(reason: str) -> L15PublishSummary:
+    return L15PublishSummary(
+        status="blocked_upstream_currentness",
+        reason=reason,
+        candidate_pool_size=0,
+        candidate_scored_count=0,
+        pairwise_pair_count=0,
+        corr_pair_count=0,
+        high_corr_pair_count=0,
+        corr_unavailable_count=0,
+        group_count=0,
+        write_failed_count=0,
+        top_diversity_candidate="not_available",
+        max_pair_corr_abs="not_available",
+        output_path="not_written_latest_l14_invalid",
+        summary_path="not_written_latest_l14_invalid",
+        selection_desk_summary_path="not_written_latest_l14_invalid",
+        candidate_input_count=0,
+        candidate_pool_capped="false",
+        candidate_pool_cap=0,
+        main_lane_candidate_count=0,
+        deferred_candidate_count=0,
+        soft_cap_policy="blocked_before_l15_due_to_l14_currentness",
+        ohlc_scan_file_limit=0,
+        ohlc_scan_file_count=0,
+        threshold_source="not_evaluated",
+        max_allowed_pairwise_correlation_abs="not_evaluated",
+    )
 
 
 def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
@@ -116,11 +166,31 @@ def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
     return "applied", changed
 
 
-def l15_result_lines(summary: L15PublishSummary, duration_ms: int, clamp_status: str = "not_run", clamp_count: int = 0) -> str:
+def _l15_currentness_fields(summary: L15PublishSummary, l14_gate_valid: bool, l14_gate_reason: str) -> list[str]:
+    current = "true" if summary.status in {"accepted", "write_degraded"} and l14_gate_valid and summary.candidate_scored_count > 0 else "false"
+    if not l14_gate_valid:
+        visible_source = "blocked_latest_l14_invalid"
+        reason = "latest_l14_invalid_do_not_consume_held_l14_outputs"
+    elif current == "true":
+        visible_source = "latest_calculation"
+        reason = "latest_l15_built_from_current_l14"
+    else:
+        visible_source = "latest_l15_not_current"
+        reason = "latest_l15_failed_or_empty"
+    return [
+        f"l15_current_chain_valid={current}",
+        f"l15_visible_output_source={visible_source}",
+        f"l15_currentness_reason={reason}",
+        f"l15_upstream_l14_gate={l14_gate_reason}",
+    ]
+
+
+def l15_result_lines(summary: L15PublishSummary, duration_ms: int, clamp_status: str = "not_run", clamp_count: int = 0, l14_gate_valid: bool = True, l14_gate_reason: str = "not_checked") -> str:
     return "\n".join([
         f"l15_correlation_diversity_status={summary.status}",
         f"l15_correlation_diversity_reason={summary.reason}",
         f"l15_correlation_diversity_duration_ms={duration_ms}",
+        *_l15_currentness_fields(summary, l14_gate_valid, l14_gate_reason),
         f"l15_degraded_score_clamp_status={clamp_status}",
         f"l15_degraded_score_clamp_count={clamp_count}",
         f"l15_candidate_input_count={summary.candidate_input_count}",
@@ -175,19 +245,25 @@ def run_l15_after_l14(root: Path) -> L15PublishSummary:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
     start_ns = time.perf_counter_ns()
-    summary = publish_l15_correlation_diversity_selection(paths.outbox)
-    clamp_status, clamp_count = _clamp_l15_degraded_score_outputs(paths.outbox)
+    l14_gate_valid, l14_gate_reason = _l14_current_chain_valid(paths.outbox)
+    if l14_gate_valid:
+        summary = publish_l15_correlation_diversity_selection(paths.outbox)
+        clamp_status, clamp_count = _clamp_l15_degraded_score_outputs(paths.outbox)
+    else:
+        summary = _blocked_l15_summary("l15_blocked_because_latest_l14_current_chain_invalid;" + l14_gate_reason)
+        clamp_status, clamp_count = "blocked_l14_invalid", 0
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms, clamp_status, clamp_count))
+        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms, clamp_status, clamp_count, l14_gate_valid, l14_gate_reason))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=13",
+            "schema_version=14",
             "worker_l15_append_status=appended_by_l15_dispatch",
+            *_l15_currentness_fields(summary, l14_gate_valid, l14_gate_reason),
             f"l15_degraded_score_clamp_status={clamp_status}",
             f"l15_degraded_score_clamp_count={clamp_count}",
             f"l15_main_lane_candidate_count={summary.main_lane_candidate_count}",
