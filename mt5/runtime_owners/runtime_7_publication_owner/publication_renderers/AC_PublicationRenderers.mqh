@@ -309,6 +309,73 @@ string AC_UxBoardGatewayLine()
    return AC_BoardGatewayState() + " | " + AC_EXTERNAL_WORKER_STATUS.worker_status + " | " + AC_BoardGatewayProgress();
 }
 
+string AC_UxDossierRouteSummary()
+{
+   int physical_total = AC_DOSSIER_PHYSICAL_OPEN_FILES + AC_DOSSIER_PHYSICAL_CLOSED_FILES + AC_DOSSIER_PHYSICAL_UNKNOWN_FILES;
+   int expected_total = AC_DOSSIER_EXPECTED_OPEN_FILES + AC_DOSSIER_EXPECTED_CLOSED_FILES + AC_DOSSIER_EXPECTED_UNKNOWN_FILES;
+   string disk = "disk open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + " closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + " unknown " + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES);
+   if(AC_DOSSIER_PHYSICAL_MATCH_OK)
+      return "CLEAN | " + disk;
+   if(expected_total == 0 && physical_total > 0)
+      return "STALE_DISK_PROOF_NOT_CURRENT_GENERATION | " + disk + " | expected unavailable";
+   return "MISMATCH | " + disk + " | expected open " + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + " closed " + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + " unknown " + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES);
+}
+
+string AC_UxL8WindowText()
+{
+   string cycle = AC_BoardGatewayCycleText();
+   string blocker_owner = AC_L16KvValue(cycle, "main_blocker_owner", "");
+   string blocker_reason = AC_L16KvValue(cycle, "main_blocker_reason", "");
+   string detail = "ranked=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + " | ohlc_ready=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED);
+   if(AC_L8_OHLC_MIN_READY_RENDERED == 0 && AC_L8_RANKED_ROWS_RENDERED > 0)
+      detail += " | window_proof=not_currently_proven";
+   if(blocker_owner == "Runtime3/L8" && blocker_reason != "")
+      detail += " | blocker=" + AC_SelectionDeskSafeValue(blocker_reason);
+   else
+      detail += " | status=" + AC_SelectionDeskSafeValue(AC_L8_STATUS);
+   return detail;
+}
+
+string AC_UxL18TradeDataText()
+{
+   string detail = "files=" + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED)
+      + " | missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING)
+      + " | freshness=" + AC_L18_FRESHNESS_STATUS;
+   if(AC_L17_DEEP_SELECTED_COUNT == 0)
+      detail += " | queue=0/5_waiting";
+   return detail;
+}
+
+string AC_UxL19TradeDataText()
+{
+   string detail = "geometry_rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS)
+      + " | stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT)
+      + " | freshness=" + AC_L19_FRESHNESS_STATUS;
+   if(AC_L18_SOURCE_FILES_FOUND == 0)
+      detail += " | raw_ohlc_files=0_waiting";
+   return detail;
+}
+
+string AC_UxDossierRouteProofSection(const AC_Layer0StatusPacket &status)
+{
+   string text = "";
+   int expected_total = AC_DOSSIER_EXPECTED_OPEN_FILES + AC_DOSSIER_EXPECTED_CLOSED_FILES + AC_DOSSIER_EXPECTED_UNKNOWN_FILES;
+   text += "\r\nDOSSIER ROUTE TRADE-DATA PROOF\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "Disk Files:        Open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + " | Closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + " | Unknown " + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + "\r\n";
+   if(expected_total == 0)
+      text += "Expected Current:  unavailable_current_generation_not_started\r\n";
+   else
+      text += "Expected Current:  Open " + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + " | Closed " + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + " | Unknown " + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES) + "\r\n";
+   text += "Physical Missing:  " + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS) + "\r\n";
+   text += "Wrong Folder:      " + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS) + "\r\n";
+   text += "Duplicate Symbols: " + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS) + "\r\n";
+   text += "Cleanup Pending:   " + (AC_DOSSIER_CLEANUP_PENDING ? "TRUE" : "FALSE") + "\r\n";
+   text += "Route State:       " + AC_UxDossierRouteSummary() + "\r\n";
+   text += "Generation:        " + IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " current pass\r\n";
+   return text;
+}
+
 string AC_UxBoardChainStateSection()
 {
    string cycle = AC_BoardGatewayCycleText();
@@ -323,12 +390,12 @@ string AC_UxBoardChainStateSection()
    text += AC_UxBoardStateLine("Static Hold", AC_L16KvValue(cycle, "accepted_epoch_static_hold_active", "false") + " remaining=" + AC_L16KvValue(cycle, "accepted_epoch_static_remaining_seconds", "0") + "s");
    text += AC_UxBoardStateLine("Retry Cycle", AC_L16KvValue(cycle, "retry_cycle_count", "0") + "/" + AC_L16KvValue(cycle, "retry_cycle_limit", "5"));
    text += AC_UxBoardStateLine("Main Blocker", AC_L16KvValue(cycle, "main_blocker_owner", "not_runtime_proven") + " | " + AC_L16KvValue(cycle, "main_blocker_reason", "not_runtime_proven"));
-   text += AC_UxBoardStateLine("L8 Strict State", AC_L8_STATUS);
+   text += AC_UxBoardStateLine("L8 OHLC Windows", AC_UxL8WindowText());
    text += AC_UxBoardStateLine("L15 Correlation", AC_L15_STATUS + " current=" + AC_L16KvValue(cycle, "l15_current_chain_valid", "see_gateway_result"));
    text += AC_UxBoardStateLine("L16 Top10", AC_L16_STATUS + " current=" + AC_L16KvValue(cycle, "l16_current_chain_valid", "see_gateway_result"));
    text += AC_UxBoardStateLine("L17 Currentness", AC_L17_STATUS + " current=" + AC_L16KvValue(cycle, "l17_current_chain_valid", "see_gateway_result"));
-   text += AC_UxBoardStateLine("L18 Raw OHLC", AC_L18_STATUS + " current=" + AC_L16KvValue(cycle, "l18_current_chain_valid", "see_gateway_result"));
-   text += AC_UxBoardStateLine("L19 Geometry", AC_L19_STATUS + " current=" + AC_L16KvValue(cycle, "l19_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L18 Raw OHLC", AC_UxL18TradeDataText() + " current=" + AC_L16KvValue(cycle, "l18_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L19 Geometry", AC_UxL19TradeDataText() + " current=" + AC_L16KvValue(cycle, "l19_current_chain_valid", "see_gateway_result"));
    text += AC_UxBoardStateLine("L20 Tick/Spread", "not_active");
    text += "Trade Permission: FALSE\r\n";
    return text;
@@ -340,7 +407,7 @@ string AC_UxBoardHeaderSection(const AC_Layer0StatusPacket &status)
    text += "AURORA CORE - OPERATOR BOARD\r\n";
    text += "==================================================\r\n";
    text += AC_UxBoardStateLine("Publication State", status.status);
-   text += AC_UxBoardStateLine("Dossier Route", (AC_DOSSIER_PHYSICAL_MATCH_OK ? "CLEAN" : "MISMATCH") + " | open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + " closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + " unknown " + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES));
+   text += AC_UxBoardStateLine("Dossier Route", AC_UxDossierRouteSummary());
    text += AC_UxBoardStateLine("Inspection State", AC_UxBoardInspectionState());
    text += AC_UxBoardStateLine("Selection State", "L16/L17 inspection surfaces only | L16=" + IntegerToString(AC_L16_SELECTED_COUNT) + " L17=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT));
    text += AC_UxBoardStateLine("Trading State", "BLOCKED");
@@ -361,15 +428,15 @@ string AC_UxBoardPrimaryWarningsSection(const AC_Layer0StatusPacket &status)
    if(StringFind(status.main_blocker, "l5_drift=true") >= 0 || StringFind(AC_L6_STATUS, "drift") >= 0 || StringFind(AC_L6_STATUS, "Drift") >= 0)
       AC_UxAppendWarning(text, idx, "L6 drift: current L5 pass set differs from L6 export/readback");
    if(AC_BoardStatusNeedsWarning(AC_L8_STATUS))
-      AC_UxAppendWarning(text, idx, "L8 degraded/review: " + AC_L8_STATUS);
+      AC_UxAppendWarning(text, idx, "L8 degraded/review: " + AC_UxL8WindowText());
    if(AC_BoardStatusNeedsWarning(AC_L10_STATUS))
       AC_UxAppendWarning(text, idx, "L10 review items present: " + AC_L10_STATUS);
    if(AC_BoardStatusNeedsWarning(AC_L16_STATUS) || AC_L16_FALLBACK_COUNT > 0)
       AC_UxAppendWarning(text, idx, "L16 degraded/fallback-heavy: selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 fallback=" + IntegerToString(AC_L16_FALLBACK_COUNT));
-   if(AC_L18_SOURCE_FILES_MISSING > 0)
-      AC_UxAppendWarning(text, idx, "L18 partial: found " + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED) + " missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING));
-   if(AC_L19_FRESHNESS_STALE_COUNT > 0 || AC_SurfaceStateFromStatus(AC_L19_STATUS) == "DEGRADED")
-      AC_UxAppendWarning(text, idx, "L19 degraded/stale: rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS) + " stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT));
+   if(AC_L18_SOURCE_FILES_MISSING > 0 || AC_L17_DEEP_SELECTED_COUNT == 0)
+      AC_UxAppendWarning(text, idx, "L18 trade-data waiting: " + AC_UxL18TradeDataText());
+   if(AC_L19_FRESHNESS_STALE_COUNT > 0 || AC_SurfaceStateFromStatus(AC_L19_STATUS) == "DEGRADED" || AC_L18_SOURCE_FILES_FOUND == 0)
+      AC_UxAppendWarning(text, idx, "L19 trade-data waiting: " + AC_UxL19TradeDataText());
    AC_UxAppendWarning(text, idx, "L23 blocked: no validated setup, alert, permission, or execution system");
    if(idx == 1)
       text += "none\r\n";
@@ -431,7 +498,7 @@ string AC_UxBoardGroupedSurfaceSections(const AC_Layer0StatusPacket &status)
    text += "--------------------------------------------------\r\n";
    text += AC_UxBoardRow("L6 Cost/Friction", AC_BoardHealthTag(AC_L6_STATUS), AC_L6_STATUS + " | accepted=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false"));
    text += AC_UxBoardRow("L7 Session", AC_BoardHealthTag(AC_L7_STATUS), AC_L7_STATUS + " | rows=" + IntegerToString(AC_L7_RANKED_ROWS_RENDERED));
-   text += AC_UxBoardRow("L8 Movement", AC_BoardHealthTag(AC_L8_STATUS), AC_L8_STATUS + " | rows=" + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + " ohlc_min=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED));
+   text += AC_UxBoardRow("L8 Movement", AC_BoardHealthTag(AC_L8_STATUS), AC_UxL8WindowText());
    text += AC_UxBoardRow("L9 Structure", AC_BoardHealthTag(AC_L9_STATUS), AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE);
 
    text += "\r\nSELECTION PIPELINE - NOT PERMISSION\r\n";
@@ -445,10 +512,10 @@ string AC_UxBoardGroupedSurfaceSections(const AC_Layer0StatusPacket &status)
    text += AC_UxBoardRow("L16 Global Top 10", AC_BoardHealthTag(AC_L16_STATUS), AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 fallback=" + IntegerToString(AC_L16_FALLBACK_COUNT));
    text += AC_UxBoardRow("L17 Deep Evidence", AC_BoardHealthTag(AC_L17_STATUS), AC_L17_STATUS + " | deep=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 fallback=" + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT));
 
-   text += "\r\nEVIDENCE / PERMISSION\r\n";
+   text += "\r\nTRADE DATA READINESS\r\n";
    text += "--------------------------------------------------\r\n";
-   text += AC_UxBoardRow("L18 Raw OHLC", AC_SurfaceStateFromStatus(AC_L18_STATUS), "found " + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED) + " missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING) + " | " + AC_L18_FRESHNESS_STATUS);
-   text += AC_UxBoardRow("L19 Wick Geometry", AC_SurfaceStateFromStatus(AC_L19_STATUS), "rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS) + " stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT) + " | " + AC_L19_FRESHNESS_STATUS);
+   text += AC_UxBoardRow("L18 Raw OHLC", AC_SurfaceStateFromStatus(AC_L18_STATUS), AC_UxL18TradeDataText());
+   text += AC_UxBoardRow("L19 Wick Geometry", AC_SurfaceStateFromStatus(AC_L19_STATUS), AC_UxL19TradeDataText());
    text += AC_UxBoardRow("L20 Rolling Tick", "NOT_ACTIVE", "design hold");
    text += AC_UxBoardRow("L21 Indicators", "NOT_ACTIVE", "design hold");
    text += AC_UxBoardRow("L22 Liquidity/DOM", "NOT_ACTIVE", "design hold");
@@ -512,7 +579,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_BoardSurfaceCoherenceProofSection();
    text += AC_BoardSelectionPipelineSnapshotSection();
    text += AC_BoardDegradationSnapshotSection(status);
-   text += AC_BoardDossierCoverageSection(status);
+   text += AC_UxDossierRouteProofSection(status);
    text += AC_BoardTraderSelectionOverviewSection();
    text += "\r\nFULL TECHNICAL DETAIL - BELOW THIS LINE\r\n";
    text += "==================================================\r\n";
