@@ -208,7 +208,7 @@ string AC_SharedExternalWorkerFolder()
 
 string AC_SharedExternalWorkerPackageFolder()
 {
-   return AC_SharedExternalWorkerFolder() + "\\Package";
+   return AC_SharedExternalWorkerFolder() + "\\AuroraWorker";
 }
 
 string AC_SharedExternalWorkerStatusFolder()
@@ -218,12 +218,12 @@ string AC_SharedExternalWorkerStatusFolder()
 
 string AC_SharedExternalWorkerInstallStatusPath()
 {
-   return AC_SharedExternalWorkerStatusFolder() + "\\worker_install_status.txt";
+   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_install_status.txt";
 }
 
 string AC_SharedExternalWorkerStatusPath()
 {
-   return AC_SharedExternalWorkerStatusFolder() + "\\worker_status.txt";
+   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_status.txt";
 }
 
 string AC_ExternalWorkerJobPath()
