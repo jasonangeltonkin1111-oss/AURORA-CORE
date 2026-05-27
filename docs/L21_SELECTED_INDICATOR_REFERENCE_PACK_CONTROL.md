@@ -15,13 +15,18 @@ expectancy_validated=false
 ```
 
 ## Purpose
-Layer 21 builds selected-symbol indicator/reference context only.
+Layer 21 builds selected-symbol reference/context indicators only.
 
-Indicators describe condition. They do not grant permission.
+Core law:
 
-L21 may support manual review by explaining volatility, dispersion, range context, VWAP/fair-value distance, trend-strength context, momentum pressure, and execution-quality context.
+```text
+Indicators describe condition.
+They do not grant permission.
+```
 
-L21 must never create buy/sell signals, trade permission, auto-trading permission, prop-firm readiness, or edge/expectancy claims.
+L21 may support manual review by explaining volatility, simple trend context, recent range boundaries, Bollinger location/width, VWAP distance, and volume-source truth.
+
+L21 must never create buy/sell signals, auto-trading permission, prop-firm readiness, edge/expectancy claims, or indicator-only permission.
 
 ## Hard upstream gate
 L21 is blocked until L20 is accepted and stable.
@@ -60,7 +65,7 @@ else:
 `reference_pack_ready` does not mean trade-ready.
 
 ## One-pack-one-module law
-Every indicator pack must be its own module.
+Every indicator group must be its own module.
 
 ```text
 one_indicator_pack=one_module
@@ -83,22 +88,51 @@ external_worker/l21/
   l21_no_signal_audit.py
   packs/
     atr_pack.py
-    range_percentile_pack.py
-    ma_slope_pack.py
-    stddev_pack.py
+    sma_context_pack.py
+    donchian_pack.py
     bollinger_pack.py
     vwap_pack.py
-    spread_to_range_pack.py
-    rsi_pack.py
-    adx_dmi_pack.py
-    donchian_pack.py
-    choppiness_pack.py
-    volume_proxy_pack.py
-    macd_pack.py
-    stochastic_pack.py
-    keltner_pack.py
-    zscore_pack.py
-    candle_pressure_reference_pack.py
+    volume_source_pack.py
+```
+
+## Realistic L21 field set
+Keep L21 simple, objective, and explainable.
+
+```text
+atr_value
+atr_percentile
+sma_50_value
+sma_200_value
+sma_context_state
+donchian_period
+donchian_high
+donchian_low
+donchian_breakout_candidate
+bollinger_width
+bollinger_position
+vwap_value
+vwap_session_basis
+vwap_distance_pips
+volume_source_type
+```
+
+Field meanings:
+
+```text
+atr_value=volatility reference
+atr_percentile=relative volatility context
+sma_50_value=medium trend reference
+sma_200_value=longer trend reference
+sma_context_state=above/below/cross-zone/compressed context only
+donchian_high=recent upper boundary
+donchian_low=recent lower boundary
+donchian_breakout_candidate=boundary-proximity context only, not breakout permission
+bollinger_width=volatility compression/expansion context
+bollinger_position=location inside volatility envelope
+vwap_value=benchmark/fair-value reference
+vwap_session_basis=session/day/week/rolling basis label
+vwap_distance_pips=distance from VWAP reference
+volume_source_type=real_volume|tick_volume_proxy|partial|unavailable
 ```
 
 ## Universal packet guardrails
@@ -121,50 +155,51 @@ Pack-specific wording must remain descriptive:
 
 ```text
 atr_meaning=volatility_reference_only_not_signal
-ma_slope_meaning=directional_context_only_not_entry
-bb_meaning=volatility_location_envelope_only_not_buy_sell
-vwap_meaning=benchmark_context_only_not_entry
-rsi_meaning=momentum_pressure_context_only_not_entry
-macd_meaning=momentum_shift_reference_only_not_entry
-adx_meaning=trend_strength_context_only_not_direction_permission
+sma_context_meaning=simple_trend_context_only_not_entry
 donchian_meaning=recent_boundary_context_only_not_breakout_permission
-chop_meaning=market_condition_context_only_not_trade_filter_permission
-volume_meaning=activity_proxy_only_not_institutional_confirmation
-spread_to_range_meaning=execution_quality_context_only_not_edge
+bollinger_meaning=volatility_location_envelope_only_not_buy_sell
+vwap_meaning=benchmark_context_only_not_entry
+volume_source_meaning=source_truth_only_not_institutional_confirmation
 ```
 
-## Indicator build phases
+## Do not add
+Do not add indicator stacking nonsense.
 
-### Phase 1 - core reference pack
+Do not add MACD crossover trading.
+
+Do not add RSI overbought/oversold trade interpretation.
+
+Do not add indicator-only permission.
+
+Do not add an expanded indicator menu without a new control decision.
+
+Forbidden interpretations:
+
 ```text
-ATR
-Range percentile
-MA slope
-Standard deviation
-Bollinger Bands
-VWAP
-Spread-to-range
+ATR expansion = signal
+SMA 50 above SMA 200 = buy
+SMA 50 below SMA 200 = sell
+Donchian high break = confirmed buy
+Donchian low break = confirmed sell
+BB lower = buy
+BB upper = sell
+BB squeeze = guaranteed breakout
+VWAP touch = entry
+VWAP reclaim = confirmed buy
+High tick volume = institutional confirmation
+Low spread = edge
 ```
 
-### Phase 2 - high-value extra context
+Correct wording:
+
 ```text
-RSI
-ADX / DMI
-Donchian Channel
-Choppiness Index
-Volume / tick-volume MA
+ATR = volatility reference
+SMA context = simple trend reference
+Donchian = recent boundary context
+Bollinger = volatility/location envelope
+VWAP = benchmark/fair-value reference
+Volume source = data-source truth
 ```
-
-### Phase 3 - optional advanced context
-```text
-MACD
-Stochastic
-Keltner Channel
-Z-score
-L19 candle-pressure reference only
-```
-
-Candle pressure is L19-owned. L21 may reference L19 geometry but must not recalculate or own it.
 
 ## Board surface
 Board is compact cockpit only.
@@ -182,8 +217,8 @@ L21 status
 L20 gate status
 selected symbols seen
 selected symbols decorated
-indicator complete/partial/missing counts
-VWAP real/tick_proxy/unavailable counts
+reference fields complete/partial/missing counts
+VWAP volume-source counts
 top blocking reasons
 no_signal_audit_status
 trade_permission=false
@@ -207,6 +242,12 @@ L21 block lives inside selected deep evidence section:
 ```
 
 Before L20 acceptance/stability, Dossier should print blocked truth only, not calculated indicator values.
+
+Future Dossier rows should stay compact:
+
+```text
+tf | status | atr | atr_pctile | sma50 | sma200 | sma_state | donchian_high | donchian_low | donchian_candidate | bb_width | bb_position | vwap | vwap_basis | vwap_distance_pips | volume_source | failures
+```
 
 ## Workbench surface
 Workbench owns proof and diagnostics.
@@ -258,40 +299,6 @@ no-signal wording
 synthetic tests
 performance risk
 rollback path
-```
-
-If MT5 indicator handles are used later, the module must check:
-
-```text
-INVALID_HANDLE
-BarsCalculated
-CopyBuffer return count
-GetLastError where relevant
-IndicatorRelease lifecycle
-```
-
-## Forbidden interpretations
-Never allow these in runtime packets:
-
-```text
-ATR expansion = signal
-MA slope up = buy
-MA slope down = sell
-BB lower = buy
-BB upper = sell
-BB squeeze = guaranteed breakout
-VWAP touch = entry
-VWAP reclaim = confirmed buy
-RSI oversold = buy
-RSI overbought = sell
-MACD cross = automatic entry
-ADX high = buy
-ADX high = sell
-Donchian break = confirmed breakout
-Keltner upper = buy
-Stochastic oversold = buy
-High tick volume = institutional confirmation
-Low spread = edge
 ```
 
 ## Synthetic test plan
