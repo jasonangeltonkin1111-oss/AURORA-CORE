@@ -66,7 +66,7 @@ def _selection_readme_text() -> str:
         "Stable operator routes:",
         "Selection Desk/Global = stable current L16 Global Top 10 inspection basket source.",
         "Selection Desk/Groups = stable ranking_group operator route and current group indexes.",
-        "Selection Desk/Selection Index.txt = stable operator navigation surface when published by Runtime 7.",
+        "Selection Desk/Selection Index.txt = stable operator navigation surface mirrored by this worker support index.",
         "",
         "Compatibility/helper routes:",
         "01_Global/Top_10 = compatibility shortcut surface with copied dossier files plus current shortcut overlays.",
@@ -132,7 +132,7 @@ def _selection_index_text(root: Path) -> str:
 
     return "\n".join([
         "schema_name=selection_desk_worker_support_index",
-        "schema_version=4",
+        "schema_version=5",
         "owner_name=Runtime 3 external worker support index publisher",
         "source_owner=Runtime 3 calculation outputs plus Runtime 7 publication surfaces",
         "authority=operator_navigation_only_not_runtime_route_law",
@@ -171,8 +171,11 @@ def publish_selection_root_index(root: Path) -> SelectionRootIndexSummary:
     desk.mkdir(parents=True, exist_ok=True)
     readme_path = desk / "00_Read_Me.txt"
     index_path = desk / "00_Selection_Index.txt"
+    stable_index_path = desk / "Selection Index.txt"
     _write(readme_path, _selection_readme_text(), failed)
-    _write(index_path, _selection_index_text(root), failed)
+    index_text = _selection_index_text(root)
+    _write(index_path, index_text, failed)
+    _write(stable_index_path, index_text, failed)
     status = "accepted" if not failed else "write_degraded"
     reason = "selection_worker_support_index_published" if status == "accepted" else "selection_worker_support_index_write_failed"
-    return SelectionRootIndexSummary(status, reason, str(index_path), str(readme_path), len(failed))
+    return SelectionRootIndexSummary(status, reason, str(stable_index_path), str(readme_path), len(failed))
