@@ -12,6 +12,14 @@ READ_RETRY_BACKOFF_SECONDS = 0.05
 WRITE_REPLACE_RETRY_ATTEMPTS = 12
 WRITE_REPLACE_RETRY_BACKOFF_SECONDS = 0.05
 GATEWAY_FOLDER_NAME = "Gateway"
+VOLATILE_COMPARE_PREFIXES = (
+    "generated_utc=",
+    "generated_unix=",
+    "shortcut_generated_utc=",
+    "shortcut_generated_unix=",
+    "Generated UTC:",
+    "Generated:",
+)
 
 
 @dataclass(frozen=True)
@@ -59,8 +67,6 @@ def read_text(path: Path) -> str:
         try:
             return path.read_text(encoding="utf-8", errors="replace")
         except (PermissionError, OSError) as exc:
-            # MT5 may briefly hold files while publishing. Retry boundedly, then let
-            # the caller record the final failure instead of poisoning daemon state.
             last_error = exc
             if attempt + 1 >= READ_RETRY_ATTEMPTS:
                 break
@@ -74,7 +80,6 @@ def read_kv(path: Path) -> Dict[str, str]:
 
 
 def split_snapshot(text: str) -> Tuple[Dict[str, str], List[str]]:
-    # Snapshot format is header key=value lines, blank line, then pipe-delimited rows.
     normalized = text.replace("\r\n", "\n")
     header_text, sep, rows_text = normalized.partition("\n\n")
     if not sep:
@@ -114,8 +119,32 @@ def _cleanup_stale_tmp(path: Path) -> None:
         pass
 
 
+def _strip_volatile_lines_for_compare(text: str) -> str:
+    normalized = text.replace("\r\n", "\n")
+    kept: List[str] = []
+    for raw in normalized.splitlines():
+        stripped = raw.strip()
+        if any(stripped.startswith(prefix) for prefix in VOLATILE_COMPARE_PREFIXES):
+            continue
+        kept.append(raw.rstrip())
+    return "\n".join(kept).rstrip()
+
+
+def _same_effective_text(path: Path, text: str, ignore_volatile_lines: bool) -> bool:
+    if not path.exists() or not path.is_file():
+        return False
+    try:
+        existing = read_text(path)
+    except (PermissionError, OSError):
+        return False
+    if existing == text:
+        return True
+    if ignore_volatile_lines:
+        return _strip_volatile_lines_for_compare(existing) == _strip_volatile_lines_for_compare(text)
+    return False
+
+
 def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
-    # Best-effort only. Never let failed proof writing crash the Gateway daemon.
     try:
         sidecar = path.with_name(path.name + ".write_failed.txt")
         text = "\n".join([
@@ -168,29 +197,26 @@ def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
 
 
 def atomic_write_text(path: Path, text: str) -> bool:
-    """Durable best-effort atomic text write for Windows/MT5 shared files.
-
-    Windows can briefly lock the final status file while MT5, Explorer, antivirus,
-    or another reader opens it. A transient WinError 32 must not kill the packaged
-    Gateway daemon or create popup storms. Use a unique tmp per process/write,
-    retry boundedly, and degrade with a sidecar proof if replacement stays locked.
-
-    Returns True only when the final replace succeeded. Returns False after a
-    bounded replace failure and best-effort sidecar proof. Callers that publish
-    heartbeat/result/status files must propagate False as degraded write truth.
-    """
+    """Durable best-effort atomic text write for Windows/MT5 shared files."""
     return _atomic_write_text(path, text, durable=True)
 
 
 def atomic_write_text_fast(path: Path, text: str) -> bool:
-    """Fast atomic text write for high-frequency non-authoritative status files.
-
-    This keeps the same temp-file + os.replace boundary and bounded lock retry as
-    durable writes, but deliberately skips os.fsync. Use only for status/probe
-    surfaces that can be regenerated on the next loop. Do not use for result,
-    manifest, accepted epoch, install proof, or write-failure sidecars.
-    """
+    """Fast atomic text write for high-frequency non-authoritative status files."""
     return _atomic_write_text(path, text, durable=False)
+
+
+def atomic_write_text_if_changed(path: Path, text: str, *, durable: bool = True, ignore_volatile_lines: bool = True) -> bool:
+    """Atomic write that skips unchanged publication surfaces.
+
+    This is for heavy/generated operator surfaces, not heartbeat/liveness files.
+    By default it ignores volatile generated timestamp lines during comparison so
+    a file is not rewritten just because a proof timestamp changed while the
+    payload stayed identical.
+    """
+    if _same_effective_text(path, text, ignore_volatile_lines):
+        return True
+    return _atomic_write_text(path, text, durable=durable)
 
 
 def unix_time() -> int:
