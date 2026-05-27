@@ -8,18 +8,19 @@ import csv
 import io
 import math
 
-from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import atomic_write_text, atomic_write_text_if_changed, payload_checksum, read_text, unix_time, utc_stamp
 
 L11_LAYER_FOLDER = "Layer_11_Symbol_Ranking_Inside_Ranking_Group"
 L11_LAYER_ID = "11"
 L11_LAYER_NAME = "Layer 11 - Symbol Ranking Inside Ranking Group"
 L11_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
-L11_SCHEMA_VERSION = "1"
+L11_SCHEMA_VERSION = "2"
 L11_SCHEMA_NAME = "l11_symbol_ranking_inside_group"
 L11_AUTHORITY = "intra_group_inspection_priority_only"
 L11_COMPONENT_WEIGHTS = {"l6": 25.0, "l7": 20.0, "l8": 25.0, "l9": 30.0}
 L11_RANKABLE_TAXONOMY_STATES = {"ACCEPTED_STRICT", "ACCEPTED_PUBLIC_RESEARCH"}
 L11_MIN_AVAILABLE_COMPONENTS = 2
+L11_MAX_GROUP_SLUG_CHARS = 48
 
 L11_INPUT_FIELDS = [
     "symbol", "canonical_symbol", "asset_class", "market_group", "market_segment", "ranking_group", "ranking_group_slug",
@@ -132,17 +133,26 @@ def _sanitize(value: str) -> str:
     safe = str(value).strip() or "unknown"
     for ch in ['\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ']:
         safe = safe.replace(ch, '_')
-    return safe
+    while "__" in safe:
+        safe = safe.replace("__", "_")
+    return safe.strip("_.") or "unknown"
 
-def _write(path: Path, text: str, failed: List[Path]) -> None:
-    if not atomic_write_text(path, text):
+def _compact_group_slug(group: str) -> str:
+    base = _sanitize(group)
+    checksum = payload_checksum([group])
+    if len(base) <= L11_MAX_GROUP_SLUG_CHARS:
+        return base
+    return f"{base[:L11_MAX_GROUP_SLUG_CHARS].rstrip('_')}_{checksum}"
+
+def _write(path: Path, text: str, failed: List[Path], *, durable: bool = True, changed_only: bool = True) -> None:
+    ok = atomic_write_text_if_changed(path, text, durable=durable) if changed_only else atomic_write_text(path, text)
+    if not ok:
         failed.append(path)
 
 def _render_index_path(outbox_root: Path, layer_key: str) -> Path:
     return outbox_root / "RenderIndex" / f"{layer_key}_symbol_rank_index.csv"
 
 def _selection_groups_dir(outbox_root: Path) -> Path:
-    # outbox = <account>/Workbench/Gateway/Outbox
     account_root = outbox_root.parents[2]
     return account_root / "Selection Desk" / "Groups"
 
@@ -155,12 +165,7 @@ def _component(layer_key: str, symbol: str, render_rows: Dict[str, Dict[str, Dic
     available = ok and rank_state not in {"missing", "not_available", "not_rankable_quality"}
     stale = manifest_status not in {"complete", "accepted"}
     risk_review = "risk_review" in rank_state or "risk" in _safe_text(row, "bucket", "").lower()
-    return {
-        "available": "true" if available else "false", "rank_state": rank_state, "score_quality": _safe_text(row, "score_quality", "not_available"),
-        "raw_score": f"{score:.2f}" if ok else "not_available", "normalized_score": f"{score:.2f}" if ok else "not_available",
-        "manifest_checksum": manifest_checksum, "manifest_status": manifest_status, "stale": "true" if stale else "false", "risk_review": "true" if risk_review else "false",
-        "reason": "available" if available else "missing_or_unusable_score", "weight": str(int(L11_COMPONENT_WEIGHTS[layer_key])),
-    }
+    return {"available":"true" if available else "false", "rank_state":rank_state, "score_quality":_safe_text(row,"score_quality","not_available"), "raw_score":f"{score:.2f}" if ok else "not_available", "normalized_score":f"{score:.2f}" if ok else "not_available", "manifest_checksum":manifest_checksum, "manifest_status":manifest_status, "stale":"true" if stale else "false", "risk_review":"true" if risk_review else "false", "reason":"available" if available else "missing_or_unusable_score", "weight":str(int(L11_COMPONENT_WEIGHTS[layer_key]))}
 
 def _eligibility(tax: Dict[str, str], components: Dict[str, Dict[str, str]]) -> Tuple[str, str]:
     taxonomy_state = _safe_text(tax, "taxonomy_state", "UNKNOWN")
@@ -211,7 +216,7 @@ def _rank_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
         not_rankable_count = len(members) - len(rankable)
         rankable.sort(key=lambda r: (state_order.get(r.get("rank_state", "not_rankable_quality"), 9), -float(r.get("l11_group_score", "0") or 0), -int(r.get("component_available_count", "0") or 0), r.get("symbol", "")))
         rankable_count = len(rankable)
-        for idx, row in enumerate(rankable, start=1):
+        for idx, row in enumerate(rankable, 1):
             row["ranking_group_rank"] = str(idx)
             row["rankable_count"] = str(rankable_count)
             row["ranking_group_rankable_count"] = str(rankable_count)
@@ -252,30 +257,22 @@ def _group_txt(group: str, rows: List[Dict[str, str]], top5: List[Dict[str, str]
     asset_class = sorted({r.get("asset_class", "Unknown") for r in rows})
     market_group = sorted({r.get("market_group", "Unknown") for r in rows})
     market_segment = sorted({r.get("market_segment", "Unknown") for r in rows})
-    lines = [
-        "L11 - SYMBOL RANKING INSIDE RANKING GROUP", "----------------------------------------", f"Ranking Group: {group}",
-        f"Asset Class: {asset_class[0] if len(asset_class)==1 else 'mixed'}", f"Market Group: {market_group[0] if len(market_group)==1 else 'mixed'}", f"Market Segment: {market_segment[0] if len(market_segment)==1 else 'mixed'}",
-        f"Group Symbol Count: {len(rows)}", f"Rankable Symbols: {sum(1 for r in rows if not r.get('rank_state','').startswith('not_rankable'))}", f"Not Rankable: {sum(1 for r in rows if r.get('rank_state','').startswith('not_rankable'))}",
-        "Top 5 per ranking_group:",
-    ]
+    lines = ["L11 - SYMBOL RANKING INSIDE RANKING GROUP", "----------------------------------------", f"Ranking Group: {group}", f"Asset Class: {asset_class[0] if len(asset_class)==1 else 'mixed'}", f"Market Group: {market_group[0] if len(market_group)==1 else 'mixed'}", f"Market Segment: {market_segment[0] if len(market_segment)==1 else 'mixed'}", f"Group Symbol Count: {len(rows)}", f"Rankable Symbols: {sum(1 for r in rows if not r.get('rank_state','').startswith('not_rankable'))}", f"Not Rankable: {sum(1 for r in rows if r.get('rank_state','').startswith('not_rankable'))}", "Top 5 per ranking_group:"]
     for r in top5:
         lines.append(f"#{r.get('ranking_group_rank')} {r.get('symbol')} score={r.get('l11_group_score')} state={r.get('rank_state')} leader={r.get('leader_flag')} backup={r.get('backup_flag')}")
     lines += ["Policy: intra_group_inspection_priority_only", "Selection Runtime: FALSE", "Trade Permission: FALSE", "Entry Signal: FALSE", "Execution: FALSE", "Source: L10 + L6-L9", f"Generated UTC: {utc_stamp()}", f"Main Blocker: {main_blocker}", ""]
     return "\n".join(lines)
 
 def _group_index_text(summary: L11PublishSummary) -> str:
-    return "\n".join([
-        "L11 SELECTION DESK GROUPS INDEX", "----------------------------------------", f"L11 Status: {summary.status}", f"Ranking Groups: {summary.ranking_group_count}", f"Groups With Top 5: {summary.top5_group_count}",
-        f"Ranked Symbols: {summary.ranked_symbol_count}", f"Not Rankable Taxonomy: {summary.not_rankable_taxonomy_count}", f"Risk Review Symbols: {summary.risk_review_count}",
-        f"Visible Group Files Written: {summary.visible_group_files_written}", f"Visible Group Files Expected: {summary.visible_group_files_expected}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", f"main_blocker={summary.reason if summary.status != 'accepted' else 'none'}", f"generated_utc={utc_stamp()}", "",
-    ])
+    return "\n".join(["L11 SELECTION DESK GROUPS INDEX", "----------------------------------------", f"L11 Status: {summary.status}", f"Ranking Groups: {summary.ranking_group_count}", f"Groups With Top 5: {summary.top5_group_count}", f"Ranked Symbols: {summary.ranked_symbol_count}", f"Not Rankable Taxonomy: {summary.not_rankable_taxonomy_count}", f"Risk Review Symbols: {summary.risk_review_count}", f"Visible Group Files Written: {summary.visible_group_files_written}", f"Visible Group Files Expected: {summary.visible_group_files_expected}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", f"main_blocker={summary.reason if summary.status != 'accepted' else 'none'}", f"generated_utc={utc_stamp()}", ""])
 
 def _publish(outbox_root: Path, input_rows: List[Dict[str, str]], ranked_rows: List[Dict[str, str]]) -> L11PublishSummary:
     layer_dir = outbox_root / "Layers" / L11_LAYER_FOLDER
     group_dir = layer_dir / "RankingGroups"
     symbol_dir = layer_dir / "SymbolRanks"
     visible_dir = _selection_groups_dir(outbox_root)
-    for d in (layer_dir, group_dir, symbol_dir, visible_dir): d.mkdir(parents=True, exist_ok=True)
+    for d in (layer_dir, group_dir, symbol_dir, visible_dir):
+        d.mkdir(parents=True, exist_ok=True)
     failed: List[Path] = []
     input_csv = _csv_text(input_rows, L11_INPUT_FIELDS)
     ranked_csv = _csv_text(ranked_rows, L11_RANKED_FIELDS)
@@ -292,7 +289,7 @@ def _publish(outbox_root: Path, input_rows: List[Dict[str, str]], ranked_rows: L
     group_index_rows: List[Dict[str, str]] = []
     visible_written = 0
     for group in sorted(set(row.get("ranking_group", "Unknown") for row in ranked_rows)):
-        slug = _sanitize(group)
+        slug = _compact_group_slug(group)
         group_rows = [row for row in ranked_rows if row.get("ranking_group") == group]
         group_top5 = [row for row in group_rows if row.get("in_top5_per_ranking_group") == "true"]
         group_csv = _csv_text(group_rows, L11_RANKED_FIELDS)
@@ -302,7 +299,8 @@ def _publish(outbox_root: Path, input_rows: List[Dict[str, str]], ranked_rows: L
         before = len(failed)
         _write(visible_dir / f"{slug}.txt", group_text, failed)
         _write(visible_dir / f"{slug}.csv", group_csv, failed)
-        if len(failed) == before: visible_written += 2
+        if len(failed) == before:
+            visible_written += 2
         leader = group_top5[0] if group_top5 else {}
         group_index_rows.append({"ranking_group": group, "asset_class": leader.get("asset_class", "mixed_or_not_available"), "market_group": leader.get("market_group", "mixed_or_not_available"), "market_segment": leader.get("market_segment", "mixed_or_not_available"), "group_symbol_count": str(len(group_rows)), "rankable_count": str(sum(1 for r in group_rows if not r.get('rank_state','').startswith('not_rankable'))), "not_rankable_count": str(sum(1 for r in group_rows if r.get('rank_state','').startswith('not_rankable'))), "top5_available": "true" if group_top5 else "false", "leader_symbol": leader.get("symbol", "not_available"), "leader_score": leader.get("l11_group_score", "not_available"), "risk_review_count": str(sum(1 for r in group_rows if r.get("risk_review_flag") == "true")), "file_txt": str(visible_dir / f"{slug}.txt"), "file_csv": str(visible_dir / f"{slug}.csv"), "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false"})
     group_index_csv = _csv_text(group_index_rows, L11_GROUP_INDEX_FIELDS)
@@ -334,25 +332,44 @@ def publish_l11_symbol_ranking_inside_group(outbox_root: Path) -> L11PublishSumm
             return L11PublishSummary("degraded", "render_index_not_complete_status=" + render_manifest.get("status", "not_available"))
         render_rows: Dict[str, Dict[str, Dict[str, str]]] = {key: {_safe_text(row, "symbol", ""): row for row in _read_csv(_render_index_path(outbox_root, key)) if _safe_text(row, "symbol", "")} for key in ("l6", "l7", "l8", "l9")}
         taxonomy = {_safe_text(row, "symbol", ""): row for row in taxonomy_rows if _safe_text(row, "symbol", "")}
-        group_slugs = {_safe_text(row, "ranking_group", "Unknown"): _safe_text(row, "ranking_group_slug", "Unknown") for row in group_rows}
-        symbols = sorted(set(taxonomy.keys()).intersection(set().union(*(set(layer.keys()) for layer in render_rows.values()))))
+        group_slugs = {_safe_text(row, "ranking_group", "Unknown"): _safe_text(row, "ranking_group_slug", _compact_group_slug(_safe_text(row, "ranking_group", "Unknown"))) for row in group_rows}
         input_rows: List[Dict[str, str]] = []
-        base_rows: List[Dict[str, str]] = []
-        for symbol in symbols:
-            tax = taxonomy[symbol]
+        for symbol, tax in sorted(taxonomy.items()):
             components = {key: _component(key, symbol, render_rows, render_manifest) for key in ("l6", "l7", "l8", "l9")}
-            available_count = sum(1 for item in components.values() if item["available"] == "true")
-            rank_state, reason = _eligibility(tax, components)
-            score, average, missing_penalty, stale_penalty, risk_penalty, component_summary, missing_count, stale_count = _score(components, rank_state)
+            rank_state, rank_reason = _eligibility(tax, components)
+            score, avg, missing_penalty, stale_penalty, risk_penalty, component_summary, missing_count, stale_count = _score(components, rank_state)
+            component_available_count = sum(1 for item in components.values() if item.get("available") == "true")
             ranking_group = _safe_text(tax, "ranking_group", "Unknown")
-            l5_gate_state = _safe_text(tax, "l5_gate_state", "not_available")
-            input_row = {"symbol": symbol, "canonical_symbol": _safe_text(tax, "canonical_symbol", symbol), "asset_class": _safe_text(tax, "asset_class", "Unknown"), "market_group": _safe_text(tax, "market_group", "Unknown"), "market_segment": _safe_text(tax, "market_segment", "Unknown"), "ranking_group": ranking_group, "ranking_group_slug": group_slugs.get(ranking_group, _sanitize(ranking_group)), "taxonomy_state": _safe_text(tax, "taxonomy_state", "UNKNOWN"), "review_state": _safe_text(tax, "review_state", "not_available"), "rank_allowed": _safe_text(tax, "rank_allowed", "false"), "selection_allowed": _safe_text(tax, "selection_allowed", "false"), "l5_gate_state": l5_gate_state, "l5_eligible_flag": _safe_text(tax, "l5_eligible_flag", "not_available"), "component_available_count": str(available_count), "component_missing_count": str(4 - available_count), "input_quality_state": "complete" if available_count == 4 else ("partial" if available_count >= 2 else "degraded"), "rank_eligibility_state": rank_state, "rank_eligibility_reason": reason, "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false"}
-            for key in ("l6", "l7", "l8", "l9"):
-                item = components[key]
-                input_row[f"{key}_available"] = item["available"]; input_row[f"{key}_rank_state"] = item["rank_state"]; input_row[f"{key}_score_quality"] = item["score_quality"]; input_row[f"{key}_raw_score"] = item["raw_score"]; input_row[f"{key}_normalized_score"] = item["normalized_score"]; input_row[f"{key}_manifest_checksum"] = item["manifest_checksum"]; input_row[f"{key}_manifest_status"] = item["manifest_status"]; input_row[f"{key}_reason"] = item["reason"]
-            input_rows.append(input_row)
-            source_checksum = payload_checksum([symbol, ranking_group, component_summary])
-            base_rows.append({"ranking_group": ranking_group, "ranking_group_slug": input_row["ranking_group_slug"], "symbol": symbol, "canonical_symbol": input_row["canonical_symbol"], "asset_class": input_row["asset_class"], "market_group": input_row["market_group"], "market_segment": input_row["market_segment"], "l5_gate_state": l5_gate_state, "l11_group_score": f"{score:.2f}", "rank_state": rank_state, "risk_review_flag": "true" if rank_state == "risk_review" else "false", "not_rankable_reason": reason if rank_state.startswith("not_rankable") else "not_applicable", "component_available_count": str(available_count), "component_missing_count": str(4 - available_count), "missing_layer_count": str(missing_count), "stale_layer_count": str(stale_count), "weighted_available_average": f"{average:.2f}", "missing_layer_penalty": f"{missing_penalty:.2f}", "stale_layer_penalty": f"{stale_penalty:.2f}", "risk_review_penalty": f"{risk_penalty:.2f}", "l6_score": components["l6"]["normalized_score"], "l6_weight": components["l6"]["weight"], "l6_state": components["l6"]["rank_state"], "l7_score": components["l7"]["normalized_score"], "l7_weight": components["l7"]["weight"], "l7_state": components["l7"]["rank_state"], "l8_score": components["l8"]["normalized_score"], "l8_weight": components["l8"]["weight"], "l8_state": components["l8"]["rank_state"], "l9_score": components["l9"]["normalized_score"], "l9_weight": components["l9"]["weight"], "l9_state": components["l9"]["rank_state"], "component_summary": component_summary, "reason": reason, "meaning": "intra_group_inspection_priority_only", "directional_validity": "false", "expectancy_validated": "false", "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false", "source_checksum": source_checksum})
-        return _publish(outbox_root, input_rows, _rank_rows(base_rows))
+            row: Dict[str, str] = {
+                "symbol": symbol, "canonical_symbol": _safe_text(tax, "canonical_symbol", symbol), "asset_class": _safe_text(tax, "asset_class", "Unknown"),
+                "market_group": _safe_text(tax, "market_group", "Unknown"), "market_segment": _safe_text(tax, "market_segment", "Unknown"), "ranking_group": ranking_group,
+                "ranking_group_slug": group_slugs.get(ranking_group, _compact_group_slug(ranking_group)), "taxonomy_state": _safe_text(tax, "taxonomy_state", "UNKNOWN"),
+                "review_state": _safe_text(tax, "review_state", "UNKNOWN"), "rank_allowed": str(_safe_bool(tax.get("rank_allowed"))).lower(),
+                "selection_allowed": str(_safe_bool(tax.get("selection_allowed"))).lower(), "l5_gate_state": _safe_text(tax, "l5_gate_state", "not_available"),
+                "l5_eligible_flag": _safe_text(tax, "l5_eligible_flag", "not_available"), "component_available_count": str(component_available_count),
+                "component_missing_count": str(missing_count), "input_quality_state": "review" if stale_count or missing_count else "accepted",
+                "rank_eligibility_state": rank_state, "rank_eligibility_reason": rank_reason,
+                "l11_group_score": f"{score:.2f}", "weighted_available_average": f"{avg:.2f}", "missing_layer_penalty": f"{missing_penalty:.2f}",
+                "stale_layer_penalty": f"{stale_penalty:.2f}", "risk_review_penalty": f"{risk_penalty:.2f}", "component_summary": component_summary,
+                "rank_state": rank_state, "risk_review_flag": "true" if rank_state == "risk_review" else "false", "not_rankable_reason": "none" if not rank_state.startswith("not_rankable") else rank_reason,
+                "missing_layer_count": str(missing_count), "stale_layer_count": str(stale_count), "reason": rank_reason, "meaning": "intra_group_inspection_priority_only",
+                "directional_validity": "false", "expectancy_validated": "false", "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false",
+            }
+            for key, comp in components.items():
+                row[f"{key}_available"] = comp["available"]
+                row[f"{key}_rank_state"] = comp["rank_state"]
+                row[f"{key}_score_quality"] = comp["score_quality"]
+                row[f"{key}_raw_score"] = comp["raw_score"]
+                row[f"{key}_normalized_score"] = comp["normalized_score"]
+                row[f"{key}_manifest_checksum"] = comp["manifest_checksum"]
+                row[f"{key}_manifest_status"] = comp["manifest_status"]
+                row[f"{key}_reason"] = comp["reason"]
+                row[f"{key}_score"] = comp["normalized_score"]
+                row[f"{key}_weight"] = comp["weight"]
+                row[f"{key}_state"] = comp["rank_state"]
+            row["source_checksum"] = payload_checksum([symbol, ranking_group, row["l11_group_score"], component_summary])
+            input_rows.append(row)
+        ranked_rows = _rank_rows(input_rows)
+        return _publish(outbox_root, input_rows, ranked_rows)
     except Exception as exc:
-        return L11PublishSummary("exception", f"{type(exc).__name__}: {exc}")
+        return L11PublishSummary("degraded", f"l11_exception:{type(exc).__name__}:{exc}")
