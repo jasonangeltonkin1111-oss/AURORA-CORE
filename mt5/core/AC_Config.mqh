@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "fileio_signature_cache_and_flat_l11_tree_recovery";
-static const string AC_BUILD_VERSION      = "1.077";
-static const string AC_UPGRADE_ID         = "FILEIO_SIGNATURE_CACHE_AND_FLAT_L11_TREE_RECOVERY";
-static const string AC_UPGRADE_SUMMARY    = "Adds FileIO in-session content-signature caching to avoid repeated unchanged Dossier disk reads, keeps full rich Board/Dossier publication, and pairs with the external-worker flat L11 taxonomy-tree route fix for Windows path length recovery.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 7 FileIO publication efficiency and runtime identity only. External worker L11 tree route cleanup is separate Python source. No trade permission, execution, broker polling outside Shared OHLC, FileIO shadow owner, route shadow owner, setup owner, or new worker owner is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.077. Runtime proof must show FileIO unchanged writes can report memory_signature_match_disk_read_skipped after repeated passes, Dossier Pass Duration falls after cache warmup, Board remains rich, L11 tree path overflow is gone after worker rebuild, and trade_permission remains false. No packet import, matching, live capture, permission, or execution is expected.";
-static const string AC_LOGGING_POLICY     = "event_boundary_fileio_signature_cache_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "runtime0_spine_identity_gateway_timer_repair";
+static const string AC_BUILD_VERSION      = "1.082";
+static const string AC_UPGRADE_ID         = "RUNTIME0_SPINE_IDENTITY_GATEWAY_TIMER_REPAIR";
+static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 0 runtime identity, heartbeat ownership, timer-pressure telemetry, micro-log cache isolation, account-status dual publication, and Runtime 3 gateway publication wiring without adding shadow owners or trade permission.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 0 governance/timer spine plus existing Runtime 3 gateway support call wiring. No trade permission, execution, strategy, new FileIO owner, new route owner, scheduler V2, worker V2, or new blocker web is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.082 and #property version=1.082. Runtime proof must show heartbeat_id increments, Layer 0.1/0.2/0.4 statuses are real, timer pressure fields print, Runtime Status/Market Board/Account Status/Manifest/Diagnostics/MicroLog update, worker_required and snapshot/result status surfaces are attempted through existing Runtime 3 owner, and trade_permission remains false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime0_spine_truth_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.077_fileio_signature_cache";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.082_runtime0_spine_repair";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
@@ -64,6 +64,7 @@ static const string AC_TRADE_HISTORY_BEFORE_AURORA_FOLDER = "Before Aurora";
 static const string AC_TRADE_HISTORY_AURORA_CAPTURED_FOLDER = "Aurora Captured";
 static const string AC_MARKET_BOARD_FILE  = "Market Board.txt";
 static const int    AC_TIMER_MILLISECONDS = 250;
+static const int    AC_TIMER_STUCK_WARN_MS = 5000;
 static const int    AC_WORKBENCH_INTERVAL_HEARTBEATS = 120;
 static const int    AC_L2_REFRESH_SECONDS = 300;
 static const int    AC_L4_DOSSIER_REFRESH_SECONDS = 30;
