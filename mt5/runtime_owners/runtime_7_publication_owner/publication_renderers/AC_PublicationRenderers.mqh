@@ -534,7 +534,7 @@ string AC_UxBoardBlockerSplitSection(const AC_Layer0StatusPacket &status)
    string text = "";
    text += "\r\nBLOCKER SPLIT\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Publication Blocker: " + AC_UxBoardPublicationBlocker(status) + "\r\n";
+   text += "Downstream Inspection Blocker: " + AC_UxBoardPublicationBlocker(status) + "\r\n";
    text += "Inspection Warning:  " + AC_UxBoardInspectionWarning(status) + "\r\n";
    text += "Trading Blocker:     L23 strategy validation not active\r\n";
    return text;
