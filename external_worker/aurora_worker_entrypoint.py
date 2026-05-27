@@ -17,9 +17,14 @@ from aurora_worker_l16_dispatch import run_l16_after_l15
 from aurora_worker_l17_dispatch import run_l17_after_l16
 from aurora_worker_l18_dispatch import run_l18_after_l17
 
-SNAPSHOT_STABLE_REQUIRED_SECONDS = 0
-CALCULATION_CYCLE_SECONDS = 0
-ACCEPTED_EPOCH_TTL_SECONDS = 120
+# Runtime flow law:
+# - Debounce Runtime 1 snapshots before a calculation cycle starts.
+# - Retry unfinished/non-accepted cycles on a bounded cadence, not every poll.
+# - Once the full layer chain reaches strict accepted truth, keep that accepted
+#   surface static for five minutes before another recalculation can start.
+SNAPSHOT_STABLE_REQUIRED_SECONDS = 10
+CALCULATION_CYCLE_SECONDS = 60
+ACCEPTED_EPOCH_TTL_SECONDS = 300
 ENABLE_L13_RUNTIME = True
 ENABLE_L14_RUNTIME = True
 ENABLE_L15_RUNTIME = True
@@ -56,15 +61,42 @@ def _result_latest_path(root: Path) -> Path:
     return WorkerPaths.from_root(root).outbox / "result_latest.txt"
 
 
+def _accepted_epoch_static_state(root: Path, result: core.ValidationResult, now: int) -> Tuple[bool, str, int]:
+    path = _surface_epoch_manifest_path(root)
+    if not path.exists():
+        return False, "accepted_epoch_missing", 0
+    try:
+        data = read_kv(path)
+    except OSError as exc:
+        return False, f"accepted_epoch_unreadable:{type(exc).__name__}", 0
+    status_ok = data.get("status") == "accepted" and data.get("epoch_status") == "accepted"
+    same_snapshot = data.get("source_snapshot_id") == result.snapshot_id and data.get("source_payload_checksum") == result.payload_checksum
+    try:
+        valid_until = int(float(data.get("valid_until_unix", "0")))
+    except ValueError:
+        valid_until = 0
+    remaining = max(0, valid_until - now)
+    if status_ok and same_snapshot and remaining > 0:
+        return True, "strict_accepted_epoch_static_hold_active", remaining
+    if not status_ok:
+        return False, "accepted_epoch_not_strict_accepted", 0
+    if not same_snapshot:
+        return False, "accepted_epoch_snapshot_changed", 0
+    return False, "accepted_epoch_static_hold_expired", 0
+
+
 def _build_cycle_status(root: Path, loop: int, state: SnapshotCycleState, result: core.ValidationResult, action: str, reason: str) -> str:
     now = unix_time()
     stable_age = max(0, now - state.first_seen_unix) if state.first_seen_unix > 0 else 0
     cycle_age = max(0, now - state.last_calculation_unix) if state.last_calculation_unix > 0 else -1
+    static_ok, static_reason, static_remaining = _accepted_epoch_static_state(root, result, now)
     return "\n".join([
-        "schema_name=aurora_gateway_cycle_status", "schema_version=3", f"worker_version={core.WORKER_VERSION}",
+        "schema_name=aurora_gateway_cycle_status", "schema_version=4", f"worker_version={core.WORKER_VERSION}",
         "mode=shared-daemon-cycle-controller", f"root={root}", f"loop_count={loop}", "poll_seconds=1",
-        f"snapshot_stable_required_seconds={SNAPSHOT_STABLE_REQUIRED_SECONDS}", f"calculation_cycle_seconds={CALCULATION_CYCLE_SECONDS}",
-        f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}", f"snapshot_identity={state.identity}",
+        f"snapshot_stable_required_seconds={SNAPSHOT_STABLE_REQUIRED_SECONDS}", f"calculation_retry_seconds={CALCULATION_CYCLE_SECONDS}",
+        f"accepted_epoch_static_seconds={ACCEPTED_EPOCH_TTL_SECONDS}", f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}",
+        f"accepted_epoch_static_hold_active={'true' if static_ok else 'false'}", f"accepted_epoch_static_hold_reason={static_reason}",
+        f"accepted_epoch_static_remaining_seconds={static_remaining}", f"snapshot_identity={state.identity}",
         f"snapshot_first_seen_unix={state.first_seen_unix}", f"snapshot_stable_age_seconds={stable_age}",
         f"last_calculation_unix={state.last_calculation_unix}", f"last_calculation_age_seconds={cycle_age}",
         f"last_exit_code={state.last_exit_code}", f"last_action={action}", f"last_reason={reason}",
@@ -97,32 +129,37 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
     l17_status = latest.get("l17_deep_evidence_selection_status", "missing") if enable_l17_runtime else "disabled"
     l18_status = latest.get("l18_selected_raw_ohlc_status", "missing") if enable_l18_runtime else "disabled"
     l19_status = latest.get("l19_candle_geometry_status", "missing") if enable_l19_runtime else "disabled"
+    l14_current = latest.get("l14_current_chain_valid", "true") if enable_l14_runtime else "disabled"
+    l15_current = latest.get("l15_current_chain_valid", "true") if enable_l15_runtime else "disabled"
+    l16_current = latest.get("l16_current_chain_valid", "true") if enable_l16_runtime else "disabled"
     all_complete = (
-        result.ok and l6_status == "complete" and l7_status == "complete" and l8_status in {"complete", "input_degraded"} and l9_status == "complete"
-        and l11_status in {"accepted", "write_degraded"}
-        and l12_status in {"accepted", "write_degraded"}
-        and ((l13_status in {"accepted", "write_degraded"}) if enable_l13_runtime else True)
-        and ((l14_status in {"accepted", "write_degraded"}) if enable_l14_runtime else True)
-        and ((l15_status in {"accepted", "degraded", "write_degraded"}) if enable_l15_runtime else True)
-        and ((l16_status in {"accepted", "degraded", "write_degraded"}) if enable_l16_runtime else True)
-        and ((l17_status in {"accepted", "degraded", "write_degraded"}) if enable_l17_runtime else True)
-        and ((l18_status in {"accepted", "degraded", "partial", "pending", "write_degraded"}) if enable_l18_runtime else True)
-        and ((l19_status in {"accepted", "degraded", "partial", "pending", "write_degraded"}) if enable_l19_runtime else True)
+        result.ok and l6_status == "complete" and l7_status == "complete" and l8_status == "complete" and l9_status == "complete"
+        and l11_status == "accepted"
+        and l12_status == "accepted"
+        and ((l13_status == "accepted") if enable_l13_runtime else True)
+        and ((l14_status == "accepted" and l14_current == "true") if enable_l14_runtime else True)
+        and ((l15_status == "accepted" and l15_current == "true") if enable_l15_runtime else True)
+        and ((l16_status == "accepted" and l16_current == "true") if enable_l16_runtime else True)
+        and ((l17_status == "accepted") if enable_l17_runtime else True)
+        and ((l18_status == "accepted") if enable_l18_runtime else True)
+        and ((l19_status == "accepted") if enable_l19_runtime else True)
     )
     if not all_complete:
         return False
     accepted_unix = unix_time()
     epoch_id = "|".join([result.snapshot_id, result.payload_checksum, l6_status, l7_status, l8_status, l9_status, l11_status, l12_status, l13_status, l14_status, l15_status, l16_status, l17_status, l18_status, l19_status])
     text = "\n".join([
-        "schema_name=aurora_gateway_surface_accepted_epoch", "schema_version=11", f"worker_version={core.WORKER_VERSION}",
-        "status=accepted", "epoch_status=accepted", "display_epoch_status=accepted_current", f"epoch_id={epoch_id}",
+        "schema_name=aurora_gateway_surface_accepted_epoch", "schema_version=12", f"worker_version={core.WORKER_VERSION}",
+        "status=accepted", "epoch_status=accepted", "display_epoch_status=strict_accepted_static", f"epoch_id={epoch_id}",
+        "static_policy=hold_strict_accepted_surface_for_5_minutes_before_recalculation", "false_accept_policy=degraded_pending_partial_write_degraded_do_not_create_static_epoch",
         f"source_snapshot_id={result.snapshot_id}", f"source_payload_checksum={result.payload_checksum}", f"source_job_id={result.job_id}",
         f"row_count={result.row_count}", f"accepted_unix={accepted_unix}", f"accepted_utc={utc_stamp()}",
         f"valid_until_unix={accepted_unix + ACCEPTED_EPOCH_TTL_SECONDS}", f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}",
         f"l6_status={l6_status}", f"l7_status={l7_status}", f"l8_status={l8_status}", f"l9_status={l9_status}",
         f"l11_symbol_ranking_status={l11_status}", f"l12_group_heat_quality_status={l12_status}",
-        f"l13_dynamic_group_selection_status={l13_status}", f"l14_candidate_pool_status={l14_status}",
-        f"l15_correlation_diversity_status={l15_status}", f"l16_global_top10_status={l16_status}",
+        f"l13_dynamic_group_selection_status={l13_status}", f"l14_candidate_pool_status={l14_status}", f"l14_current_chain_valid={l14_current}",
+        f"l15_correlation_diversity_status={l15_status}", f"l15_current_chain_valid={l15_current}",
+        f"l16_global_top10_status={l16_status}", f"l16_current_chain_valid={l16_current}",
         f"l17_deep_evidence_selection_status={l17_status}", f"l18_selected_raw_ohlc_status={l18_status}",
         f"l19_candle_geometry_status={l19_status}",
         f"l13_runtime_enabled={'true' if enable_l13_runtime else 'false'}", f"l14_runtime_enabled={'true' if enable_l14_runtime else 'false'}",
@@ -186,19 +223,25 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
                 stable_age = max(0, now - state.first_seen_unix) if state.first_seen_unix > 0 else 0
                 cycle_due = state.last_calculation_unix <= 0 or (now - state.last_calculation_unix) >= CALCULATION_CYCLE_SECONDS
                 snapshot_stable = polled_result.ok and stable_age >= SNAPSHOT_STABLE_REQUIRED_SECONDS
-                if snapshot_stable and cycle_due:
+                static_ok, static_reason, static_remaining = _accepted_epoch_static_state(root, polled_result, now)
+                if snapshot_stable and static_ok:
+                    code = state.last_exit_code if state.last_result is not None else 0
+                    res = state.last_result if state.last_result is not None else polled_result
+                    state.last_action = "calculation_cycle_skipped_static_accepted_epoch"
+                    state.last_reason = f"{static_reason};remaining_seconds={static_remaining}"
+                elif snapshot_stable and cycle_due:
                     code, res = _run_core_once_with_layers(root, "shared_validator_daemon_cycle_controlled")
                     state.last_calculation_unix = now
                     state.last_exit_code = code
                     state.last_result = res
+                    accepted_written = _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME, ENABLE_L15_RUNTIME, ENABLE_L16_RUNTIME, ENABLE_L17_RUNTIME, ENABLE_L18_RUNTIME, ENABLE_L19_RUNTIME)
                     state.last_action = "calculation_cycle_ran"
-                    state.last_reason = "snapshot_stable_and_cycle_due"
-                    _write_surface_epoch_if_accepted(root, res, ENABLE_L13_RUNTIME, ENABLE_L14_RUNTIME, ENABLE_L15_RUNTIME, ENABLE_L16_RUNTIME, ENABLE_L17_RUNTIME, ENABLE_L18_RUNTIME, ENABLE_L19_RUNTIME)
+                    state.last_reason = "strict_accepted_epoch_created" if accepted_written else "cycle_completed_waiting_for_full_chain_accepted"
                 elif snapshot_stable:
                     code = state.last_exit_code if state.last_result is not None else 0
                     res = state.last_result if state.last_result is not None else polled_result
-                    state.last_action = "calculation_cycle_skipped_waiting_for_timer"
-                    state.last_reason = "snapshot_stable_but_cycle_not_due"
+                    state.last_action = "calculation_cycle_skipped_waiting_for_retry_timer"
+                    state.last_reason = "snapshot_stable_but_retry_cycle_not_due"
                 else:
                     code = state.last_exit_code if state.last_result is not None else 2
                     res = state.last_result if state.last_result is not None else polled_result
