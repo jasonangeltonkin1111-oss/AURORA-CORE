@@ -228,4 +228,28 @@ void AC_DossierPhysicalRefreshProof()
    AC_DOSSIER_PHYSICAL_LAST_REFRESH_MS = now_ms;
 }
 
+string AC_DossierPhysicalCoverageBoardSection()
+{
+   AC_DossierPhysicalRefreshProof();
+
+   string text = "";
+   text += "Physical Route Truth:     " + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "MATCH" : "MISMATCH_OR_PENDING") + "\r\n";
+   text += "Physical Files:           Open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES)
+      + " | Closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES)
+      + " | Unknown " + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + "\r\n";
+   text += "Expected Files:           Open " + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES)
+      + " | Closed " + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES)
+      + " | Unknown " + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES) + "\r\n";
+   text += "Physical Missing Symbols: " + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS) + "\r\n";
+   text += "Wrong Folder Symbols:     " + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS) + "\r\n";
+   text += "Duplicate Symbols:        " + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS) + "\r\n";
+   text += "Orphan Files:             " + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES) + "\r\n";
+   text += "Cleanup Pending:          " + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "TRUE" : "FALSE") + "\r\n";
+   if(AC_DOSSIER_PHYSICAL_MISSING_SAMPLE != "") text += "Missing Sample:           " + AC_DOSSIER_PHYSICAL_MISSING_SAMPLE + "\r\n";
+   if(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SAMPLE != "") text += "Wrong Folder Sample:      " + AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SAMPLE + "\r\n";
+   if(AC_DOSSIER_PHYSICAL_DUPLICATE_SAMPLE != "") text += "Duplicate Sample:         " + AC_DOSSIER_PHYSICAL_DUPLICATE_SAMPLE + "\r\n";
+   if(AC_DOSSIER_PHYSICAL_ORPHAN_SAMPLE != "") text += "Orphan Sample:            " + AC_DOSSIER_PHYSICAL_ORPHAN_SAMPLE + "\r\n";
+   return text;
+}
+
 #endif
