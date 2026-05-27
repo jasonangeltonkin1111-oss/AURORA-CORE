@@ -3,7 +3,10 @@
 
 // Dependencies are included by mt5/AuroraCore.mq5 using root includes.
 
+string AC_Layer2StatusRow();
 string AC_Layer3StatusRow();
+string AC_Layer4StatusRow();
+string AC_Layer5StatusRow();
 
 string AC_BoolText(const bool value)
 {
@@ -97,7 +100,10 @@ string AC_LayerStatusRows(const AC_Runtime0Snapshot &snapshot)
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.1|layer_name=" + AC_LAYER_0_1_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_1_status + "\r\n";
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.2|layer_name=" + AC_LAYER_0_2_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_2_status + "\r\n";
    text += "schema_name=layer_status|schema_version=v0.1|layer_id=0.4|layer_name=" + AC_LAYER_0_4_NAME + "|source_owner=" + AC_RUNTIME0_OWNER + "|layer_status=" + snapshot.layer_0_4_status + "\r\n";
+   text += AC_Layer2StatusRow() + "\r\n";
    text += AC_Layer3StatusRow() + "\r\n";
+   text += AC_Layer4StatusRow() + "\r\n";
+   text += AC_Layer5StatusRow() + "\r\n";
    return text;
 }
 
@@ -137,7 +143,7 @@ string AC_UpgradeAddendumText(const AC_Runtime0Snapshot &snapshot)
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
    text += "upgrade_id=" + AC_UPGRADE_ID + "\r\n";
    text += "generated_at=" + snapshot.generated_at + "\r\n";
-   text += "addendum_reason=layer3_broker_specs_value_scan_wiring_and_manifest_status_rows\r\n";
+   text += "addendum_reason=layer4_live_quote_spread_scan_wiring_and_manifest_status_sync\r\n";
    text += "logging_contract=" + AC_LOGGING_POLICY + "\r\n";
    text += "board_contract=trading_side_summary_atomic_update_only_when_content_changes\r\n";
    text += "workbench_contract=developer_status_layer_packets_slower_refresh_without_trader_bloat\r\n";
