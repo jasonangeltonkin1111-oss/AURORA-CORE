@@ -34,7 +34,17 @@ class WorkerPaths:
 
     @classmethod
     def from_root(cls, root: Path) -> "WorkerPaths":
-        gateway = root / "Workbench" / GATEWAY_FOLDER_NAME
+        """Return the account-local Gateway folders written by MT5.
+
+        MT5 route authority writes the calculation Gateway under:
+            <account root>/Gateway/{Control,Inbox,Outbox,Status,Logs,Quarantine}
+
+        Older worker code looked under <account root>/Workbench/Gateway, which made
+        the daemon blind to the real MT5 snapshot/input files and left Layer 6 stuck
+        pending/degraded. Keep all worker outputs account-local and do not create a
+        second Workbench/Gateway authority.
+        """
+        gateway = root / GATEWAY_FOLDER_NAME
         return cls(
             root=root,
             control=gateway / "Control",
@@ -62,8 +72,6 @@ def parse_kv_text(text: str) -> Dict[str, str]:
 
 
 def _retry_sleep(attempt: int, base_seconds: float) -> None:
-    # Bounded linear backoff. This keeps MT5/Windows lock contention survivable
-    # without hiding a persistent broken writer/reader.
     time.sleep(base_seconds * (attempt + 1))
 
 
@@ -135,8 +143,6 @@ def _clear_write_failure_sidecar(path: Path) -> None:
         if sidecar.exists():
             sidecar.unlink()
     except OSError:
-        # A locked stale failure sidecar must not make a successful authority
-        # write look failed. The next writer can try again.
         pass
 
 
@@ -223,23 +229,14 @@ def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
 
 
 def atomic_write_text(path: Path, text: str) -> bool:
-    """Durable best-effort atomic text write for Windows/MT5 shared files."""
     return _atomic_write_text(path, text, durable=True)
 
 
 def atomic_write_text_fast(path: Path, text: str) -> bool:
-    """Fast atomic text write for high-frequency non-authoritative status files."""
     return _atomic_write_text(path, text, durable=False)
 
 
 def atomic_write_text_if_changed(path: Path, text: str, *, durable: bool = True, ignore_volatile_lines: bool = True) -> bool:
-    """Atomic write that skips unchanged publication surfaces.
-
-    This is for heavy/generated operator surfaces, not heartbeat/liveness files.
-    By default it ignores volatile generated timestamp lines during comparison so
-    a file is not rewritten just because a proof timestamp changed while the
-    payload stayed identical.
-    """
     if _same_effective_text(path, text, ignore_volatile_lines):
         _clear_write_failure_sidecar(path)
         return True
