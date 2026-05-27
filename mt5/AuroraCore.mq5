@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.085"
+#property version   "1.086"
 #property description "AURORA CORE - runtime spine, foundation truth, gateway support"
 
 #include "core/AC_Config.mqh"
@@ -361,6 +361,10 @@ void OnTimer()
    AC_LAST_TIMER_DURATION_MS = AC_SNAPSHOT.timer_duration_ms;
 
    start = GetTickCount();
+   AC_WriteResult runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
+   AC_AddMicroLog("AC_PublishRuntimeStatus", start, runtime_status.status);
+
+   start = GetTickCount();
    AC_WriteResult manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
    AC_SNAPSHOT.manifest_status = manifest.status;
    AC_AddMicroLog("AC_PublishManifest", start, manifest.status);
@@ -383,8 +387,8 @@ void OnTimer()
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "degraded_publication_problem" : "accepted";
 
    start = GetTickCount();
-   AC_WriteResult runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
-   AC_AddMicroLog("AC_PublishRuntimeStatusAfterManifestDiagnostics", start, runtime_status.status);
+   runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
+   AC_AddMicroLog("AC_PublishRuntimeStatusFinal", start, runtime_status.status);
 
    start = GetTickCount();
    AC_WriteResult upgrade_log = AC_PublishUpgradeLog(runtime_status, telemetry, manifest, diagnostics);
@@ -402,35 +406,6 @@ void OnTimer()
    AC_WriteResult micro_log = AC_WriteTextFileIfChanged(AC_MicroLogPath(), AC_MICRO_LOG, AC_LAST_MICRO_LOG_TEXT);
    AC_SNAPSHOT.micro_log_status = micro_log.status;
    AC_AddMicroLog("AC_PublishMicroLog", start, micro_log.status);
-
-   // Final sync pass: publish Manifest/Telemetry/Diagnostics again after upgrade and micro-log
-   // statuses are known, then write Runtime Status last so it cannot remain stuck at
-   // not_attempted or running_publication_pending while the files already exist.
-   start = GetTickCount();
-   manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
-   AC_SNAPSHOT.manifest_status = manifest.status;
-   AC_AddMicroLog("AC_PublishManifestFinal", start, manifest.status);
-   AC_RecordWriteProblem("manifest_final", manifest);
-
-   start = GetTickCount();
-   telemetry = AC_PublishTelemetry(board);
-   AC_SNAPSHOT.telemetry_status = telemetry.status;
-   AC_AddMicroLog("AC_PublishTelemetryFinal", start, telemetry.status);
-   AC_RecordWriteProblem("telemetry_final", telemetry);
-
-   start = GetTickCount();
-   diagnostics = AC_PublishDiagnostics(account_status, dossier_batch, worker_required, board);
-   AC_SNAPSHOT.diagnostics_status = diagnostics.status;
-   AC_AddMicroLog("AC_PublishDiagnosticsFinal", start, diagnostics.status);
-   AC_RecordWriteProblem("diagnostics_final", diagnostics);
-
-   AC_SNAPSHOT.layer_0_4_status = (manifest.ok && telemetry.ok && diagnostics.ok) ? "accepted" : "degraded_publication_status";
-   AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.timer_duration_gt_period_flag ? "degraded_over_period" : "accepted";
-   AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "degraded_publication_problem" : "accepted";
-
-   start = GetTickCount();
-   runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
-   AC_AddMicroLog("AC_PublishRuntimeStatusFinal", start, runtime_status.status);
 
    AC_TIMER_TICKS_SINCE_WORKBENCH++;
    AC_TIMER_BUSY = false;
