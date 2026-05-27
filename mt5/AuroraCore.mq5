@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.050"
+#property version   "1.076"
 #property description "AURORA CORE - foundation truth and gateway support"
 
 #include "core/AC_Config.mqh"

@@ -2,7 +2,7 @@
 #define AC_LAYER0_DOSSIER_PUBLICATION_MQH
 static string AC_L0_FIRST_FAILURE = "";
 static string AC_L0_FAILURE_ADDENDUM = "";
-static string AC_DOSSIER_RENDER_LAYOUT_KEY = "dossier_topview_v3_l16_l17_source_key";
+static string AC_DOSSIER_RENDER_LAYOUT_KEY = "dossier_topview_v4_symbol_surface_overview_l18_l19_truth";
 static int    AC_L0_CACHED_SYMBOLS_TOTAL = -1;
 static string AC_L0_CACHED_DOSSIER_SCHEMA_VERSION = "";
 static string AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY = "";
@@ -58,6 +58,31 @@ static int    AC_L0_CACHED_L15_CANDIDATE_SCORED_COUNT = -1;
 static int    AC_L0_CACHED_L15_HIGH_CORR_PAIR_COUNT = -1;
 static string AC_L0_CACHED_L15_GENERATED_UTC = "";
 static bool   AC_L0_CACHED_L15_ACCEPTED = false;
+static string AC_L18_STATUS = "pending";
+static string AC_L18_REASON = "l18 status surface not read";
+static string AC_L18_FRESHNESS_STATUS = "unknown";
+static string AC_L18_GENERATED_UTC = "not_available";
+static int    AC_L18_SOURCE_FILES_EXPECTED = 0;
+static int    AC_L18_SOURCE_FILES_FOUND = 0;
+static int    AC_L18_SOURCE_FILES_MISSING = 0;
+static int    AC_L18_SOURCE_FILES_PARTIAL = 0;
+static int    AC_L18_SELECTED_UNIQUE_SYMBOLS = 0;
+static int    AC_L18_SELECTED_DUPLICATE_ROUTE_COPIES = 0;
+static int    AC_L18_FRESHNESS_STALE_COUNT = 0;
+static int    AC_L18_FRESHNESS_UNKNOWN_COUNT = 0;
+static string AC_L19_STATUS = "pending";
+static string AC_L19_REASON = "l19 status surface not read";
+static string AC_L19_FRESHNESS_STATUS = "unknown";
+static string AC_L19_GENERATED_UTC = "not_available";
+static int    AC_L19_SOURCE_FILES_EXPECTED = 0;
+static int    AC_L19_SOURCE_FILES_FOUND = 0;
+static int    AC_L19_SOURCE_FILES_MISSING = 0;
+static int    AC_L19_SOURCE_FILES_PARTIAL = 0;
+static int    AC_L19_SELECTED_UNIQUE_SYMBOLS = 0;
+static int    AC_L19_SELECTED_DUPLICATE_ROUTE_COPIES = 0;
+static int    AC_L19_VALID_GEOMETRY_ROWS = 0;
+static int    AC_L19_FRESHNESS_STALE_COUNT = 0;
+static int    AC_L19_FRESHNESS_UNKNOWN_COUNT = 0;
 static bool   AC_L0_CACHED_PASS_VALID = false;
 static AC_Layer0StatusPacket AC_L0_CACHED_STATUS;
 static AC_WriteResult AC_L0_CACHED_RESULT;
@@ -88,6 +113,106 @@ string AC_L0DossierRouteStateForSymbol(const string symbol)
    if(market_state == "open" || market_state == "closed")
       return market_state;
    return "unknown";
+}
+
+string AC_L18StatusPath(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_18_Selected_Raw_OHLC_Bar_Pack\\l18_status.txt"; }
+string AC_L19StatusPath(){ return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_19_Wick_Candle_Geometry_Pack\\l19_status.txt"; }
+
+string AC_SurfaceStateFromStatus(const string status)
+{
+   string s = status;
+   StringToLower(s);
+   if(StringFind(s, "accepted") >= 0 || StringFind(s, "complete") >= 0) return "ACCEPTED";
+   if(StringFind(s, "partial") >= 0) return "PARTIAL";
+   if(StringFind(s, "degraded") >= 0 || StringFind(s, "stale") >= 0 || StringFind(s, "expired") >= 0) return "DEGRADED";
+   if(StringFind(s, "seed") >= 0) return "SEEDING";
+   if(StringFind(s, "pending") >= 0) return "PENDING";
+   if(StringFind(s, "blocked") >= 0) return "BLOCKED";
+   if(StringFind(s, "review") >= 0) return "REVIEW";
+   return "UNKNOWN";
+}
+
+string AC_DossierOverviewRow(const string surface,
+                             const string state,
+                             const string evidence,
+                             const string blocker,
+                             const string meaning)
+{
+   return surface + " | " + state + " | " + evidence + " | " + blocker + " | " + meaning + "\r\n";
+}
+
+void AC_L18RefreshStatus()
+{
+   string text = AC_L16ReadSmallTextFile(AC_L18StatusPath(), 30000);
+   if(text == "")
+   {
+      AC_L18_STATUS = "pending";
+      AC_L18_REASON = "l18_status_missing_or_unreadable";
+      AC_L18_FRESHNESS_STATUS = "unknown";
+      AC_L18_GENERATED_UTC = "not_available";
+      AC_L18_SOURCE_FILES_EXPECTED = 0;
+      AC_L18_SOURCE_FILES_FOUND = 0;
+      AC_L18_SOURCE_FILES_MISSING = 0;
+      AC_L18_SOURCE_FILES_PARTIAL = 0;
+      AC_L18_SELECTED_UNIQUE_SYMBOLS = 0;
+      AC_L18_SELECTED_DUPLICATE_ROUTE_COPIES = 0;
+      AC_L18_FRESHNESS_STALE_COUNT = 0;
+      AC_L18_FRESHNESS_UNKNOWN_COUNT = 0;
+      return;
+   }
+   AC_L18_STATUS = AC_L16KvValue(text, "status", "pending");
+   AC_L18_REASON = AC_L16KvValue(text, "reason", "not_available");
+   AC_L18_FRESHNESS_STATUS = AC_L16KvValue(text, "freshness_status", "unknown");
+   AC_L18_GENERATED_UTC = AC_L16KvValue(text, "generated_utc", "not_available");
+   AC_L18_SOURCE_FILES_EXPECTED = AC_L16KvInt(text, "source_files_expected", 0);
+   AC_L18_SOURCE_FILES_FOUND = AC_L16KvInt(text, "source_files_found", 0);
+   AC_L18_SOURCE_FILES_MISSING = AC_L16KvInt(text, "source_files_missing", 0);
+   AC_L18_SOURCE_FILES_PARTIAL = AC_L16KvInt(text, "source_files_partial", 0);
+   AC_L18_SELECTED_UNIQUE_SYMBOLS = AC_L16KvInt(text, "selected_unique_symbols_seen", 0);
+   AC_L18_SELECTED_DUPLICATE_ROUTE_COPIES = AC_L16KvInt(text, "selected_duplicate_route_copies", 0);
+   AC_L18_FRESHNESS_STALE_COUNT = AC_L16KvInt(text, "freshness_stale_count", 0);
+   AC_L18_FRESHNESS_UNKNOWN_COUNT = AC_L16KvInt(text, "freshness_unknown_count", 0);
+}
+
+void AC_L19RefreshStatus()
+{
+   string text = AC_L16ReadSmallTextFile(AC_L19StatusPath(), 30000);
+   if(text == "")
+   {
+      AC_L19_STATUS = "pending";
+      AC_L19_REASON = "l19_status_missing_or_unreadable";
+      AC_L19_FRESHNESS_STATUS = "unknown";
+      AC_L19_GENERATED_UTC = "not_available";
+      AC_L19_SOURCE_FILES_EXPECTED = 0;
+      AC_L19_SOURCE_FILES_FOUND = 0;
+      AC_L19_SOURCE_FILES_MISSING = 0;
+      AC_L19_SOURCE_FILES_PARTIAL = 0;
+      AC_L19_SELECTED_UNIQUE_SYMBOLS = 0;
+      AC_L19_SELECTED_DUPLICATE_ROUTE_COPIES = 0;
+      AC_L19_VALID_GEOMETRY_ROWS = 0;
+      AC_L19_FRESHNESS_STALE_COUNT = 0;
+      AC_L19_FRESHNESS_UNKNOWN_COUNT = 0;
+      return;
+   }
+   AC_L19_STATUS = AC_L16KvValue(text, "status", "pending");
+   AC_L19_REASON = AC_L16KvValue(text, "reason", "not_available");
+   AC_L19_FRESHNESS_STATUS = AC_L16KvValue(text, "freshness_status", "unknown");
+   AC_L19_GENERATED_UTC = AC_L16KvValue(text, "generated_utc", "not_available");
+   AC_L19_SOURCE_FILES_EXPECTED = AC_L16KvInt(text, "source_files_expected", 0);
+   AC_L19_SOURCE_FILES_FOUND = AC_L16KvInt(text, "source_files_found", 0);
+   AC_L19_SOURCE_FILES_MISSING = AC_L16KvInt(text, "source_files_missing", 0);
+   AC_L19_SOURCE_FILES_PARTIAL = AC_L16KvInt(text, "source_files_partial", 0);
+   AC_L19_SELECTED_UNIQUE_SYMBOLS = AC_L16KvInt(text, "selected_unique_symbols_seen", 0);
+   AC_L19_SELECTED_DUPLICATE_ROUTE_COPIES = AC_L16KvInt(text, "selected_duplicate_route_copies", 0);
+   AC_L19_VALID_GEOMETRY_ROWS = AC_L16KvInt(text, "valid_geometry_rows", 0);
+   AC_L19_FRESHNESS_STALE_COUNT = AC_L16KvInt(text, "freshness_stale_count", 0);
+   AC_L19_FRESHNESS_UNKNOWN_COUNT = AC_L16KvInt(text, "freshness_unknown_count", 0);
+}
+
+void AC_L18L19RefreshStatus()
+{
+   AC_L18RefreshStatus();
+   AC_L19RefreshStatus();
 }
 
 void AC_Layer0InitStatus(AC_Layer0StatusPacket &status)
@@ -146,19 +271,68 @@ string AC_DossierSymbolTopViewSection(const string symbol, const string market_s
 {
    string l14_row = AC_L14CsvLineForSymbol(symbol);
    string l15_row = AC_L15CsvLineForSymbol(symbol);
+   string l16_row = AC_L16CsvLineForSymbol(symbol);
+   string l17_row = AC_L17CsvLineForSymbol(symbol);
+   string l17_rejected_row = AC_L17RejectedCsvLineForSymbol(symbol);
+   string pipeline_position = "pre-candidate or not selected";
+   if(l17_row != "") pipeline_position = "L17 deep evidence queue selected";
+   else if(l16_row != "") pipeline_position = "L16 Global Top 10 visible basket";
+   else if(l15_row != "") pipeline_position = "L15 correlation/diversity scored";
+   else if(l14_row != "") pipeline_position = "L14 raw candidate pool member";
    string text = "";
    text += "\r\nSYMBOL TOP VIEW\r\n";
    text += "--------------------------------------------------\r\n";
    text += "Symbol:              " + symbol + "\r\n";
    text += "Market State:        " + AC_MarketStateTitle(market_state) + "\r\n";
-   text += "Pipeline Position:   " + (l15_row != "" ? "L15 correlation/diversity scored" : (l14_row != "" ? "L14 raw candidate pool member" : "pre-candidate or not selected")) + "\r\n";
+   text += "Pipeline Position:   " + pipeline_position + "\r\n";
    text += "L14 Candidate:       " + (l14_row != "" ? "TRUE rank #" + AC_L14CsvField(l14_row, 0) + " / " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE) : "FALSE") + "\r\n";
    text += "L15 Diversity:       " + (l15_row != "" ? "TRUE rank #" + AC_L15CsvField(l15_row, 0) + " / " + IntegerToString(AC_L15_CANDIDATE_POOL_SIZE) : "FALSE") + "\r\n";
+   text += "L16 Top 10:          " + (l16_row != "" ? "TRUE rank #" + AC_L16CsvField(l16_row, 0) + " / " + IntegerToString(AC_L16_SELECTED_COUNT) : "FALSE") + "\r\n";
+   text += "L17 Deep Evidence:   " + (l17_row != "" ? "TRUE queue #" + AC_L17CsvField(l17_row, 0) + " / " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) : (l17_rejected_row != "" ? "WATCH_ONLY / rejected queue" : "FALSE")) + "\r\n";
    text += "Surface State:       L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + " | L9_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
-   text += "Selection State:     L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + "\r\n";
+   text += "Selection State:     L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + " | L16=" + AC_L16_STATUS + " | L17=" + AC_L17_STATUS + "\r\n";
+   text += "Evidence State:      L18=" + AC_L18_STATUS + " | L19=" + AC_L19_STATUS + "\r\n";
    text += "Trade Permission:    FALSE\r\n";
    text += "Entry Signal:        FALSE\r\n";
    text += "Execution:           FALSE\r\n";
+   return text;
+}
+
+string AC_DossierSymbolSurfaceOverviewSection(const string symbol, const string market_state)
+{
+   string l14_row = AC_L14CsvLineForSymbol(symbol);
+   string l15_row = AC_L15CsvLineForSymbol(symbol);
+   string l16_row = AC_L16CsvLineForSymbol(symbol);
+   string l17_row = AC_L17CsvLineForSymbol(symbol);
+   string l17_rejected_row = AC_L17RejectedCsvLineForSymbol(symbol);
+   bool l16_selected = (l16_row != "");
+   bool l17_selected = (l17_row != "");
+   bool l17_watch = (l17_rejected_row != "");
+   string text = "";
+   text += "\r\nSYMBOL SURFACE OVERVIEW\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "Surface | State | Evidence | Blocker | Meaning\r\n";
+   text += AC_DossierOverviewRow("Physical Dossier Route", "ACCEPTED", AC_DossierSymbolPathByState(symbol, market_state), "physical_route_clean", "route membership only");
+   text += AC_DossierOverviewRow("L2 Market State", (market_state == "open" || market_state == "closed") ? "ACCEPTED" : "UNKNOWN", AC_MarketStateTitle(market_state), market_state == "unknown" ? "market_state_unknown" : "none", "closed market is not a Dossier error");
+   text += AC_DossierOverviewRow("L5 Gate", AC_SurfaceStateFromStatus(AC_L5_STATUS), AC_L5_STATUS, "see_layer_5_detail", "basic eligibility gate only");
+   text += AC_DossierOverviewRow("L6 Cost/Friction", AC_SurfaceStateFromStatus(AC_L6_STATUS), AC_L6_STATUS, AC_L6_RANKED_ACCEPTED ? "none" : "ranked_sidecar_not_current_accepted", "inspection ranking only");
+   text += AC_DossierOverviewRow("L7 Session", AC_SurfaceStateFromStatus(AC_L7_STATUS), AC_L7_STATUS, AC_L7_RANKED_ACCEPTED ? "none" : "epoch_or_count_contract_pending", "session relevance only");
+   text += AC_DossierOverviewRow("L8 Movement", AC_SurfaceStateFromStatus(AC_L8_STATUS), AC_L8_STATUS, AC_L8_RANKED_ACCEPTED ? "none" : "ohlc_or_epoch_contract_degraded", "movement/range scoring only");
+   text += AC_DossierOverviewRow("L9 Structure", AC_SurfaceStateFromStatus(AC_L9_STATUS), AC_L9_STATUS + " quality=" + AC_L9_GEOMETRY_QUALITY_STATE, AC_L9_RANKED_ACCEPTED ? "none" : "structure_or_ohlc_contract_degraded", "structure/location context only");
+   text += AC_DossierOverviewRow("L10 Taxonomy", AC_SurfaceStateFromStatus(AC_L10_STATUS), AC_L10_STATUS, AC_L10_ACCEPTED ? "none" : "taxonomy_summary_pending", "ranking_group lookup only");
+   text += AC_DossierOverviewRow("L11 Group Rank", AC_SurfaceStateFromStatus(AC_L11_STATUS), AC_L11_STATUS, AC_L11_ACCEPTED ? "none" : "group_rank_pending", "rank inside group only");
+   text += AC_DossierOverviewRow("L12 Group Heat", AC_SurfaceStateFromStatus(AC_L12_STATUS), AC_L12_STATUS, AC_L12_ACCEPTED ? "none" : "group_heat_pending", "group heat/quality only");
+   text += AC_DossierOverviewRow("L13 Group Selection", AC_SurfaceStateFromStatus(AC_L13_STATUS), AC_L13_STATUS, AC_L13_ACCEPTED ? "none" : "group_selection_pending", "attention group selection only");
+   text += AC_DossierOverviewRow("L14 Candidate Pool", AC_SurfaceStateFromStatus(AC_L14_STATUS), (l14_row != "" ? "candidate=true rank #" + AC_L14CsvField(l14_row, 0) : "candidate=false"), l14_row != "" ? "none" : "not_selected", "raw candidate pool only");
+   text += AC_DossierOverviewRow("L15 Correlation", AC_SurfaceStateFromStatus(AC_L15_STATUS), (l15_row != "" ? "scored=true rank #" + AC_L15CsvField(l15_row, 0) : "scored=false"), l15_row != "" ? "none" : "not_selected", "correlation/diversity scoring only");
+   text += AC_DossierOverviewRow("L16 Global Top 10", l16_selected ? AC_SurfaceStateFromStatus(AC_L16_STATUS) : "NOT_ACTIVE", l16_selected ? "top10_member=true rank #" + AC_L16CsvField(l16_row, 0) : "top10_member=false", l16_selected ? AC_L16_MAIN_BLOCKER : "not_selected", "visible inspection basket only");
+   text += AC_DossierOverviewRow("L17 Deep Evidence", l17_selected ? AC_SurfaceStateFromStatus(AC_L17_STATUS) : (l17_watch ? "REVIEW" : "NOT_ACTIVE"), l17_selected ? "queue_selected=true rank #" + AC_L17CsvField(l17_row, 0) : (l17_watch ? "watch_only=true" : "queue_selected=false"), l17_selected ? AC_L17_MAIN_BLOCKER : (l17_watch ? "watch_only_not_degraded" : "not_selected"), "evidence budget split only");
+   text += AC_DossierOverviewRow("L18 Raw OHLC", l16_selected ? AC_SurfaceStateFromStatus(AC_L18_STATUS) : "NOT_ACTIVE", "status=" + AC_L18_STATUS + " found=" + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED), l16_selected ? AC_L18_REASON : "not_selected", "selected raw OHLC display only");
+   text += AC_DossierOverviewRow("L19 Wick/Candle", l16_selected ? AC_SurfaceStateFromStatus(AC_L19_STATUS) : "NOT_ACTIVE", "status=" + AC_L19_STATUS + " geometry_rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS), l16_selected ? AC_L19_REASON : "not_selected", "wick/candle geometry only");
+   text += AC_DossierOverviewRow("L20 Rolling Tick", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
+   text += AC_DossierOverviewRow("L21 Indicator Pack", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
+   text += AC_DossierOverviewRow("L22 Liquidity/DOM Proxy", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
+   text += AC_DossierOverviewRow("L23 Setup/Permission", "BLOCKED", "trade_permission=false entry_signal=false execution=false", "strategy_validation_status=not_validated", "no setup, alert, permission, or execution");
    return text;
 }
 
@@ -227,7 +401,10 @@ string AC_DossierPipelinePositionSection(const string symbol, const string marke
    text += "L13 Group Selection:          " + AC_L13_STATUS + "\r\n";
    text += "L14 Candidate Pool:           " + AC_L14_STATUS + "\r\n";
    text += "L15 Correlation / Diversity:  " + AC_L15_STATUS + "\r\n";
-   text += "L16 Global Top 10:            not_built_or_not_active_here\r\n";
+   text += "L16 Global Top 10:            " + AC_L16_STATUS + "\r\n";
+   text += "L17 Deep Evidence Split:      " + AC_L17_STATUS + "\r\n";
+   text += "L18 Raw OHLC Bar Pack:        " + AC_L18_STATUS + " freshness=" + AC_L18_FRESHNESS_STATUS + "\r\n";
+   text += "L19 Wick / Candle Geometry:   " + AC_L19_STATUS + " freshness=" + AC_L19_FRESHNESS_STATUS + "\r\n";
    text += "L23 Trade Permission:         false\r\n";
    return text;
 }
@@ -260,9 +437,10 @@ string AC_DossierCurrentLimitsSection(const string symbol, const string market_s
    text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
    text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
    text += "Surface Ranking: L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + " | L9_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
-   text += "Selection Ranking: L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + "\r\n";
+   text += "Selection Ranking: L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + " | L16=" + AC_L16_STATUS + " | L17=" + AC_L17_STATUS + "\r\n";
+   text += "Selected Evidence: L18=" + AC_L18_STATUS + " | L19=" + AC_L19_STATUS + "\r\n";
    text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
-   text += "Selection Active: L15 scoring only; no Global Top 10 or trade permission\r\n";
+   text += "Selection Active: L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n";
    text += "Permission Active: No\r\n";
    return text;
 }
@@ -288,6 +466,14 @@ string AC_DossierFoundationStatusSection(const string symbol, const string marke
    text += "Layer 13 Dynamic Group Selection: " + AC_L13_STATUS + "\r\n";
    text += "Layer 14 Candidate Pool: " + AC_L14_STATUS + "\r\n";
    text += "Layer 15 Correlation / Diversity: " + AC_L15_STATUS + "\r\n";
+   text += "Layer 16 Global Top 10: " + AC_L16_STATUS + "\r\n";
+   text += "Layer 17 Deep Evidence Split: " + AC_L17_STATUS + "\r\n";
+   text += "Layer 18 Raw OHLC Bar Pack: " + AC_L18_STATUS + " | freshness=" + AC_L18_FRESHNESS_STATUS + "\r\n";
+   text += "Layer 19 Wick / Candle Geometry: " + AC_L19_STATUS + " | freshness=" + AC_L19_FRESHNESS_STATUS + "\r\n";
+   text += "Layer 20 Rolling Tick Pack: NOT_ACTIVE design/hold\r\n";
+   text += "Layer 21 Indicator / Reference Pack: NOT_ACTIVE design/hold\r\n";
+   text += "Layer 22 Liquidity / DOM Proxy: NOT_ACTIVE design/hold\r\n";
+   text += "Layer 23 Setup / Permission State: BLOCKED trade_permission=false\r\n";
    text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
    return text;
 }
@@ -297,11 +483,11 @@ string AC_DossierNextRequiredSection(const string market_state)
    string text = "";
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: Layer 16 Global Top 10 builder after L15 correlation/diversity output is accepted.\r\n" : "Next step: wait for Layer 2 recheck before deeper layers.\r\n");
+   text += (market_state == "open" ? "Next step: inspect L16/L17 selection context, then wait for L18/L19/OHLC evidence to become fresh enough.\r\n" : "Next step: wait for Layer 2 recheck before deeper layers.\r\n");
    text += "Open / Closed owner: Layer 2 only\r\n";
    text += "Layer 6-9 rank only Layer 5 pass symbols; they do not hard-block symbols.\r\n";
    text += "Layer 10 classifies symbols into ranking_groups only; it does not rank, select, copy Dossiers, or permit trades.\r\n";
-   text += "Layer 11-15 are inspection/selection-scoring surfaces only; no Global Top 10, alert, or trade permission exists here.\r\n";
+   text += "Layer 11-19 are inspection/evidence surfaces only; no setup alert or trade permission exists here.\r\n";
    text += "Shared OHLC is raw storage only; future layers must read it instead of calling CopyRates privately.\r\n";
    return text;
 }
@@ -327,6 +513,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    string text = "";
    text += AC_DossierHeaderSection(symbol, market_state);
    text += AC_DossierSymbolTopViewSection(symbol, market_state);
+   text += AC_DossierSymbolSurfaceOverviewSection(symbol, market_state);
    text += AC_DossierOperatorMeaningSection(symbol, market_state);
    text += AC_DossierScoreCardSection(symbol);
    text += AC_DossierPipelinePositionSection(symbol, market_state);
@@ -590,6 +777,7 @@ void AC_L0RefreshDossierSectionDependencies()
    AC_L0CacheLayer15Proof();
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
+   AC_L18L19RefreshStatus();
 }
 
 string AC_L0DossierSourceKey(const int total)
@@ -663,6 +851,18 @@ string AC_L0DossierSourceKey(const int total)
       + "|l17_top=" + AC_L17_TOP_SYMBOL
       + "|l17_generated=" + AC_L17_GENERATED_UTC
       + "|l17_accepted=" + (AC_L17_ACCEPTED ? "true" : "false")
+      + "|l18=" + AC_L18_STATUS
+      + "|l18_found=" + IntegerToString(AC_L18_SOURCE_FILES_FOUND)
+      + "|l18_expected=" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED)
+      + "|l18_missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING)
+      + "|l18_freshness=" + AC_L18_FRESHNESS_STATUS
+      + "|l18_generated=" + AC_L18_GENERATED_UTC
+      + "|l19=" + AC_L19_STATUS
+      + "|l19_found=" + IntegerToString(AC_L19_SOURCE_FILES_FOUND)
+      + "|l19_expected=" + IntegerToString(AC_L19_SOURCE_FILES_EXPECTED)
+      + "|l19_geometry=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS)
+      + "|l19_freshness=" + AC_L19_FRESHNESS_STATUS
+      + "|l19_generated=" + AC_L19_GENERATED_UTC
       + "|ohlc=" + AC_SHARED_OHLC_STATUS
       + "|ohlc_mode=" + AC_SHARED_OHLC_MODE
       + "|ohlc_l8_fast=" + IntegerToString(AC_SHARED_OHLC_L8_FAST_READY);
