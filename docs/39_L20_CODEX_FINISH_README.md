@@ -19,16 +19,24 @@ backup/layer-20-before-main-rebuild-20260527
 
 ## Current Landed Files On This Branch
 
-As of this README, only these L20 files are confirmed landed on the rebuilt branch:
+Confirmed L20 files landed on the rebuilt branch:
 
 ```text
 docs/37_L20_SELECTED_ROLLING_TICK_PACK_CONTROL.md
 docs/38_L20_IMPLEMENTATION_DESIGN_AND_ACCEPTANCE_PLAN.md
-mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPack.mqh
 docs/39_L20_CODEX_FINISH_README.md
+mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/00_L20_SELECTED_ROLLING_TICK_PACK_SOURCE_INDEX.md
+mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPack.mqh
+mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPackPublication.mqh
+mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPackHarness.mqh
 ```
 
-Do not assume other L20 files exist until Git proves them.
+Parent indexes updated:
+
+```text
+mt5/00_MT5_SOURCE_INDEX.md
+mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md
+```
 
 ## Current Proof Level
 
@@ -128,11 +136,11 @@ liquidity_degradation_proxy
 
 Do not add fake CVD, fake footprint logic, or institutional-flow claims.
 
-## What Codex Must Finish Next
+## Remaining Work Before Merge Consideration
 
 ### Step 1 — Re-check Git Truth
 
-Before patching:
+Before any further patching:
 
 ```text
 git status
@@ -164,65 +172,21 @@ blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 docs/37_L20_SELECTED_ROLLING_TICK_PACK_CONTROL.md
 docs/38_L20_IMPLEMENTATION_DESIGN_AND_ACCEPTANCE_PLAN.md
 mt5/runtime_owners/runtime_1_foundation_truth_owner/layer_4_market_watch_truth/AC_L4_Scan.mqh
+mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/00_L20_SELECTED_ROLLING_TICK_PACK_SOURCE_INDEX.md
 mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPack.mqh
-```
-
-### Step 3 — Add Missing L20 Source Files
-
-The interrupted prior pass did not land these files on the rebuilt branch. Add them only if still absent:
-
-```text
 mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPackPublication.mqh
 mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/AC_SelectedRollingTickPackHarness.mqh
-mt5/runtime_owners/runtime_5_selected_evidence_owner/layer_20_selected_rolling_tick_pack/00_L20_SELECTED_ROLLING_TICK_PACK_SOURCE_INDEX.md
 ```
 
-Publication scaffold rules:
+### Step 3 — Do Not Wire Runtime Yet
 
-```text
-- May build L20 paths/text/CSV/manifest only.
-- Must delegate physical writes to existing FileIO owner.
-- Must not create FileIO owner.
-- Must not create route owner.
-- Must not publish current bid/ask/live spread as L20 authority.
-```
+Do not modify `mt5/AuroraCore.mq5` unless Jason/overseer explicitly asks for compile-only include work.
 
-Harness scaffold rules:
+Do not add OnTimer calls.
+Do not activate CopyTicksRange in normal runtime.
+Do not merge to main.
 
-```text
-- Must default disabled.
-- Must not be called from OnTimer.
-- Must not call CopyTicksRange in compile-touch mode.
-- May expose compile-touch helper and disabled status text.
-```
-
-Suggested macro:
-
-```text
-AC_L20_RUNTIME_ACTIVATION_ENABLED=false
-```
-
-### Step 4 — Update Indexes Only After Files Exist
-
-After the missing files are added, update:
-
-```text
-mt5/00_MT5_SOURCE_INDEX.md
-mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md
-```
-
-Index text must say:
-
-```text
-L20 is source-present only.
-L20 is not included by AuroraCore.mq5.
-L20 is not compile-proven.
-L20 is not runtime-proven.
-L4 remains current quote owner.
-L20 owns selected rolling tick-window metrics only.
-```
-
-### Step 5 — Optional Premerge Wiring Plan
+### Step 4 — Optional Premerge Wiring Plan
 
 Add only if useful:
 
@@ -241,14 +205,6 @@ runtime proof checklist
 Board/Dossier/Workbench acceptance
 rollback path
 ```
-
-### Step 6 — Do Not Wire Runtime Yet
-
-Do not modify `mt5/AuroraCore.mq5` unless Jason/overseer explicitly asks for compile-only include work.
-
-Do not add OnTimer calls.
-Do not activate CopyTicksRange in normal runtime.
-Do not merge to main.
 
 ## Surface Design To Preserve
 
@@ -320,7 +276,7 @@ FileIO/route/scheduler duplicate owner
 
 ## Final Handoff Format
 
-End the Codex run with:
+End the future run with:
 
 ```text
 Decision: DESIGN READY / NEEDS FIX / KILL
