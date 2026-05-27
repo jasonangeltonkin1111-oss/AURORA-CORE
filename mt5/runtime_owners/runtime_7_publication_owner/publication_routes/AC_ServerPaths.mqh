@@ -1,84 +1,40 @@
 #ifndef AC_SERVER_PATHS_MQH
 #define AC_SERVER_PATHS_MQH
 
-// Dependencies are included by mt5/AuroraCore.mq5 using root includes.
-// Publication / FileIO / Route Service owns route building only. It does not own trading truth.
-// Runtime 3 external worker split:
-// - Shared worker binary/install payload lives under Aurora Core\External Worker so all terminals/accounts can use one package.
-// - Per-server/account worker IO, status, inbox, outbox, logs, and proof files remain under Aurora Core\<server>\<account>\Workbench\External Worker.
-// Trade Journal routes are bookkeeping/publication route support only. They do not grant trade permission or reconstruct motive by themselves.
-
-string AC_SanitizePathPart(string value)
+string AC_SafePart(const string value)
 {
-   StringTrimLeft(value);
-   StringTrimRight(value);
-   if(value == "")
-      value = "unknown";
-
-   StringReplace(value, "\\", "_");
-   StringReplace(value, "/", "_");
-   StringReplace(value, ":", "_");
-   StringReplace(value, "*", "_");
-   StringReplace(value, "?", "_");
-   StringReplace(value, "\"", "_");
-   StringReplace(value, "<", "_");
-   StringReplace(value, ">", "_");
-   StringReplace(value, "|", "_");
-   StringReplace(value, " ", "_");
-   return value;
+   string safe = value;
+   StringReplace(safe, "\\", "_");
+   StringReplace(safe, "/", "_");
+   StringReplace(safe, ":", "_");
+   StringReplace(safe, "*", "_");
+   StringReplace(safe, "?", "_");
+   StringReplace(safe, "\"", "_");
+   StringReplace(safe, "<", "_");
+   StringReplace(safe, ">", "_");
+   StringReplace(safe, "|", "_");
+   StringTrimLeft(safe);
+   StringTrimRight(safe);
+   return safe == "" ? "unknown" : safe;
 }
 
-int AC_FileFlags()
-{
-   int flags = FILE_TXT | FILE_ANSI;
-   if(AC_USE_COMMON_FILES)
-      flags |= FILE_COMMON;
-   return flags;
-}
-
-int AC_CommonFlag()
-{
-   return AC_USE_COMMON_FILES ? FILE_COMMON : 0;
-}
-
-bool AC_FolderDetailHasWarning(const string detail)
-{
-   return StringFind(detail, "folder_create_warning_at=") >= 0;
-}
-
-string AC_FolderStatusFromDetail(const bool folders_ok, const string detail)
-{
-   if(!folders_ok)
-      return "folder_create_failed";
-   if(AC_FolderDetailHasWarning(detail))
-      return "folder_create_warning";
-   return "folder_create_ok";
-}
-
-string AC_ServerNameForRoute()
+string AC_ServerFolder()
 {
    string server = AccountInfoString(ACCOUNT_SERVER);
-   if(server == "")
-      server = TerminalInfoString(TERMINAL_NAME);
-   return AC_SanitizePathPart(server);
+   if(server == "") server = "unknown_server";
+   return AC_SafePart(server);
 }
 
-string AC_AccountForRoute()
+string AC_AccountFolder()
 {
    long login = AccountInfoInteger(ACCOUNT_LOGIN);
-   if(login <= 0)
-      return "unknown_account";
+   if(login <= 0) return "unknown_account";
    return IntegerToString(login);
-}
-
-string AC_SharedRootFolder()
-{
-   return AC_BASE_FOLDER;
 }
 
 string AC_RootFolder()
 {
-   return AC_BASE_FOLDER + "\\" + AC_ServerNameForRoute() + "\\" + AC_AccountForRoute();
+   return AC_BASE_FOLDER + "\\" + AC_ServerFolder() + "\\" + AC_AccountFolder();
 }
 
 string AC_WorkbenchFolder()
@@ -86,34 +42,64 @@ string AC_WorkbenchFolder()
    return AC_RootFolder() + "\\" + AC_WORKBENCH_FOLDER;
 }
 
-string AC_SharedExternalWorkerFolder()
+string AC_WorkbenchInternalFolder()
 {
-   return AC_SharedRootFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
+   return AC_WorkbenchFolder() + "\\Internal";
 }
 
-string AC_SharedExternalWorkerPackageFolder()
+string AC_WorkbenchManifestsFolder()
 {
-   return AC_SharedExternalWorkerFolder() + "\\AuroraWorker";
+   return AC_WorkbenchFolder() + "\\Manifests";
 }
 
-string AC_SharedExternalWorkerStatusFolder()
+string AC_WorkbenchStatusFolder()
 {
-   return AC_SharedExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_STATUS_FOLDER;
+   return AC_WorkbenchFolder() + "\\Status";
 }
 
-string AC_SharedExternalWorkerInstallStatusPath()
+string AC_WorkbenchDiagnosticsFolder()
 {
-   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_install_status.txt";
+   return AC_WorkbenchFolder() + "\\Diagnostics";
 }
 
-string AC_SharedExternalWorkerStatusPath()
+string AC_WorkbenchCacheFolder()
 {
-   return AC_SharedExternalWorkerStatusFolder() + "\\shared_worker_status.txt";
+   return AC_WorkbenchFolder() + "\\Cache";
+}
+
+string AC_WorkbenchFileIoStatusFolder()
+{
+   return AC_WorkbenchStatusFolder() + "\\FileIO";
+}
+
+string AC_WorkbenchFileIoAuditFolder()
+{
+   return AC_WorkbenchDiagnosticsFolder() + "\\FileIO";
+}
+
+string AC_Runtime0Folder()
+{
+   return AC_WorkbenchInternalFolder() + "\\Runtime0";
+}
+
+string AC_Runtime0ManifestPath()
+{
+   return AC_WorkbenchManifestsFolder() + "\\Runtime0_Identity.manifest";
+}
+
+string AC_HeartbeatPath()
+{
+   return AC_WorkbenchStatusFolder() + "\\Heartbeat.txt";
+}
+
+string AC_GovernancePath()
+{
+   return AC_WorkbenchStatusFolder() + "\\Governance.txt";
 }
 
 string AC_ExternalWorkerFolder()
 {
-   return AC_WorkbenchFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
+   return AC_RootFolder() + "\\" + AC_EXTERNAL_WORKER_FOLDER;
 }
 
 string AC_ExternalWorkerControlFolder()
@@ -146,49 +132,9 @@ string AC_ExternalWorkerQuarantineFolder()
    return AC_ExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_QUARANTINE_FOLDER;
 }
 
-string AC_ExternalWorkerExePath()
+string AC_ExternalWorkerJobPath()
 {
-   return AC_SharedExternalWorkerFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
-}
-
-string AC_ExternalWorkerPackagedExePath()
-{
-   return AC_SharedExternalWorkerPackageFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
-}
-
-string AC_ExternalWorkerRequiredPath()
-{
-   return AC_ExternalWorkerControlFolder() + "\\worker_required.txt";
-}
-
-string AC_ExternalWorkerInstallStatusPath()
-{
-   return AC_ExternalWorkerStatusFolder() + "\\worker_install_status.txt";
-}
-
-string AC_ExternalWorkerProcessStatusPath()
-{
-   return AC_ExternalWorkerStatusFolder() + "\\worker_process_status.txt";
-}
-
-string AC_ExternalWorkerHeartbeatPath()
-{
-   return AC_ExternalWorkerStatusFolder() + "\\worker_heartbeat.txt";
-}
-
-string AC_ExternalWorkerResultStatusPath()
-{
-   return AC_ExternalWorkerStatusFolder() + "\\worker_result_status.txt";
-}
-
-string AC_ExternalWorkerSnapshotPath()
-{
-   return AC_ExternalWorkerInboxFolder() + "\\snapshot_latest.txt";
-}
-
-string AC_ExternalWorkerSnapshotManifestPath()
-{
-   return AC_ExternalWorkerInboxFolder() + "\\snapshot_latest.manifest";
+   return AC_ExternalWorkerInboxFolder() + "\\job_latest.json";
 }
 
 string AC_ExternalWorkerResultPath()
@@ -199,6 +145,78 @@ string AC_ExternalWorkerResultPath()
 string AC_ExternalWorkerResultManifestPath()
 {
    return AC_ExternalWorkerOutboxFolder() + "\\result_latest.manifest";
+}
+
+string AC_ExternalWorkerHeartbeatPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_heartbeat.txt";
+}
+
+string AC_ExternalWorkerInstallStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_install_status.txt";
+}
+
+string AC_ExternalWorkerLaunchStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\worker_launch_status.txt";
+}
+
+string AC_ExternalWorkerSnapshotIndexPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\render_index_snapshot.txt";
+}
+
+string AC_ExternalWorkerSnapshotCsvPath()
+{
+   return AC_ExternalWorkerOutboxFolder() + "\\render_index_snapshot.csv";
+}
+
+string AC_ExternalWorkerExePath()
+{
+   return AC_ExternalWorkerControlFolder() + "\\" + AC_EXTERNAL_WORKER_EXE_FILE;
+}
+
+string AC_SharedRootFolder()
+{
+   string server = AccountInfoString(ACCOUNT_SERVER);
+   if(server == "") server = "unknown_server";
+   return AC_BASE_FOLDER + "\\" + AC_SafePart(server);
+}
+
+string AC_SharedMarketDataFolder()
+{
+   return AC_SharedRootFolder() + "\\Shared Market Data";
+}
+
+string AC_SharedOhlcStoreFolder()
+{
+   return AC_SharedMarketDataFolder() + "\\OHLC Store";
+}
+
+string AC_SharedOhlcSymbolsFolder()
+{
+   return AC_SharedOhlcStoreFolder() + "\\Symbols";
+}
+
+string AC_SharedOhlcWorkbenchFolder()
+{
+   return AC_WorkbenchFolder() + "\\Shared OHLC Raw Storage";
+}
+
+string AC_SharedOhlcStatusPath()
+{
+   return AC_SharedOhlcWorkbenchFolder() + "\\shared_ohlc_status.txt";
+}
+
+string AC_SharedOhlcManifestPath()
+{
+   return AC_SharedOhlcWorkbenchFolder() + "\\shared_ohlc_manifest.txt";
+}
+
+string AC_SharedOhlcSymbolTfPath(const string symbol, const string timeframe)
+{
+   return AC_SharedOhlcSymbolsFolder() + "\\" + AC_SafePart(symbol) + "\\" + AC_SafePart(timeframe) + ".csv";
 }
 
 string AC_DossiersFolder()
@@ -236,19 +254,25 @@ string AC_SelectionGlobalFolder()
    return AC_SelectionDeskFolder() + "\\" + AC_SELECTION_GLOBAL_FOLDER;
 }
 
-string AC_SelectionCanonicalGlobalFolder()
+string AC_SelectionCompatibilityGlobalFolder()
 {
    return AC_SelectionDeskFolder() + "\\01_Global";
 }
 
+string AC_SelectionCanonicalGlobalFolder()
+{
+   // Legacy alias retained for older includes. 01_Global is a compatibility/helper route, not the stable Global authority.
+   return AC_SelectionCompatibilityGlobalFolder();
+}
+
 string AC_SelectionGlobalTop10Folder()
 {
-   return AC_SelectionCanonicalGlobalFolder() + "\\Top_10";
+   return AC_SelectionCompatibilityGlobalFolder() + "\\Top_10";
 }
 
 string AC_SelectionGlobalDeepEvidenceFolder()
 {
-   return AC_SelectionCanonicalGlobalFolder() + "\\Deep_Evidence";
+   return AC_SelectionCompatibilityGlobalFolder() + "\\Deep_Evidence";
 }
 
 string AC_SelectionAssetClassesFolder()
@@ -378,221 +402,17 @@ string AC_MarketBoardPath()
 
 string AC_DossierOpenSymbolPath(const string symbol)
 {
-   return AC_DossiersOpenFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+   return AC_DossiersOpenFolder() + "\\" + AC_SafePart(symbol) + ".txt";
 }
 
 string AC_DossierClosedSymbolPath(const string symbol)
 {
-   return AC_DossiersClosedFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
+   return AC_DossiersClosedFolder() + "\\" + AC_SafePart(symbol) + ".txt";
 }
 
 string AC_DossierUnknownSymbolPath(const string symbol)
 {
-   return AC_DossiersUnknownFolder() + "\\" + AC_SanitizePathPart(symbol) + ".txt";
-}
-
-string AC_DossierSymbolPathByState(const string symbol, const string market_state)
-{
-   if(market_state == "open") return AC_DossierOpenSymbolPath(symbol);
-   if(market_state == "closed") return AC_DossierClosedSymbolPath(symbol);
-   return AC_DossierUnknownSymbolPath(symbol);
-}
-
-string AC_RuntimeStatusPath()
-{
-   return AC_RootFolder() + "\\Runtime Status.txt";
-}
-
-string AC_AccountStatusPath()
-{
-   return AC_RootFolder() + "\\Account Status.txt";
-}
-
-string AC_ManifestPath()
-{
-   return AC_WorkbenchFolder() + "\\Manifest.txt";
-}
-
-string AC_WorkbenchStatusPath()
-{
-   return AC_WorkbenchFolder() + "\\Status.txt";
-}
-
-string AC_DiagnosticsPath()
-{
-   return AC_WorkbenchFolder() + "\\Diagnostics.txt";
-}
-
-string AC_UpgradeLogPath()
-{
-   return AC_WorkbenchFolder() + "\\Upgrade Log.txt";
-}
-
-string AC_UpgradeAddendumPath()
-{
-   return AC_WorkbenchFolder() + "\\Upgrade Addendum.txt";
-}
-
-string AC_MicroLogPath()
-{
-   return AC_WorkbenchFolder() + "\\Micro Log.txt";
-}
-
-string AC_PlaceholderPath(const string folder_path)
-{
-   return folder_path + "\\_PLACEHOLDER.txt";
-}
-
-bool AC_EnsureFolderPath(const string folder_path, string &detail)
-{
-   string parts[];
-   int count = StringSplit(folder_path, '\\', parts);
-   if(count <= 0)
-   {
-      detail = "folder_path_split_failed";
-      return false;
-   }
-
-   string current = "";
-   detail = "folder_create_attempted";
-
-   for(int i = 0; i < count; i++)
-   {
-      if(parts[i] == "")
-         continue;
-      if(current == "")
-         current = parts[i];
-      else
-         current = current + "\\" + parts[i];
-
-      ResetLastError();
-      bool created = FolderCreate(current, AC_CommonFlag());
-      int err = GetLastError();
-      if(!created && err != 0)
-         detail += ";folder_create_warning_at=" + current + ";error=" + IntegerToString(err);
-   }
-
-   if(detail == "folder_create_attempted")
-      detail = "folder_create_attempted_no_errors";
-   return true;
-}
-
-bool AC_EnsureRuntimeFolders(string &detail)
-{
-   string root_detail = "";
-   string wb_detail = "";
-   string shared_worker_detail = "";
-   string shared_worker_package_detail = "";
-   string shared_worker_status_detail = "";
-   string worker_detail = "";
-   string worker_control_detail = "";
-   string worker_inbox_detail = "";
-   string worker_outbox_detail = "";
-   string worker_status_detail = "";
-   string worker_logs_detail = "";
-   string worker_quarantine_detail = "";
-   string dossiers_detail = "";
-   string open_detail = "";
-   string closed_detail = "";
-   string unknown_detail = "";
-   string selection_desk_detail = "";
-   string selection_groups_detail = "";
-   string selection_global_detail = "";
-   string selection_canonical_global_detail = "";
-   string selection_global_top10_detail = "";
-   string selection_global_deep_evidence_detail = "";
-   string selection_asset_classes_detail = "";
-   string selection_system_indexes_detail = "";
-   string selection_layer_summaries_detail = "";
-   string trade_journal_import_detail = "";
-   string trade_journal_inbox_detail = "";
-   string trade_journal_accepted_detail = "";
-   string trade_journal_rejected_detail = "";
-   string trade_journal_orphaned_detail = "";
-   string trade_history_detail = "";
-   string trade_history_before_aurora_detail = "";
-   string trade_history_aurora_captured_detail = "";
-
-   bool root_ok = AC_EnsureFolderPath(AC_RootFolder(), root_detail);
-   bool wb_ok = AC_EnsureFolderPath(AC_WorkbenchFolder(), wb_detail);
-   bool shared_worker_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerFolder(), shared_worker_detail);
-   bool shared_worker_package_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerPackageFolder(), shared_worker_package_detail);
-   bool shared_worker_status_ok = AC_EnsureFolderPath(AC_SharedExternalWorkerStatusFolder(), shared_worker_status_detail);
-   bool worker_ok = AC_EnsureFolderPath(AC_ExternalWorkerFolder(), worker_detail);
-   bool worker_control_ok = AC_EnsureFolderPath(AC_ExternalWorkerControlFolder(), worker_control_detail);
-   bool worker_inbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerInboxFolder(), worker_inbox_detail);
-   bool worker_outbox_ok = AC_EnsureFolderPath(AC_ExternalWorkerOutboxFolder(), worker_outbox_detail);
-   bool worker_status_ok = AC_EnsureFolderPath(AC_ExternalWorkerStatusFolder(), worker_status_detail);
-   bool worker_logs_ok = AC_EnsureFolderPath(AC_ExternalWorkerLogsFolder(), worker_logs_detail);
-   bool worker_quarantine_ok = AC_EnsureFolderPath(AC_ExternalWorkerQuarantineFolder(), worker_quarantine_detail);
-   bool dossiers_ok = AC_EnsureFolderPath(AC_DossiersFolder(), dossiers_detail);
-   bool open_ok = AC_EnsureFolderPath(AC_DossiersOpenFolder(), open_detail);
-   bool closed_ok = AC_EnsureFolderPath(AC_DossiersClosedFolder(), closed_detail);
-   bool unknown_ok = AC_EnsureFolderPath(AC_DossiersUnknownFolder(), unknown_detail);
-   bool selection_desk_ok = AC_EnsureFolderPath(AC_SelectionDeskFolder(), selection_desk_detail);
-   bool selection_groups_ok = AC_EnsureFolderPath(AC_SelectionGroupsFolder(), selection_groups_detail);
-   bool selection_global_ok = AC_EnsureFolderPath(AC_SelectionGlobalFolder(), selection_global_detail);
-   bool selection_canonical_global_ok = AC_EnsureFolderPath(AC_SelectionCanonicalGlobalFolder(), selection_canonical_global_detail);
-   bool selection_global_top10_ok = AC_EnsureFolderPath(AC_SelectionGlobalTop10Folder(), selection_global_top10_detail);
-   bool selection_global_deep_evidence_ok = AC_EnsureFolderPath(AC_SelectionGlobalDeepEvidenceFolder(), selection_global_deep_evidence_detail);
-   bool selection_asset_classes_ok = AC_EnsureFolderPath(AC_SelectionAssetClassesFolder(), selection_asset_classes_detail);
-   bool selection_system_indexes_ok = AC_EnsureFolderPath(AC_SelectionSystemIndexesFolder(), selection_system_indexes_detail);
-   bool selection_layer_summaries_ok = AC_EnsureFolderPath(AC_SelectionLayerSummariesFolder(), selection_layer_summaries_detail);
-   bool trade_journal_import_ok = AC_EnsureFolderPath(AC_TradeJournalImportFolder(), trade_journal_import_detail);
-   bool trade_journal_inbox_ok = AC_EnsureFolderPath(AC_TradeJournalInboxFolder(), trade_journal_inbox_detail);
-   bool trade_journal_accepted_ok = AC_EnsureFolderPath(AC_TradeJournalAcceptedFolder(), trade_journal_accepted_detail);
-   bool trade_journal_rejected_ok = AC_EnsureFolderPath(AC_TradeJournalRejectedFolder(), trade_journal_rejected_detail);
-   bool trade_journal_orphaned_ok = AC_EnsureFolderPath(AC_TradeJournalOrphanedFolder(), trade_journal_orphaned_detail);
-   bool trade_history_ok = AC_EnsureFolderPath(AC_TradeHistoryFolder(), trade_history_detail);
-   bool trade_history_before_aurora_ok = AC_EnsureFolderPath(AC_TradeHistoryBeforeAuroraFolder(), trade_history_before_aurora_detail);
-   bool trade_history_aurora_captured_ok = AC_EnsureFolderPath(AC_TradeHistoryAuroraCapturedFolder(), trade_history_aurora_captured_detail);
-
-   detail = "root=" + root_detail
-      + ";workbench=" + wb_detail
-      + ";shared_external_worker=" + shared_worker_detail
-      + ";shared_external_worker_package=" + shared_worker_package_detail
-      + ";shared_external_worker_status=" + shared_worker_status_detail
-      + ";external_worker_account_io=" + worker_detail
-      + ";external_worker_control=" + worker_control_detail
-      + ";external_worker_inbox=" + worker_inbox_detail
-      + ";external_worker_outbox=" + worker_outbox_detail
-      + ";external_worker_status=" + worker_status_detail
-      + ";external_worker_logs=" + worker_logs_detail
-      + ";external_worker_quarantine=" + worker_quarantine_detail
-      + ";dossiers=" + dossiers_detail
-      + ";dossiers_open=" + open_detail
-      + ";dossiers_closed=" + closed_detail
-      + ";dossiers_unknown=" + unknown_detail
-      + ";selection_desk=" + selection_desk_detail
-      + ";selection_groups=" + selection_groups_detail
-      + ";selection_global=" + selection_global_detail
-      + ";selection_01_global=" + selection_canonical_global_detail
-      + ";selection_01_global_top10=" + selection_global_top10_detail
-      + ";selection_01_global_deep_evidence=" + selection_global_deep_evidence_detail
-      + ";selection_02_asset_classes=" + selection_asset_classes_detail
-      + ";selection_90_system_indexes=" + selection_system_indexes_detail
-      + ";selection_91_layer_summaries=" + selection_layer_summaries_detail
-      + ";trade_journal_import=" + trade_journal_import_detail
-      + ";trade_journal_inbox=" + trade_journal_inbox_detail
-      + ";trade_journal_accepted=" + trade_journal_accepted_detail
-      + ";trade_journal_rejected=" + trade_journal_rejected_detail
-      + ";trade_journal_orphaned=" + trade_journal_orphaned_detail
-      + ";trade_history=" + trade_history_detail
-      + ";trade_history_before_aurora=" + trade_history_before_aurora_detail
-      + ";trade_history_aurora_captured=" + trade_history_aurora_captured_detail
-      + ";market_board_path=" + AC_MarketBoardPath()
-      + ";external_worker_required_path=" + AC_ExternalWorkerRequiredPath()
-      + ";shared_external_worker_exe_path=" + AC_ExternalWorkerPackagedExePath()
-      + ";shared_worker_install_status_path=" + AC_SharedExternalWorkerInstallStatusPath()
-      + ";shared_worker_status_path=" + AC_SharedExternalWorkerStatusPath()
-      + ";selection_index_path=" + AC_SelectionIndexPath()
-      + ";selection_canonical_index_path=" + AC_SelectionCanonicalIndexPath()
-      + ";selection_status_path=" + AC_SelectionDeskStatusPath()
-      + ";trade_journal_inbox_path=" + AC_TradeJournalInboxFolder()
-      + ";trade_history_before_aurora_path=" + AC_TradeHistoryBeforeAuroraFolder()
-      + ";trade_history_aurora_captured_path=" + AC_TradeHistoryAuroraCapturedFolder();
-
-   return root_ok && wb_ok && shared_worker_ok && shared_worker_package_ok && shared_worker_status_ok && worker_ok && worker_control_ok && worker_inbox_ok && worker_outbox_ok && worker_status_ok && worker_logs_ok && worker_quarantine_ok && dossiers_ok && open_ok && closed_ok && unknown_ok && selection_desk_ok && selection_groups_ok && selection_global_ok && selection_canonical_global_ok && selection_global_top10_ok && selection_global_deep_evidence_ok && selection_asset_classes_ok && selection_system_indexes_ok && selection_layer_summaries_ok && trade_journal_import_ok && trade_journal_inbox_ok && trade_journal_accepted_ok && trade_journal_rejected_ok && trade_journal_orphaned_ok && trade_history_ok && trade_history_before_aurora_ok && trade_history_aurora_captured_ok;
+   return AC_DossiersUnknownFolder() + "\\" + AC_SafePart(symbol) + ".txt";
 }
 
 #endif
