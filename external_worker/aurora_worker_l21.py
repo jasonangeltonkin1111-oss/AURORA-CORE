@@ -9,6 +9,14 @@ from aurora_worker_io import WorkerPaths, atomic_write_text, utc_stamp, unix_tim
 L21_STATUS = "design_hold_l20_required"
 L21_REASON = "L21 is design-only until L20 is accepted and stable on main."
 L21_LAYER_FOLDER_NAME = "Layer_21_Selected_Indicator_Reference_Pack"
+L21_FINAL_FIELDS = (
+    "atr_value,atr_percentile,range_percentile,movement_context_state,"
+    "sma_50_value,sma_200_value,price_vs_sma50,price_vs_sma200,sma_context_state,"
+    "donchian_period,donchian_high,donchian_low,donchian_position_percent,donchian_breakout_candidate,"
+    "bollinger_width,bollinger_position,compression_state,expansion_state,"
+    "vwap_value,vwap_session_basis,vwap_distance_pips,vwap_data_status,"
+    "volume_source_type,volume_context_state"
+)
 
 
 @dataclass(frozen=True)
@@ -71,7 +79,7 @@ def _summary(root: Path, status: str = L21_STATUS, reason: str = L21_REASON) -> 
 def _status_text(summary: L21PublishSummary) -> str:
     return "\n".join([
         "schema_name=l21_selected_indicator_reference_pack_status",
-        "schema_version=3",
+        "schema_version=4",
         "layer_id=L21",
         "layer_name=selected_indicator_reference_pack",
         f"status={summary.status}",
@@ -82,9 +90,16 @@ def _status_text(summary: L21PublishSummary) -> str:
         "runtime_activation_allowed=false_until_L20_accepted_and_stable",
         "selected_scope_only=true",
         "upstream_required=L20_selected_rolling_tick_pack",
+        "input_contract=L18_selected_ohlc_optional_L20_tick_spread_context_timeframe_roles",
         "indicator_pack_module_law=one_indicator_pack_one_module_one_deep_research_run",
-        "core_role=reference_context_indicators_only",
-        "realistic_fields=atr_value,atr_percentile,sma_50_value,sma_200_value,sma_context_state,donchian_period,donchian_high,donchian_low,donchian_breakout_candidate,bollinger_width,bollinger_position,vwap_value,vwap_session_basis,vwap_distance_pips,volume_source_type",
+        "core_role=selected_symbol_reference_context_owner",
+        "answers=normal_range_volatility|price_vs_reference_tools|extended_compressed_boundary_context|L22_L23_risk_geometry_context",
+        f"final_reference_fields={L21_FINAL_FIELDS}",
+        "acceptance_check_timeframe_label_required=true",
+        "acceptance_check_data_status_label_required=true",
+        "acceptance_check_context_only_required=true",
+        "acceptance_check_missing_data_degrades_honestly=true",
+        "acceptance_check_no_indicator_only_setup_candidate=true",
         "copyrates_by_l21=false",
         "copyticks_by_l21=false",
         "private_ohlc_cache=false",
@@ -109,7 +124,8 @@ def _board_text(summary: L21PublishSummary) -> str:
         "L21 SELECTED INDICATOR / REFERENCE PACK",
         "Status: DESIGN HOLD",
         "Reason: L20 must be accepted and stable on main before L21 can publish indicator reference values.",
-        "Purpose: selected-symbol reference/context indicators only",
+        "Purpose: selected-symbol neutral reference/context values only",
+        "Answers: normal range/volatility; price vs simple references; extended/compressed/boundary context; L22/L23 risk-geometry context",
         "Merge Allowed: FALSE",
         "Runtime Activation: FALSE until L20 accepted/stable",
         "Module Law: one pack / one module / one deep research run",
@@ -123,15 +139,16 @@ def _board_text(summary: L21PublishSummary) -> str:
         "Execution: FALSE",
         "Expectancy Validated: FALSE",
         "",
-        "Realistic Field Set:",
-        "ATR: atr_value, atr_percentile",
-        "SMA: sma_50_value, sma_200_value, sma_context_state",
-        "Donchian: donchian_period, donchian_high, donchian_low, donchian_breakout_candidate",
-        "Bollinger: bollinger_width, bollinger_position",
-        "VWAP: vwap_value, vwap_session_basis, vwap_distance_pips",
-        "Volume: volume_source_type",
+        "Final Reference Tools:",
+        "ATR/range: atr_value, atr_percentile, range_percentile, movement_context_state",
+        "SMA: sma_50_value, sma_200_value, price_vs_sma50, price_vs_sma200, sma_context_state",
+        "Donchian: donchian_period, donchian_high, donchian_low, donchian_position_percent, donchian_breakout_candidate",
+        "Bollinger: bollinger_width, bollinger_position, compression_state, expansion_state",
+        "VWAP: vwap_value, vwap_session_basis, vwap_distance_pips, vwap_data_status",
+        "Volume label: volume_source_type, volume_context_state",
         "",
-        "Forbidden: indicator stacking nonsense, MACD crossover trading, RSI overbought=sell, indicator-only permission",
+        "Acceptance: every value needs timeframe label, data-status label, context-only wording, honest degradation, and no indicator-only setup candidate.",
+        "Forbidden: RSI/MACD strategy by default, indicator stacking, indicator says buy/sell, VWAP institutional reaction claim, signal permission.",
         "Meaning: context only, not signal authority",
         "",
         f"Generated UTC: {utc_stamp()}",
