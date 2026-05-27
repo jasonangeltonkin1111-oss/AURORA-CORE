@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.086"
+#property version   "1.087"
 #property description "AURORA CORE - runtime spine, foundation truth, gateway support"
 
 #include "core/AC_Config.mqh"
@@ -362,7 +362,7 @@ void OnTimer()
 
    start = GetTickCount();
    AC_WriteResult runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
-   AC_AddMicroLog("AC_PublishRuntimeStatus", start, runtime_status.status);
+   AC_AddMicroLog("AC_PublishRuntimeStatusInterim", start, runtime_status.status);
 
    start = GetTickCount();
    AC_WriteResult manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
@@ -388,7 +388,7 @@ void OnTimer()
 
    start = GetTickCount();
    runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
-   AC_AddMicroLog("AC_PublishRuntimeStatusFinal", start, runtime_status.status);
+   AC_AddMicroLog("AC_PublishRuntimeStatusPostCore", start, runtime_status.status);
 
    start = GetTickCount();
    AC_WriteResult upgrade_log = AC_PublishUpgradeLog(runtime_status, telemetry, manifest, diagnostics);
@@ -406,6 +406,10 @@ void OnTimer()
    AC_WriteResult micro_log = AC_WriteTextFileIfChanged(AC_MicroLogPath(), AC_MICRO_LOG, AC_LAST_MICRO_LOG_TEXT);
    AC_SNAPSHOT.micro_log_status = micro_log.status;
    AC_AddMicroLog("AC_PublishMicroLog", start, micro_log.status);
+
+   start = GetTickCount();
+   runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
+   AC_AddMicroLog("AC_PublishRuntimeStatusFinalLate", start, runtime_status.status);
 
    AC_TIMER_TICKS_SINCE_WORKBENCH++;
    AC_TIMER_BUSY = false;
