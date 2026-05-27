@@ -64,6 +64,56 @@ def _result_latest_path(root: Path) -> Path:
     return WorkerPaths.from_root(root).outbox / "result_latest.txt"
 
 
+def _manifest_true(data: Dict[str, str], key: str) -> bool:
+    return str(data.get(key, "false")).strip().lower() == "true"
+
+
+def _strict_epoch_manifest_ok(data: Dict[str, str]) -> Tuple[bool, str]:
+    if data.get("schema_name") != "aurora_gateway_surface_accepted_epoch":
+        return False, "accepted_epoch_missing_or_wrong_schema_name"
+    try:
+        schema_version = int(float(data.get("schema_version", "0")))
+    except ValueError:
+        schema_version = 0
+    if schema_version < 12:
+        return False, "accepted_epoch_legacy_schema_version"
+    if data.get("display_epoch_status") != "strict_accepted_static":
+        return False, "accepted_epoch_missing_strict_display_status"
+    if data.get("static_policy") != "hold_strict_accepted_surface_for_5_minutes_before_recalculation":
+        return False, "accepted_epoch_missing_chain11_static_policy"
+    if data.get("false_accept_policy") != "degraded_pending_partial_write_degraded_do_not_create_static_epoch":
+        return False, "accepted_epoch_missing_false_accept_policy"
+
+    required_statuses = {
+        "l6_status": "complete",
+        "l7_status": "complete",
+        "l8_status": "complete",
+        "l9_status": "complete",
+        "l11_symbol_ranking_status": "accepted",
+        "l12_group_heat_quality_status": "accepted",
+        "l13_dynamic_group_selection_status": "accepted",
+        "l14_candidate_pool_status": "accepted",
+        "l15_correlation_diversity_status": "accepted",
+        "l16_global_top10_status": "accepted",
+        "l17_deep_evidence_selection_status": "accepted",
+    }
+    for key, expected in required_statuses.items():
+        if data.get(key) != expected:
+            return False, f"accepted_epoch_status_not_strict:{key}={data.get(key, 'missing')}"
+
+    for layer in ("l14", "l15", "l16", "l17", "l18", "l19"):
+        if not _manifest_true(data, f"{layer}_current_chain_valid"):
+            return False, f"accepted_epoch_currentness_not_true:{layer}"
+        if not _manifest_true(data, f"{layer}_downstream_allowed"):
+            return False, f"accepted_epoch_downstream_not_true:{layer}"
+
+    if data.get("l18_selected_raw_ohlc_status") not in {"accepted", "complete_history_limited"}:
+        return False, f"accepted_epoch_l18_not_complete:{data.get('l18_selected_raw_ohlc_status', 'missing')}"
+    if data.get("l19_candle_geometry_status") not in {"accepted", "complete_history_limited"}:
+        return False, f"accepted_epoch_l19_not_complete:{data.get('l19_candle_geometry_status', 'missing')}"
+    return True, "strict_accepted_epoch_manifest_verified"
+
+
 def _accepted_epoch_static_state(root: Path, result: core.ValidationResult, now: int) -> Tuple[bool, str, int]:
     path = _surface_epoch_manifest_path(root)
     if not path.exists():
@@ -73,16 +123,19 @@ def _accepted_epoch_static_state(root: Path, result: core.ValidationResult, now:
     except OSError as exc:
         return False, f"accepted_epoch_unreadable:{type(exc).__name__}", 0
     status_ok = data.get("status") == "accepted" and data.get("epoch_status") == "accepted"
+    if not status_ok:
+        return False, "accepted_epoch_not_strict_accepted", 0
+    manifest_ok, manifest_reason = _strict_epoch_manifest_ok(data)
+    if not manifest_ok:
+        return False, manifest_reason, 0
     same_snapshot = data.get("source_snapshot_id") == result.snapshot_id and data.get("source_payload_checksum") == result.payload_checksum
     try:
         valid_until = int(float(data.get("valid_until_unix", "0")))
     except ValueError:
         valid_until = 0
     remaining = max(0, valid_until - now)
-    if status_ok and same_snapshot and remaining > 0:
+    if same_snapshot and remaining > 0:
         return True, "strict_accepted_epoch_static_hold_active", remaining
-    if not status_ok:
-        return False, "accepted_epoch_not_strict_accepted", 0
     if not same_snapshot:
         return False, "accepted_epoch_snapshot_changed", 0
     return False, "accepted_epoch_static_hold_expired", 0
@@ -253,7 +306,7 @@ def _write_surface_epoch_if_accepted(root: Path, result: core.ValidationResult, 
         f"valid_until_unix={accepted_unix + ACCEPTED_EPOCH_TTL_SECONDS}", f"accepted_epoch_ttl_seconds={ACCEPTED_EPOCH_TTL_SECONDS}",
         f"l6_status={l6_status}", f"l7_status={l7_status}", f"l8_status={l8_status}", f"l9_status={l9_status}",
         f"l11_symbol_ranking_status={l11_status}", f"l12_group_heat_quality_status={l12_status}",
-        f"l13_dynamic_group_selection_status={l13_status}", f"l14_candidate_pool_status={l14_status}", f"l14_current_chain_valid={l14_current}",
+        f"l13_dynamic_group_selection_status={l13_status}", f"l14_candidate_pool_status={l14_status}", f"l14_current_chain_valid={l14_current}", f"l14_downstream_allowed={l14_downstream}",
         f"l15_correlation_diversity_status={l15_status}", f"l15_current_chain_valid={l15_current}",
         f"l15_downstream_allowed={l15_downstream}",
         f"l16_global_top10_status={l16_status}", f"l16_current_chain_valid={l16_current}", f"l16_downstream_allowed={l16_downstream}",
