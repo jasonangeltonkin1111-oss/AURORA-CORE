@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer4_live_quote_spread_scan_repair";
-static const string AC_BUILD_VERSION      = "1.084";
-static const string AC_UPGRADE_ID         = "LAYER4_LIVE_QUOTE_SPREAD_SCAN_REPAIR";
-static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 4 live quote/spread truth by running the existing Layer 4 scan owner before Board, Dossier, Workbench, Manifest, and Layer 5 consumer render/status output, preserving Runtime Owner boundaries and no trade permission.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 1 Layer 4 quote/spread truth render-trigger wiring, Board/Dossier/Workbench/Manifest status sync, Layer 5 upstream consumer refresh through existing owner packets, and duplicate Layer 2 manifest row cleanup. No trade permission, execution, strategy, ranking, new FileIO owner, new route owner, scheduler V2, worker V2, or hidden blocker web is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.084 and #property version=1.084. Runtime proof must show Layer 0 remains accepted, Layer 2 remains clean, Layer 3 scanned_count remains populated, Layer 4 scanned equals open symbol count where ticks are available, l4_cache_key and l4_refresh_key are no longer not_scanned/not_refreshed, Board/Dossier/Diagnostics/Manifest all show Layer 4 live quote/spread status, L5 no longer blocks solely on l4_not_ready, zero spread is labelled fresh only when quote freshness and bid/ask validity support it, physical publication remains unblocked, and trade_permission/auto_trade_allowed remain false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_layer4_live_quote_spread_truth_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "runtime0_final_status_sync_repair";
+static const string AC_BUILD_VERSION      = "1.085";
+static const string AC_UPGRADE_ID         = "RUNTIME0_FINAL_STATUS_SYNC_REPAIR";
+static const string AC_UPGRADE_SUMMARY    = "Repairs Runtime 0 final publication status sync so Runtime_Status.txt is written after Manifest, Telemetry, Diagnostics, Upgrade Log, Upgrade Addendum, and Micro Log statuses are known, preserving Board/Dossier/Workbench/Manifest/internal consistency.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 0 publication-order repair only: final sync pass for Manifest/Telemetry/Diagnostics followed by Runtime Status last-write. Includes prior Layer 4 quote/spread scan repair and Layer 5 missing-tick invalid-bidask counter alignment. No trade permission, execution, strategy, ranking, new FileIO owner, new route owner, scheduler V2, worker V2, or hidden blocker web is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.085 and #property version=1.085. Runtime proof must show Runtime_Status.txt no longer reports manifest_status/telemetry_status/diagnostics_status/upgrade_log_status/upgrade_addendum_status/micro_log_status as not_attempted after those files exist, Layer 0 final statuses are not stuck in running_publication_pending, Layer 2/3/4/5 remain synced, physical publication remains unblocked, and trade_permission/auto_trade_allowed remain false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_runtime0_final_status_sync_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.084_layer4_quote_scan_repair";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.085_runtime0_final_status_sync";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
