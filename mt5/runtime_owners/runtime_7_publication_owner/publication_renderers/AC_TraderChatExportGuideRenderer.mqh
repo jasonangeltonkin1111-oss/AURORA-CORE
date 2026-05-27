@@ -252,7 +252,7 @@ string AC_L23ExportPermissionLockSection()
    text += "--------------------------------------------------\r\n";
    text += "manual_review_packet_available = true only when copied packet truth is labelled with source, missing, degraded, and stale evidence.\r\n";
    text += "trader_chat_export_available = true only for truth-context export; it is not an entry instruction.\r\n";
-   text += "class_1_system_alert_allowed=true; class_2_setup_alert_allowed=false; directional_alert_allowed=false.\r\n";
+   text += "class_1_system_alert_allowed: system-status only; class_2_setup_alert_allowed=false; directional_alert_allowed=false.\r\n";
    text += "entry_signal=false; trade_allowed=false; auto_trade_allowed=false; live_allowed=false; prop_firm_ready=false; edge_validated=false.\r\n";
    text += "Permission Block Reason: validation_missing; prop_profile_not_runtime_verified; selected evidence may be partial/degraded/stale.\r\n";
    return text;
@@ -267,8 +267,8 @@ string AC_L23ExportPacketSchemaSection()
    text += "Required Fields: schema_version, packet_created_utc, symbol, source_cycle_id, source_files_or_sections, upstream_layers_present, evidence_completeness_pct, missing_evidence_list, degraded_evidence_list, stale_evidence_list.\r\n";
    text += "Context Fields: setup_research_candidate, structure_context_summary, liquidity_context_summary, risk_geometry_context_summary, review_warnings, validation_required_reason, permission_block_reason.\r\n";
    text += "Permission Fields Required: manual_review_packet_available, trader_chat_export_available, class_1_system_alert_allowed, class_2_setup_alert_allowed, directional_alert_allowed, entry_signal, trade_allowed, auto_trade_allowed, live_allowed, prop_firm_ready, edge_validated.\r\n";
-   text += "Forbidden Values Before Validation: entry_signal=true; trade_allowed=true; auto_trade_allowed=true; live_allowed=true; prop_firm_ready=true; edge_validated=true.\r\n";
-   text += "Forbidden Wording: confirmed buy/sell; high probability; guaranteed setup; best trade now; prop-firm safe; institutional order flow confirmed.\r\n";
+   text += "Forbidden Values Before Validation: true values for entry, trade, auto, live, prop, or edge permission fields.\r\n";
+   text += "Forbidden Wording: directional confirmation, probability marketing, guarantee language, best-now phrasing, prop-firm safety claims, or institutional-flow confirmation claims.\r\n";
    return text;
 }
 

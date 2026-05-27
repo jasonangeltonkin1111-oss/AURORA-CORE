@@ -68,7 +68,7 @@ Do not claim:
 EA auto-launch works
 packaged worker is proven
 worker is production-ready
-worker is trade-ready
+worker is trade-authority-ready
 ```
 
 Auto-launch comes only after packaged-worker proof.

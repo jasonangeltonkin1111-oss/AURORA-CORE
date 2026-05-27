@@ -87,6 +87,75 @@ void AC_MergeWriteResult(const string surface, const AC_WriteResult &result, str
    AC_RecordWriteProblem(surface, result);
 }
 
+string AC_EnsureRootFolders()
+{
+   string detail = "";
+   bool ok = AC_EnsureRuntimeFolders(detail);
+   if(ok)
+      return "folder_create_ok|" + detail;
+   return "folder_create_failed|" + detail;
+}
+
+AC_WriteResult AC_PublishAccountStatus()
+{
+   string text = AC_AccountTruthText();
+   return AC_WriteTextFileIfChanged(AC_AccountStatusPath(), text, AC_LAST_ACCOUNT_STATUS_TEXT);
+}
+
+AC_WriteResult AC_PublishMarketBoard(const AC_Layer0StatusPacket &status)
+{
+   string text = AC_BuildTraderBoardText(AC_SNAPSHOT, status);
+   return AC_WriteTextFileIfChanged(AC_MarketBoardPath(), text, AC_LAST_BOARD_TEXT);
+}
+
+AC_WriteResult AC_PublishManifest(const AC_WriteResult &board_write)
+{
+   string text = "";
+   text += AC_ManifestRow("Market Board", board_write, AC_SNAPSHOT) + "\r\n";
+   text += AC_OwnerStatusRow(AC_SNAPSHOT) + "\r\n";
+   text += AC_LayerStatusRows(AC_SNAPSHOT);
+   return AC_WriteTextFileFastAtomicIfChanged(AC_ManifestPath(), text, "manifest_changed_only");
+}
+
+AC_WriteResult AC_PublishTelemetry(const AC_WriteResult &board_write)
+{
+   string text = "";
+   text += AC_RuntimeTelemetryRow(AC_SNAPSHOT) + "\r\n";
+   text += AC_WriteResultLine("Market Board", board_write) + "\r\n";
+   text += AC_HeartbeatStatusText(AC_SNAPSHOT);
+   return AC_WriteTextFileIfChanged(AC_WorkbenchStatusPath(), text, AC_LAST_WORKBENCH_STATUS_TEXT);
+}
+
+AC_WriteResult AC_PublishDiagnostics(const AC_WriteResult &board_write)
+{
+   string text = "";
+   text += AC_Layer0WorkbenchText(AC_L0_STATUS);
+   text += "\r\nRuntime Status\r\n----------------------------------------\r\n";
+   text += AC_RuntimeStatusText(AC_SNAPSHOT);
+   text += "\r\nWrite Detail\r\n----------------------------------------\r\n";
+   text += AC_WriteResultLine("Market Board", board_write) + "\r\n";
+   return AC_WriteTextFileFastAtomicIfChanged(AC_DiagnosticsPath(), text, "diagnostics_changed_only");
+}
+
+AC_WriteResult AC_PublishUpgradeLog(const AC_WriteResult &board_write)
+{
+   string text = AC_UpgradeLogText(AC_SNAPSHOT, board_write, board_write, board_write, board_write);
+   return AC_WriteTextFileFastAtomicIfChanged(AC_UpgradeLogPath(), text, "upgrade_log_changed_only");
+}
+
+AC_WriteResult AC_PublishUpgradeAddendum(const string detail)
+{
+   string text = AC_UpgradeAddendumText(AC_SNAPSHOT);
+   text += "write_detail=\r\n" + detail;
+   return AC_WriteTextFileFastAtomicIfChanged(AC_UpgradeAddendumPath(), text, "upgrade_addendum_changed_only");
+}
+
+AC_WriteResult AC_PublishRuntimeStatus(const AC_Runtime0Snapshot &snapshot)
+{
+   string text = AC_RuntimeStatusText(snapshot);
+   return AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), text, AC_LAST_RUNTIME_STATUS_TEXT);
+}
+
 int OnInit()
 {
    AC_EnsureRootFolders();

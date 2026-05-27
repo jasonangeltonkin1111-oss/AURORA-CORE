@@ -14,6 +14,8 @@ string AC_BoardHealthTag(const string status)
       return "REVIEW";
    if(StringFind(status, "Drift") >= 0 || StringFind(status, "drift") >= 0)
       return "DRIFT";
+   if(StringFind(status, "history_limited") >= 0 || StringFind(status, "History Limited") >= 0)
+      return "PARTIAL";
    if(StringFind(status, "Degraded") >= 0 || StringFind(status, "degraded") >= 0 ||
       StringFind(status, "Expired") >= 0 || StringFind(status, "expired") >= 0)
       return "DEGRADED";
@@ -99,6 +101,16 @@ string AC_BoardGatewayProgress()
       + ";accepted=" + (AC_EXTERNAL_WORKER_STATUS.accepted_result ? "true" : "false");
 }
 
+string AC_BoardGatewayCycleStatusPath()
+{
+   return AC_ExternalWorkerStatusFolder() + "\\gateway_cycle_status.txt";
+}
+
+string AC_BoardGatewayCycleText()
+{
+   return AC_L16ReadSmallTextFile(AC_BoardGatewayCycleStatusPath(), 20000);
+}
+
 string AC_BoardHeaderSection(const AC_Layer0StatusPacket &status)
 {
    string text = "";
@@ -119,6 +131,17 @@ string AC_BoardSystemCockpitSection(const AC_Layer0StatusPacket &status)
    text += "Runtime Mode:        Publication + inspection ranking\r\n";
    text += "Selection Surface:   L16 visible basket + L17 deep-evidence split; inspection only\r\n";
    text += "Permission Stage:    Not active\r\n";
+   string cycle = AC_BoardGatewayCycleText();
+   text += "Chain State:         " + AC_L16KvValue(cycle, "chain_state", "not_runtime_proven") + "\r\n";
+   text += "Core Completion:     " + AC_L16KvValue(cycle, "core_completion_state", "not_runtime_proven") + "\r\n";
+   text += "Deep Completion:     " + AC_L16KvValue(cycle, "deep_completion_state", "not_runtime_proven") + "\r\n";
+   text += "Static Hold:         " + AC_L16KvValue(cycle, "accepted_epoch_static_hold_active", "false") + " remaining=" + AC_L16KvValue(cycle, "accepted_epoch_static_remaining_seconds", "0") + "s\r\n";
+   text += "Retry Cycle:         " + AC_L16KvValue(cycle, "retry_cycle_count", "0") + "/" + AC_L16KvValue(cycle, "retry_cycle_limit", "5") + "\r\n";
+   text += "Chain Blocker:       " + AC_L16KvValue(cycle, "main_blocker_owner", "not_runtime_proven") + " | " + AC_L16KvValue(cycle, "main_blocker_reason", "not_runtime_proven") + "\r\n";
+   text += "L8 Strict State:     " + AC_L8_STATUS + "\r\n";
+   text += "L15 Correlation:     " + AC_L15_STATUS + "\r\n";
+   text += "L17 Currentness:     " + AC_L16KvValue(cycle, "l17_current_chain_valid", "see_gateway_result") + "\r\n";
+   text += "L18/L19 Deep Fill:   L18=" + AC_L18_STATUS + " L19=" + AC_L19_STATUS + "\r\n";
    text += "Primary Warning:     " + AC_BoardWarningText() + "\r\n";
    text += "Main Blocker:        " + status.main_blocker + "\r\n";
    return text;
@@ -185,10 +208,10 @@ string AC_BoardLayerHealthMatrixSection(const AC_Layer0StatusPacket &status)
    text += AC_BoardOverviewRow("L17 Deep Evidence Split", AC_BoardHealthTag(AC_L17_STATUS), AC_L17_STATUS, "deep " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 fallback=" + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT), AC_L17_MAIN_BLOCKER, "Runtime3 worker readback", "evidence budget split only");
    text += AC_BoardOverviewRow("L18 Raw OHLC Bar Pack", AC_SurfaceStateFromStatus(AC_L18_STATUS), AC_L18_FRESHNESS_STATUS, "found " + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED) + ";missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING), AC_L18_REASON, "Runtime3 worker status surface", "selected raw OHLC display only");
    text += AC_BoardOverviewRow("L19 Wick / Candle Geometry", AC_SurfaceStateFromStatus(AC_L19_STATUS), AC_L19_FRESHNESS_STATUS, "geometry_rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS) + ";stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT), AC_L19_REASON, "Runtime3 worker status surface", "wick/candle geometry only");
-   text += AC_BoardOverviewRow("L20 Rolling Tick Pack", "NOT_ACTIVE", "design_hold", "0 runtime files", "not_runtime_active", "Design hold", "design only");
-   text += AC_BoardOverviewRow("L21 Indicator / Reference Pack", "NOT_ACTIVE", "design_hold", "0 runtime files", "not_runtime_active", "Design hold", "design only");
-   text += AC_BoardOverviewRow("L22 Liquidity / DOM Proxy", "NOT_ACTIVE", "design_hold", "0 runtime files", "not_runtime_active", "Design hold", "design only");
-   text += AC_BoardOverviewRow("L23 Setup / Permission State", "BLOCKED", "trade_permission_false", "entry_signal=false execution=false", "strategy_validation_status=not_validated", "Design hold", "no setup, alert, permission, or execution");
+   text += AC_BoardOverviewRow("L20 Rolling Tick Pack", "NOT_ACTIVE", "design_hold", "feed_quality_proxy_scaffold;mt5_proxy_caveat", "not_runtime_active", "Design hold", "future selected-symbol tick/feed quality evidence only");
+   text += AC_BoardOverviewRow("L21 Indicator / Reference Pack", "NOT_ACTIVE", "design_hold", "explainable_reference_scaffold", "not_runtime_active", "Design hold", "future ATR/VWAP/Bollinger/Donchian context only");
+   text += AC_BoardOverviewRow("L22 Liquidity / DOM Proxy", "NOT_ACTIVE", "design_hold", "evidence_scaffold_poi_liquidity_proxy", "not_runtime_active", "Design hold", "future evidence structures only, no buy/sell wording");
+   text += AC_BoardOverviewRow("L23 Setup / Permission State", "BLOCKED", "trade_permission_false", "entry_signal=false execution=false auto_trade_allowed=false alert_allowed=false", "strategy_validation_status=not_validated", "Design hold", "validation scaffold only; no setup, alert, permission, or execution");
    text += AC_BoardOverviewRow("OHLC Shared Raw Store", AC_BoardHealthTag(AC_SHARED_OHLC_STATUS), AC_SHARED_OHLC_STATUS, "tf=8 pending=" + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_PENDING) + ";topup=" + IntegerToString(AC_SHARED_OHLC_TOPUP_ATTEMPTED), "supported_timeframes=M1,M5,M15,M30,H1,H4,D1,W1", "Runtime1 Shared OHLC Raw Storage", "raw storage only");
    text += AC_BoardOverviewRow("Gateway / External Worker", AC_BoardGatewayState(), AC_EXTERNAL_WORKER_STATUS.worker_status, AC_BoardGatewayProgress(), AC_EXTERNAL_WORKER_STATUS.result_validation_reason, "Runtime3 Calculation Gateway", "worker liveness and result acceptance are separate");
    text += AC_BoardOverviewRow("Selection Desk", AC_BoardHealthTag(AC_SelectionDeskScaffoldStatus()), AC_SelectionDeskScaffoldStatus(), "L16=" + IntegerToString(AC_L16_SELECTED_COUNT) + ";L17=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + ";dup_l18=" + IntegerToString(AC_L18_SELECTED_DUPLICATE_ROUTE_COPIES), AC_SelectionDeskBlockerSummary(), "Runtime3 worker selection publishers", "operator navigation only");

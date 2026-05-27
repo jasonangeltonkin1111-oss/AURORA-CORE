@@ -346,7 +346,7 @@ FVG confirmation
 OB confirmation
 CHOCH confirmation
 AI confidence
-high probability label
+probability-marketing label
 ```
 
 ### Global Top 10 Outputs

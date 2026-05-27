@@ -65,6 +65,12 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int, selected_sour
         f"l18_freshness_unknown_count={summary.freshness_unknown_count}",
         f"l18_freshness_status={summary.freshness_status}",
         f"l18_freshness_policy={summary.freshness_policy}",
+        f"l18_upstream_l17_status={summary.upstream_l17_status}",
+        f"l18_upstream_l17_current_chain_valid={summary.upstream_l17_current_chain_valid}",
+        f"l18_current_chain_valid={summary.latest_current}",
+        f"l18_downstream_allowed={summary.downstream_allowed}",
+        f"l18_visible_output_source={summary.visible_output_source}",
+        f"l18_currentness_reason={summary.currentness_reason}",
     ]
     lines.extend(_tf_counter_lines(summary))
     lines.extend([
@@ -130,6 +136,10 @@ def run_l18_after_l17(root: Path, run_l19: bool = True) -> L18PublishSummary:
             f"l18_source_files_expected={summary.source_files_expected}",
             f"l18_selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
             f"l18_freshness_status={summary.freshness_status}",
+            f"l18_current_chain_valid={summary.latest_current}",
+            f"l18_downstream_allowed={summary.downstream_allowed}",
+            f"l18_visible_output_source={summary.visible_output_source}",
+            f"l18_currentness_reason={summary.currentness_reason}",
             f"l18_status_path={summary.status_path}",
             f"l18_board_path={summary.board_path}",
             f"result_size={len(updated.encode('utf-8'))}",

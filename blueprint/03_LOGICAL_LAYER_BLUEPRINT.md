@@ -58,7 +58,7 @@ Layer order matters.
 5. **DOM is MT5 proxy-only:** MT5 internal first build only; external DOM/order-flow/liquidity APIs blocked; `MarketBookAdd/MarketBookGet` availability-gated and broker/symbol dependent; no institutional-order-flow claims.
 6. **Alerts are rare:** no per-symbol progress spam; Class 1 system/risk/integrity only now. Class 2 setup/strategy alerts require validation, but raw evidence export and manual trader-review packets may exist earlier with clear missing/degraded truth labels.
 7. **Runtime visibility law:** Board-only Atomic Update Overview, no artificial slow-drip, no blind unbounded loops, timer pressure must be visible.
-8. **Export is not permission:** `manual_review_allowed=true` or `trader_chat_export_allowed=true` never implies `trade_allowed=true`, `auto_trade_allowed=true`, `entry_signal=true`, or `expectancy_validated=true`.
+8. **Export is not permission:** enabled manual review or trader-chat export never implies enabled trade, auto-trade, entry-signal, or expectancy-validation authority.
 
 ---
 
@@ -87,11 +87,11 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 ## Layer Contracts (1-23)
 
 ### L1 — Account / Portfolio / Prop Rule Truth
-- **Purpose:** Account/portfolio/prop safety baseline truth.
+- **Purpose:** Account/portfolio/prop-rule baseline truth.
 - **Owns:** balance, equity, margin, free_margin, margin_level_pct, floating_pl, floating_pl_pct, daily_pl, daily_loss_buffer, max_loss_buffer, open_positions_count, pending_orders_count, currency_exposure, symbol_exposure, ranking_group_exposure, correlation_exposure, portfolio_heat, prop_rule_profile_id, prop_rule_status, news_restriction_state.
 - **Prop profile fields:** firm_name, account_phase, daily_loss_formula, max_loss_formula, equity_vs_balance_basis, trailing_drawdown_type, static_drawdown_limit, news_restriction_window, max_lots, max_positions, max_daily_trades, weekend_holding_allowed, overnight_holding_allowed, copy_trading_restriction, hedging_restriction, martingale_grid_policy, consistency_rule, rule_last_verified_date.
 - **Inputs / MT5 family:** AccountInfo*, Position*/Order* snapshots.
-- **Outputs:** portfolio/prop safety truth rows.
+- **Outputs:** portfolio/prop-rule truth rows.
 - **Forbidden ownership:** ranking, selection, strategy claims.
 - **Publication surface:** Board risk panel, Dossier risk section.
 - **Validation/permission rule:** downstream permission must consume, not override.
@@ -184,6 +184,8 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 - **Purpose:** diversify candidate basket.
 - **Scope law:** candidate pool only; no full-universe 1200x1200 matrix.
 - **Owns:** corr_to_selected_max, corr_to_selected_avg, correlation_sample_count, correlation_confidence, currency_overlap_score, ranking_group_overlap_score, diversity_score, selection_utility, correlation_reject_reason.
+- **Currentness law:** consumes latest-current L14 only. Held or write-degraded candidate pools are operator-visible history, not current downstream truth.
+- **Recent window law:** primary correlation timeframe is M15; secondary recent timeframe is M5; H1 is optional reference only. Minimum aligned returns = 64, deep target returns = 350.
 - **Heatmap:** Global Top 10 Correlation Heatmap.
 - **Forbidden ownership:** direct trade calls.
 
@@ -191,12 +193,14 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 - **Purpose:** diversified attention basket builder.
 - **Owns:** global_top10, global_top10_rank, global_top10_reason, backup_fill_used, backup_fill_reason, correlation_rejects, fallback_reason.
 - **Meaning law:** Global Top 10 is not best 10 trades.
+- **Currentness law:** consumes latest-current accepted L15 only. Fallback/held displays must be labelled and must not silently become clean current truth.
 - **Forbidden ownership:** direct trade calls.
 
 ### L17 — Deep Evidence Selection Split
 - **Purpose:** visible-vs-deep split control.
 - **Owns:** visible_top_n_only, deep_evidence_selected, alert_eligible_candidate, deep_selected_total, visible_only_total, alert_eligible_total, selection_reason, depth_assignment.
 - **Law:** Visible Top-N does not equal deep evidence selected.
+- **Currentness law:** consumes latest-current L16 only. Selection Desk visible rows are navigation/readback surfaces, not a fallback source for current downstream truth.
 - **Forbidden ownership:** evidence collection and trade permission.
 
 ### L18 — Selected Raw OHLC Bar Pack
@@ -207,6 +211,7 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 - **Fields:** time, open, high, low, close, tick_volume, spread, real_volume_if_available, bar_complete_flag.
 - **Inputs / MT5 family:** CopyRates, MqlRates, CopyTime/Open/High/Low/Close/TickVolume/Spread/RealVolume.
 - **Outputs:** selected OHLC pack completeness.
+- **Currentness law:** consumes latest-current L17 only. Fresh/aging but shallow history may be `complete_history_limited`; missing, stale, decode_error, or write_failed remains non-current.
 - **Forbidden ownership:** candle interpretation, signal, permission.
 
 ### L19 — Selected Wick / Candle Geometry Pack
@@ -214,6 +219,7 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 - **Fields:** bar_time, open, high, low, close, range, body, upper_wick, lower_wick, upper_wick_pct, lower_wick_pct, body_pct, close_position_pct, zero_range_flag, bar_complete_flag.
 - **Formulas:** range=high-low; body=abs(close-open); upper_wick=high-max(open,close); lower_wick=min(open,close)-low; percentages/close_position as defined.
 - **Zero-range rule:** if range==0 => pct fields unavailable; zero_range_flag=true.
+- **Currentness law:** consumes latest-current L17 and L18 only. Geometry from stale or blocked upstream is not downstream-allowed.
 - **Verification:** synthetic candle tests, manual chart cross-check, live MT5 verification later.
 - **Forbidden ownership:** signal, permission.
 
@@ -241,17 +247,17 @@ Owns manual review packet availability, trader-chat export availability, evidenc
 - **Liquidity fields:** nearest_liquidity_high_distance_pips, nearest_liquidity_low_distance_pips, equal_high_cluster_count, equal_low_cluster_count, session_high_distance, session_low_distance, prior_day_high_distance, prior_day_low_distance, liquidity_map_confidence.
 - **MT5 order-flow proxy fields:** order_flow_source (mt5_tick_proxy|mt5_dom_proxy|unavailable), dom_available_flag, dom_subscription_status, dom_bid_levels_count, dom_ask_levels_count, dom_bid_volume_total, dom_ask_volume_total, dom_imbalance_ratio, tick_flow_proxy_available, tick_count_10m, bid_change_count_10m, ask_change_count_10m, spread_spike_count_10m, order_flow_confidence.
 - **Inputs / MT5 family:** MarketBookAdd, MarketBookGet, MarketBookRelease, OnBookEvent, CopyTicks.
-- **Forbidden claims:** institutional order flow confirmed; zone touched=buy/sell; sweep=reversal; FVG=continuation.
+- **Forbidden claims:** institutional-flow certainty, touch-equals-direction claims, sweep-equals-reversal claims, or FVG-equals-continuation claims.
 
 ### L23 — Setup / Strategy / Permission / Trader-Review Export State
 - **Purpose:** package selected-symbol evidence into manual review, trader-chat export, setup research, permission, and alert state without confusing export with permission.
 - **Owns:** manual_review_packet_available, trader_chat_export_available, evidence_completeness_pct, missing_evidence_list, degraded_evidence_list, setup_research_candidate, structure_context_summary, liquidity_context_summary, risk_geometry_context_summary, review_warnings, trade_allowed, auto_trade_allowed, directional_alert_allowed, class_1_system_alert_allowed, class_2_setup_alert_allowed.
 - **Export defaults:** manual review and trader-chat export may be true when a labelled truth packet exists, even if partial/degraded. Missing L18-L22 evidence reduces completeness/confidence; it does not block export.
-- **Permission defaults:** class_1_system_alert_allowed=true rare only, class_2_setup_alert_allowed=false, directional_alert_allowed=false, auto_trade_allowed=false, live_allowed=false, trade_allowed=false.
+- **Permission defaults:** rare system-integrity alerts may be allowed; setup, directional, auto-trade, live, and trade authority remain disabled by default.
 - **Class 1 allowed:** session changed, atomic overview stale, cycle failed, critical governance write failure, terminal disconnected, prop rule danger, tick capture failed for selected batch.
 - **Class 2 / permission future requires:** exact strategy rules, validated permission standard, Layer 1 pass, cooldown pass, and explicit validation/permission upgrade. Backtesting/OOS/forward proof is required for Aurora-generated permission or auto-trading, not for raw evidence export.
-- **Forbidden phrases:** high probability buy, guaranteed setup, confirmed sell, best trade now.
-- **Meaning law:** `manual_review_allowed=true` or `trader_chat_export_allowed=true` does not imply `trade_allowed=true`, `entry_signal=true`, `auto_trade_allowed=true`, or `expectancy_validated=true`.
+- **Forbidden phrases:** directional certainty, guarantee language, probability marketing, or best-now phrasing.
+- **Meaning law:** enabled manual review or trader-chat export does not imply enabled trade, entry-signal, auto-trade, or expectancy-validation authority.
 
 ## Heatmap Publication Set
 1. Ranking Group Strength Heatmap

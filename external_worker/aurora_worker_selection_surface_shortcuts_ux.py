@@ -30,11 +30,9 @@ STALE_WARNING_BLOCK = "\n".join([
 ])
 
 OVERLAY_TRUST_BLOCK = "\n".join([
-    "OVERLAY TRUST RULE",
-    "overlay_truth=current_selection_truth",
-    "base_dossier_body_policy=may_lag_current_selection_overlay",
-    "operator_rule=trust_overlay_for_current_selection_membership;trust_base_body_for_symbol_detail_only",
-    "stale_warning_policy=only_loud_when_staleness_is_proven_by_future_timestamp_generation_check",
+    "HISTORICAL BASE DOSSIER BODY BELOW - NOT CURRENT SELECTION TRUTH",
+    "current_selection_truth_source=overlay_above",
+    "base_dossier_body_policy=historical_context_only_may_lag_current_selection_overlay",
     "----------------------------------------",
     "",
 ])

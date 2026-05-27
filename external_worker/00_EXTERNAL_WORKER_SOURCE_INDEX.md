@@ -29,6 +29,15 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 - `install_worker_global.ps1` — Windows install/register script for the shared global scheduled-task daemon/watchdog path.
 - `register_watchdog_safe.ps1` — Windows watchdog registration/support script.
 
+## Chain 11 currentness addendum
+
+- L15 consumes latest-current L14 only and uses recent reachable correlation windows: M15 primary, M5 secondary, H1 optional reference only.
+- L16 consumes latest-current accepted L15 only. Held/fallback display rows remain labelled and must not silently become clean current truth.
+- L17 consumes latest-current L16 layer output only. Selection Desk visible rows are operator navigation/readback, not a fallback source for current downstream truth.
+- L18 consumes latest-current L17 only and may report `complete_history_limited` when files decode, are fresh or aging, and only display depth is shallow.
+- L19 consumes latest-current L17 and L18 only. Geometry from stale or blocked upstream is not downstream-allowed.
+- `test_chain11_currentness.py` is an active synthetic test file for stale-upstream refusal, static epoch rejection, M15/M5 L15 correlation, and L18 history-limited semantics.
+
 ## Runtime chain boundary
 
 Current source chain:
@@ -62,11 +71,11 @@ L8 may read Runtime 1 Shared OHLC Priority Window files for movement/range ranki
 
 If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted movement, fake correlation, fake L18 completion, or fake L19 structure completion.
 
-L15 may read shared OHLC for candidate-pool correlation/diversity only.
+L15 may read shared OHLC for candidate-pool correlation/diversity only. Its current recent correlation contract is M15 primary, M5 secondary, H1 optional reference only.
 
 L16 must not read raw OHLC or recompute correlation. L16 consumes L15 correlation/diversity outputs.
 
-L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for selected visible L16 display rows.
+L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for latest-current selected visible L16 display rows.
 
 L18 may read existing Shared OHLC Store seed files and copy/render selected raw OHLC rows into canonical selected copied dossiers only. L18 must not call `CopyRates`, change Shared OHLC Store contracts, create new OHLC files/caches, touch base Dossiers, or infer trade signals.
 

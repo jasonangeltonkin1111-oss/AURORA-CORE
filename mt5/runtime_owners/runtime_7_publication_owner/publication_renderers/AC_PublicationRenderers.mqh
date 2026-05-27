@@ -256,7 +256,9 @@ AC_WriteResult AC_PublishSelectionDeskScaffold()
 #undef AC_Layer0StatusRow
 #undef AC_Layer0WorkbenchText
 #undef AC_BuildTraderBoardText
+#define AC_BuildTraderBoardText AC_BuildTraderBoardText_TraderChatWrapper
 #include "AC_TraderChatExportGuideRenderer.mqh"
+#undef AC_BuildTraderBoardText
 
 string AC_UxBoardStateLine(const string name, const string value)
 {
@@ -305,6 +307,31 @@ string AC_UxBoardInspectionState()
 string AC_UxBoardGatewayLine()
 {
    return AC_BoardGatewayState() + " | " + AC_EXTERNAL_WORKER_STATUS.worker_status + " | " + AC_BoardGatewayProgress();
+}
+
+string AC_UxBoardChainStateSection()
+{
+   string cycle = AC_BoardGatewayCycleText();
+   string text = "";
+   text += "\r\nCHAIN COCKPIT\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += AC_UxBoardStateLine("Chain State", AC_L16KvValue(cycle, "chain_state", "not_runtime_proven"));
+   text += AC_UxBoardStateLine("Core Completion", AC_L16KvValue(cycle, "core_completion_state", "not_runtime_proven"));
+   text += AC_UxBoardStateLine("Deep Completion", AC_L16KvValue(cycle, "deep_completion_state", "not_runtime_proven"));
+   text += AC_UxBoardStateLine("Current Top10", "L16=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 state=" + AC_L16_STATUS);
+   text += AC_UxBoardStateLine("Current Top5 Deep", "L17=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 state=" + AC_L17_STATUS);
+   text += AC_UxBoardStateLine("Static Hold", AC_L16KvValue(cycle, "accepted_epoch_static_hold_active", "false") + " remaining=" + AC_L16KvValue(cycle, "accepted_epoch_static_remaining_seconds", "0") + "s");
+   text += AC_UxBoardStateLine("Retry Cycle", AC_L16KvValue(cycle, "retry_cycle_count", "0") + "/" + AC_L16KvValue(cycle, "retry_cycle_limit", "5"));
+   text += AC_UxBoardStateLine("Main Blocker", AC_L16KvValue(cycle, "main_blocker_owner", "not_runtime_proven") + " | " + AC_L16KvValue(cycle, "main_blocker_reason", "not_runtime_proven"));
+   text += AC_UxBoardStateLine("L8 Strict State", AC_L8_STATUS);
+   text += AC_UxBoardStateLine("L15 Correlation", AC_L15_STATUS + " current=" + AC_L16KvValue(cycle, "l15_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L16 Top10", AC_L16_STATUS + " current=" + AC_L16KvValue(cycle, "l16_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L17 Currentness", AC_L17_STATUS + " current=" + AC_L16KvValue(cycle, "l17_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L18 Raw OHLC", AC_L18_STATUS + " current=" + AC_L16KvValue(cycle, "l18_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L19 Geometry", AC_L19_STATUS + " current=" + AC_L16KvValue(cycle, "l19_current_chain_valid", "see_gateway_result"));
+   text += AC_UxBoardStateLine("L20 Tick/Spread", "not_active");
+   text += "Trade Permission: FALSE\r\n";
+   return text;
 }
 
 string AC_UxBoardHeaderSection(const AC_Layer0StatusPacket &status)
@@ -473,6 +500,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 
    string text = "";
    text += AC_UxBoardHeaderSection(status);
+   text += AC_UxBoardChainStateSection();
    text += AC_UxBoardPrimaryWarningsSection(status);
    text += AC_UxBoardOperatorActionSection();
    text += AC_UxBoardTruthContractSection();
@@ -509,6 +537,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    text += AC_BoardTradingReadinessSection();
    text += AC_BoardTrustBlockerSection(status);
    text += AC_BoardActionSection();
+   text += AC_BoardTraderChatExportGuideSection();
    return text;
 }
 

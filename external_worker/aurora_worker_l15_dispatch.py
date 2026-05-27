@@ -76,13 +76,12 @@ def _result_latest_kv(outbox: Path) -> dict[str, str]:
 def _l14_current_chain_valid(outbox: Path) -> tuple[bool, str]:
     kv = _result_latest_kv(outbox)
     value = str(kv.get("l14_current_chain_valid", "unknown")).strip().lower()
+    downstream = str(kv.get("l14_downstream_allowed", "false")).strip().lower()
     status = str(kv.get("l14_candidate_pool_status", "unknown")).strip()
     reason = str(kv.get("l14_currentness_reason", kv.get("l14_candidate_pool_reason", "not_available"))).strip()
-    if value == "true":
-        return True, f"l14_current_chain_valid=true;status={status};reason={reason}"
-    if value == "unknown" and status in {"accepted", "write_degraded"}:
-        return True, f"legacy_l14_status_allowed;status={status};reason={reason}"
-    return False, f"l14_current_chain_valid={value};status={status};reason={reason}"
+    if value == "true" and downstream == "true" and status == "accepted":
+        return True, f"l14_current_chain_valid=true;downstream_allowed=true;status={status};reason={reason}"
+    return False, f"l14_current_chain_valid={value};downstream_allowed={downstream};status={status};reason={reason}"
 
 
 def _blocked_l15_summary(reason: str) -> L15PublishSummary:
@@ -222,10 +221,12 @@ def _write_l15_correlation_diagnostics(outbox: Path, summary: L15PublishSummary,
         f"corr_unavailable_count={summary.corr_unavailable_count}",
         f"ohlc_scan_file_limit={summary.ohlc_scan_file_limit}",
         f"ohlc_scan_file_count={summary.ohlc_scan_file_count}",
-        "timeframe=H1",
-        "lookback_bars=168",
-        "minimum_aligned_returns=80",
-        "diagnostic_meaning=if correlation is unavailable, fix OHLC path/coverage/alignment before tuning thresholds",
+        "primary_timeframe=M15",
+        "secondary_timeframe=M5",
+        "reference_timeframe=H1_optional_not_primary_blocker",
+        "lookback_bars=351",
+        "minimum_aligned_returns=64",
+        "diagnostic_meaning=if M15/M5 correlation is unavailable, fix reachable OHLC path/coverage/alignment before tuning thresholds",
         "",
         "PAIR DATA QUALITY COUNTS",
     ]
@@ -244,18 +245,21 @@ def _write_l15_correlation_diagnostics(outbox: Path, summary: L15PublishSummary,
 
 
 def _l15_currentness_fields(summary: L15PublishSummary, l14_gate_valid: bool, l14_gate_reason: str) -> list[str]:
-    current = "true" if summary.status in {"accepted", "write_degraded"} and l14_gate_valid and summary.candidate_scored_count > 0 else "false"
+    current = "true" if summary.status == "accepted" and l14_gate_valid and summary.candidate_scored_count > 0 else "false"
+    downstream_allowed = current
     if not l14_gate_valid:
-        visible_source = "blocked_latest_l14_invalid"
+        visible_source = "blocked"
         reason = "latest_l14_invalid_do_not_consume_held_l14_outputs"
     elif current == "true":
-        visible_source = "latest_calculation"
+        visible_source = "latest"
         reason = "latest_l15_built_from_current_l14"
     else:
-        visible_source = "latest_l15_not_current"
+        visible_source = "blocked"
         reason = "latest_l15_failed_or_empty"
     return [
         f"l15_current_chain_valid={current}",
+        f"l15_latest_current={current}",
+        f"l15_downstream_allowed={downstream_allowed}",
         f"l15_visible_output_source={visible_source}",
         f"l15_currentness_reason={reason}",
         f"l15_upstream_l14_gate={l14_gate_reason}",

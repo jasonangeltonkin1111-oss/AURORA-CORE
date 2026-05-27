@@ -7,7 +7,7 @@ import math
 import re
 import time
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, unix_time, utc_stamp
+from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, read_text, unix_time, utc_stamp
 
 SELECTION_DEEP_START = "========== SELECTION-ONLY DEEP EVIDENCE START =========="
 SELECTION_DEEP_END = "========== SELECTION-ONLY DEEP EVIDENCE END =========="
@@ -112,6 +112,14 @@ class L19PublishSummary:
     freshness_unknown_count: int = 0
     freshness_status: str = "unknown"
     freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time"
+    upstream_l17_status: str = "unknown"
+    upstream_l17_current_chain_valid: str = "false"
+    upstream_l18_status: str = "unknown"
+    upstream_l18_current_chain_valid: str = "false"
+    latest_current: str = "false"
+    downstream_allowed: str = "false"
+    visible_output_source: str = "none"
+    currentness_reason: str = "not_run"
     status_path: str = "not_available"
     board_path: str = "not_available"
     layer_folder: str = "not_available"
@@ -134,6 +142,26 @@ def _shared_ohlc_symbols(root: Path) -> Path:
 
 def _layer_folder(root: Path) -> Path:
     return WorkerPaths.from_root(root).outbox / "Layers" / "Layer_19_Wick_Candle_Geometry_Pack"
+
+
+def _upstream_currentness_gate(root: Path) -> Tuple[bool, Dict[str, str], str]:
+    result_path = WorkerPaths.from_root(root).outbox / "result_latest.txt"
+    if not result_path.exists():
+        return False, {}, "result_latest_missing_l17_l18_currentness_unknown"
+    kv = read_kv(result_path)
+    l17_status = kv.get("l17_deep_evidence_selection_status", "unknown")
+    l17_current = kv.get("l17_current_chain_valid", "false").strip().lower()
+    l17_downstream = kv.get("l17_downstream_allowed", "false").strip().lower()
+    l18_status = kv.get("l18_selected_raw_ohlc_status", "unknown")
+    l18_current = kv.get("l18_current_chain_valid", "false").strip().lower()
+    l18_downstream = kv.get("l18_downstream_allowed", "false").strip().lower()
+    l18_current_status_ok = l18_status in {"accepted", "complete_history_limited"}
+    if l17_status == "accepted" and l17_current == "true" and l17_downstream == "true" and l18_current_status_ok and l18_current == "true" and l18_downstream == "true":
+        return True, kv, f"l17_current=true;l18_current=true;l18_status={l18_status}"
+    return False, kv, (
+        f"l17_status={l17_status};l17_current={l17_current};l17_downstream_allowed={l17_downstream};"
+        f"l18_status={l18_status};l18_current={l18_current};l18_downstream_allowed={l18_downstream}"
+    )
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> bool:
@@ -603,6 +631,14 @@ def _status_text(summary: L19PublishSummary) -> str:
         f"freshness_unknown_count={summary.freshness_unknown_count}",
         f"freshness_status={summary.freshness_status}",
         f"freshness_policy={summary.freshness_policy}",
+        f"upstream_l17_status={summary.upstream_l17_status}",
+        f"upstream_l17_current_chain_valid={summary.upstream_l17_current_chain_valid}",
+        f"upstream_l18_status={summary.upstream_l18_status}",
+        f"upstream_l18_current_chain_valid={summary.upstream_l18_current_chain_valid}",
+        f"latest_current={summary.latest_current}",
+        f"downstream_allowed={summary.downstream_allowed}",
+        f"visible_output_source={summary.visible_output_source}",
+        f"currentness_reason={summary.currentness_reason}",
         f"m5_completed_symbols={summary.m5_completed_symbols}",
         f"m5_partial_symbols={summary.m5_partial_symbols}",
         f"m5_missing_symbols={summary.m5_missing_symbols}",
@@ -663,6 +699,28 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
     layer_dir.mkdir(parents=True, exist_ok=True)
     status_path = layer_dir / "l19_status.txt"
     board_path = _selection_desk(root) / "91_Layer_Summaries" / "L19_Wick_Candle_Geometry_Pack" / "00_L19_Board_Overview.txt"
+    upstream_valid, upstream_kv, upstream_reason = _upstream_currentness_gate(root)
+    if not upstream_valid:
+        summary = L19PublishSummary(
+            status="pending",
+            reason="waiting_upstream_l17_l18_current;" + upstream_reason,
+            upstream_l17_status=upstream_kv.get("l17_deep_evidence_selection_status", "unknown"),
+            upstream_l17_current_chain_valid=upstream_kv.get("l17_current_chain_valid", "false"),
+            upstream_l18_status=upstream_kv.get("l18_selected_raw_ohlc_status", "unknown"),
+            upstream_l18_current_chain_valid=upstream_kv.get("l18_current_chain_valid", "false"),
+            latest_current="false",
+            downstream_allowed="false",
+            visible_output_source="blocked",
+            currentness_reason="waiting_upstream_l17_l18_current",
+            status_path=str(status_path),
+            board_path=str(board_path),
+            layer_folder=str(layer_dir),
+        )
+        _write(status_path, _status_text(summary), failed)
+        _write(board_path, _board_text(summary), failed)
+        if failed:
+            return L19PublishSummary(**{**summary.__dict__, "status": "write_degraded", "reason": "one_or_more_l19_waiting_outputs_failed", "write_failed_count": len(failed)})
+        return summary
     dossiers = _selected_dossier_paths(root)
     tf_counts = _empty_tf_counts()
     decorated = missing_symbol = source_found = source_missing = source_partial = decode_errors = 0
@@ -720,7 +778,8 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         except Exception:
             failed.append(dossier)
 
-    has_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or source_partial > 0 or decorated == 0
+    has_errors = bool(failed) or source_missing > 0 or decode_errors > 0 or decorated == 0
+    history_limited = source_partial > 0
     freshness_bad = freshness["stale"] > 0 or freshness["unknown"] > 0
     if not dossiers:
         status = "pending"
@@ -728,13 +787,17 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         status = "partial"
     elif freshness_bad:
         status = "degraded"
+    elif history_limited:
+        status = "complete_history_limited"
     else:
         status = "accepted"
     reason = (
         "selected_dossiers_decorated_with_freshness_proof"
         if status == "accepted"
         else (
-            "selected_dossiers_decorated_with_stale_or_unknown_freshness"
+            "selected_dossiers_decorated_with_fresh_or_aging_limited_history"
+            if status == "complete_history_limited"
+            else "selected_dossiers_decorated_with_stale_or_unknown_freshness"
             if status == "degraded"
             else ("no_canonical_selected_dossiers_found" if not dossiers else "one_or_more_sources_missing_partial_invalid_or_write_failed")
         )
@@ -796,6 +859,14 @@ def publish_l19_candle_geometry_and_structure(root: Path) -> L19PublishSummary:
         freshness_unknown_count=freshness["unknown"],
         freshness_status=freshness_status,
         freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time",
+        upstream_l17_status=upstream_kv.get("l17_deep_evidence_selection_status", "accepted"),
+        upstream_l17_current_chain_valid=upstream_kv.get("l17_current_chain_valid", "true"),
+        upstream_l18_status=upstream_kv.get("l18_selected_raw_ohlc_status", "accepted"),
+        upstream_l18_current_chain_valid=upstream_kv.get("l18_current_chain_valid", "true"),
+        latest_current="true" if status in {"accepted", "complete_history_limited"} else "false",
+        downstream_allowed="true" if status in {"accepted", "complete_history_limited"} else "false",
+        visible_output_source="latest" if status in {"accepted", "complete_history_limited"} else "blocked",
+        currentness_reason="latest_l19_built_from_current_l17_l18" if status in {"accepted", "complete_history_limited"} else "latest_l19_not_current",
         status_path=str(status_path),
         board_path=str(board_path),
         layer_folder=str(layer_dir),

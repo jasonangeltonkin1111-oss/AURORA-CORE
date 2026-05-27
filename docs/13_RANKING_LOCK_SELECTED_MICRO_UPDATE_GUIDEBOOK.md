@@ -125,7 +125,7 @@ Forbidden meanings:
 best trades
 trade signals
 permission list
-high probability list
+probability-marketing list
 prop-firm ready basket
 auto-trade candidates
 ```

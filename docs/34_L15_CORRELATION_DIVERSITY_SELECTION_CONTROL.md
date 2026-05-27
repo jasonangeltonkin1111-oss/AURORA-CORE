@@ -288,7 +288,7 @@ Entry Signal: FALSE
 Execution: FALSE
 ```
 
-Dossier must not say buy, sell, setup, high probability, signal, permission, execution, or prop-firm safe.
+Dossier must not say direction, setup, probability marketing, signal, permission, execution, or prop-rule clearance.
 
 ---
 

@@ -403,7 +403,7 @@ Owns later setup/permission/alert state.
 Default status:
 
 ```text
-class_1_system_alert_allowed=true
+class_1_system_alert_allowed may be true only for system integrity
 class_2_setup_alert_allowed=false
 directional_alert_allowed=false
 auto_trade_allowed=false

@@ -39,8 +39,6 @@ mt5/AuroraCore.mq5
 | `AC_SharedOhlcActiveBridge.mqh` | current active Shared OHLC bridge | active-source | Owns current active raw CopyRates/MqlRates storage service, priority-window/status surfaces, and Board/Dossier/Workbench render sections. No calculations, scoring, selection, permission, or execution. |
 | `AC_SharedOhlcPublicationContract.mqh` | stable publication/compatibility compile-read contract | active-contract | Must delegate to `AC_SharedOhlcActiveBridge.mqh`; no CopyRates or storage scheduling logic belongs in the contract. |
 | `AC_SharedOhlcLegacyAliases.mqh` | compatibility aliases for renamed L8 fast-window counters | source-present | Alias only; no state ownership. |
-| `AC_SharedOhlcActiveBridgeV6.mqh` | historical/prototype bridge variant | inactive-review-only | Must not be included or promoted without explicit migration, compile proof, and runtime proof. |
-| `AC_SharedOhlcActiveBridgeV7.mqh` | historical/prototype bridge variant | inactive-review-only | Must not be included or promoted without explicit migration, compile proof, and runtime proof. |
 | `AC_SharedOhlcSurface.mqh` | modular lazy surface wrappers | source-present-scaffold | Not the active bridge path unless explicitly wired and compile-proven. |
 | `AC_SharedOhlcPubli` | truncated-include compatibility shim | active-compatibility-shim | Delegates to `AC_SharedOhlcPublicationContract.mqh`; exists only because a compile path referenced the truncated name. Must not gain logic. |
 

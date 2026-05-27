@@ -15,13 +15,12 @@ def _l15_current_chain_valid(outbox: Path) -> tuple[bool, str]:
         return False, "result_latest_missing_l15_currentness_unknown"
     kv = read_kv(result_path)
     value = str(kv.get("l15_current_chain_valid", "unknown")).strip().lower()
+    downstream = str(kv.get("l15_downstream_allowed", "false")).strip().lower()
     status = str(kv.get("l15_correlation_diversity_status", "unknown")).strip()
     reason = str(kv.get("l15_currentness_reason", kv.get("l15_correlation_diversity_reason", "not_available"))).strip()
-    if value == "true":
-        return True, f"l15_current_chain_valid=true;status={status};reason={reason}"
-    if value == "unknown" and status in {"accepted", "write_degraded"}:
-        return True, f"legacy_l15_status_allowed;status={status};reason={reason}"
-    return False, f"l15_current_chain_valid={value};status={status};reason={reason}"
+    if value == "true" and downstream == "true" and status == "accepted":
+        return True, f"l15_current_chain_valid=true;downstream_allowed=true;status={status};reason={reason}"
+    return False, f"l15_current_chain_valid={value};downstream_allowed={downstream};status={status};reason={reason}"
 
 
 def _blocked_l16_summary(reason: str) -> L16PublishSummary:
@@ -54,18 +53,21 @@ def _blocked_l16_summary(reason: str) -> L16PublishSummary:
 
 
 def _l16_currentness_fields(summary: L16PublishSummary, l15_gate_valid: bool, l15_gate_reason: str) -> list[str]:
-    current = "true" if summary.status in {"accepted", "degraded", "write_degraded"} and l15_gate_valid and summary.display_slot_count > 0 else "false"
+    current = "true" if summary.status == "accepted" and l15_gate_valid and summary.display_slot_count > 0 else "false"
+    downstream_allowed = current
     if not l15_gate_valid:
-        visible_source = "blocked_latest_l15_invalid"
+        visible_source = "blocked"
         reason = "latest_l15_invalid_do_not_consume_held_l15_or_l16_outputs"
     elif current == "true":
-        visible_source = "latest_calculation"
+        visible_source = "latest"
         reason = "latest_l16_built_from_current_l15"
     else:
-        visible_source = "latest_l16_not_current"
+        visible_source = "blocked"
         reason = "latest_l16_failed_or_empty"
     return [
         f"l16_current_chain_valid={current}",
+        f"l16_latest_current={current}",
+        f"l16_downstream_allowed={downstream_allowed}",
         f"l16_visible_output_source={visible_source}",
         f"l16_currentness_reason={reason}",
         f"l16_upstream_l15_gate={l15_gate_reason}",

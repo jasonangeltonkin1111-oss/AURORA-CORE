@@ -505,7 +505,7 @@ guaranteed
 certain
 confirmed profitable
 institutional grade
-prop-firm safe
+prop-rule cleared
 ```
 
 ---

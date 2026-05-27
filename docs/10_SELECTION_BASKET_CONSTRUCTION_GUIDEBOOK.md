@@ -439,7 +439,7 @@ It does not mean:
 ```text
 edge
 lower guaranteed risk
-prop-firm safety
+prop-rule certainty
 ```
 
 ---

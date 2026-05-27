@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 import re
 
-from aurora_worker_io import WorkerPaths, atomic_write_text, read_text, unix_time, utc_stamp
+from aurora_worker_io import WorkerPaths, atomic_write_text, read_kv, read_text, unix_time, utc_stamp
 
 SELECTION_DEEP_START = "========== SELECTION-ONLY DEEP EVIDENCE START =========="
 SELECTION_DEEP_END = "========== SELECTION-ONLY DEEP EVIDENCE END =========="
@@ -76,6 +76,12 @@ class L18PublishSummary:
     freshness_unknown_count: int = 0
     freshness_status: str = "unknown"
     freshness_policy: str = "derived_from_existing_shared_ohlc_seed_latest_bar_time_read_once"
+    upstream_l17_status: str = "unknown"
+    upstream_l17_current_chain_valid: str = "false"
+    latest_current: str = "false"
+    downstream_allowed: str = "false"
+    visible_output_source: str = "none"
+    currentness_reason: str = "not_run"
     status_path: str = "not_available"
     board_path: str = "not_available"
     layer_folder: str = "not_available"
@@ -108,6 +114,21 @@ def _shared_ohlc_symbols(root: Path) -> Path:
 
 def _layer_folder(root: Path) -> Path:
     return WorkerPaths.from_root(root).outbox / "Layers" / "Layer_18_Selected_Raw_OHLC_Bar_Pack"
+
+
+def _l17_currentness_gate(root: Path) -> Tuple[bool, Dict[str, str], str]:
+    result_path = WorkerPaths.from_root(root).outbox / "result_latest.txt"
+    if not result_path.exists():
+        return False, {}, "result_latest_missing_l17_currentness_unknown"
+    kv = read_kv(result_path)
+    status = kv.get("l17_deep_evidence_selection_status", "unknown")
+    current = kv.get("l17_current_chain_valid", "false").strip().lower()
+    downstream = kv.get("l17_downstream_allowed", "false").strip().lower()
+    source = kv.get("l17_visible_output_source", "none")
+    reason = kv.get("l17_currentness_reason", kv.get("l17_deep_evidence_selection_reason", "not_available"))
+    if status == "accepted" and current == "true" and downstream == "true":
+        return True, kv, f"l17_current_chain_valid=true;status={status};reason={reason}"
+    return False, kv, f"l17_current_chain_valid={current};downstream_allowed={downstream};status={status};visible_output_source={source};reason={reason}"
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> bool:
@@ -388,6 +409,12 @@ def _status_text(summary: L18PublishSummary) -> str:
         f"freshness_unknown_count={summary.freshness_unknown_count}",
         f"freshness_status={summary.freshness_status}",
         f"freshness_policy={summary.freshness_policy}",
+        f"upstream_l17_status={summary.upstream_l17_status}",
+        f"upstream_l17_current_chain_valid={summary.upstream_l17_current_chain_valid}",
+        f"latest_current={summary.latest_current}",
+        f"downstream_allowed={summary.downstream_allowed}",
+        f"visible_output_source={summary.visible_output_source}",
+        f"currentness_reason={summary.currentness_reason}",
         f"m1_completed_symbols={summary.m1_completed_symbols}",
         f"m1_partial_symbols={summary.m1_partial_symbols}",
         f"m1_missing_symbols={summary.m1_missing_symbols}",
@@ -463,6 +490,27 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
     status_path = layer_dir / "l18_status.txt"
     board_path = _selection_desk(root) / "91_Layer_Summaries" / "L18_Selected_Raw_OHLC_Bar_Pack" / "00_L18_Board_Overview.txt"
 
+    l17_gate_valid, l17_kv, l17_gate_reason = _l17_currentness_gate(root)
+    if not l17_gate_valid:
+        summary = L18PublishSummary(
+            status="pending",
+            reason="waiting_upstream_l17_current;" + l17_gate_reason,
+            upstream_l17_status=l17_kv.get("l17_deep_evidence_selection_status", "unknown"),
+            upstream_l17_current_chain_valid=l17_kv.get("l17_current_chain_valid", "false"),
+            latest_current="false",
+            downstream_allowed="false",
+            visible_output_source="blocked",
+            currentness_reason="waiting_upstream_l17_current",
+            status_path=str(status_path),
+            board_path=str(board_path),
+            layer_folder=str(layer_dir),
+        )
+        _write(status_path, _status_text(summary), failed)
+        _write(board_path, _board_text(summary), failed)
+        if failed:
+            return L18PublishSummary(**{**summary.__dict__, "status": "write_degraded", "reason": "one_or_more_l18_waiting_outputs_failed", "write_failed_count": len(failed)})
+        return summary
+
     dossiers = _selected_dossier_paths(root)
     tf_counts = _empty_tf_counts()
     decorated = 0
@@ -534,15 +582,19 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         status = "pending"
     elif hard_errors:
         status = "partial"
-    elif history_limited or freshness_bad:
+    elif freshness_bad:
         status = "degraded"
+    elif history_limited:
+        status = "complete_history_limited"
     else:
         status = "accepted"
 
     if status == "accepted":
         reason = "selected_dossiers_decorated_with_contract_timeframes_and_freshness_proof"
+    elif status == "complete_history_limited":
+        reason = "selected_dossiers_decorated_with_fresh_or_aging_limited_history"
     elif status == "degraded":
-        reason = "selected_dossiers_decorated_with_limited_history_or_stale_freshness"
+        reason = "selected_dossiers_decorated_with_stale_or_unknown_freshness"
     elif status == "pending":
         reason = "no_canonical_selected_dossiers_found"
     else:
@@ -586,6 +638,12 @@ def publish_l18_selected_raw_ohlc_bar_pack(root: Path) -> L18PublishSummary:
         freshness_unknown_count=freshness["unknown"],
         freshness_status=freshness_status,
         freshness_policy="derived_from_existing_shared_ohlc_seed_latest_bar_time_read_once",
+        upstream_l17_status=l17_kv.get("l17_deep_evidence_selection_status", "accepted"),
+        upstream_l17_current_chain_valid=l17_kv.get("l17_current_chain_valid", "true"),
+        latest_current="true" if status in {"accepted", "complete_history_limited"} else "false",
+        downstream_allowed="true" if status in {"accepted", "complete_history_limited"} else "false",
+        visible_output_source="latest" if status in {"accepted", "complete_history_limited"} else "blocked",
+        currentness_reason="latest_l18_built_from_current_l17" if status in {"accepted", "complete_history_limited"} else "latest_l18_not_current",
         status_path=str(status_path),
         board_path=str(board_path),
         layer_folder=str(layer_dir),

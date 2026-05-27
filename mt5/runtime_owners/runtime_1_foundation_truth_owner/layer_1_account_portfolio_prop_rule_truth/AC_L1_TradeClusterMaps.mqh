@@ -1,5 +1,5 @@
-#ifndef AC_L1_CLUSTER_V2_MAPS_MQH
-#define AC_L1_CLUSTER_V2_MAPS_MQH
+#ifndef AC_L1_TRADE_CLUSTER_MAPS_MQH
+#define AC_L1_TRADE_CLUSTER_MAPS_MQH
 
 string AC_L1ClusterMinuteKey(const AC_L1ClosedTradeRow &row)
 {
@@ -53,12 +53,12 @@ void AC_L1ClusterGroupStats(const string key,
    }
 }
 
-string AC_L1ClusterV2Line(const string label,
-                          const int groups,
-                          const int rows,
-                          const double net,
-                          const double risk,
-                          const double net_r)
+string AC_L1ClusterLine(const string label,
+                        const int groups,
+                        const int rows,
+                        const double net,
+                        const double risk,
+                        const double net_r)
 {
    double net_over_risk = (risk > 0.0 ? net / risk : 0.0);
    return AC_L1PadRight(label, 22)
@@ -147,7 +147,7 @@ void AC_L1ClusterModeSummary(const int mode,
    }
 }
 
-string AC_L1TradeClusterV2Map()
+string AC_L1TradeClusterMap()
 {
    int same_side_groups, same_side_rows;
    double same_side_net, same_side_risk, same_side_net_r;
@@ -175,8 +175,8 @@ string AC_L1TradeClusterV2Map()
       if(AC_L1_CLOSED[i].net_result < 0.0) total_loss_abs += MathAbs(AC_L1_CLOSED[i].net_result);
    double cluster_loss_share = (total_loss_abs > 0.0 && same_symbol_net < 0.0 ? (MathAbs(same_symbol_net) / total_loss_abs) * 100.0 : 0.0);
 
-   string text = AC_L1MapHeader("TRADE CLUSTER MAP V2");
-   text += "section_id:             L1_TRADE_CLUSTER_V2\r\n";
+   string text = AC_L1MapHeader("TRADE CLUSTER MAP");
+   text += "section_id:             L1_TRADE_CLUSTER\r\n";
    text += "Scope:                  selected closed history; minute-level cluster diagnostics\r\n";
    text += "Risk Source:            estimated money risk when available; cluster map is diagnostic only\r\n";
    text += AC_L1PadRight("Cluster Type", 22)
@@ -187,8 +187,8 @@ string AC_L1TradeClusterV2Map()
       + AC_L1PadLeft("Net R", 10)
       + AC_L1PadLeft("Net/Risk", 10)
       + "\r\n";
-   text += AC_L1ClusterV2Line("Same symbol+side", same_side_groups, same_side_rows, same_side_net, same_side_risk, same_side_net_r);
-   text += AC_L1ClusterV2Line("Same symbol minute", same_symbol_groups, same_symbol_rows, same_symbol_net, same_symbol_risk, same_symbol_net_r);
+   text += AC_L1ClusterLine("Same symbol+side", same_side_groups, same_side_rows, same_side_net, same_side_risk, same_side_net_r);
+   text += AC_L1ClusterLine("Same symbol minute", same_symbol_groups, same_symbol_rows, same_symbol_net, same_symbol_risk, same_symbol_net_r);
    text += "Worst Same-Side Cluster: " + same_side_worst_key + " | rows " + IntegerToString(same_side_worst_rows) + " | net " + AC_L1MoneyText(same_side_worst_net) + " | risk " + AC_L1MoneyText(same_side_worst_risk) + " | R " + DoubleToString(same_side_worst_r, 2) + "\r\n";
    text += "Best Same-Side Cluster:  " + same_side_best_key + " | rows " + IntegerToString(same_side_best_rows) + " | net " + AC_L1MoneyText(same_side_best_net) + " | risk " + AC_L1MoneyText(same_side_best_risk) + " | R " + DoubleToString(same_side_best_r, 2) + "\r\n";
    text += "Worst Symbol-Minute:    " + same_symbol_worst_key + " | rows " + IntegerToString(same_symbol_worst_rows) + " | net " + AC_L1MoneyText(same_symbol_worst_net) + " | risk " + AC_L1MoneyText(same_symbol_worst_risk) + " | R " + DoubleToString(same_symbol_worst_r, 2) + "\r\n";

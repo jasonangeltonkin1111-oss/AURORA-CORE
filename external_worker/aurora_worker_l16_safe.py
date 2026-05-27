@@ -507,10 +507,10 @@ def publish_l16_global_top10_builder(outbox_root: Path) -> L16PublishSummary:
     try:
         l14_status = _kv(l14 / "l14_candidate_pool_summary.txt").get("status", "pending")
         l15_status = _kv(l15 / "l15_correlation_diversity_summary.txt").get("status", "pending")
-        if l14_status not in {"accepted", "write_degraded"}:
+        if l14_status != "accepted":
             held = _held_summary(layer, visible, "l14_not_accepted_holding_prior_status=" + l14_status)
             return held if held is not None else L16PublishSummary("pending", "l14_not_accepted_status=" + l14_status)
-        if l15_status not in {"accepted", "degraded", "write_degraded"}:
+        if l15_status != "accepted":
             held = _held_summary(layer, visible, "l15_not_accepted_holding_prior_status=" + l15_status)
             return held if held is not None else L16PublishSummary("pending", "l15_not_accepted_status=" + l15_status)
 

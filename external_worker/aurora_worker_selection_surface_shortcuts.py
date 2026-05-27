@@ -235,9 +235,9 @@ def _shortcut_overlay_text(symbol: str, overlay_lines: Sequence[str] | None, sou
         f"shortcut_generated_utc={utc_stamp()}",
         f"shortcut_generated_unix={unix_time()}",
         "",
-        "STALE-SECTION WARNING",
-        "Base dossier content below may be older than this current shortcut overlay if the bounded dossier renderer has not refreshed this symbol yet.",
-        "Read the overlay above as the current Selection Desk truth for this shortcut file.",
+        "HISTORICAL BASE DOSSIER BODY BELOW - NOT CURRENT SELECTION TRUTH",
+        "current_selection_truth_source=overlay_above",
+        "base_dossier_body_policy=historical_context_only_may_lag_current_selection_overlay",
         "----------------------------------------",
         "",
     ])

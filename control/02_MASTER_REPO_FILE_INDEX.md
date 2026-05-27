@@ -64,6 +64,7 @@ This index maps the AURORA CORE trading-intelligence system. It must not make th
 | `docs/35_L16_GLOBAL_TOP10_BUILDER_CONTROL.md` | L16 Global Top 10 inspection basket control | Active | task-specific | L5 | Held visible basket + fallback labels; no trade permission. |
 | `docs/36_L17_DEEP_EVIDENCE_SELECTION_SPLIT_CONTROL.md` | L17 Deep Evidence Selection Split control | Active | task-specific | L5 | Consumes L16 held visible display rows only; no evidence collection/trade permission. |
 | `docs/37_OPERATOR_WORKFLOW_AND_UX_RUNBOOK.md` | Operator workflow and UX runbook | Active | task-specific | L5 | First-click workflow, export safety, overtrading guardrails, and runtime visual-output test gate. |
+| `docs/39_AURORA_COMPLETION_EPOCH_CONTROL.md` | Chain currentness, completion epoch, and future-layer weave control | Active | task-specific | L5 | L14-L19 currentness, core/deep completion split, L15 M15/M5 correlation contract, and L20-L23 future-safe scaffolds. |
 | `docs/27_RUNTIME_5_TO_7_FUTURE_LAYER_PLAYBOOK.md` .. `docs/33_L13_CLOSEOUT_AND_L14_HANDOFF.md` | Runtime/layer implementation notes and handoffs | Active | task-specific | L5 | Check exact file before using as active source; current source/config still outranks docs. |
 
 ## blueprint
@@ -185,16 +186,17 @@ This index maps the AURORA CORE trading-intelligence system. It must not make th
 | `external_worker/aurora_worker_l13_dispatch.py` | L13 result_latest dispatch | Active | task-specific | L1 | Appends `l13_*` fields to worker result output. |
 | `external_worker/aurora_worker_l14.py` | L14 candidate pool worker | Active | task-specific | L1 | Candidate pool support only; no trade permission/execution. |
 | `external_worker/aurora_worker_l14_dispatch.py` | L14 result_latest dispatch | Active | task-specific | L1 | Appends `l14_*` fields to worker result output. |
-| `external_worker/aurora_worker_l15.py` | L15 correlation/diversity worker | Active | task-specific | L1 | Consumes L14 candidate pool and Shared OHLC Store if available; no broker polling. |
+| `external_worker/aurora_worker_l15.py` | L15 correlation/diversity worker | Active | task-specific | L1 | Consumes latest-current L14 candidate pool and Shared OHLC Store M15/M5 recent windows if available; no broker polling. |
 | `external_worker/aurora_worker_l15_dispatch.py` | L15 result_latest dispatch | Active | task-specific | L1 | Appends `l15_*` fields to worker result output. |
 | `external_worker/aurora_worker_l16.py` | L16 Global Top 10 worker | Active | task-specific | L1 | Consumes L14/L15 outputs only; held visible basket; fallback labels; no raw OHLC/correlation recompute/trading authority. |
 | `external_worker/aurora_worker_l16_dispatch.py` | L16 result_latest dispatch | Active | task-specific | L1 | Appends `l16_*` fields to worker result output. |
-| `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes L16 held visible display rows only; selected/rejected split; no evidence collection/trade permission. |
+| `external_worker/aurora_worker_l17.py` | L17 Deep Evidence Selection Split worker | Active | task-specific | L1 | Consumes latest-current L16 only; selected/rejected split; no Selection Desk fallback as current truth; no evidence collection/trade permission. |
 | `external_worker/aurora_worker_l17_dispatch.py` | L17 result_latest dispatch | Active | task-specific | L1 | Appends `l17_*` fields to worker result output. |
 | `external_worker/aurora_worker_l18.py` | L18 Selected Raw OHLC Bar Pack worker | Active | task-specific | L1 | Reads existing Shared OHLC Store for selected scope only; no broker polling/permission. |
 | `external_worker/aurora_worker_l18_dispatch.py` | L18 result_latest dispatch | Active | task-specific | L1 | Appends `l18_*` fields to worker result output and invokes L19 dispatch. |
 | `external_worker/aurora_worker_l19.py` | L19 Candle Geometry worker | Active | task-specific | L1 | Selected candle geometry support only; no signals/permission/execution. |
 | `external_worker/aurora_worker_l19_dispatch.py` | L19 result_latest dispatch | Active | task-specific | L1 | Appends `l19_*` fields to worker result output. |
+| `external_worker/test_chain11_currentness.py` | Chain 11 synthetic tests | Active | test | L1/L4 | Proves stale L16/L17 cannot feed downstream, write-degraded cannot create static epoch, L15 M15 path works without H1, and L18 history-limited state remains explicit. |
 
 ## Archive (historical context only)
 | path | role | status | must-read? | source authority level | notes |

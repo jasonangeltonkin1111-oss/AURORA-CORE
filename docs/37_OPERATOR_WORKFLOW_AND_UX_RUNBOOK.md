@@ -125,14 +125,14 @@ permission blocked
 Forbidden wording:
 
 ```text
-confirmed buy
-confirmed sell
-high probability
+directional certainty phrase
+opposite-direction certainty phrase
+probability marketing
 best trade now
 Aurora approved trade
-prop-firm safe
+prop-rule cleared
 edge proven
-institutional order flow confirmed
+institution-grade flow certainty
 smart money confirmed
 ```
 
@@ -171,7 +171,7 @@ current Market Board output
 one selected-symbol Dossier output
 Workbench/status output when Board reports stale/degraded/failed/starved state
 exact confusing line(s)
-why the line could make a human infer trade permission, signal, or prop-firm safety
+why the line could make a human infer trade permission, signal, or prop-rule clearance
 the smallest replacement wording
 expected before/after output
 MetaEditor compile proof after code change

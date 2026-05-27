@@ -58,7 +58,7 @@ string AC_L1AccountStatusSectionIndex()
    text += AC_L1SectionIndexLine("L1_TIME_WINDOW_RISK_V2", "Time Window Risk Map V2", "time-window net/risk comparison");
    text += AC_L1SectionIndexLine("L1_HOLDING_TIME_RISK_V2", "Holding Time Risk Map V2", "hold-duration net/risk comparison");
    text += AC_L1SectionIndexLine("L1_CURRENCY_RESULT_RISK", "Currency Result / Risk Map", "forex currency net/risk view");
-   text += AC_L1SectionIndexLine("L1_TRADE_CLUSTER_V2", "Trade Cluster Map V2", "minute-level cluster diagnostics");
+   text += AC_L1SectionIndexLine("L1_TRADE_CLUSTER", "Trade Cluster Map", "minute-level cluster diagnostics");
    text += AC_L1SectionIndexLine("L1_EQUITY_DRAWDOWN_RECOVERY", "Equity / Drawdown Recovery Map", "closed-history equity reconstruction");
    text += AC_L1SectionIndexLine("L1_RECOVERY_QUALITY", "Recovery Quality Map", "selected-history recovery reconstruction");
    text += AC_L1SectionIndexLine("L1_STREAK_DAMAGE", "Streak Damage Map", "worst/best rolling trade sequences");

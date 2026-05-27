@@ -7,22 +7,24 @@ from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, r
 from aurora_worker_l14 import L14PublishSummary, publish_l14_ranking_group_leader_candidate_pool
 
 
-CURRENT_L14_STATUSES = {"accepted", "write_degraded"}
+CURRENT_L14_STATUSES = {"accepted"}
 
 
-def _currentness_state(summary: L14PublishSummary) -> tuple[str, str, str]:
+def _currentness_state(summary: L14PublishSummary) -> tuple[str, str, str, str]:
     if summary.status in CURRENT_L14_STATUSES and summary.candidate_pool_size > 0:
-        return "true", "latest_calculation", "latest_l14_candidate_pool_available"
-    return "false", "latest_failed_or_empty", "latest_l14_failed_do_not_treat_existing_candidate_pool_as_current"
+        return "true", "latest", "true", "latest_l14_candidate_pool_available"
+    return "false", "blocked", "false", "latest_l14_failed_do_not_treat_existing_candidate_pool_as_current"
 
 
 def l14_result_lines(summary: L14PublishSummary, duration_ms: int) -> str:
-    current_valid, visible_source, current_reason = _currentness_state(summary)
+    current_valid, visible_source, downstream_allowed, current_reason = _currentness_state(summary)
     return "\n".join([
         f"l14_candidate_pool_status={summary.status}",
         f"l14_candidate_pool_reason={summary.reason}",
         f"l14_candidate_pool_duration_ms={duration_ms}",
         f"l14_current_chain_valid={current_valid}",
+        f"l14_latest_current={current_valid}",
+        f"l14_downstream_allowed={downstream_allowed}",
         f"l14_visible_output_source={visible_source}",
         f"l14_currentness_reason={current_reason}",
         f"l14_quality_state={summary.quality_state}",
@@ -78,13 +80,15 @@ def run_l14_after_l13(root: Path) -> L14PublishSummary:
         text = read_text(result_path)
         updated = _replace_or_append_l14_block(text, l14_result_lines(summary, duration_ms))
         atomic_write_text(result_path, updated)
-        current_valid, visible_source, current_reason = _currentness_state(summary)
+        current_valid, visible_source, downstream_allowed, current_reason = _currentness_state(summary)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
             "schema_version=11",
             "worker_l14_append_status=appended_by_l14_dispatch",
             f"l14_current_chain_valid={current_valid}",
+            f"l14_latest_current={current_valid}",
+            f"l14_downstream_allowed={downstream_allowed}",
             f"l14_visible_output_source={visible_source}",
             f"l14_currentness_reason={current_reason}",
             f"result_size={len(updated.encode('utf-8'))}",

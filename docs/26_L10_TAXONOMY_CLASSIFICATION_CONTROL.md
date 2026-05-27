@@ -219,7 +219,7 @@ Rank eligibility is not trade permission.
 
 ```text
 rank_allowed=true does not mean selection_allowed=true
-selection_allowed=true does not mean trade_permission=true
+enabled selection does not mean enabled trade permission
 trade_permission=false always in Layer 10
 ```
 

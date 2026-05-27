@@ -52,8 +52,13 @@ class L17PublishSummary:
     write_failed_count: int = 0
     source_path: str = "not_available"
     source_l16_status: str = "not_available"
+    source_l16_current_chain_valid: str = "false"
     source_l16_hold_state: str = "not_available"
     source_l16_visible_surface_state: str = "not_available"
+    latest_current: str = "false"
+    downstream_allowed: str = "false"
+    visible_output_source: str = "none"
+    currentness_reason: str = "not_run"
     top_symbol: str = "not_available"
     output_path: str = "not_available"
     rejected_path: str = "not_available"
@@ -134,12 +139,21 @@ def _source_rows(outbox_root: Path) -> Tuple[List[Dict[str, str]], Path, str]:
     layer_csv = outbox_root / "Layers" / "Layer_16_Global_Top10_Builder" / "l16_global_top10.csv"
     rows = _csv(layer_csv)
     if rows:
-        return rows, layer_csv, "l16_layer_visible_held_global_top10"
-    visible_csv = _global_dir(outbox_root) / "current_top10.csv"
-    rows = _csv(visible_csv)
-    if rows:
-        return rows, visible_csv, "selection_desk_visible_current_top10_fallback"
+        return rows, layer_csv, "l16_layer_current_global_top10"
     return [], layer_csv, "missing_l16_visible_candidates"
+
+
+def _l16_currentness_gate(outbox_root: Path) -> Tuple[bool, Dict[str, str], str]:
+    result_path = outbox_root / "result_latest.txt"
+    kv = _kv(result_path)
+    status = kv.get("l16_global_top10_status", "unknown")
+    current = kv.get("l16_current_chain_valid", "false").strip().lower()
+    downstream = kv.get("l16_downstream_allowed", "false").strip().lower()
+    visible_source = kv.get("l16_visible_output_source", "none")
+    reason = kv.get("l16_currentness_reason", kv.get("l16_global_top10_reason", "not_available"))
+    if status == "accepted" and current == "true" and downstream == "true":
+        return True, kv, f"l16_current_chain_valid=true;downstream_allowed=true;status={status};reason={reason}"
+    return False, kv, f"l16_current_chain_valid={current};downstream_allowed={downstream};status={status};visible_output_source={visible_source};reason={reason}"
 
 
 def _tier_weight(row: Dict[str, str]) -> int:
@@ -329,8 +343,11 @@ def _manifest(payload: str, summary: L17PublishSummary) -> str:
         f"deep_selected_count={summary.deep_selected_count}", f"rejected_candidate_count={summary.rejected_candidate_count}",
         f"clean_selected_count={summary.clean_selected_count}", f"fallback_selected_count={summary.fallback_selected_count}",
         f"max_deep_selected={L17_MAX_DEEP_SELECTED}", f"source_path={summary.source_path}", f"source_l16_status={summary.source_l16_status}",
+        f"source_l16_current_chain_valid={summary.source_l16_current_chain_valid}", f"latest_current={summary.latest_current}",
+        f"downstream_allowed={summary.downstream_allowed}", f"visible_output_source={summary.visible_output_source}",
+        f"currentness_reason={summary.currentness_reason}",
         f"source_l16_hold_state={summary.source_l16_hold_state}", f"source_l16_visible_surface_state={summary.source_l16_visible_surface_state}",
-        "input_source=L16_held_visible_display_rows_only", "collects_ohlc=false", "collects_ticks=false", "collects_indicators=false",
+        "input_source=L16_latest_current_top10_only", "collects_ohlc=false", "collects_ticks=false", "collects_indicators=false",
         "collects_liquidity=false", "all_symbol_scan=false", "broker_polling=false", "private_ohlc_cache=false",
         f"payload_checksum={payload_checksum(payload.splitlines())}", "deep_evidence_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false",
         f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", "",
@@ -340,8 +357,11 @@ def _manifest(payload: str, summary: L17PublishSummary) -> str:
 def _summary_text(summary: L17PublishSummary) -> str:
     return "\n".join([
         f"schema_name={L17_SCHEMA_NAME}", "schema_version=2", f"owner_name={L17_OWNER}", "layer_id=17", "layer_name=Layer 17 - Deep Evidence Selection Split",
-        f"status={summary.status}", f"reason={summary.reason}", "input_source=L16_held_visible_display_rows_only",
+        f"status={summary.status}", f"reason={summary.reason}", "input_source=L16_latest_current_top10_only",
         f"source_path={summary.source_path}", f"source_l16_status={summary.source_l16_status}",
+        f"source_l16_current_chain_valid={summary.source_l16_current_chain_valid}",
+        f"latest_current={summary.latest_current}", f"downstream_allowed={summary.downstream_allowed}",
+        f"visible_output_source={summary.visible_output_source}", f"currentness_reason={summary.currentness_reason}",
         f"source_l16_hold_state={summary.source_l16_hold_state}", f"source_l16_visible_surface_state={summary.source_l16_visible_surface_state}",
         f"visible_candidate_count={summary.visible_candidate_count}", f"deep_selected_count={summary.deep_selected_count}",
         f"rejected_candidate_count={summary.rejected_candidate_count}", f"clean_selected_count={summary.clean_selected_count}",
@@ -386,12 +406,53 @@ def publish_l17_deep_evidence_selection_split(outbox_root: Path) -> L17PublishSu
     for folder in (layer, visible):
         folder.mkdir(parents=True, exist_ok=True)
     try:
+        l16_gate_valid, l16_result_kv, l16_gate_reason = _l16_currentness_gate(outbox_root)
         summary_kv = _kv(l16 / "l16_global_top10_summary.txt")
         l16_status = summary_kv.get("status", "not_available")
+        l16_current = l16_result_kv.get("l16_current_chain_valid", "false").strip().lower()
+        l16_visible_state = l16_result_kv.get("l16_visible_surface_state", summary_kv.get("l16_visible_surface_state", "not_available"))
+        if not l16_gate_valid:
+            failed: List[Path] = []
+            selected_text = _csv_text([], SELECTED_FIELDS)
+            rejected_text = _csv_text([], REJECTED_FIELDS)
+            depth_text = _csv_text([], DEPTH_SUMMARY_FIELDS)
+            summary = L17PublishSummary(
+                status="pending",
+                reason="waiting_upstream_l16_current;" + l16_gate_reason,
+                source_path=str(outbox_root / "result_latest.txt"),
+                source_l16_status=l16_result_kv.get("l16_global_top10_status", l16_status),
+                source_l16_current_chain_valid=l16_current,
+                source_l16_hold_state=l16_result_kv.get("l16_hold_state", summary_kv.get("l16_hold_state", "not_available")),
+                source_l16_visible_surface_state=l16_visible_state,
+                latest_current="false",
+                downstream_allowed="false",
+                visible_output_source="blocked",
+                currentness_reason="waiting_upstream_l16_current",
+                output_path=str(layer / "l17_deep_evidence_selected.csv"),
+                rejected_path=str(layer / "l17_deep_evidence_rejected.csv"),
+                summary_path=str(layer / "l17_deep_evidence_summary.txt"),
+                selection_desk_path=str(visible / "Deep Evidence Split.txt"),
+            )
+            summary_text = _summary_text(summary)
+            manifest_text = _manifest(selected_text + rejected_text + depth_text + summary_text, summary)
+            _write(layer / "l17_deep_evidence_selected.csv", selected_text, failed)
+            _write(layer / "l17_deep_evidence_rejected.csv", rejected_text, failed)
+            _write(layer / "l17_depth_assignment_summary.csv", depth_text, failed)
+            _write(layer / "l17_deep_evidence_summary.txt", summary_text, failed)
+            _write(layer / "l17_deep_evidence.manifest", manifest_text, failed)
+            _write(layer / "l17_deep_evidence_selection_split.csv", selected_text, failed)
+            _write(layer / "l17_deep_evidence_selection_split_summary.txt", summary_text, failed)
+            _write(layer / "l17_deep_evidence_selection_split.manifest", manifest_text, failed)
+            _write(visible / "current_deep_evidence_split.csv", selected_text, failed)
+            _write(visible / "current_deep_evidence_split_manifest.txt", manifest_text, failed)
+            _write(visible / "Deep Evidence Split.txt", _selection_text([], [], summary), failed)
+            if failed:
+                return L17PublishSummary(**{**summary.__dict__, "status": "write_degraded", "reason": "one_or_more_l17_waiting_outputs_failed", "write_failed_count": len(failed)})
+            return summary
         rows, source_path, source_kind = _source_rows(outbox_root)
         if not rows:
             return L17PublishSummary("pending", "missing_l16_visible_candidates")
-        if source_kind == "l16_layer_visible_held_global_top10" and l16_status not in {"accepted", "degraded", "write_degraded"}:
+        if source_kind == "l16_layer_current_global_top10" and l16_status != "accepted":
             return L17PublishSummary("pending", "l16_not_accepted_status=" + l16_status)
         selected, rejected = _build_split(rows, source_kind, summary_kv)
         failed: List[Path] = []
@@ -410,14 +471,19 @@ def publish_l17_deep_evidence_selection_split(outbox_root: Path) -> L17PublishSu
         reason = "l17_deep_evidence_budget_split_published" if status == "accepted" else "l17_published_without_deep_selected_candidates"
         if fallback_selected > 0:
             reason += ";fallback_rows_selected_only_after_clean_budget_gap"
-        if source_kind != "l16_layer_visible_held_global_top10":
+        if source_kind != "l16_layer_current_global_top10":
             reason += ";used_selection_desk_visible_source_degraded"
         summary = L17PublishSummary(
             status=status, reason=reason, visible_candidate_count=len(rows), deep_selected_count=deep_count,
             rejected_candidate_count=len(rejected), clean_selected_count=clean_selected, fallback_selected_count=fallback_selected,
             full_depth_count=full_count, standard_depth_count=standard_count, fallback_limited_depth_count=fallback_limited_count,
             watch_only_count=watch_count, alert_eligible_candidate_count=alert_count, source_path=str(source_path), source_l16_status=l16_status,
+            source_l16_current_chain_valid=l16_current,
             source_l16_hold_state=summary_kv.get("l16_hold_state", "not_available"), source_l16_visible_surface_state=summary_kv.get("l16_visible_surface_state", "not_available"),
+            latest_current="true" if status == "accepted" else "false",
+            downstream_allowed="true" if status == "accepted" else "false",
+            visible_output_source="latest" if status == "accepted" else "blocked",
+            currentness_reason="latest_l17_built_from_current_l16" if status == "accepted" else "latest_l17_not_current",
             top_symbol=selected[0]["symbol"] if selected else "not_available", output_path=str(layer / "l17_deep_evidence_selected.csv"),
             rejected_path=str(layer / "l17_deep_evidence_rejected.csv"), summary_path=str(layer / "l17_deep_evidence_summary.txt"),
             selection_desk_path=str(visible / "Deep Evidence Split.txt"),

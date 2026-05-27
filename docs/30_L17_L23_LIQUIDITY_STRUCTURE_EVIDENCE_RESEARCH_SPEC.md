@@ -26,7 +26,7 @@ Turtle Soup = entry
 CRT = entry
 candlestick pattern signal
 AI trade picker
-high probability wording
+probability-marketing wording
 trade permission
 execution
 ```
@@ -103,16 +103,16 @@ Each field must carry source timeframe, source bars, timestamp, confidence/degra
 Forbidden before validation:
 
 ```text
-confirmed buy
-confirmed sell
-high probability setup
+directional certainty phrase
+opposite-direction certainty phrase
+probability-marketing setup
 guaranteed continuation
 institutional order-flow confirmed
 smart money confirmed
 best trade now
 entry signal
 trade permission
-prop-firm safe
+prop-rule cleared
 auto-trade allowed
 ```
 
@@ -298,9 +298,9 @@ class_2_setup_alert_allowed=false
 Manual review/export is not the same as permission:
 
 ```text
-manual_review_allowed=true does not imply trade_allowed=true
-trader_chat_export_allowed=true does not imply entry_signal=true
-setup_research_candidate=true does not imply expectancy_validated=true
+enabled manual review does not imply enabled trade authority
+enabled trader-chat export does not imply enabled entry-signal authority
+enabled setup research candidate state does not imply enabled expectancy validation
 ```
 
 ---

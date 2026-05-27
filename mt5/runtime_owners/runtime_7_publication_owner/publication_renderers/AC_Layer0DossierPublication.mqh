@@ -122,6 +122,7 @@ string AC_SurfaceStateFromStatus(const string status)
 {
    string s = status;
    StringToLower(s);
+   if(StringFind(s, "history_limited") >= 0) return "PARTIAL";
    if(StringFind(s, "accepted") >= 0 || StringFind(s, "complete") >= 0) return "ACCEPTED";
    if(StringFind(s, "partial") >= 0) return "PARTIAL";
    if(StringFind(s, "degraded") >= 0 || StringFind(s, "stale") >= 0 || StringFind(s, "expired") >= 0) return "DEGRADED";
@@ -329,10 +330,10 @@ string AC_DossierSymbolSurfaceOverviewSection(const string symbol, const string 
    text += AC_DossierOverviewRow("L17 Deep Evidence", l17_selected ? AC_SurfaceStateFromStatus(AC_L17_STATUS) : (l17_watch ? "REVIEW" : "NOT_ACTIVE"), l17_selected ? "queue_selected=true rank #" + AC_L17CsvField(l17_row, 0) : (l17_watch ? "watch_only=true" : "queue_selected=false"), l17_selected ? AC_L17_MAIN_BLOCKER : (l17_watch ? "watch_only_not_degraded" : "not_selected"), "evidence budget split only");
    text += AC_DossierOverviewRow("L18 Raw OHLC", l16_selected ? AC_SurfaceStateFromStatus(AC_L18_STATUS) : "NOT_ACTIVE", "status=" + AC_L18_STATUS + " found=" + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED), l16_selected ? AC_L18_REASON : "not_selected", "selected raw OHLC display only");
    text += AC_DossierOverviewRow("L19 Wick/Candle", l16_selected ? AC_SurfaceStateFromStatus(AC_L19_STATUS) : "NOT_ACTIVE", "status=" + AC_L19_STATUS + " geometry_rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS), l16_selected ? AC_L19_REASON : "not_selected", "wick/candle geometry only");
-   text += AC_DossierOverviewRow("L20 Rolling Tick", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
-   text += AC_DossierOverviewRow("L21 Indicator Pack", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
-   text += AC_DossierOverviewRow("L22 Liquidity/DOM Proxy", "NOT_ACTIVE", "design_hold", "not_runtime_active", "design only");
-   text += AC_DossierOverviewRow("L23 Setup/Permission", "BLOCKED", "trade_permission=false entry_signal=false execution=false", "strategy_validation_status=not_validated", "no setup, alert, permission, or execution");
+   text += AC_DossierOverviewRow("L20 Rolling Tick", "NOT_ACTIVE", "design_hold feed_quality_proxy_future", "not_runtime_active", "future selected-symbol tick/feed quality evidence only");
+   text += AC_DossierOverviewRow("L21 Indicator Pack", "NOT_ACTIVE", "design_hold explainable_reference_future", "not_runtime_active", "future ATR/VWAP/Bollinger/Donchian context only");
+   text += AC_DossierOverviewRow("L22 Liquidity/DOM Proxy", "NOT_ACTIVE", "design_hold evidence_scaffold_future", "not_runtime_active", "future evidence/POI/liquidity proxy only");
+   text += AC_DossierOverviewRow("L23 Setup/Permission", "BLOCKED", "trade_permission=false entry_signal=false execution=false auto_trade_allowed=false alert_allowed=false", "strategy_validation_status=not_validated", "validation scaffold only; no setup, alert, permission, or execution");
    return text;
 }
 
