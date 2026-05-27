@@ -42,6 +42,15 @@ def _l15_csv_text(rows: list[dict[str, str]], fieldnames: list[str]) -> str:
     return out.getvalue()
 
 
+def _read_csv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    text = read_text(path).replace("\r\n", "\n")
+    if not text.strip():
+        return []
+    return [{str(k): "" if v is None else str(v) for k, v in row.items()} for row in csv.DictReader(io.StringIO(text))]
+
+
 def _replace_manifest_checksum(manifest_text: str, checksum: str) -> str:
     lines = manifest_text.replace("\r\n", "\n").splitlines()
     replaced = False
@@ -72,7 +81,6 @@ def _l14_current_chain_valid(outbox: Path) -> tuple[bool, str]:
     if value == "true":
         return True, f"l14_current_chain_valid=true;status={status};reason={reason}"
     if value == "unknown" and status in {"accepted", "write_degraded"}:
-        # Compatibility for older result_latest files before the currentness flag existed.
         return True, f"legacy_l14_status_allowed;status={status};reason={reason}"
     return False, f"l14_current_chain_valid={value};status={status};reason={reason}"
 
@@ -108,23 +116,15 @@ def _blocked_l15_summary(reason: str) -> L15PublishSummary:
 
 
 def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
-    """Clamp L15 rows with no usable correlation proof before downstream L16 reads them.
-
-    This is a L15 dispatch safety postcondition, not a new scoring owner. It only lowers
-    rows already labelled degraded/unavailable/deferred and refreshes the existing L15
-    manifest checksum for the already-published L15 payload files.
-    """
     layer = outbox / "Layers" / L15_LAYER_FOLDER
     score_path = layer / L15_SCORE_FILE
     if not score_path.exists():
         return "score_file_missing", 0
-
     score_text = read_text(score_path).replace("\r\n", "\n")
     reader = csv.DictReader(io.StringIO(score_text))
     fieldnames = list(reader.fieldnames or [])
     if not fieldnames:
         return "score_file_no_header", 0
-
     rows = [{str(k): "" if v is None else str(v) for k, v in row.items()} for row in reader]
     changed = 0
     for row in rows:
@@ -144,26 +144,103 @@ def _clamp_l15_degraded_score_outputs(outbox: Path) -> tuple[str, int]:
             if not str(row.get("correlation_reject_reason", "")).strip() or row.get("correlation_reject_reason") == "none":
                 row["correlation_reject_reason"] = "correlation_unavailable_degraded"
             changed += 1
-
     if changed <= 0:
         return "no_change_needed", 0
-
     updated_score_text = _l15_csv_text(rows, fieldnames)
     if not atomic_write_text(score_path, updated_score_text):
         return "score_write_failed", changed
-
     visible_score_path = outbox.parents[2] / "Selection Desk" / "Groups" / "00_Correlation_Diversity_Summary.csv"
     if visible_score_path.exists():
         atomic_write_text(visible_score_path, updated_score_text)
-
     pair_text = read_text(layer / L15_PAIR_FILE) if (layer / L15_PAIR_FILE).exists() else ""
     group_text = read_text(layer / L15_GROUP_FILE) if (layer / L15_GROUP_FILE).exists() else ""
     manifest_path = layer / L15_MANIFEST_FILE
     if manifest_path.exists():
         checksum = payload_checksum((updated_score_text + pair_text + group_text).splitlines())
         atomic_write_text(manifest_path, _replace_manifest_checksum(read_text(manifest_path), checksum))
-
     return "applied", changed
+
+
+def _safe_rank_key(row: dict[str, str]) -> tuple[int, str]:
+    try:
+        rank = int(float(str(row.get("candidate_pool_rank", "999999") or "999999")))
+    except ValueError:
+        rank = 999999
+    return rank, str(row.get("symbol", ""))
+
+
+def _write_l15_correlation_diagnostics(outbox: Path, summary: L15PublishSummary, l14_gate_valid: bool, l14_gate_reason: str) -> tuple[str, str]:
+    layer = outbox / "Layers" / L15_LAYER_FOLDER
+    score_rows = _read_csv(layer / L15_SCORE_FILE)
+    pair_rows = _read_csv(layer / L15_PAIR_FILE)
+    visible = outbox.parents[2] / "Selection Desk" / "Groups"
+    diagnostics_path = layer / "l15_ohlc_correlation_diagnostics.txt"
+    visible_path = visible / "00_Correlation_Diversity_Diagnostics.txt"
+    reason_counts: dict[str, int] = {}
+    for row in pair_rows:
+        reason = str(row.get("data_quality_reason", "not_available") or "not_available")
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+    candidate_lines: list[str] = []
+    for row in sorted(score_rows, key=_safe_rank_key):
+        candidate_lines.append(" | ".join([
+            f"rank={row.get('candidate_pool_rank','not_available')}",
+            f"symbol={row.get('symbol','not_available')}",
+            f"group={row.get('ranking_group','not_available')}",
+            f"corr_pair_count={row.get('corr_pair_count','not_available')}",
+            f"corr_unavailable_count={row.get('corr_unavailable_count','not_available')}",
+            f"correlation_state={row.get('correlation_state','not_available')}",
+            f"correlation_confidence={row.get('correlation_confidence','not_available')}",
+            f"correlation_sample_count={row.get('correlation_sample_count','not_available')}",
+            f"reject_reason={row.get('correlation_reject_reason','not_available')}",
+            f"l16_hint={row.get('l16_constraint_hint','not_available')}",
+        ]))
+    pair_problem_lines: list[str] = []
+    for row in pair_rows:
+        reason = str(row.get("data_quality_reason", "") or "")
+        if reason == "ok":
+            continue
+        pair_problem_lines.append(" | ".join([
+            f"{row.get('symbol_a','?')}->{row.get('symbol_b','?')}",
+            f"reason={reason or 'not_available'}",
+            f"sample={row.get('correlation_sample_count','not_available')}",
+            f"state={row.get('correlation_state','not_available')}",
+        ]))
+    lines = [
+        "L15 OHLC / CORRELATION DIAGNOSTICS",
+        "----------------------------------------",
+        "schema_name=l15_ohlc_correlation_diagnostics",
+        "schema_version=1",
+        "owner=Runtime 5 - Taxonomy / Ranking Group Owner",
+        "authority=diagnostic_readback_only_no_scoring_authority",
+        f"l15_status={summary.status}",
+        f"l15_reason={summary.reason}",
+        f"l14_gate_valid={'true' if l14_gate_valid else 'false'}",
+        f"l14_gate_reason={l14_gate_reason}",
+        f"candidate_scored_count={summary.candidate_scored_count}",
+        f"pairwise_pair_count={summary.pairwise_pair_count}",
+        f"corr_pair_count={summary.corr_pair_count}",
+        f"corr_unavailable_count={summary.corr_unavailable_count}",
+        f"ohlc_scan_file_limit={summary.ohlc_scan_file_limit}",
+        f"ohlc_scan_file_count={summary.ohlc_scan_file_count}",
+        "timeframe=H1",
+        "lookback_bars=168",
+        "minimum_aligned_returns=80",
+        "diagnostic_meaning=if correlation is unavailable, fix OHLC path/coverage/alignment before tuning thresholds",
+        "",
+        "PAIR DATA QUALITY COUNTS",
+    ]
+    for reason, count in sorted(reason_counts.items()):
+        lines.append(f"{reason}={count}")
+    lines.extend(["", "CANDIDATE CORRELATION READBACK"])
+    lines.extend(candidate_lines or ["no_candidate_rows_available"])
+    lines.extend(["", "PAIR PROBLEMS FIRST 80"])
+    lines.extend(pair_problem_lines[:80] or ["no_pair_problems_or_pair_file_missing"])
+    lines.extend(["", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", f"generated_utc={utc_stamp()}", f"generated_unix={unix_time()}", ""])
+    text = "\n".join(lines)
+    ok1 = atomic_write_text(diagnostics_path, text)
+    ok2 = atomic_write_text(visible_path, text)
+    status = "published" if ok1 and ok2 else "write_degraded"
+    return status, str(diagnostics_path)
 
 
 def _l15_currentness_fields(summary: L15PublishSummary, l14_gate_valid: bool, l14_gate_reason: str) -> list[str]:
@@ -185,12 +262,14 @@ def _l15_currentness_fields(summary: L15PublishSummary, l14_gate_valid: bool, l1
     ]
 
 
-def l15_result_lines(summary: L15PublishSummary, duration_ms: int, clamp_status: str = "not_run", clamp_count: int = 0, l14_gate_valid: bool = True, l14_gate_reason: str = "not_checked") -> str:
+def l15_result_lines(summary: L15PublishSummary, duration_ms: int, clamp_status: str = "not_run", clamp_count: int = 0, l14_gate_valid: bool = True, l14_gate_reason: str = "not_checked", diagnostics_status: str = "not_run", diagnostics_path: str = "not_available") -> str:
     return "\n".join([
         f"l15_correlation_diversity_status={summary.status}",
         f"l15_correlation_diversity_reason={summary.reason}",
         f"l15_correlation_diversity_duration_ms={duration_ms}",
         *_l15_currentness_fields(summary, l14_gate_valid, l14_gate_reason),
+        f"l15_diagnostics_status={diagnostics_status}",
+        f"l15_diagnostics_path={diagnostics_path}",
         f"l15_degraded_score_clamp_status={clamp_status}",
         f"l15_degraded_score_clamp_count={clamp_count}",
         f"l15_candidate_input_count={summary.candidate_input_count}",
@@ -252,18 +331,21 @@ def run_l15_after_l14(root: Path) -> L15PublishSummary:
     else:
         summary = _blocked_l15_summary("l15_blocked_because_latest_l14_current_chain_invalid;" + l14_gate_reason)
         clamp_status, clamp_count = "blocked_l14_invalid", 0
+    diagnostics_status, diagnostics_path = _write_l15_correlation_diagnostics(paths.outbox, summary, l14_gate_valid, l14_gate_reason)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms, clamp_status, clamp_count, l14_gate_valid, l14_gate_reason))
+        updated = _replace_or_append_l15_block(text, l15_result_lines(summary, duration_ms, clamp_status, clamp_count, l14_gate_valid, l14_gate_reason, diagnostics_status, diagnostics_path))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=14",
+            "schema_version=15",
             "worker_l15_append_status=appended_by_l15_dispatch",
             *_l15_currentness_fields(summary, l14_gate_valid, l14_gate_reason),
+            f"l15_diagnostics_status={diagnostics_status}",
+            f"l15_diagnostics_path={diagnostics_path}",
             f"l15_degraded_score_clamp_status={clamp_status}",
             f"l15_degraded_score_clamp_count={clamp_count}",
             f"l15_main_lane_candidate_count={summary.main_lane_candidate_count}",
