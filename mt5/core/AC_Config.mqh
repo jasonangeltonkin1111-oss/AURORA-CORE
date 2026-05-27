@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "runtime0_final_status_sync_repair";
-static const string AC_BUILD_VERSION      = "1.085";
-static const string AC_UPGRADE_ID         = "RUNTIME0_FINAL_STATUS_SYNC_REPAIR";
-static const string AC_UPGRADE_SUMMARY    = "Repairs Runtime 0 final publication status sync so Runtime_Status.txt is written after Manifest, Telemetry, Diagnostics, Upgrade Log, Upgrade Addendum, and Micro Log statuses are known, preserving Board/Dossier/Workbench/Manifest/internal consistency.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 0 publication-order repair only: final sync pass for Manifest/Telemetry/Diagnostics followed by Runtime Status last-write. Includes prior Layer 4 quote/spread scan repair and Layer 5 missing-tick invalid-bidask counter alignment. No trade permission, execution, strategy, ranking, new FileIO owner, new route owner, scheduler V2, worker V2, or hidden blocker web is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.085 and #property version=1.085. Runtime proof must show Runtime_Status.txt no longer reports manifest_status/telemetry_status/diagnostics_status/upgrade_log_status/upgrade_addendum_status/micro_log_status as not_attempted after those files exist, Layer 0 final statuses are not stuck in running_publication_pending, Layer 2/3/4/5 remain synced, physical publication remains unblocked, and trade_permission/auto_trade_allowed remain false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_runtime0_final_status_sync_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "layer5_basic_gate_policy_repair";
+static const string AC_BUILD_VERSION      = "1.086";
+static const string AC_UPGRADE_ID         = "LAYER5_BASIC_GATE_POLICY_REPAIR";
+static const string AC_UPGRADE_SUMMARY    = "Repairs Layer 5 Basic System Gate policy so Layer 4 advisory Surface Warning state does not become a duplicate hard blocker; includes prior Runtime 0 final status sync repair and preserves no trade permission.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 1 Layer 5 Basic System Gate policy interpretation, Runtime 0 final status sync continuity, Dossier/Board/Workbench/Manifest status sync through existing render owners, and build/schema identity bump to force fresh output proof. No trade permission, execution, strategy, ranking, new FileIO owner, new route owner, scheduler V2, worker V2, or hidden blocker web is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.086 and #property version=1.086. Runtime proof must show Runtime_Status.txt final statuses are not stuck as not_attempted after files exist, Layer 0 remains accepted, Layer 2 remains clean, Layer 3 scanned_count remains populated, Layer 4 scanned equals open symbol count, L4 invalid_bidask remains independent from missing_tick, L5 scanned_symbols equals broker universe count, L5 gate_pass plus gate_blocked equals scanned_symbols, L5 gate_pass equals eligible_clean plus eligible_degraded, blocked_l4_surface_not_usable only counts true L4 surface blocked/not scanned packets and no longer duplicates Surface Warning/high-spread/stale advisory state, missing_tick is not double-counted as invalid_bidask, physical publication remains unblocked, and trade_permission/auto_trade_allowed remain false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_layer5_basic_gate_policy_truth_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.085_runtime0_final_status_sync";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.086_layer5_basic_gate_policy_repair";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
