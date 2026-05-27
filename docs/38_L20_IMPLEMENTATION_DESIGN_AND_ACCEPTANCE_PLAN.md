@@ -4,7 +4,7 @@
 
 This document converts the L20 control contract into an implementation plan without activating runtime code prematurely.
 
-Layer 20 is selected-symbol rolling MT5 tick/spread proxy evidence. It is not institutional order flow, buy/sell pressure, setup confirmation, trade permission, execution, or prop-firm readiness.
+Layer 20 is selected-symbol rolling MT5 tick-window/spread-observation proxy evidence. It is not the source owner for current bid, ask, last, live spread, quote freshness, institutional order flow, buy/sell pressure, setup confirmation, trade permission, execution, or prop-firm readiness.
 
 ## Current Decision
 
@@ -21,12 +21,13 @@ final_merge_owner=overseer
 primary_control=docs/37_L20_SELECTED_ROLLING_TICK_PACK_CONTROL.md
 logical_blueprint=blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
 upstream_scope=L17/L18/L19 selected evidence scope
+current_quote_truth=L4_market_watch_quote_truth
 current_chain_status=L18_dispatch_invokes_L19; L20_not_active_yet
 ```
 
 ## Owner Placement Decision
 
-L20 tick capture must be owned by MT5-side selected evidence source when implemented. Python must not become a broker tick owner.
+L20 tick-window metric capture must be owned by MT5-side selected evidence source when implemented. Python must not become a broker tick owner.
 
 Candidate MT5 source placement, pending overseer approval:
 
@@ -42,7 +43,16 @@ Python may later have a dispatch/decorator only after MT5-produced L20 packets e
 external_worker/aurora_worker_l20_dispatch.py
 ```
 
-That Python file may read L20 output packets and append `l20_*` fields to result surfaces. It must not call broker APIs, poll MT5, or invent ticks.
+That Python file may read L20 output packets and append `l20_*` fields to result surfaces. It must not call broker APIs, poll MT5, invent ticks, or become current quote authority.
+
+## Source Owner Split
+
+```text
+L4 owns current bid/ask/last/live spread/quote freshness.
+L20 owns selected rolling tick-window derived metrics.
+```
+
+L20 may store bid/ask/last values from historical `MqlTick` rows only as internal tick-row observations needed to calculate rolling-window metrics. L20 must not publish those values as current quote truth and must not override or replace L4 quote packets.
 
 ## Implementation Phases
 
@@ -76,7 +86,29 @@ fallback_scope_degraded=true when fallback used
 all_symbol_scan=false
 ```
 
-### Phase 2 — MT5 Rolling Buffer Scaffold
+### Phase 2 — L4 Quote Reference Readback
+
+Goal: reference current quote truth without owning it.
+
+Allowed source:
+
+```text
+L4 Market Watch / quote truth packet
+```
+
+Acceptance:
+
+```text
+l4_quote_reference_status visible
+current_bid_owner=L4
+current_ask_owner=L4
+current_live_spread_owner=L4
+L20_current_quote_owner=false
+```
+
+L20 may compare its latest tick-window timestamp/observed spread context against L4 freshness/spread state, but L4 remains the source owner.
+
+### Phase 3 — MT5 Rolling Buffer Scaffold
 
 Goal: create in-memory rolling buffers for selected symbols only.
 
@@ -95,19 +127,20 @@ buffer_count
 reset_count
 reset_reasons
 retired_grace_until
+l4_quote_reference_status
 ```
 
-Per-tick fields:
+Per-tick-row observation fields:
 
 ```text
 time_msc
-bid
-ask
-last
-volume
-volume_real
+observed_bid
+observed_ask
+observed_last
+observed_volume
+observed_volume_real
 flags
-spread_points
+observed_spread_points
 ```
 
 Acceptance:
@@ -117,9 +150,10 @@ normal_publish_resets_buffer=false
 normal_refresh_cold_rebuild=false
 append_new_ticks_only=true
 prune_older_than_rolling_window=true
+current_quote_truth_owner=false
 ```
 
-### Phase 3 — Tick Acquisition
+### Phase 4 — Tick Acquisition
 
 Goal: bootstrap and update selected symbols using MT5 tick APIs within strict budget.
 
@@ -134,9 +168,9 @@ Runtime update:
 
 ```text
 CopyTicksRange(symbol, from=last_tick_msc+1, to=now_msc)
-append returned ticks
-prune old ticks
-recompute summary
+append returned tick rows
+prune old tick rows
+recompute summary metrics
 ```
 
 Fallback option only if range call is unsuitable after proof:
@@ -155,34 +189,35 @@ copyticks_error recorded
 sync_delay_or_timeout degrades status, not hidden
 ```
 
-### Phase 4 — Metrics
+### Phase 5 — Metrics
 
 Required metrics:
 
 ```text
-tick_count_1m
-tick_count_5m
-tick_count_10m
-spread_min_points_10m
-spread_max_points_10m
-spread_avg_points_10m
-spread_stddev_points_10m
-spread_spike_count_10m
+tick_row_count_1m
+tick_row_count_5m
+tick_row_count_10m
+spread_observed_min_points_10m
+spread_observed_max_points_10m
+spread_observed_avg_points_10m
+spread_observed_stddev_points_10m
+spread_observed_spike_count_10m
 tick_gap_avg_seconds
 tick_gap_max_seconds
-bid_change_count_10m
-ask_change_count_10m
-last_change_count_10m
-volume_change_count_10m
-bid_up_count_10m
-bid_down_count_10m
-ask_up_count_10m
-ask_down_count_10m
-mid_change_count_10m
-mid_range_points_10m
-latest_tick_age_seconds
+tick_observed_bid_change_count_10m
+tick_observed_ask_change_count_10m
+tick_observed_last_change_count_10m
+tick_observed_volume_change_count_10m
+tick_observed_bid_up_count_10m
+tick_observed_bid_down_count_10m
+tick_observed_ask_up_count_10m
+tick_observed_ask_down_count_10m
+mid_observed_change_count_10m
+mid_observed_range_points_10m
+latest_tick_row_age_seconds
 sample_quality
 proxy_confidence
+l4_quote_reference_status
 ```
 
 Metric laws:
@@ -190,12 +225,13 @@ Metric laws:
 ```text
 change_count_source=flags_preferred
 value_delta_fallback_must_be_labelled=true
-invalid_bid_ask_degrades_symbol=true
-ask_less_than_bid_degrades_symbol=true
+invalid_observed_bid_ask_degrades_symbol=true
+observed_ask_less_than_observed_bid_degrades_symbol=true
 point_invalid_degrades_symbol=true
+L20_observed_bid_ask_not_current_quote_truth=true
 ```
 
-### Phase 5 — Output Files
+### Phase 6 — Output Files
 
 Runtime outputs only, not repo artifacts:
 
@@ -211,7 +247,7 @@ Selection Desk/Global/Selected Rolling Tick Pack.txt
 
 All writes must go through the existing FileIO owner. Do not create duplicate FileIO or route owners.
 
-### Phase 6 — Render Surfaces
+### Phase 7 — Render Surfaces
 
 Board:
 
@@ -219,14 +255,15 @@ Board:
 compact aggregate only
 no raw tick dump
 no signal wording
+no current quote authority wording
 ```
 
 Dossier:
 
 ```text
-per-symbol L20 selected rolling tick section
-small bounded latest-tick sample only if needed
-truth labels visible
+per-symbol L20 selected rolling tick-window section
+small bounded latest tick-row sample only if needed and labelled observed
+truth labels visible: current_quote_owner=L4
 ```
 
 Workbench:
@@ -237,9 +274,10 @@ copyticks calls/errors
 budget status
 reset reasons
 selected scope source
+l4 quote reference status
 ```
 
-Renderers must not calculate L20 metrics or call tick APIs. They render published L20 packets only.
+Renderers must not calculate L20 metrics, call tick APIs, or treat L20 observed tick rows as current quote truth. They render published L20 packets only.
 
 ## Cadence
 
@@ -263,15 +301,16 @@ If timer budget pressure exists, L20 must degrade and skip lower-priority public
 | L20-T04 | Symbol leaves selected set | status=RETIRED_GRACE; buffer retained 15 minutes |
 | L20-T05 | Symbol re-enters within grace | buffer restored; no cold rebuild unless stale/corrupt |
 | L20-T06 | Zero ticks returned | status=UNAVAILABLE_NO_TICKS or no_ticks_returned |
-| L20-T07 | Latest tick too old | status=DEGRADED_STALE_TICKS |
+| L20-T07 | Latest tick row too old | status=DEGRADED_STALE_TICKS |
 | L20-T08 | Huge tick gap | status=DEGRADED_GAPPY_FEED |
-| L20-T09 | Spread unstable | status=DEGRADED_SPREAD_UNSTABLE; spike count visible |
-| L20-T10 | Invalid bid/ask | symbol degraded; invalid source visible |
+| L20-T09 | Observed spread unstable | status=DEGRADED_SPREAD_UNSTABLE; spike count visible |
+| L20-T10 | Invalid observed bid/ask row | symbol degraded; invalid observation visible |
 | L20-T11 | Flags missing/unclear | flags_decode_status degraded |
 | L20-T12 | Timer budget exceeded | partial_budget_limited; truth still prints |
 | L20-T13 | Renderer sees missing output | renderer says not_wired/missing_output, not accepted |
 | L20-T14 | Result_latest append | only after real L20 output exists |
-| L20-T15 | Forbidden wording grep | no institutional/order-flow/signal/permission wording |
+| L20-T15 | Forbidden wording grep | no institutional/order-flow/signal/permission/current-quote-owner wording |
+| L20-T16 | L4 reference absent/stale | l4_quote_reference_status degrades; L20 does not replace L4 |
 
 ## Static Review Checklist
 
@@ -280,6 +319,7 @@ no duplicate Runtime Owner
 no duplicate FileIO owner
 no duplicate route owner
 no duplicate scheduler/timer owner
+no duplicate current quote owner
 no full-universe CopyTicks/CopyTicksRange
 no OnTick perfect-capture assumption
 no per-tick file writes
@@ -300,6 +340,7 @@ MetaEditor_compile_passed
 MT5_runtime_output_seen
 L20_output_files_written
 selected_scope_source_visible
+l4_quote_reference_status_visible
 copyticks_calls_bounded
 buffer_reset_rules_observed
 Board_compact_summary_visible
@@ -310,6 +351,7 @@ trade_permission=false
 entry_signal=false
 execution=false
 institutional_order_flow_claim=false
+current_quote_owner=L4
 ```
 
 ## Rollback Plan
@@ -330,4 +372,4 @@ If the implementation later harms runtime stability, rollback in this order:
 TEST_FIRST
 ```
 
-L20 is valid only as bounded selected rolling MT5 tick proxy evidence. It should proceed after L1-L19 are stable enough for selected scope truth to be trusted.
+L20 is valid only as bounded selected rolling MT5 tick-window proxy evidence. It should proceed after L1-L19 are stable enough for selected scope truth to be trusted and after L4 quote ownership is preserved.
