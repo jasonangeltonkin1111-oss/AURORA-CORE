@@ -119,65 +119,98 @@ def publish_l11_manifest_guard(root: Path) -> L11ManifestGuardSummary:
         f"generated_unix={unix_time()}",
         "",
     ])
-    atomic_write_text(status_path, report)
+    if not atomic_write_text(status_path, report):
+        return L11ManifestGuardSummary(
+            "write_degraded",
+            "l11_manifest_guard_status_write_failed" if failed == 0 else "one_or_more_l11_manifest_guard_outputs_failed_or_missing_payload_or_status_failed",
+            written,
+            len(targets),
+            failed + 1,
+            str(status_path),
+        )
     return summary
 
 
-def l11_result_lines(summary: L11PublishSummary,
-                     tree_summary: L11TreeSummary = EMPTY_TREE_SUMMARY,
-                     manifest_summary: L11ManifestGuardSummary = EMPTY_MANIFEST_GUARD_SUMMARY,
-                     dossier_copy: L11DossierCopySummary = EMPTY_L11_DOSSIER_COPY_SUMMARY,
-                     asset_shortcuts: SelectionShortcutSummary = EMPTY_SELECTION_SHORTCUT_SUMMARY,
-                     root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY) -> str:
+def l11_result_lines(summary: L11PublishSummary, duration_ms: int, stale_sidecars_removed: int = 0, tree: L11TreeSummary = EMPTY_TREE_SUMMARY, dossier_copy: L11DossierCopySummary = EMPTY_L11_DOSSIER_COPY_SUMMARY, asset_shortcuts: SelectionShortcutSummary = EMPTY_SELECTION_SHORTCUT_SUMMARY, shallow_groups: SelectionShortcutSummary = EMPTY_SELECTION_SHORTCUT_SUMMARY, root_index: SelectionRootIndexSummary = EMPTY_SELECTION_ROOT_INDEX_SUMMARY, manifest_guard: L11ManifestGuardSummary = EMPTY_MANIFEST_GUARD_SUMMARY) -> str:
     return "\n".join([
         f"l11_symbol_ranking_status={summary.status}",
         f"l11_symbol_ranking_reason={summary.reason}",
-        f"l11_group_count={summary.group_count}",
+        f"l11_symbol_ranking_duration_ms={duration_ms}",
+        f"l11_stale_symbol_rank_sidecars_removed={stale_sidecars_removed}",
+        f"l11_input_symbol_count={summary.input_symbol_count}",
+        f"l11_ranking_group_count={summary.ranking_group_count}",
         f"l11_ranked_symbol_count={summary.ranked_symbol_count}",
-        f"l11_not_rankable_count={summary.not_rankable_count}",
-        f"l11_guard_removed_stale_rows={summary.guard_removed_stale_rows}",
-        f"l11_guard_blocked_count={summary.guard_blocked_count}",
-        f"l11_guard_review_count={summary.guard_review_count}",
-        f"l11_guard_status={summary.guard_status}",
-        f"l11_top_group={summary.top_group}",
-        f"l11_top_symbol={summary.top_symbol}",
+        f"l11_ranked_partial_count={summary.ranked_partial_count}",
+        f"l11_risk_review_count={summary.risk_review_count}",
+        f"l11_not_rankable_taxonomy_count={summary.not_rankable_taxonomy_count}",
+        f"l11_not_rankable_quality_count={summary.not_rankable_quality_count}",
+        f"l11_top5_group_count={summary.top5_group_count}",
+        f"l11_top5_symbol_count={summary.top5_symbol_count}",
+        f"l11_visible_selection_desk_groups_written={summary.visible_selection_desk_groups_written}",
+        f"l11_visible_selection_desk_groups_expected={summary.visible_selection_desk_groups_expected}",
+        f"l11_visible_group_files_written={summary.visible_group_files_written}",
+        f"l11_visible_group_files_expected={summary.visible_group_files_expected}",
+        f"l11_symbol_rank_files_written={summary.symbol_rank_files_written}",
+        f"l11_symbol_rank_files_actual={summary.symbol_rank_files_actual}",
         f"l11_write_failed_count={summary.write_failed_count}",
-        f"l11_output_path={summary.output_path}",
-        f"l11_summary_path={summary.summary_path}",
-        f"l11_manifest_path={summary.manifest_path}",
-        f"l11_tree_status={tree_summary.status}",
-        f"l11_tree_reason={tree_summary.reason}",
-        f"l11_tree_groups_written={tree_summary.groups_written}",
-        f"l11_tree_files_written={tree_summary.files_written}",
-        f"l11_tree_files_expected={tree_summary.files_expected}",
-        f"l11_tree_status_path={tree_summary.status_path}",
-        f"l11_manifest_guard_status={manifest_summary.status}",
-        f"l11_manifest_guard_reason={manifest_summary.reason}",
-        f"l11_manifest_guard_written={manifest_summary.manifests_written}",
-        f"l11_manifest_guard_expected={manifest_summary.manifests_expected}",
-        f"l11_manifest_guard_status_path={manifest_summary.status_path}",
+        f"l11_ranked_symbols_by_group_path={summary.ranked_symbols_by_group_path}",
+        f"l11_ranking_group_top5_path={summary.ranking_group_top5_path}",
+        f"l11_visible_group_index_path={summary.visible_group_index_path}",
+        f"l11_taxonomy_tree_status={tree.status}",
+        f"l11_taxonomy_tree_reason={tree.reason}",
+        f"l11_taxonomy_tree_rows={tree.taxonomy_tree_rows}",
+        f"l11_taxonomy_tree_files_written={tree.taxonomy_tree_files_written}",
+        f"l11_taxonomy_tree_files_expected={tree.taxonomy_tree_files_expected}",
+        f"l11_taxonomy_tree_rank_cards_written={tree.taxonomy_tree_rank_cards_written}",
+        f"l11_taxonomy_tree_rank_cards_expected={tree.taxonomy_tree_rank_cards_expected}",
+        f"l11_taxonomy_tree_stale_rank_cards_removed={tree.stale_rank_cards_removed}",
+        f"l11_taxonomy_tree_write_failed_count={tree.write_failed_count}",
+        f"l11_taxonomy_tree_index_path={tree.taxonomy_tree_index_path}",
+        f"l11_taxonomy_tree_csv_path={tree.taxonomy_tree_csv_path}",
         f"l11_dossier_copy_status={dossier_copy.status}",
         f"l11_dossier_copy_reason={dossier_copy.reason}",
-        f"l11_dossier_copy_files_written={dossier_copy.files_written}",
-        f"l11_dossier_copy_files_expected={dossier_copy.files_expected}",
+        f"l11_dossier_copies_written={dossier_copy.dossier_copies_written}",
+        f"l11_dossier_copies_expected={dossier_copy.dossier_copies_expected}",
+        f"l11_dossier_sources_missing={dossier_copy.dossier_sources_missing}",
+        f"l11_dossier_stale_rank_files_removed={dossier_copy.stale_dossier_rank_files_removed}",
+        f"l11_dossier_copy_write_failed_count={dossier_copy.write_failed_count}",
         f"l11_dossier_copy_status_path={dossier_copy.status_path}",
-        f"l11_asset_shortcut_status={asset_shortcuts.status}",
-        f"l11_asset_shortcut_reason={asset_shortcuts.reason}",
-        f"l11_asset_shortcut_files_written={asset_shortcuts.files_written}",
-        f"l11_asset_shortcut_files_expected={asset_shortcuts.files_expected}",
-        f"l11_asset_shortcut_status_path={asset_shortcuts.status_path}",
+        f"l11_asset_class_shortcut_status={asset_shortcuts.status}",
+        f"l11_asset_class_shortcut_reason={asset_shortcuts.reason}",
+        f"l11_asset_class_shortcut_files_written={asset_shortcuts.files_written}",
+        f"l11_asset_class_shortcut_files_expected={asset_shortcuts.files_expected}",
+        f"l11_asset_class_shortcut_dossier_copies_written={asset_shortcuts.dossier_copies_written}",
+        f"l11_asset_class_shortcut_dossier_copies_expected={asset_shortcuts.dossier_copies_expected}",
+        f"l11_asset_class_shortcut_sources_missing={asset_shortcuts.dossier_sources_missing}",
+        f"l11_asset_class_shortcut_status_path={asset_shortcuts.status_path}",
+        f"l11_shallow_group_shortcut_status={shallow_groups.status}",
+        f"l11_shallow_group_shortcut_reason={shallow_groups.reason}",
+        f"l11_shallow_group_shortcut_files_written={shallow_groups.files_written}",
+        f"l11_shallow_group_shortcut_files_expected={shallow_groups.files_expected}",
+        f"l11_shallow_group_shortcut_dossier_copies_written={shallow_groups.dossier_copies_written}",
+        f"l11_shallow_group_shortcut_dossier_copies_expected={shallow_groups.dossier_copies_expected}",
+        f"l11_shallow_group_shortcut_sources_missing={shallow_groups.dossier_sources_missing}",
+        f"l11_shallow_group_shortcut_status_path={shallow_groups.status_path}",
         f"l11_selection_root_index_status={root_index.status}",
         f"l11_selection_root_index_reason={root_index.reason}",
         f"l11_selection_root_index_files_written={root_index.files_written}",
         f"l11_selection_root_index_files_expected={root_index.files_expected}",
+        f"l11_selection_root_index_write_failed_count={root_index.write_failed_count}",
         f"l11_selection_root_index_path={root_index.index_path}",
+        f"l11_manifest_guard_status={manifest_guard.status}",
+        f"l11_manifest_guard_reason={manifest_guard.reason}",
+        f"l11_manifest_guard_manifests_written={manifest_guard.manifests_written}",
+        f"l11_manifest_guard_manifests_expected={manifest_guard.manifests_expected}",
+        f"l11_manifest_guard_write_failed_count={manifest_guard.write_failed_count}",
+        f"l11_manifest_guard_status_path={manifest_guard.status_path}",
         "l11_selection_surface_ux_wrapper=active_pointer_over_stale_mirror_and_overlay_trust_rule",
-        "l11_meaning=symbol_ranking_inside_ranking_group_only_not_trade_permission",
-        "l11_tree_meaning=selection_desk_navigation_tree_only_no_selection_permission",
-        "l11_manifest_guard_meaning=proof_sidecars_only_no_ranking_authority",
-        "l11_dossier_copy_meaning=top5_tree_dossier_copies_only_not_trade_permission",
-        "l11_asset_shortcut_meaning=asset_class_review_shortcuts_only_not_trade_permission",
+        "l11_meaning=intra_group_inspection_priority_only_current_l5_guarded",
+        "l11_asset_class_shortcut_meaning=asset_class_review_shortcuts_only_existing_l11_score",
+        "l11_shallow_group_shortcut_meaning=ranking_group_review_shortcuts_only_existing_l11_rank",
         "l11_selection_root_index_meaning=operator_navigation_index_only_no_scoring_authority",
+        "l11_manifest_guard_meaning=manifest_proof_only_no_ranking_authority",
+        "l11_directional_validity=false",
+        "l11_expectancy_validated=false",
         "l11_selection_runtime=false",
         "l11_trade_permission=false",
         "l11_entry_signal=false",
@@ -201,39 +234,55 @@ def _replace_or_append_l11_block(result_text: str, lines: str) -> str:
     return before.rstrip() + "\n" + lines + (suffix + "\n" if suffix else "")
 
 
-def run_l11_after_render_index(root: Path) -> L11PublishSummary:
+def run_l11_after_core(root: Path, duration_ms: int = 0) -> L11PublishSummary:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
     summary = publish_l11_symbol_ranking_inside_group(paths.outbox)
-    guard_l11_with_current_dossier_gate(root)
-    cleanup_l11_stale_symbol_rank_sidecars(root)
-    dossier_copy_summary = copy_l11_tree_rank_files_from_dossiers(root)
+    stale_sidecars_removed = 0
+    if summary.status == "write_degraded" and summary.symbol_rank_files_actual > summary.symbol_rank_files_written:
+        stale_sidecars_removed = cleanup_l11_stale_symbol_rank_sidecars(root)
+        if stale_sidecars_removed > 0:
+            summary = publish_l11_symbol_ranking_inside_group(paths.outbox)
+    summary = guard_l11_with_current_dossier_gate(paths.outbox, summary)
     tree_summary = publish_l11_selection_desk_taxonomy_tree(root)
+    dossier_copy_summary = copy_l11_tree_rank_files_from_dossiers(root)
     asset_shortcuts_summary = publish_l11_asset_class_shortcuts(root)
-    publish_l11_shallow_group_shortcuts(root)
+    shallow_groups_summary = publish_l11_shallow_group_shortcuts(root)
     root_index_summary = publish_selection_desk_root_operator_index(root)
-    manifest_summary = publish_l11_manifest_guard(root)
+    manifest_guard_summary = publish_l11_manifest_guard(root)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, tree_summary, manifest_summary, dossier_copy_summary, asset_shortcuts_summary, root_index_summary))
+        updated = _replace_or_append_l11_block(text, l11_result_lines(summary, duration_ms, stale_sidecars_removed, tree_summary, dossier_copy_summary, asset_shortcuts_summary, shallow_groups_summary, root_index_summary, manifest_guard_summary))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=12",
+            "schema_version=15",
             "worker_l11_append_status=appended_by_l11_dispatch",
-            f"l11_group_count={summary.group_count}",
-            f"l11_ranked_symbol_count={summary.ranked_symbol_count}",
-            f"l11_top_group={summary.top_group}",
-            f"l11_top_symbol={summary.top_symbol}",
-            f"l11_tree_status={tree_summary.status}",
-            f"l11_manifest_guard_status={manifest_summary.status}",
+            f"l11_stale_symbol_rank_sidecars_removed={stale_sidecars_removed}",
+            f"l11_taxonomy_tree_status={tree_summary.status}",
+            f"l11_taxonomy_tree_files_written={tree_summary.taxonomy_tree_files_written}",
+            f"l11_taxonomy_tree_files_expected={tree_summary.taxonomy_tree_files_expected}",
             f"l11_dossier_copy_status={dossier_copy_summary.status}",
-            f"l11_asset_shortcut_status={asset_shortcuts_summary.status}",
-            "l11_selection_surface_ux_wrapper=active_pointer_over_stale_mirror_and_overlay_trust_rule",
+            f"l11_dossier_copies_written={dossier_copy_summary.dossier_copies_written}",
+            f"l11_dossier_copies_expected={dossier_copy_summary.dossier_copies_expected}",
+            f"l11_dossier_copy_status_path={dossier_copy_summary.status_path}",
+            f"l11_asset_class_shortcut_status={asset_shortcuts_summary.status}",
+            f"l11_asset_class_shortcut_files_written={asset_shortcuts_summary.files_written}",
+            f"l11_asset_class_shortcut_files_expected={asset_shortcuts_summary.files_expected}",
+            f"l11_asset_class_shortcut_status_path={asset_shortcuts_summary.status_path}",
+            f"l11_shallow_group_shortcut_status={shallow_groups_summary.status}",
+            f"l11_shallow_group_shortcut_files_written={shallow_groups_summary.files_written}",
+            f"l11_shallow_group_shortcut_files_expected={shallow_groups_summary.files_expected}",
+            f"l11_shallow_group_shortcut_status_path={shallow_groups_summary.status_path}",
             f"l11_selection_root_index_status={root_index_summary.status}",
             f"l11_selection_root_index_path={root_index_summary.index_path}",
+            f"l11_manifest_guard_status={manifest_guard_summary.status}",
+            f"l11_manifest_guard_manifests_written={manifest_guard_summary.manifests_written}",
+            f"l11_manifest_guard_manifests_expected={manifest_guard_summary.manifests_expected}",
+            f"l11_manifest_guard_write_failed_count={manifest_guard_summary.write_failed_count}",
+            f"l11_manifest_guard_status_path={manifest_guard_summary.status_path}",
             f"result_size={len(updated.encode('utf-8'))}",
             f"payload_checksum={payload_checksum(updated.splitlines())}",
             "authority=calculation_support_only",
@@ -247,3 +296,7 @@ def run_l11_after_render_index(root: Path) -> L11PublishSummary:
         ])
         atomic_write_text(manifest_path, manifest)
     return summary
+
+
+def run_l11_after_render_index(root: Path) -> L11PublishSummary:
+    return run_l11_after_core(root, 0)
