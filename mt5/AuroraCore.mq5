@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.082"
+#property version   "1.084"
 #property description "AURORA CORE - runtime spine, foundation truth, gateway support"
 
 #include "core/AC_Config.mqh"
@@ -50,8 +50,7 @@ void AC_AppendDegradedReason(const string reason)
    if(reason == "") return;
    if(AC_SNAPSHOT.degraded_reason == "") AC_SNAPSHOT.degraded_reason = reason;
    else AC_SNAPSHOT.degraded_reason += ";" + reason;
-}
-
+}\n
 void AC_SetLayer0Status(const string l01, const string l02, const string l04)
 {
    AC_SNAPSHOT.layer_0_1_status = l01;
