@@ -37,6 +37,11 @@ struct AC_Runtime0Snapshot
    uint   timer_finished_ms;
    uint   timer_duration_ms;
    bool   over_budget;
+   int    timer_busy_skip_count;
+   uint   timer_busy_age_ms;
+   bool   timer_busy_stale_flag;
+   bool   timer_duration_gt_period_flag;
+   string timer_pressure_state;
    string generated_at;
    string runtime_state;
    string terminal_connected;
