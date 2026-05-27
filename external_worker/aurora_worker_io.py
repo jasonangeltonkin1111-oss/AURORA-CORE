@@ -6,7 +6,6 @@ from typing import Dict, Iterable, List, Tuple
 import os
 import time
 
-
 READ_RETRY_ATTEMPTS = 12
 READ_RETRY_BACKOFF_SECONDS = 0.08
 WRITE_REPLACE_RETRY_ATTEMPTS = 30
@@ -21,7 +20,6 @@ VOLATILE_COMPARE_PREFIXES = (
     "Generated:",
 )
 
-
 @dataclass(frozen=True)
 class WorkerPaths:
     root: Path
@@ -34,23 +32,14 @@ class WorkerPaths:
 
     @classmethod
     def from_root(cls, root: Path) -> "WorkerPaths":
-        """Return the account-local Gateway folders written by MT5.
-
-        MT5 route authority writes the calculation Gateway under:
-            <account root>/Gateway/{Control,Inbox,Outbox,Status,Logs,Quarantine}
-
-        Older worker code looked under <account root>/Workbench/Gateway, which made
-        the daemon blind to the real MT5 snapshot/input files and left Layer 6 stuck
-        pending/degraded. Keep all worker outputs account-local and do not create a
-        second Workbench/Gateway authority.
-        """
         gateway = root / GATEWAY_FOLDER_NAME
+        status = gateway / "Status"
         return cls(
             root=root,
-            control=gateway / "Control",
+            control=status,
             inbox=gateway / "Inbox",
             outbox=gateway / "Outbox",
-            status=gateway / "Status",
+            status=status,
             logs=gateway / "Logs",
             quarantine=gateway / "Quarantine",
         )
@@ -58,7 +47,6 @@ class WorkerPaths:
     def ensure(self) -> None:
         for folder in (self.control, self.inbox, self.outbox, self.status, self.logs, self.quarantine):
             folder.mkdir(parents=True, exist_ok=True)
-
 
 def parse_kv_text(text: str) -> Dict[str, str]:
     data: Dict[str, str] = {}
@@ -70,14 +58,11 @@ def parse_kv_text(text: str) -> Dict[str, str]:
         data[key.strip()] = value.strip()
     return data
 
-
 def _retry_sleep(attempt: int, base_seconds: float) -> None:
     time.sleep(base_seconds * (attempt + 1))
 
-
 def dependency_lock_reason(path: Path, exc: BaseException) -> str:
     return f"dependency_file_locked_or_unreadable:path={path};error_type={type(exc).__name__};error={str(exc).replace(chr(13), ' ').replace(chr(10), ' ')}"
-
 
 def read_text(path: Path) -> str:
     last_error: PermissionError | OSError | None = None
@@ -92,10 +77,8 @@ def read_text(path: Path) -> str:
     assert last_error is not None
     raise last_error
 
-
 def read_kv(path: Path) -> Dict[str, str]:
     return parse_kv_text(read_text(path))
-
 
 def split_snapshot(text: str) -> Tuple[Dict[str, str], List[str]]:
     normalized = text.replace("\r\n", "\n")
@@ -104,7 +87,6 @@ def split_snapshot(text: str) -> Tuple[Dict[str, str], List[str]]:
         return parse_kv_text(header_text), []
     rows = [line for line in rows_text.splitlines() if line.strip()]
     return parse_kv_text(header_text), rows
-
 
 def payload_checksum(payload_rows: Iterable[str]) -> str:
     payload = "\r\n".join(payload_rows)
@@ -115,19 +97,16 @@ def payload_checksum(payload_rows: Iterable[str]) -> str:
         checksum = (checksum + (ord(ch) * (index + 1))) % 2147483647
     return str(checksum)
 
-
 def _write_text_file_durable(path: Path, text: str) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(text)
         handle.flush()
         os.fsync(handle.fileno())
 
-
 def _write_text_file_fast(path: Path, text: str) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(text)
         handle.flush()
-
 
 def _cleanup_stale_tmp(path: Path) -> None:
     try:
@@ -136,7 +115,6 @@ def _cleanup_stale_tmp(path: Path) -> None:
     except OSError:
         pass
 
-
 def _clear_write_failure_sidecar(path: Path) -> None:
     sidecar = path.with_name(path.name + ".write_failed.txt")
     try:
@@ -144,7 +122,6 @@ def _clear_write_failure_sidecar(path: Path) -> None:
             sidecar.unlink()
     except OSError:
         pass
-
 
 def _strip_volatile_lines_for_compare(text: str) -> str:
     normalized = text.replace("\r\n", "\n")
@@ -155,7 +132,6 @@ def _strip_volatile_lines_for_compare(text: str) -> str:
             continue
         kept.append(raw.rstrip())
     return "\n".join(kept).rstrip()
-
 
 def _same_effective_text(path: Path, text: str, ignore_volatile_lines: bool) -> bool:
     if not path.exists() or not path.is_file():
@@ -169,7 +145,6 @@ def _same_effective_text(path: Path, text: str, ignore_volatile_lines: bool) -> 
     if ignore_volatile_lines:
         return _strip_volatile_lines_for_compare(existing) == _strip_volatile_lines_for_compare(text)
     return False
-
 
 def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
     try:
@@ -201,7 +176,6 @@ def _write_atomic_failure_sidecar(path: Path, exc: BaseException) -> None:
     except OSError:
         pass
 
-
 def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".aurora_tmp_{os.getpid()}_{time.time_ns() & 0xffffffff:x}.tmp")
@@ -227,14 +201,11 @@ def _atomic_write_text(path: Path, text: str, durable: bool) -> bool:
     finally:
         _cleanup_stale_tmp(tmp)
 
-
 def atomic_write_text(path: Path, text: str) -> bool:
     return _atomic_write_text(path, text, durable=True)
 
-
 def atomic_write_text_fast(path: Path, text: str) -> bool:
     return _atomic_write_text(path, text, durable=False)
-
 
 def atomic_write_text_if_changed(path: Path, text: str, *, durable: bool = True, ignore_volatile_lines: bool = True) -> bool:
     if _same_effective_text(path, text, ignore_volatile_lines):
@@ -242,10 +213,8 @@ def atomic_write_text_if_changed(path: Path, text: str, *, durable: bool = True,
         return True
     return _atomic_write_text(path, text, durable=durable)
 
-
 def unix_time() -> int:
     return int(time.time())
-
 
 def utc_stamp() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
