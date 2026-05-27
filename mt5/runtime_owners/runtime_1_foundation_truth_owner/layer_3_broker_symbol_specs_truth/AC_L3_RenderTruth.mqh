@@ -27,6 +27,30 @@ string AC_L3ObservedCalculationMoneyText(const double value, const bool availabl
    return AC_L3CalculationMoneyText(value, available);
 }
 
+bool AC_L3FieldMissing(const AC_L3SymbolSpecs &s, const string field)
+{
+   if(s.missing_required_fields == "") return false;
+   return (StringFind(s.missing_required_fields, field + "(") >= 0 || StringFind(s.missing_required_fields, field + ";") >= 0);
+}
+
+string AC_L3RequiredIntegerText(const AC_L3SymbolSpecs &s, const string field, const long value)
+{
+   if(AC_L3FieldMissing(s, field)) return "Not available";
+   return IntegerToString((int)value);
+}
+
+string AC_L3RequiredNumberText(const AC_L3SymbolSpecs &s, const string field, const double value, const int digits)
+{
+   if(AC_L3FieldMissing(s, field)) return "Not available";
+   return AC_L3NumberText(value, digits);
+}
+
+void AC_L3EnsureFreshForRender()
+{
+   if(AC_L3ShouldRunFullScan())
+      AC_RefreshLayer3BrokerSpecsTruth();
+}
+
 string AC_L3MarginRateText(const bool available, const double initial, const double maintenance)
 {
    if(!available)
@@ -56,6 +80,12 @@ string AC_L3ClosedLayer4Status(const string market_state)
 
 void AC_BuildLayer3Texts()
 {
+   if(AC_L3ShouldRunFullScan())
+   {
+      AC_RefreshLayer3BrokerSpecsTruth();
+      return;
+   }
+
    int denom = AC_L3_ELIGIBLE_FROM_L2;
    AC_L3_BOARD_SECTION = "\r\nLAYER 3 - BROKER SPECS AND VALUE TRUTH\r\n";
    AC_L3_BOARD_SECTION += "----------------------------------------\r\n";
@@ -139,18 +169,21 @@ void AC_BuildLayer3Texts()
 
 string AC_Layer3BoardSection()
 {
+   AC_L3EnsureFreshForRender();
    if(!AC_L3_READY) return "\r\nLAYER 3 - BROKER SPECS AND VALUE TRUTH\r\n----------------------------------------\r\nStatus: Pending\r\n";
    return AC_L3_BOARD_SECTION;
 }
 
 string AC_Layer3WorkbenchSection()
 {
+   AC_L3EnsureFreshForRender();
    if(!AC_L3_READY) return "\r\nL3_BROKER_SPECS_VALUE_SCAN\r\nstatus=pending\r\n";
    return AC_L3_WORKBENCH_SECTION;
 }
 
 string AC_Layer3DossierSection(const string symbol)
 {
+   AC_L3EnsureFreshForRender();
    string text = "\r\nLAYER 3 - BROKER SPECS AND VALUE TRUTH\r\n";
    text += "----------------------------------------\r\n";
    int idx = AC_L3FindIndex(symbol);
@@ -214,29 +247,29 @@ string AC_Layer3DossierSection(const string symbol)
    text += AC_L3DossierLine("Link Truth", s.link_truth);
 
    text += "\r\nBroker Contract\r\n";
-   text += AC_L3DossierLine("Digits", IntegerToString((int)s.digits));
-   text += AC_L3DossierLine("Point", AC_L3NumberText(s.point, 8));
-   text += AC_L3DossierLine("Tick Size", AC_L3NumberText(s.tick_size, 8));
-   text += AC_L3DossierLine("Tick Value", AC_L3NumberText(s.tick_value, 6));
-   text += AC_L3DossierLine("Tick Value Profit", AC_L3NumberText(s.tick_value_profit, 6));
-   text += AC_L3DossierLine("Tick Value Loss", AC_L3NumberText(s.tick_value_loss, 6));
-   text += AC_L3DossierLine("Contract Size", AC_L3NumberText(s.contract_size, 4));
+   text += AC_L3DossierLine("Digits", AC_L3RequiredIntegerText(s, "Digits", s.digits));
+   text += AC_L3DossierLine("Point", AC_L3RequiredNumberText(s, "Point", s.point, 8));
+   text += AC_L3DossierLine("Tick Size", AC_L3RequiredNumberText(s, "Tick size", s.tick_size, 8));
+   text += AC_L3DossierLine("Tick Value", AC_L3RequiredNumberText(s, "Tick value", s.tick_value, 6));
+   text += AC_L3DossierLine("Tick Value Profit", AC_L3RequiredNumberText(s, "Tick value profit", s.tick_value_profit, 6));
+   text += AC_L3DossierLine("Tick Value Loss", AC_L3RequiredNumberText(s, "Tick value loss", s.tick_value_loss, 6));
+   text += AC_L3DossierLine("Contract Size", AC_L3RequiredNumberText(s, "Contract size", s.contract_size, 4));
 
    text += "\r\nVolume Rules\r\n";
-   text += AC_L3DossierLine("Minimum Volume", AC_L3NumberText(s.volume_min, 4));
-   text += AC_L3DossierLine("Maximum Volume", AC_L3NumberText(s.volume_max, 4));
-   text += AC_L3DossierLine("Volume Step", AC_L3NumberText(s.volume_step, 4));
-   text += AC_L3DossierLine("Volume Limit", AC_L3NumberText(s.volume_limit, 4));
+   text += AC_L3DossierLine("Minimum Volume", AC_L3RequiredNumberText(s, "Minimum volume", s.volume_min, 4));
+   text += AC_L3DossierLine("Maximum Volume", AC_L3RequiredNumberText(s, "Maximum volume", s.volume_max, 4));
+   text += AC_L3DossierLine("Volume Step", AC_L3RequiredNumberText(s, "Volume step", s.volume_step, 4));
+   text += AC_L3DossierLine("Volume Limit", AC_L3RequiredNumberText(s, "Volume limit", s.volume_limit, 4));
 
    text += "\r\nExecution Rules\r\n";
-   text += AC_L3DossierLine("Trade Mode", AC_L3TradeModeText(s.trade_mode));
-   text += AC_L3DossierLine("Execution Mode", IntegerToString((int)s.execution_mode));
-   text += AC_L3DossierLine("Filling Mode", IntegerToString((int)s.filling_mode));
-   text += AC_L3DossierLine("Order Mode", IntegerToString((int)s.order_mode));
-   text += AC_L3DossierLine("Expiration Mode", IntegerToString((int)s.expiration_mode));
-   text += AC_L3DossierLine("GTC Mode", IntegerToString((int)s.gtc_mode));
-   text += AC_L3DossierLine("Stops Level", IntegerToString((int)s.stops_level) + " points");
-   text += AC_L3DossierLine("Freeze Level", IntegerToString((int)s.freeze_level) + " points");
+   text += AC_L3DossierLine("Trade Mode", AC_L3FieldMissing(s, "Trade mode") ? "Not available" : AC_L3TradeModeText(s.trade_mode));
+   text += AC_L3DossierLine("Execution Mode", AC_L3RequiredIntegerText(s, "Execution mode", s.execution_mode));
+   text += AC_L3DossierLine("Filling Mode", AC_L3RequiredIntegerText(s, "Filling mode", s.filling_mode));
+   text += AC_L3DossierLine("Order Mode", AC_L3RequiredIntegerText(s, "Order mode", s.order_mode));
+   text += AC_L3DossierLine("Expiration Mode", AC_L3RequiredIntegerText(s, "Expiration mode", s.expiration_mode));
+   text += AC_L3DossierLine("GTC Mode", AC_L3RequiredIntegerText(s, "GTC mode", s.gtc_mode));
+   text += AC_L3DossierLine("Stops Level", AC_L3FieldMissing(s, "Stops level") ? "Not available" : IntegerToString((int)s.stops_level) + " points");
+   text += AC_L3DossierLine("Freeze Level", AC_L3FieldMissing(s, "Freeze level") ? "Not available" : IntegerToString((int)s.freeze_level) + " points");
 
    text += "\r\nSpread Specification\r\n";
    text += AC_L3DossierLine("Floating Spread", AC_L3BoolText(s.spread_float));
@@ -244,10 +277,10 @@ string AC_Layer3DossierSection(const string symbol)
    text += AC_L3DossierLine("Note", "Live bid, ask, tick freshness, and live spread belong to Layer 4");
 
    text += "\r\nSwap\r\n";
-   text += AC_L3DossierLine("Swap Mode", IntegerToString((int)s.swap_mode));
-   text += AC_L3DossierLine("Swap Long", AC_L3NumberText(s.swap_long, 6));
-   text += AC_L3DossierLine("Swap Short", AC_L3NumberText(s.swap_short, 6));
-   text += AC_L3DossierLine("Triple Swap Day", IntegerToString((int)s.swap_rollover3days));
+   text += AC_L3DossierLine("Swap Mode", AC_L3RequiredIntegerText(s, "Swap mode", s.swap_mode));
+   text += AC_L3DossierLine("Swap Long", AC_L3RequiredNumberText(s, "Swap long", s.swap_long, 6));
+   text += AC_L3DossierLine("Swap Short", AC_L3RequiredNumberText(s, "Swap short", s.swap_short, 6));
+   text += AC_L3DossierLine("Triple Swap Day", AC_L3RequiredIntegerText(s, "Swap rollover day", s.swap_rollover3days));
 
    text += "\r\nValue Formula Primitives\r\n";
    text += AC_L3DossierLine("Account Currency", s.account_currency);
@@ -292,7 +325,8 @@ string AC_Layer3DossierSection(const string symbol)
 
 string AC_Layer3StatusRow()
 {
-   return "schema_name=layer_status|schema_version=v3.4|layer_id=3|layer_name=" + AC_LAYER_3_NAME
+   AC_L3EnsureFreshForRender();
+   return "schema_name=layer_status|schema_version=v3.5|layer_id=3|layer_name=" + AC_LAYER_3_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID
