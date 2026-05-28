@@ -91,4 +91,29 @@ static const int    AC_DOSSIER_SYMBOL_ACTIVITY_MAX_ROWS = 30;
 static const uint   AC_TIMER_BUDGET_MS    = 0;
 static const bool   AC_USE_COMMON_FILES   = true;
 
+string AC_L0CsvCompatField(string line, int index)
+{
+   string cols[];
+   ushort sep = StringGetCharacter(",", 0);
+   int count = StringSplit(line, sep, cols);
+   if(index < 0 || index >= count) return "";
+   string value = cols[index];
+   StringTrimLeft(value);
+   StringTrimRight(value);
+   StringReplace(value, "\"", "");
+   return value;
+}
+
+string AC_L6CsvLineForSymbol(const string symbol){ return ""; }
+string AC_L7CsvLineForSymbol(const string symbol){ return ""; }
+string AC_L8CsvLineForSymbol(const string symbol){ return ""; }
+string AC_L9CsvLineForSymbol(const string symbol){ return ""; }
+string AC_L10CsvLineForSymbol(const string symbol){ return ""; }
+
+string AC_L6CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
+string AC_L7CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
+string AC_L8CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
+string AC_L9CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
+string AC_L10CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
+
 #endif
