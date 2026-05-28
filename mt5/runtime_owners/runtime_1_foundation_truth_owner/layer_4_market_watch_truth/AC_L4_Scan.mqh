@@ -27,6 +27,38 @@ string AC_L4BuildCacheKey(const int total)
       + " | symbols " + IntegerToString(total);
 }
 
+string AC_L4BoolKey(const bool value)
+{
+   return value ? "1" : "0";
+}
+
+string AC_L4PacketDataChangeKey()
+{
+   string key = "l4_packet_data_change";
+   int total = ArraySize(AC_L4_SYMBOLS);
+   for(int i = 0; i < total; i++)
+   {
+      AC_L4SymbolPacket p = AC_L4_SYMBOLS[i];
+      key += "|" + p.symbol
+         + ":state=" + p.market_state
+         + ":scan=" + p.scan_status
+         + ":tick=" + AC_L4BoolKey(p.tick_available)
+         + ":q=" + p.quote_quality
+         + ":surf=" + p.surface_quality
+         + ":bid=" + DoubleToString(p.bid, p.digits)
+         + ":ask=" + DoubleToString(p.ask, p.digits)
+         + ":last=" + DoubleToString(p.last, p.digits)
+         + ":spread_pts=" + DoubleToString(p.spread_points_live, 1)
+         + ":spread_bps=" + DoubleToString(p.spread_bps_live, 4)
+         + ":zero=" + p.zero_spread_state
+         + ":daily=" + DoubleToString(p.daily_change_pct, 4)
+         + ":tick_msc=" + IntegerToString(p.tick_time_msc)
+         + ":flags=" + IntegerToString((int)p.tick_flags)
+         + ":fail=" + p.failure_reason;
+   }
+   return key;
+}
+
 void AC_L4InitPacket(AC_L4SymbolPacket &p, const string symbol)
 {
    p.symbol = symbol;
@@ -262,9 +294,6 @@ void AC_RefreshLayer4MarketWatchTruth()
    AC_L4Reset();
    int total = SymbolsTotal(false);
    AC_L4_CACHE_KEY = AC_L4BuildCacheKey(total);
-   // Refresh key must change on each L4 quote cycle so L5 can detect fresh L4 packet truth.
-   // Stable universe invalidation remains in AC_L4_CACHE_KEY.
-   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | time_source=TimeTradeServerFirst | refresh_time=" + TimeToString(AC_L4_LAST_REFRESH_TIME, TIME_DATE | TIME_SECONDS);
 
    for(int idx=0; idx<total; idx++)
    {
@@ -278,6 +307,9 @@ void AC_RefreshLayer4MarketWatchTruth()
    if(AC_L4_MISSING_TICK > 0 || AC_L4_INVALID_BIDASK > 0 || AC_L4_STALE_QUOTES > 0 || AC_L4_HIGH_SPREAD_WARNINGS > 0)
       AC_L4_SCAN_STATUS = "Complete with warnings";
    AC_L4_SCAN_DURATION_MS = GetTickCount() - AC_L4_SCAN_STARTED_MS;
+   // Refresh key is deliberately data-change driven, not refresh-time driven.
+   // This stops a clock tick from forcing all Dossiers/Gateway inputs dirty while still changing when live quote packets change.
+   AC_L4_REFRESH_KEY = AC_L4_CACHE_KEY + " | data_change=" + AC_FileIOContentSignature(AC_L4PacketDataChangeKey());
    AC_L4_READY = true;
    AC_BuildLayer4Texts();
 }
@@ -288,6 +320,7 @@ bool AC_L4ShouldRunFullScan()
    if(!AC_L4_READY) return true;
    if(AC_L4_CACHE_KEY == "not_scanned") return true;
    if(AC_L4_CACHE_KEY != AC_L4BuildCacheKey(total)) return true;
+   if(AC_L4_DOSSIER_REFRESH_SECONDS <= 0) return true;
    if(AC_L2CurrentSessionServerTime() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
    return false;
 }
