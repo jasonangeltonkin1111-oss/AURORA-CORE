@@ -36,7 +36,6 @@ string AC_LAST_WORKBENCH_STATUS_TEXT = "";
 string AC_LAST_ACCOUNT_STATUS_TEXT = "";
 string AC_LAST_ACCOUNT_ROOT_STATUS_TEXT = "";
 string AC_LAST_MICRO_LOG_TEXT = "";
-string AC_LAST_WORKBENCH_SURFACE_SYNC_KEY = "";
 
 void AC_AppendReason(const string reason)
 {
@@ -460,27 +459,13 @@ void OnTimer()
    start = GetTickCount();
    AC_WriteResult micro_log = AC_WriteTextFileIfChanged(AC_MicroLogPath(), AC_MICRO_LOG, AC_LAST_MICRO_LOG_TEXT);
    AC_SNAPSHOT.micro_log_status = micro_log.status;
-   AC_AddMicroLog("AC_WriteMicroLog", start, micro_log.status);
-   AC_RecordDegradedWrite("micro_log", micro_log);
+   AC_AddMicroLog("AC_PublishMicroLog", start, micro_log.status);
 
-   if(AC_TIMER_TICKS_SINCE_WORKBENCH == 0 || AC_TIMER_TICKS_SINCE_WORKBENCH >= AC_WORKBENCH_INTERVAL_HEARTBEATS)
-   {
-      start = GetTickCount();
-      AC_WriteResult selection_desk = AC_PublishSelectionDeskScaffold();
-      AC_AddMicroLog("AC_PublishSelectionDeskScaffold", start, selection_desk.status);
-      AC_RecordDegradedWrite("selection_desk", selection_desk);
+   start = GetTickCount();
+   runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
+   AC_AddMicroLog("AC_PublishRuntimeStatusFinalLate", start, runtime_status.status);
 
-      start = GetTickCount();
-      AC_WorkbenchSurfaceSyncResult surface_sync = AC_PublishWorkbenchSurfaceSyncIfDue(AC_LAST_WORKBENCH_SURFACE_SYNC_KEY);
-      AC_AddMicroLog("AC_PublishWorkbenchSurfaceSyncIfDue", start, surface_sync.status + ":" + surface_sync.detail);
-
-      AC_TIMER_TICKS_SINCE_WORKBENCH = 1;
-   }
-   else
-   {
-      AC_TIMER_TICKS_SINCE_WORKBENCH++;
-   }
-
+   AC_TIMER_TICKS_SINCE_WORKBENCH++;
    AC_TIMER_BUSY = false;
    AC_TIMER_BUSY_STARTED_MS = 0;
 }
