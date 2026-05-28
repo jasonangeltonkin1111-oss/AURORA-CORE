@@ -40,3 +40,4 @@ external_worker/sync_backups/
 *.ex5
 *.log
 *.tmp
+*.7z
