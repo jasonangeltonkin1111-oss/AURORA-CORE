@@ -320,7 +320,12 @@ bool AC_L4ShouldRunFullScan()
    if(!AC_L4_READY) return true;
    if(AC_L4_CACHE_KEY == "not_scanned") return true;
    if(AC_L4_CACHE_KEY != AC_L4BuildCacheKey(total)) return true;
-   if(AC_L4_DOSSIER_REFRESH_SECONDS <= 0) return true;
+   if(AC_L4_DOSSIER_REFRESH_SECONDS <= 0)
+   {
+      uint now_ms = GetTickCount();
+      if(AC_L4_LAST_REFRESH_MS == now_ms) return false;
+      return (now_ms - AC_L4_LAST_REFRESH_MS) >= (uint)AC_TIMER_MILLISECONDS;
+   }
    if(AC_L2CurrentSessionServerTime() - AC_L4_LAST_REFRESH_TIME >= AC_L4_DOSSIER_REFRESH_SECONDS) return true;
    return false;
 }
