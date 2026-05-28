@@ -137,7 +137,7 @@ High L12 quality means the group has cleaner and more complete ranking data.
 
 High L12 strength means the group has strong leaders and backup depth.
 
-None of these mean direction, best-now status, edge proof, expectancy validation, prop-rule clearance, trade permission, entry permission, or execution permission.
+None of these mean buy, sell, best trade, edge proven, expectancy validated, prop-firm safe, trade permission, entry permission, or execution permission.
 
 Required flags:
 

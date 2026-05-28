@@ -61,7 +61,7 @@ Hard law:
 Default states:
 - publication_allowed=true if FileIO works, even degraded
 - review_allowed=false until evidence completeness and integrity allow review
-- class_1_alert_allowed may be true only for system/risk/integrity alerts
+- class_1_alert_allowed=true for system/risk/integrity alerts
 - class_2_setup_alert_allowed=false
 - directional_alert_allowed=false
 - trade_allowed=false

@@ -417,7 +417,7 @@ Forbidden language:
 ```text
 best trade
 trade list
-probability-marketing setup
+high probability setup
 ```
 
 ---
@@ -729,10 +729,10 @@ Forbidden language:
 buy now
 sell now
 confirmed setup
-probability-marketing trade
-institution-grade flow certainty
+high probability trade
+institutional order flow confirmed
 smart money confirmed
-prop-rule cleared
+prop-firm safe
 ```
 
 ---

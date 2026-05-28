@@ -20,14 +20,7 @@ __pycache__/
 # Generated EXE/build/dist outputs must be rebuilt and runtime-proven before use.
 external_worker/build/
 external_worker/dist/
-external_worker/dist_AuroraWorker_backup_*/
-external_worker/_aurora_*_backup_*/
-external_worker/_FULL_REBUILD_PROOF_*/
-external_worker/_REBUILD_PROOF_*/
-external_worker/_rebuild_proof_*/
-external_worker/sync_backups/
 *.spec.bak
-*.bak_*
 *.pkg
 *.pyz
 *.toc
@@ -40,4 +33,3 @@ external_worker/sync_backups/
 *.ex5
 *.log
 *.tmp
-*.7z

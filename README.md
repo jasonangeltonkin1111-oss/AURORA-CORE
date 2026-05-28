@@ -1,8 +1,8 @@
 # AURORA CORE
 
-**Native MT5 Market Intelligence, Truth Publication, Selection, Deep Evidence, Manual Review, and Future Validation System**
+**Native MT5 Market Intelligence, Runtime Ownership, and Truth Publication System**
 
-AURORA CORE is a native MetaTrader 5 / MQL5 trading-system foundation built to observe broker/account truth, classify the market universe, rank attention-worthy symbols, build a diversified inspection basket, collect selected deep evidence, and publish operator truth without fake confidence.
+AURORA CORE is a native MetaTrader 5 / MQL5 trading-system foundation built to observe broker truth, classify the market universe, route expensive evidence only where it matters, and publish operator truth without fake confidence.
 
 It is not a finished trading edge.
 
@@ -10,17 +10,15 @@ It is not an auto-trading permission system.
 
 It is not a signal seller.
 
-AURORA CORE is the runtime spine for disciplined market intelligence. It can later support validated strategy research, alerts, review exports, and execution modules only after source, compile, runtime, broker, prop-firm, and validation evidence prove those permissions are deserved.
+AURORA CORE is the core runtime spine for building a disciplined market-intelligence engine that can later support validated strategy research, alerts, ranking, selection, and execution modules only after evidence proves they deserve permission.
 
 ---
 
 ## Mandatory Reading Spine
 
-Scaffold startup path:
+Scaffold control startup path (active):
 
 ```text
-AGENTS.md
-README.md
 control/02_MASTER_REPO_FILE_INDEX.md
 control/00_CONTROL_INDEX.md
 control/01_CONTROL_GOVERNANCE.md
@@ -28,16 +26,13 @@ relevant folder index
 relevant real content file
 ```
 
-Core system blueprints and guidebooks:
+All future Aurora Core work must read these before assigning layers, patching source, or updating docs:
 
 ```text
+AGENTS.md
 mt5/00_MT5_SOURCE_INDEX.md
-mt5/runtime_owners/00_RUNTIME_OWNERS_SOURCE_INDEX.md
 external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md
-blueprint/00_BLUEPRINT_INDEX.md
 blueprint/03_LOGICAL_LAYER_BLUEPRINT.md
-blueprint/05_PUBLICATION_SURFACE_BLUEPRINT.md
-blueprint/06_PERMISSION_AND_VALIDATION_BLUEPRINT.md
 docs/22_AURORA_QUALITY_7S_LAW.md
 docs/23_SYMBOL_OMIT_AND_CALC_MODE_CONTROL.md
 docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md
@@ -45,55 +40,13 @@ docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md
 docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md
 ```
 
-`blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is the 23-layer trading/system contract. Current source/config/index files decide active implementation truth when blueprint text and source disagree.
+`blueprint/03_LOGICAL_LAYER_BLUEPRINT.md` is blueprint context. Current source/config/index files decide the active implementation state when blueprint text and source disagree.
 
----
+The control laws require the final product to be professional, readable, logically structured, easy to navigate, and cleanly organized. Stable truths become folders. Changing ranks, scores, cycle IDs, Top-N order, and metadata belong inside files, indexes, or reports. A patch is not clean if operators must hunt for the data or if source/docs/routes disagree.
 
-## Current System Shape
+`docs/AURORA_LAYER_SURFACE_GUIDEBOOK.md` is the active Board/Dossier/Workbench surface standard. It defines the no-repeat data law: later layers consume earlier owner gates and do not duplicate raw previous-layer truth.
 
-Aurora Core has one product identity:
-
-```text
-MT5 EA + Runtime Owners + Calculation Gateway support + truth-publication surfaces
-```
-
-The system itself is the important object, not branch process, overseer process, or worker-management language. External worker files are calculation-support implementation details. They do not change the system mission and they do not become trading authority.
-
-Aurora Core’s runtime chain is:
-
-```text
-L1-L5   Foundation Truth and Basic Gate
-L6-L9   Surface Scoring and Attention Ranking
-L10-L14 Taxonomy, Ranking Groups, and Candidate Sourcing
-L15-L16 Correlation/Diversity Selection and Global Top 10 Attention Basket
-L17-L22 Selected Deep Evidence Packs
-L23     Setup/Strategy/Permission/Manual Review Export State
-```
-
-Layer order matters. Later layers consume earlier owner packets. Later layers do not reopen blocked symbols, recalculate upstream truth, or create hidden authority.
-
----
-
-## System Flow Law
-
-Aurora must flow, not freeze.
-
-```text
-Publish truth early.
-Label incomplete/degraded/stale states honestly.
-Wait for upstream acceptance before pretending downstream stability.
-Do not print false ACCEPTED/static/done states.
-Do not recalculate downstream layers aggressively while upstream chains are still filling.
-```
-
-The desired cadence is chain-aware:
-
-1. Foundation truth starts first and keeps publishing real status.
-2. L5 is the only broad all-symbol hard eligibility gate.
-3. L6-L16 may rank/select only from valid upstream packets.
-4. L17-L22 collect selected evidence only after selection is stable enough to avoid thrash.
-5. L23 may package review/export state, but permission remains false unless validation explicitly upgrades it.
-6. A static/settled state should mean the current chain is actually clean/accepted/done for that scope, not merely quiet.
+`docs/AURORA_RUNTIME3D_CLOSEOUT_GUIDEBOOK.md` is the Runtime 3 Gateway/external-worker closeout standard. Runtime 3 is not fully closed until shared install, daemon, watchdog, per-account result acceptance, rejection-path proof, and MT5 Workbench readback are captured.
 
 ---
 
@@ -112,105 +65,50 @@ Layer 2 - Market Open / Closed Truth
 Layer 3 - Broker Specs and Value Truth
 Layer 4 - Live Quote and Spread Truth
 Layer 5 - Basic System Gate
-Runtime 1 - Shared OHLC Raw Storage support service
 Runtime 2 - Market Universe / Taxonomy Lookup generated-row lookup source
-Runtime 3 - Calculation Gateway support
-Runtime 3 support chain - L6 through L19 calculation/file-decoration support where source-present
-Runtime 4 - Surface Scoring contracts where source-present
-Publication / FileIO / Route Service support
-Board / Dossier / Workbench render/readback surfaces
+Runtime 3 - Calculation Gateway Owner
+Layer 6 - active external-worker cost/friction calculation support; not permission
+Layer 7-L10 - active external-worker surface/taxonomy calculation support; not permission
+Layer 11+ - active/future worker modules by source index; not permission unless explicit validation exists
+Publication / FileIO / Route Service support (implementation inheritance may still use runtime_7_publication_owner folder naming)
 ```
 
-Do not confuse source-folder names with trading authority. Publication/FileIO/Route support owns writing and route boundaries; it does not own broker truth, ranking truth, selection truth, or permission truth.
+Do not confuse active source owners with complete logical layers.
 
-Runtime 3 owns the MT5-to-external-calculation support relationship, job-bus contract, daemon/watchdog status, and worker-result acceptance/rejection. Runtime 3 must not own broker truth, ranking authority, selection authority, trade permission, execution, FileIO, or Board/Dossier rendering.
+Publication/FileIO/Route support may exist early only as infrastructure service support. It does not make publication a trading truth owner.
+
+Layer 3 is the current broker/spec/value foundation layer. It scans Layer 2 known open and closed symbols, skips unknown symbols, prints literal fundamental lookup links where available, and must never show failed value or margin calculations as fake `0.00`. Layer 4 is the first open-symbol-only cutoff layer and owns live quote, tick, and spread truth.
+
+Layer 5 is the Basic System Gate. It consumes L2/L3/L4 owner packets and outputs pass/blocked eligibility only. It is not Runtime 5, not advisory scoring, not ranking, not selection, not permission, and not execution.
+
+Runtime 3 owns the Gateway/external-worker relationship, job-bus contract, daemon/watchdog status, and worker-result acceptance/rejection. Runtime 3 is calculation support only and must not own broker truth, ranking truth, selection truth, trade permission, execution, FileIO, or Board/Dossier rendering.
 
 `mt5/runtime_owners/runtime_5_deep_inspection_advisory_owner/AC_DeepInspectionOwner.mqh` is a retired compatibility wrapper only. It must not be treated as active Runtime 5 authority.
 
+Broker specs, Market Watch quote truth, calculation mode/spec validation, fundamental links, and DOM must follow current source truth and the control details in `docs/24_DOSSIER_SPECS_FUNDAMENTALS_DOM_CONTROL.md`.
+
 ---
 
-## Layer Chain Overview
+## Core Mission
 
-### L1-L5 — Foundation Truth and Basic Gate
-
-```text
-L1 Account / Portfolio / Prop Rule Truth
-L2 Market Open / Closed Truth
-L3 Symbol + Broker Specs Truth
-L4 Market Watch / Quote / Spread Truth
-L5 Basic System Gate
-```
-
-This block answers whether the account, broker, session, symbol specs, live quote, spread, and basic eligibility are usable. L5 is the only broad all-symbol hard gate. Broken/stale/unknown truth may block ranking, selection, review, or permission, but it should not hide publication surfaces.
-
-### L6-L9 — Surface Ranking
+AURORA CORE exists to answer:
 
 ```text
-L6 Surface Cost / Friction Ranking
-L7 Session Relevance Ranking
-L8 Surface Movement / Range Ranking
-L9 Surface Structure / Location Geometry
-```
-
-This block ranks attention quality. It does not create trade permission. Low spread is not edge. Movement is not edge. Location near a high/low is structure context, not direction.
-
-### L10-L14 — Taxonomy, Groups, and Candidate Sourcing
-
-```text
-L10 Taxonomy / Ranking Group Classification
-L11 Symbol Ranking Inside Ranking Group
-L12 Ranking Group Heat / Quality
-L13 Dynamic Ranking Group Selection
-L14 Ranking Group Leader Candidate Pool
-```
-
-This block turns a large market universe into organized ranking groups and candidate pools. `ranking_group` is the selection/cap/diversification field. It replaces older active wording such as `major_bucket`, `minor_bucket`, `aggregation_group`, `bucket_top5`, and `sub_bucket_top5`.
-
-### L15-L16 — Basket Selection
-
-```text
-L15 Correlation / Diversity Selection
-L16 Global Top 10 Builder
-```
-
-This block builds a diversified inspection basket. Global Top 10 means “inspect these first,” not “best 10 trades.” Correlation/diversity operates on the candidate pool only, not a full-universe 1200x1200 matrix.
-
-### L17-L22 — Selected Evidence Only
-
-```text
-L17 Deep Evidence Selection Split
-L18 Selected Raw OHLC Bar Pack
-L19 Selected Wick / Candle Geometry Pack
-L20 Selected Rolling Tick Pack
-L21 Selected Indicator / Reference Pack
-L22 Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack
-```
-
-Deep evidence is selected-symbol only. No all-symbol OHLC/tick/indicator/DOM collection. DOM/order-flow is MT5 proxy-only, broker/symbol dependent, and must never be labelled institutional order-flow proof.
-
-### L23 — Permission / Review / Alert State
-
-```text
-L23 Setup / Strategy / Permission / Trader-Review Export State
-```
-
-L23 packages selected-symbol evidence into manual review, trader-chat export, setup research, permission, and alert state. Export is not permission. Manual review packets may exist while trade permission remains false.
-
-Default permission state:
-
-```text
-trade_permission=false
-auto_trade_allowed=false
-entry_signal=false
-prop_firm_ready=false
-edge_validated=false
+What does the broker/account/market actually say?
+Which symbols are usable right now?
+Which symbols deserve attention later when ranking exists?
+Which groups are strongest later when ranking exists?
+Which candidates form a diversified inspection basket later when selection exists?
+Which selected symbols deserve deep evidence later when that layer exists?
+What is complete, degraded, stale, blocked, or still filling?
+What is allowed, and what is not allowed?
 ```
 
 ---
 
 ## Current Selection Desk Contract
 
-Stable parent routes:
+The current stable parent-folder contract is:
 
 ```text
 Aurora Core/<server>/<account>/Selection Desk/Groups/
@@ -218,31 +116,71 @@ Aurora Core/<server>/<account>/Selection Desk/Global/
 Aurora Core/<server>/<account>/Selection Index.txt
 ```
 
-Changing ranks, Top-N order, scores, cycle IDs, and metadata belong inside files/indexes/reports, not parent folder names.
+Ranking numbers, Top-N order, cycle IDs, and selection metadata belong inside child files and sibling index/metadata files, not in parent folder names.
 
-Preserved child output views:
+Top-N was not removed.
+
+The planned output views are preserved as child files/content:
 
 ```text
 Selection Desk/Groups/_INDEX.txt
-Selection Desk/Groups/<ranking_group>.txt
+Selection Desk/Groups/<ranking_group>.txt        # later contains group_top_n=5 and rank_1..rank_5
 Selection Desk/Global/_INDEX.txt
-Selection Desk/Global/Global Top 10.txt
-Selection Desk/Selection Index.txt
+Selection Desk/Global/Global Top 10.txt          # later contains global_top_n=10 and rank_1..rank_10
+Selection Desk/Selection Index.txt               # sidecar overview of group/symbol order and metadata
 ```
 
-Dossier routes remain separate:
+The Dossiers contract remains separate and must not be renamed by Selection Desk work:
 
 ```text
+Aurora Core/<server>/<account>/Dossiers/
 Aurora Core/<server>/<account>/Dossiers/Open/
 Aurora Core/<server>/<account>/Dossiers/Closed/
 Aurora Core/<server>/<account>/Dossiers/Unknown/
 ```
 
+Current Selection Desk files are structure placeholders only until a later selection owner exists. Placeholder publication must not imply ranked symbols, selected candidates, trade permission, edge, or prop-firm readiness.
+
+---
+
+## Layer Placement For New Evidence Sources
+
+Current implementation placement:
+
+```text
+Layer 2 = Market Open / Closed Truth
+Layer 3 = Symbol + Broker Specs Truth, including calculation mode/spec-validation direction
+Layer 4 = Market Watch Truth
+Layer 5 = Basic System Gate
+Layer 6-L10 = active Runtime 3 external-worker calculation-support outputs; inspection/scoring/classification only, not permission
+Layer 11-L19 = active/future external-worker calculation-support chain by current source index; not permission
+Layer 22 = future Deep Market Evidence / Liquidity / MT5 Order-Flow Proxy Pack, where DOM belongs later
+```
+
+DOM is not fundamentals. DOM is not current Runtime 2 taxonomy. DOM must be bounded, availability-gated, labelled proxy evidence later.
+
+---
+
+## Current Runtime 2 Universe Status
+
+Current runtime-2 source state is treated as source-inspection truth only:
+
+```text
+generated row include presence: present (mt5/runtime_owners/runtime_2_market_universe_taxonomy_lookup/AC_MarketUniverseRows.mqh exists and is included)
+AC_UniverseRowsGenerated()=true; AC_UniverseLoadedRowCount() maps to AC_UNIVERSE_GENERATED_ROW_COUNT
+contract_status=generated_copy_present_lookup_only
+runtime permission: lookup-only; ranking_group_runtime=false; selection_logic_runtime=false; trade_permission=false
+compile proof: unavailable unless explicit MetaEditor compile output exists
+runtime loaded proof: unavailable unless explicit MT5 runtime output exists
+```
+
+Generated row include presence alone does not prove runtime loading, ranking completion, or permission state.
+
 ---
 
 ## Taxonomy Naming Contract
 
-Active hierarchy:
+Use the professional hierarchy:
 
 ```text
 asset_class -> market_group -> market_segment -> symbol
@@ -257,36 +195,37 @@ minor_bucket
 aggregation_group
 bucket_top5
 sub_bucket_top5
-Top 5 Per Bucket
 ```
 
-These old names may appear only as historical/source-input references or contradiction-ledger context. They must not be used as active EA-facing fields, route names, or operator-facing labels.
+These old names may appear only as historical references. They must not be used as active source fields, route names, or operator-facing publication labels.
 
 ---
 
-## Publication Surface Contract
+## Runtime Ownership Rules
 
-Board = compact operator cockpit.
-
-Dossier = rich per-symbol truth.
-
-Selection Desk = group/global attention and selection surfaces.
-
-Workbench/Diagnostics = developer/operator proof, timing, failures, manifests, and readback evidence.
-
-A clean surface must show what is complete, stale, degraded, blocked, pending, unknown, or review-unsafe. It must not hide missing layers, stale snapshots, failed worker reads, incomplete OHLC, empty groups, or false accepted states.
+- Publication / FileIO / Route Service support owns folder routes and FileIO boundaries (current source uses inherited `runtime_7_publication_owner` folder naming as implementation inheritance only; do not infer trading Runtime Owner status from folder name; no source-folder rename performed in this run).
+- Placeholder route shells (Dossiers and Selection Desk stable parent routes) are structure-only publication surfaces; they do not prove Board/Dossier/Selection runtime truth.
+- Publication/status/manifest truth repair is source-present; late write failures are intended to surface in final status outputs.
+- Physical publication success proves file publication behavior only; it does not prove trading truth, ranking truth, or selection truth.
+- Selection Desk parent folders must be stable: `Groups` and `Global`.
+- Do not create route folders named after changing ranks such as Top 5, Top 10, Rank 1, or active cycle numbers.
+- Top 5 per group and Global Top 10 are planned child output views, not parent folder owners.
+- Do not create duplicate route owners or shadow writers.
+- Do not block physical publication just because truth is partial, stale, degraded, or review-unsafe.
+- Broken truth may block review, ranking, selection, trading, and permission; it must not hide expected files.
+- Every placeholder must be honest: structure-only means no runtime truth yet.
 
 ---
 
 ## External Worker Source Hygiene
 
-Active calculation-support source authority is listed in:
+Active Runtime 3 worker source authority is listed in:
 
 ```text
 external_worker/00_EXTERNAL_WORKER_SOURCE_INDEX.md
 ```
 
-One-shot emergency repair scripts, backup folders, generated build artifacts, and packaged executables are not source authority. Patch source first. Rebuild packages only after source changes are intentional and runtime proof is required.
+One-shot emergency repair scripts, stale backup folders, generated build artifacts, and packaged executables are not source authority. Patch source first; rebuild packages only after source is intentionally changed and runtime proof is required.
 
 ---
 
@@ -300,4 +239,4 @@ Runtime file output proves only observed publication behavior under the observed
 
 Selection is attention, not permission.
 
-No live trading, prop-firm readiness, strategy edge, or execution approval exists in this repository until direct evidence proves it.
+No live trading, prop-firm readiness, strategy edge, or execution approval exists in this repository until evidence specifically proves it.

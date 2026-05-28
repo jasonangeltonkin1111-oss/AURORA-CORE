@@ -286,7 +286,7 @@ L22 is where order-flow proxy belongs.
 L23 is where alerts/permission are decided later, after validation.
 ```
 
-No layer before L22 may claim institution-grade flow certainty, buyer/seller aggression certainty, or hidden liquidity truth.
+No layer before L22 may claim institutional order flow, confirmed buyer/seller aggression, or hidden liquidity truth.
 
 ---
 
@@ -388,7 +388,7 @@ Tick-flow proxy wording must remain honest:
 ```text
 allowed: tick_flow_proxy_up|down|mixed|flat|unavailable
 allowed: quote_pressure_proxy
-forbidden: real institution-grade flow certainty
+forbidden: real institutional order flow confirmed
 forbidden: guaranteed market-buy/sell aggression
 ```
 
@@ -441,7 +441,7 @@ Can support later setup-review evidence.
 Cannot override L1 prop/risk controls.
 Cannot reopen L5-blocked symbols.
 Cannot grant trade permission.
-Cannot claim exchange-wide or institution-grade flow authority.
+Cannot claim exchange-wide or institutional order flow.
 ```
 
 ---

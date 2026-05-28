@@ -255,12 +255,12 @@ prop_firm_safe=false
 The setup packet may contain longer notes, but forbidden certainty phrases remain blocked:
 
 ```text
-directional certainty phrase
-opposite-direction certainty phrase
+confirmed buy
+confirmed sell
 guaranteed
 safe trade
-prop-rule certainty
-probability-marketing winner
+prop firm safe
+high probability winner
 proven edge
 ```
 

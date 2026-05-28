@@ -24,7 +24,7 @@ V1 score uses existing inspection evidence only:
 
 l14 candidate priority 55 percent, l15 diversity score 20 percent, group selection score 10 percent, group strength 10 percent, group quality 5 percent.
 
-Forbidden ingredients: directional setup logic, FVG, OB, BOS, CHOCH, sweep claims, AI confidence, probability-marketing labels, prop-rule approval, or order logic.
+Forbidden ingredients: buy or sell setup logic, FVG, OB, BOS, CHOCH, sweep claims, AI confidence, high probability labels, prop-firm approval, or order logic.
 
 ## Outputs
 
@@ -34,7 +34,7 @@ Selection Desk/Global must publish current_top10.csv, current_top10_manifest.txt
 
 ## Meaning
 
-Global Top 10 means inspect these first. It does not mean best trades, entry list, validated edge, or prop-rule clearance.
+Global Top 10 means inspect these first. It does not mean best trades, entry list, validated edge, or prop-firm safety.
 
 ## Acceptance
 

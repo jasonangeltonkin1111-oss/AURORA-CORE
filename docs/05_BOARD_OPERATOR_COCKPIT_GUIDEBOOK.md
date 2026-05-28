@@ -669,10 +669,10 @@ Forbidden language:
 ```text
 best trade
 confirmed setup
-probability marketing
+high probability
 buy now
 sell now
-institution-grade flow certainty
+institutional order flow confirmed
 smart money confirmed
 guaranteed liquidity
 ```

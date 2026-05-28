@@ -38,7 +38,7 @@ The MT5-side raw source is `CopyRates()` returning `MqlRates` rows. `MqlRates` c
 - Wick/body calculations.
 - ATR, moving averages, VWAP, indicators, or reference packs.
 - Trend, volatility, structure, session, liquidity, or scoring.
-- Ranking, selection, baskets, alerts, permission, execution, or prop-rule clearance.
+- Ranking, selection, baskets, alerts, permission, execution, or prop-firm safety.
 - Gateway result acceptance.
 - Board/Dossier rendering authority.
 - FileIO authority.
