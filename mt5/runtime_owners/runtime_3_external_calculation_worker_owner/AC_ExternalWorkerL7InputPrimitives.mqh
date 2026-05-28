@@ -169,13 +169,10 @@ string AC_L7BuildInputPrimitiveRows()
 AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 {
    string upstream_key = AC_L7InputUpstreamKey();
-   if(AC_L7_LAST_INPUT_UPSTREAM_KEY == upstream_key
+   bool upstream_reused = (AC_L7_LAST_INPUT_UPSTREAM_KEY == upstream_key
       && AC_L7_LAST_INPUT_EXPORT_STATUS != "not_exported"
       && AC_L7_LAST_INPUT_MANIFEST_STATUS != "not_exported"
-      && AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM != "not_available")
-   {
-      return AC_MakeSyntheticWriteResult(AC_L7SessionInputCsvPath(), true, "unchanged_cached", AC_L7_LAST_INPUT_SIZE, "l7_input_upstream_unchanged_no_session_row_build_no_csv_rewrite|key=" + upstream_key);
-   }
+      && AC_L7_LAST_INPUT_PAYLOAD_CHECKSUM != "not_available");
 
    string folder_detail = "";
    AC_EnsureFolderPath(AC_L7SessionLayerOutboxFolder(), folder_detail);
@@ -186,11 +183,14 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
 
    string manifest = "";
    manifest += "schema_name=l7_session_relevance_input_primitives_manifest\r\n";
-   manifest += "schema_version=3\r\n";
+   manifest += "schema_version=4\r\n";
    manifest += "layer_id=7\r\n";
    manifest += "layer_name=Layer 7 - Session Relevance Input Primitives\r\n";
    manifest += "owner_name=Runtime 4 - Surface Scoring Owner reserved; input primitives only in current source\r\n";
    manifest += "job_type=L7_SESSION_RELEVANCE_INPUT_PRIMITIVES_V1\r\n";
+   manifest += "build_version=" + AC_BUILD_VERSION + "\r\n";
+   manifest += "heartbeat_id=" + IntegerToString((int)AC_SNAPSHOT.heartbeat_id) + "\r\n";
+   manifest += "generated_at=" + AC_SNAPSHOT.generated_at + "\r\n";
    manifest += "write_status=" + csv_write.status + "\r\n";
    manifest += "write_ok=" + (csv_write.ok ? "true" : "false") + "\r\n";
    manifest += "folder_detail=" + folder_detail + "\r\n";
@@ -198,6 +198,8 @@ AC_WriteResult AC_ExportLayer7SessionRelevanceInputPrimitives()
    manifest += "l5_gate_pass=" + IntegerToString(AC_L5_GATE_PASS) + "\r\n";
    manifest += "upstream_key=" + upstream_key + "\r\n";
    manifest += "payload_checksum=" + payload_checksum + "\r\n";
+   manifest += "upstream_reused_from_previous_export=" + (upstream_reused ? "true" : "false") + "\r\n";
+   manifest += "currentness_policy=manifest_and_csv_are_heartbeat_visible_even_when_upstream_key_is_reused\r\n";
    manifest += "csv_path=" + AC_L7SessionInputCsvPath() + "\r\n";
    manifest += "csv_precision_policy=price_10_decimals_spread_bps_6_decimals_tick_age_6_decimals\r\n";
    manifest += "session_time_basis=" + AC_L7_LAST_SESSION_TIME_BASIS + "\r\n";

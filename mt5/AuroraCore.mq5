@@ -1,5 +1,5 @@
 #property strict
-#property version   "1.089"
+#property version   "1.090"
 #property description "AURORA CORE - runtime spine, foundation truth, gateway support"
 
 #include "core/AC_Config.mqh"
@@ -172,7 +172,7 @@ AC_WriteResult AC_PublishAccountStatus()
 AC_WriteResult AC_PublishMarketBoard(const AC_Layer0StatusPacket &status)
 {
    string text = AC_BuildTraderBoardText(AC_SNAPSHOT, status);
-   return AC_WriteTextFileIfChanged(AC_MarketBoardPath(), text, AC_LAST_BOARD_TEXT);
+   return AC_WriteTextFileIfChanged(AC_MarketBoardPath(), text, AC_LAST_BOARD_TEXT, true);
 }
 
 AC_WriteResult AC_PublishManifest(const AC_WriteResult &account_status,
@@ -237,7 +237,7 @@ AC_WriteResult AC_PublishUpgradeAddendum(const string detail)
 AC_WriteResult AC_PublishRuntimeStatus(const AC_Runtime0Snapshot &snapshot)
 {
    string text = AC_RuntimeStatusText(snapshot);
-   return AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), text, AC_LAST_RUNTIME_STATUS_TEXT);
+   return AC_WriteTextFileIfChanged(AC_RuntimeStatusPath(), text, AC_LAST_RUNTIME_STATUS_TEXT, true);
 }
 
 int OnInit()
@@ -340,16 +340,41 @@ void OnTimer()
    if(AC_EXTERNAL_WORKER_STATUS.result_validation_status == "Rejected")
       AC_RecordDegradedWrite("gateway_result", AC_MakeSyntheticWriteResult(AC_ExternalWorkerResultPath(), false, AC_EXTERNAL_WORKER_STATUS.result_validation_status, 0, AC_EXTERNAL_WORKER_STATUS.result_validation_reason));
 
-   start = GetTickCount();
-   AC_WriteResult board = AC_PublishMarketBoard(AC_L0_STATUS);
-   AC_SNAPSHOT.fileio_status = board.status;
-   AC_AddMicroLog("AC_PublishMarketBoard", start, board.status);
-   AC_RecordWriteProblem("market_board", board);
-
+   AC_L0_STATUS.status = "Dossier pending";
+   AC_L0_STATUS.trust_state = "Survival Currentness Published";
+   AC_L0_STATUS.main_blocker = "Dossier batch has not run yet in this heartbeat";
+   AC_L0_STATUS.broker_symbols_total = SymbolsTotal(false);
+   AC_L0_STATUS.marketwatch_symbols_total = SymbolsTotal(true);
    AC_SNAPSHOT.layer_0_2_status = "running_dossier_pending";
    AC_SNAPSHOT.layer_0_4_status = "running_survival_surfaces_published";
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_LAST_TIMER_DURATION_MS = AC_SNAPSHOT.timer_duration_ms;
+
+   start = GetTickCount();
+   AC_WriteResult board = AC_PublishMarketBoard(AC_L0_STATUS);
+   AC_SNAPSHOT.fileio_status = board.status;
+   AC_AddMicroLog("AC_PublishMarketBoardSurvival", start, board.status);
+   AC_RecordWriteProblem("market_board_survival", board);
+
+   AC_WriteResult dossier_pending = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_pending_survival_manifest", 0, "heavy_dossier_batch_not_started_yet_this_heartbeat");
+
+   start = GetTickCount();
+   AC_WriteResult manifest = AC_PublishManifest(account_status, dossier_pending, worker_required, board);
+   AC_SNAPSHOT.manifest_status = manifest.status;
+   AC_AddMicroLog("AC_PublishManifestSurvival", start, manifest.status);
+   AC_MergeWriteResult("manifest_survival", manifest, detail);
+
+   start = GetTickCount();
+   AC_WriteResult telemetry = AC_PublishTelemetry(board);
+   AC_SNAPSHOT.telemetry_status = telemetry.status;
+   AC_AddMicroLog("AC_PublishTelemetrySurvival", start, telemetry.status);
+   AC_MergeWriteResult("telemetry_survival", telemetry, detail);
+
+   start = GetTickCount();
+   AC_WriteResult diagnostics = AC_PublishDiagnostics(account_status, dossier_pending, worker_required, board);
+   AC_SNAPSHOT.diagnostics_status = diagnostics.status;
+   AC_AddMicroLog("AC_PublishDiagnosticsSurvival", start, diagnostics.status);
+   AC_MergeWriteResult("diagnostics_survival", diagnostics, detail);
 
    start = GetTickCount();
    AC_WriteResult runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
@@ -363,19 +388,19 @@ void OnTimer()
    AC_MergeWriteResult("dossier_batch", dossier_batch, detail);
 
    start = GetTickCount();
-   AC_WriteResult manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
+   manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
    AC_SNAPSHOT.manifest_status = manifest.status;
    AC_AddMicroLog("AC_PublishManifest", start, manifest.status);
    AC_MergeWriteResult("manifest", manifest, detail);
 
    start = GetTickCount();
-   AC_WriteResult telemetry = AC_PublishTelemetry(board);
+   telemetry = AC_PublishTelemetry(board);
    AC_SNAPSHOT.telemetry_status = telemetry.status;
    AC_AddMicroLog("AC_PublishTelemetry", start, telemetry.status);
    AC_MergeWriteResult("telemetry", telemetry, detail);
 
    start = GetTickCount();
-   AC_WriteResult diagnostics = AC_PublishDiagnostics(account_status, dossier_batch, worker_required, board);
+   diagnostics = AC_PublishDiagnostics(account_status, dossier_batch, worker_required, board);
    AC_SNAPSHOT.diagnostics_status = diagnostics.status;
    AC_AddMicroLog("AC_PublishDiagnostics", start, diagnostics.status);
    AC_MergeWriteResult("diagnostics", diagnostics, detail);
@@ -383,6 +408,38 @@ void OnTimer()
    AC_SNAPSHOT.layer_0_4_status = (manifest.ok && telemetry.ok && diagnostics.ok) ? "accepted" : "degraded_publication_status";
    AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.timer_duration_gt_period_flag ? "degraded_over_period" : "accepted";
    AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "degraded_publication_problem" : "accepted";
+   AC_HeartbeatFinish(AC_SNAPSHOT);
+   AC_LAST_TIMER_DURATION_MS = AC_SNAPSHOT.timer_duration_ms;
+
+   start = GetTickCount();
+   board = AC_PublishMarketBoard(AC_L0_STATUS);
+   AC_SNAPSHOT.fileio_status = board.status;
+   AC_AddMicroLog("AC_PublishMarketBoardFinal", start, board.status);
+   AC_RecordWriteProblem("market_board_final", board);
+
+   start = GetTickCount();
+   manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
+   AC_SNAPSHOT.manifest_status = manifest.status;
+   AC_AddMicroLog("AC_PublishManifestFinal", start, manifest.status);
+   AC_MergeWriteResult("manifest_final", manifest, detail);
+
+   start = GetTickCount();
+   telemetry = AC_PublishTelemetry(board);
+   AC_SNAPSHOT.telemetry_status = telemetry.status;
+   AC_AddMicroLog("AC_PublishTelemetryFinal", start, telemetry.status);
+   AC_MergeWriteResult("telemetry_final", telemetry, detail);
+
+   start = GetTickCount();
+   diagnostics = AC_PublishDiagnostics(account_status, dossier_batch, worker_required, board);
+   AC_SNAPSHOT.diagnostics_status = diagnostics.status;
+   AC_AddMicroLog("AC_PublishDiagnosticsFinal", start, diagnostics.status);
+   AC_MergeWriteResult("diagnostics_final", diagnostics, detail);
+
+   AC_SNAPSHOT.layer_0_4_status = (manifest.ok && telemetry.ok && diagnostics.ok) ? "accepted" : "degraded_publication_status";
+   AC_SNAPSHOT.layer_0_2_status = AC_SNAPSHOT.timer_duration_gt_period_flag ? "degraded_over_period" : "accepted";
+   AC_SNAPSHOT.owner_status = AC_SNAPSHOT.file_publication_blocked ? "degraded_publication_problem" : "accepted";
+   AC_HeartbeatFinish(AC_SNAPSHOT);
+   AC_LAST_TIMER_DURATION_MS = AC_SNAPSHOT.timer_duration_ms;
 
    start = GetTickCount();
    runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);

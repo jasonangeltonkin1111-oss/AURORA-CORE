@@ -111,13 +111,27 @@ string AC_BoardGatewayCycleText()
    return AC_L16ReadSmallTextFile(AC_BoardGatewayCycleStatusPath(), 20000);
 }
 
-string AC_BoardHeaderSection(const AC_Layer0StatusPacket &status)
+string AC_BoardHeaderSection(const AC_Runtime0Snapshot &snapshot,
+                             const AC_Layer0StatusPacket &status)
 {
    string text = "";
    text += "AURORA CORE - MARKET BOARD\r\n";
    text += "==================================================\r\n";
+   text += "Build Version:    " + AC_BUILD_VERSION + "\r\n";
+   text += "Heartbeat ID:     " + IntegerToString((int)snapshot.heartbeat_id) + "\r\n";
+   text += "Generated At:     " + snapshot.generated_at + "\r\n";
+   text += "Current Broker Time: " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    text += "State:            " + status.status + "\r\n";
    text += "Trust:            " + status.trust_state + "\r\n";
+   text += "Layer 0 Final State: L0.1=" + snapshot.layer_0_1_status + " | L0.2=" + snapshot.layer_0_2_status + " | L0.4=" + snapshot.layer_0_4_status + " | owner=" + snapshot.owner_status + "\r\n";
+   text += "Dossier Batch Status: " + status.status + " | ready=" + IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " | failed=" + IntegerToString(status.failed_symbol_count) + "\r\n";
+   text += "Manifest Status:  " + snapshot.manifest_status + "\r\n";
+   text += "Diagnostics Status: " + snapshot.diagnostics_status + "\r\n";
+   text += "Worker Status:    " + AC_EXTERNAL_WORKER_STATUS.worker_status + " | result=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status + " | heartbeat=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status + "\r\n";
+   text += "L6 Status:        " + AC_L6_STATUS + "\r\n";
+   text += "L7 Status:        " + AC_L7_STATUS + "\r\n";
+   text += "Timer Duration ms: " + IntegerToString((int)snapshot.timer_duration_ms) + "\r\n";
+   text += "Timer Pressure State: " + snapshot.timer_pressure_state + "\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Auto Trading:     FALSE\r\n";
    return text;
@@ -342,7 +356,7 @@ string AC_BoardActionSection()
    string text = "";
    text += "\r\nACTION\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Board refresh is atomic and writes only when state text changes.\r\n";
+   text += "Board refresh is atomic and heartbeat-visible; survival publication may be overwritten by final publication in the same heartbeat.\r\n";
    text += "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n";
    return text;
 }
@@ -373,7 +387,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    string ohlc = AC_SharedOhlcRenderBoardSection();
 
    string text = "";
-   text += AC_BoardHeaderSection(status);
+   text += AC_BoardHeaderSection(snapshot, status);
    text += AC_BoardSystemCockpitSection(status);
    text += AC_BoardOperatorActionSection();
    text += AC_BoardUniverseSnapshotSection(status);

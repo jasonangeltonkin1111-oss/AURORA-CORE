@@ -16,6 +16,7 @@ from aurora_worker_l15_dispatch import run_l15_after_l14
 from aurora_worker_l16_dispatch import run_l16_after_l15
 from aurora_worker_l17_dispatch import run_l17_after_l16
 from aurora_worker_l18_dispatch import run_l18_after_l17
+from aurora_worker_l7_session import publish_l7_session_relevance_rankings
 
 # Runtime flow law:
 # - Debounce Runtime 1 snapshots before a calculation cycle starts.
@@ -379,8 +380,14 @@ def run_shared_daemon_with_cycle_control(shared_root: Path, poll_seconds: float)
                 if snapshot_stable and static_ok:
                     code = state.last_exit_code if state.last_result is not None else 0
                     res = state.last_result if state.last_result is not None else polled_result
+                    try:
+                        l7_reuse = publish_l7_session_relevance_rankings(WorkerPaths.from_root(root).outbox)
+                        l7_static_refresh = f"l7_static_hold_manifest_refresh={l7_reuse.status}:{l7_reuse.reason}"
+                    except Exception as exc:
+                        core.gateway_record_exception(root, "l7_static_hold_manifest_refresh_exception", exc, {"worker_mode": "shared-daemon-cycle-controlled", "worker_version": core.WORKER_VERSION})
+                        l7_static_refresh = f"l7_static_hold_manifest_refresh=exception:{type(exc).__name__}"
                     state.last_action = "calculation_cycle_skipped_static_accepted_epoch"
-                    state.last_reason = f"{static_reason};remaining_seconds={static_remaining}"
+                    state.last_reason = f"{static_reason};remaining_seconds={static_remaining};{l7_static_refresh}"
                 elif snapshot_stable and cycle_due:
                     code, res = _run_core_once_with_layers(root, "shared_validator_daemon_cycle_controlled")
                     state.last_calculation_unix = now

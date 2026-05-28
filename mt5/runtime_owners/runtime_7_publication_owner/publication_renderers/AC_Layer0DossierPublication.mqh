@@ -257,6 +257,10 @@ string AC_DossierHeaderSection(const string symbol, const string market_state)
    string text = "";
    text += "AURORA CORE - SYMBOL DOSSIER\r\n";
    text += "==================================================\r\n";
+   text += "Build Version:    " + AC_BUILD_VERSION + "\r\n";
+   text += "Heartbeat ID:     " + IntegerToString((int)AC_HEARTBEAT_ID) + "\r\n";
+   text += "Generated At:     " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   text += "Current Broker Time: " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    text += "Symbol:           " + symbol + "\r\n";
    text += "Broker Symbol:    " + symbol + "\r\n";
    text += "Market State:     " + AC_MarketStateTitle(market_state) + "\r\n";
@@ -296,6 +300,28 @@ string AC_DossierSymbolTopViewSection(const string symbol, const string market_s
    text += "Trade Permission:    FALSE\r\n";
    text += "Entry Signal:        FALSE\r\n";
    text += "Execution:           FALSE\r\n";
+   return text;
+}
+
+string AC_DossierCurrentnessProofSection(const string symbol,
+                                         const string market_state)
+{
+   string text = "";
+   text += "\r\nCURRENTNESS PROOF\r\n";
+   text += "--------------------------------------------------\r\n";
+   text += "build_version=" + AC_BUILD_VERSION + "\r\n";
+   text += "heartbeat_id=" + IntegerToString((int)AC_HEARTBEAT_ID) + "\r\n";
+   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   text += "current_broker_time=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   text += "dossier_route=" + AC_DossierSymbolPathByState(symbol, market_state) + "\r\n";
+   text += "market_state=" + AC_MarketStateTitle(market_state) + "\r\n";
+   text += "l5_status=" + AC_L5_STATUS + "\r\n";
+   text += "l6_status=" + AC_L6_STATUS + "\r\n";
+   text += "l7_status=" + AC_L7_STATUS + "\r\n";
+   text += "trade_permission=false\r\n";
+   text += "auto_trade_allowed=false\r\n";
+   text += "entry_signal=false\r\n";
+   text += "execution=false\r\n";
    return text;
 }
 
@@ -513,6 +539,7 @@ string AC_BuildLayer0DossierShellText(const string symbol,
    string market_state = AC_L0DossierRouteStateForSymbol(symbol);
    string text = "";
    text += AC_DossierHeaderSection(symbol, market_state);
+   text += AC_DossierCurrentnessProofSection(symbol, market_state);
    text += AC_DossierSymbolTopViewSection(symbol, market_state);
    text += AC_DossierSymbolSurfaceOverviewSection(symbol, market_state);
    text += AC_DossierOperatorMeaningSection(symbol, market_state);
@@ -902,12 +929,17 @@ AC_WriteResult AC_RunLayer0UniverseShellPass(AC_Layer0StatusPacket &status)
    AC_L0RefreshDossierSectionDependencies();
    string render_key = AC_L0DossierSourceKey(total);
    string progress_key = AC_L0DossierProgressKey(total);
-   bool reset_needed = (progress_key != AC_L0_INCREMENTAL_SOURCE_KEY || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total);
+   bool progress_changed = (progress_key != AC_L0_INCREMENTAL_SOURCE_KEY);
+   bool had_cached_pass = AC_L0_CACHED_PASS_VALID;
+   bool reset_needed = (progress_changed || AC_L0_INCREMENTAL_NEXT_INDEX < 0 || AC_L0_INCREMENTAL_NEXT_INDEX >= total);
    if(reset_needed)
    {
       AC_L0ResetIncrementalPass(progress_key);
-      AC_L0ReconcileDossierRouteMembership(total);
-      AC_L0SeedMissingRouteDossiers(total, status);
+      if(progress_changed || !had_cached_pass)
+      {
+         AC_L0ReconcileDossierRouteMembership(total);
+         AC_L0SeedMissingRouteDossiers(total, status);
+      }
    }
 
    int start_index = AC_L0_INCREMENTAL_NEXT_INDEX;
@@ -1103,9 +1135,7 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L15_GENERATED_UTC == AC_L15_GENERATED_UTC
       && AC_L0_CACHED_L15_ACCEPTED == AC_L15_ACCEPTED)
    {
-      status = AC_L0_CACHED_STATUS;
-      status.marketwatch_symbols_total = SymbolsTotal(true);
-      return AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)status.dossier_shells_ready, "cached_universe_status_no_symbol_rewrite|progress_key=" + current_progress_key + "|render_key=" + current_render_key);
+      return AC_RunLayer0UniverseShellPass(status);
    }
    return AC_RunLayer0UniverseShellPass(status);
 }

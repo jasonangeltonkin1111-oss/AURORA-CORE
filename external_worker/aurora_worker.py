@@ -29,7 +29,7 @@ from aurora_worker_l10 import EMPTY_L10_SUMMARY, publish_l10_taxonomy_classifica
 from aurora_worker_l10_source import l10_build_source_bundle
 from aurora_worker_render_index import publish_render_index
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
-WORKER_VERSION = "0.6.19_l6_gateway_contract"
+WORKER_VERSION = "0.6.20_l7_currentness_readback"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
