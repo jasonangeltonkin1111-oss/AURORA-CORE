@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer0_l7_currentness_resync";
-static const string AC_BUILD_VERSION      = "1.090";
-static const string AC_UPGRADE_ID         = "L0_L7_CURRENTNESS_RESYNC";
-static const string AC_UPGRADE_SUMMARY    = "Publishes heartbeat-visible Layer 0 surfaces before and after the Dossier batch, forces current Board/Runtime writes, refreshes heartbeat-visible base Dossiers, and tightens Layer 7 input/ranked manifest readback without changing Layer 6 authority or trade permission.";
-static const string AC_UPGRADE_SCOPE      = "Runtime 0 orchestration order and existing Runtime 7/L7 render-readback plus Runtime 3 L7 input support only. No new owner, FileIO owner, route owner, worker V2, Layer 6 rewrite, strategy, selection authority, alerts, execution, or trade permission is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.090 and #property version=1.090. Runtime proof must show Runtime_Status.txt, Market Board.txt, Publication_Manifest.txt, Workbench diagnostics, and base Dossiers include current heartbeat/build/generated proof for at least three heartbeats; L7 input/ranked manifests refresh or degrade honestly; Layer 6 remains cost/friction ranking only; trade_permission=false, auto_trade_allowed=false, selection_runtime=false, entry_signal=false, execution=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_l0_l7_currentness_resync_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "layer0_changed_only_dossier_resync";
+static const string AC_BUILD_VERSION      = "1.091";
+static const string AC_UPGRADE_ID         = "L0_CHANGED_ONLY_DOSSIER_RESYNC";
+static const string AC_UPGRADE_SUMMARY    = "Restores changed-only Dossier publication so Board/Runtime/Manifest breathe every heartbeat while Dossiers rewrite only when real owner source content changes.";
+static const string AC_UPGRADE_SCOPE      = "Existing Runtime 7 Board/Dossier renderer owner and Runtime 0 heartbeat surfaces only. Removes heartbeat/time dirtiness from Dossier text and restores cached no-rewrite behavior. No new owner, FileIO owner, route owner, worker V2, Layer 6 rewrite, strategy, alerts, execution, or trade permission is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.091 and #property version=1.091. Runtime proof must show Runtime_Status.txt, Market Board.txt, Publication_Manifest.txt, and Workbench diagnostics advance heartbeat/build every heartbeat while unchanged Dossiers report cached_no_rewrite and only changed source content rewrites. Layer 6 remains cost/friction ranking only; trade_permission=false, auto_trade_allowed=false, selection_runtime=false, entry_signal=false, execution=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_l0_changed_only_dossier_resync_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.090_heartbeat_currentness_resync";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.091_changed_only_source_truth";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
