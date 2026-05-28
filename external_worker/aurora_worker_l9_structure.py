@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, utc_stamp, unix_time
+from aurora_worker_io import atomic_write_text, payload_checksum, utc_stamp, unix_time
 from aurora_worker_l9_contract import (
     L9_AUTHORITY,
     L9_INPUT_MANIFEST_NAME,
@@ -29,7 +29,7 @@ def _layer_dir(outbox: Path) -> Path:
 
 
 def _shared_ohlc_store_root(outbox: Path) -> Path:
-    account_root = account_root_from_outbox(outbox)
+    account_root = outbox.parents[2]
     server_root = account_root.parent
     return server_root / "Shared Market Data" / "OHLC Store"
 
@@ -85,7 +85,6 @@ def _pending_manifest(summary: L9FinalSummary, input_path: Path, input_manifest_
         "ranking_runtime=false",
         "selection_runtime=false",
         "entry_signal=false",
-        "execution=false",
         f"structure_location_policy={L9_POLICY}",
         f"source_owner={L9_SOURCE_OWNER}",
         "publication_order=score_when_l9_input_exists_else_pending_manifest_only",

@@ -1,13 +1,6 @@
 #ifndef AC_EXTERNAL_WORKER_SNAPSHOT_EXPORT_MQH
 #define AC_EXTERNAL_WORKER_SNAPSHOT_EXPORT_MQH
 
-static string AC_L10_LAST_RUNTIME2_INPUT_UPSTREAM_KEY = "not_exported";
-static string AC_L10_LAST_RUNTIME2_INPUT_EXPORT_STATUS = "not_exported";
-static string AC_L10_LAST_RUNTIME2_INPUT_MANIFEST_STATUS = "not_exported";
-static string AC_L10_LAST_RUNTIME2_INPUT_PAYLOAD_CHECKSUM = "not_available";
-static int    AC_L10_LAST_RUNTIME2_INPUT_ROWS = 0;
-static ulong  AC_L10_LAST_RUNTIME2_INPUT_SIZE = 0;
-
 string AC_L10Runtime2UniverseInputPath()
 {
    return AC_ExternalWorkerOutboxFolder() + "\\Layers\\Layer_10_Taxonomy_Classification\\l10_runtime2_universe_rows.psv";
@@ -31,31 +24,8 @@ string AC_L10Runtime2UniverseInputRows()
    return text;
 }
 
-string AC_L10Runtime2UniverseInputUpstreamKey()
-{
-   return "generated_schema=" + AC_UNIVERSE_GENERATED_SCHEMA_VERSION
-      + "|source_sha256=" + AC_UNIVERSE_SOURCE_FILE_SHA256
-      + "|row_schema_sha256=" + AC_UNIVERSE_ROW_SCHEMA_SHA256
-      + "|loaded_rows=" + IntegerToString(AC_UniverseLoadedRowCount())
-      + "|strict=" + IntegerToString(AC_UniverseStrictRankAllowedCount())
-      + "|public_research=" + IntegerToString(AC_UniversePublicResearchRankAllowedCount())
-      + "|review_only=" + IntegerToString(AC_UniverseReviewOnlyCount())
-      + "|blocked=" + IntegerToString(AC_UniverseBlockedCount())
-      + "|contract=" + AC_UniverseContractStatus()
-      + "|runtime_permission=" + AC_UniverseRuntimePermission();
-}
-
 AC_WriteResult AC_ExportLayer10Runtime2UniverseInput()
 {
-   string upstream_key = AC_L10Runtime2UniverseInputUpstreamKey();
-   if(AC_L10_LAST_RUNTIME2_INPUT_UPSTREAM_KEY == upstream_key
-      && AC_L10_LAST_RUNTIME2_INPUT_EXPORT_STATUS != "not_exported"
-      && AC_L10_LAST_RUNTIME2_INPUT_MANIFEST_STATUS != "not_exported"
-      && AC_L10_LAST_RUNTIME2_INPUT_PAYLOAD_CHECKSUM != "not_available")
-   {
-      return AC_MakeSyntheticWriteResult(AC_L10Runtime2UniverseInputPath(), true, "unchanged_cached", AC_L10_LAST_RUNTIME2_INPUT_SIZE, "l10_runtime2_universe_input_unchanged_no_row_build_no_psv_rewrite|key=" + upstream_key);
-   }
-
    string rows = AC_L10Runtime2UniverseInputRows();
    string payload_checksum = AC_ExternalWorkerPayloadChecksum(rows);
    AC_WriteResult input_write = AC_WriteTextFile(AC_L10Runtime2UniverseInputPath(), rows);
@@ -68,7 +38,6 @@ AC_WriteResult AC_ExportLayer10Runtime2UniverseInput()
       + "row_schema=server|broker_file|broker_symbol|canonical_symbol|asset_class|market_group|market_segment|ranking_group|strict_rank_allowed|public_research_rank_allowed|review_lane|classification_confidence|evidence_rank|runtime_permission|evidence_status|source_status|block_reason\r\n"
       + "row_count=" + IntegerToString(AC_UniverseLoadedRowCount()) + "\r\n"
       + "payload_checksum=" + payload_checksum + "\r\n"
-      + "upstream_key=" + upstream_key + "\r\n"
       + "write_status=" + input_write.status + "\r\n"
       + "write_ok=" + (input_write.ok ? "true" : "false") + "\r\n"
       + "runtime2_contract_status=" + AC_UniverseContractStatus() + "\r\n"
@@ -78,15 +47,6 @@ AC_WriteResult AC_ExportLayer10Runtime2UniverseInput()
       + "selection_runtime=false\r\n"
       + "trade_permission=false\r\n";
    AC_WriteResult manifest_write = AC_WriteTextFile(AC_L10Runtime2UniverseInputManifestPath(), manifest);
-   AC_L10_LAST_RUNTIME2_INPUT_EXPORT_STATUS = input_write.status;
-   AC_L10_LAST_RUNTIME2_INPUT_MANIFEST_STATUS = manifest_write.status;
-   if(input_write.ok && manifest_write.ok)
-   {
-      AC_L10_LAST_RUNTIME2_INPUT_UPSTREAM_KEY = upstream_key;
-      AC_L10_LAST_RUNTIME2_INPUT_PAYLOAD_CHECKSUM = payload_checksum;
-      AC_L10_LAST_RUNTIME2_INPUT_ROWS = AC_UniverseLoadedRowCount();
-      AC_L10_LAST_RUNTIME2_INPUT_SIZE = input_write.final_size;
-   }
    if(input_write.ok && manifest_write.ok)
       return input_write;
    if(input_write.ok && !manifest_write.ok)

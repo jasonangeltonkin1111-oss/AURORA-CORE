@@ -57,11 +57,6 @@ void AC_ExternalWorkerInitStatus()
    AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count = "not_available";
-   AC_EXTERNAL_WORKER_STATUS.shared_account_heartbeat_present_count = "not_available";
-   AC_EXTERNAL_WORKER_STATUS.shared_account_process_status_present_count = "not_available";
-   AC_EXTERNAL_WORKER_STATUS.shared_account_result_pair_present_count = "not_available";
-   AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_count = "not_available";
-   AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_reason = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_registered = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state = "not_available";
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_registered = "not_available";

@@ -8,13 +8,12 @@ import io
 import re
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from aurora_worker_io import WorkerPaths, atomic_write_text_if_changed, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import WorkerPaths, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L11_LAYER_FOLDER = "Layer_11_Symbol_Ranking_Inside_Ranking_Group"
 TREE_SCHEMA_NAME = "l11_selection_desk_taxonomy_tree"
-TREE_SCHEMA_VERSION = "2"
+TREE_SCHEMA_VERSION = "1"
 TREE_AUTHORITY = "intra_group_inspection_priority_only"
-MAX_ROUTE_KEY_CHARS = 72
 TREE_INDEX_FIELDS = [
     "asset_class", "market_group", "market_segment", "ranking_group",
     "asset_class_slug", "market_group_slug", "market_segment_slug", "ranking_group_slug",
@@ -31,7 +30,6 @@ TOP5_FIELDS = [
     "missing_layer_count", "stale_layer_count", "risk_review_flag", "reason",
     "selection_runtime", "trade_permission", "entry_signal", "execution", "source_checksum",
 ]
-
 
 @dataclass(frozen=True)
 class L11TreeSummary:
@@ -57,15 +55,6 @@ def _sanitize(value: str) -> str:
     return safe or "Unknown"
 
 
-def _compact_slug(value: str, max_chars: int = MAX_ROUTE_KEY_CHARS) -> str:
-    display = _display(value)
-    safe = _sanitize(display)
-    checksum = payload_checksum([display])
-    if len(safe) <= max_chars:
-        return safe
-    return f"{safe[:max_chars].rstrip('_')}_{checksum}"
-
-
 def _display(value: str) -> str:
     return str(value or "").strip() or "Unknown"
 
@@ -85,7 +74,7 @@ def _csv_text(rows: Sequence[Dict[str, str]], fields: Sequence[str]) -> str:
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> bool:
-    ok = atomic_write_text_if_changed(path, text, durable=True)
+    ok = atomic_write_text(path, text)
     if not ok:
         failed.append(path)
     return ok
@@ -93,13 +82,14 @@ def _write(path: Path, text: str, failed: List[Path]) -> bool:
 
 def _selection_groups_dir(root: Path) -> Path:
     paths = WorkerPaths.from_root(root)
-    account_root = paths.root
+    # outbox = <account>/Workbench/Gateway/Outbox
+    account_root = paths.outbox.parents[2]
     return account_root / "Selection Desk" / "Groups"
 
 
 def _rank_value(row: Dict[str, str]) -> int:
     try:
-        return int(float(str(row.get("ranking_group_rank", "999999")).strip()))
+        return int(str(row.get("ranking_group_rank", "999999")).strip())
     except ValueError:
         return 999999
 
@@ -112,21 +102,6 @@ def _rank_card_name(row: Dict[str, str]) -> str:
     rank = _rank_value(row)
     symbol = _sanitize(row.get("symbol", "unknown"))
     return f"{rank:02d}_{symbol}.txt" if rank < 999999 else f"not_rankable_{symbol}.txt"
-
-
-def _group_route_key(asset_class: str, market_group: str, market_segment: str, ranking_group: str) -> str:
-    # One compact folder per ranking-group tuple. Full labels stay in the files;
-    # the filesystem path stays short enough for Windows MAX_PATH.
-    base = "__".join([
-        _compact_slug(asset_class, 20),
-        _compact_slug(market_group, 20),
-        _compact_slug(market_segment, 24),
-        _compact_slug(ranking_group, 32),
-    ])
-    checksum = payload_checksum([asset_class, market_group, market_segment, ranking_group])
-    if len(base) > 96:
-        base = f"{base[:96].rstrip('_')}_{checksum}"
-    return base
 
 
 def _rank_card_text(row: Dict[str, str], dossier_hint: str) -> str:
@@ -163,7 +138,7 @@ def _rank_card_text(row: Dict[str, str], dossier_hint: str) -> str:
     ])
 
 
-def _group_summary_text(group: str, rows: List[Dict[str, str]], top5: List[Dict[str, str]], folder: Path, route_key: str) -> str:
+def _group_summary_text(group: str, rows: List[Dict[str, str]], top5: List[Dict[str, str]], folder: Path) -> str:
     leader = top5[0] if top5 else {}
     not_rankable = [r for r in rows if str(r.get("rank_state", "")).startswith("not_rankable")]
     risk_review = [r for r in rows if str(r.get("risk_review_flag", "")).lower() == "true"]
@@ -174,9 +149,7 @@ def _group_summary_text(group: str, rows: List[Dict[str, str]], top5: List[Dict[
         f"Asset Class: {_display(leader.get('asset_class') or rows[0].get('asset_class')) if rows else 'Unknown'}",
         f"Market Group: {_display(leader.get('market_group') or rows[0].get('market_group')) if rows else 'Unknown'}",
         f"Market Segment: {_display(leader.get('market_segment') or rows[0].get('market_segment')) if rows else 'Unknown'}",
-        f"Route Key: {route_key}",
         f"Tree Folder: {folder}",
-        "Route Policy: compact_flat_tree_route_full_labels_inside_file",
         f"Group Symbol Count: {len(rows)}",
         f"Rankable Symbols: {len(rows) - len(not_rankable)}",
         f"Not Rankable: {len(not_rankable)}",
@@ -209,7 +182,6 @@ def _taxonomy_tree_text(index_rows: List[Dict[str, str]]) -> str:
         f"schema_name={TREE_SCHEMA_NAME}",
         f"schema_version={TREE_SCHEMA_VERSION}",
         "authority=intra_group_inspection_priority_only",
-        "route_policy=flat_compact_route_keys_full_labels_inside_rows",
         f"taxonomy_tree_rows={len(index_rows)}",
         f"unique_ranking_group_count={unique_ranking_groups}",
         "selection_runtime=false",
@@ -218,11 +190,20 @@ def _taxonomy_tree_text(index_rows: List[Dict[str, str]]) -> str:
         "execution=false",
         "",
     ]
+    current_asset = current_group = current_segment = None
     for row in sorted(index_rows, key=lambda r: (r["asset_class"], r["market_group"], r["market_segment"], r["ranking_group"])):
-        lines.append(
-            f"{row['tree_folder']} | {row['asset_class']} / {row['market_group']} / {row['market_segment']} / {row['ranking_group']} | "
-            f"leader={row['leader_symbol']} score={row['leader_score']} top5={row['top5_available']}"
-        )
+        if row["asset_class"] != current_asset:
+            current_asset = row["asset_class"]
+            current_group = current_segment = None
+            lines.append(f"{current_asset}/")
+        if row["market_group"] != current_group:
+            current_group = row["market_group"]
+            current_segment = None
+            lines.append(f"  {current_group}/")
+        if row["market_segment"] != current_segment:
+            current_segment = row["market_segment"]
+            lines.append(f"    {current_segment}/")
+        lines.append(f"      {row['ranking_group']}/ leader={row['leader_symbol']} score={row['leader_score']} top5={row['top5_available']}")
     lines.append("")
     return "\n".join(lines)
 
@@ -242,7 +223,6 @@ def _index_text(summary: L11TreeSummary) -> str:
         f"taxonomy_tree_rank_cards_expected={summary.taxonomy_tree_rank_cards_expected}",
         f"stale_rank_cards_removed={summary.stale_rank_cards_removed}",
         f"write_failed_count={summary.write_failed_count}",
-        "route_policy=flat_compact_route_keys_full_labels_inside_rows",
         "selection_runtime=false",
         "trade_permission=false",
         "entry_signal=false",
@@ -254,27 +234,31 @@ def _index_text(summary: L11TreeSummary) -> str:
 
 
 def _write_level_indexes(base_dir: Path, rows: List[Dict[str, str]], failed: List[Path]) -> int:
-    # Keep operator index hierarchy shallow: no asset/market/segment nested folders.
     written = 0
     by_asset: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for row in rows:
         by_asset[row["asset_class_slug"]].append(row)
-    index_dir = base_dir / "00_Level_Indexes"
     for asset_slug, asset_rows in by_asset.items():
-        text = "\n".join([
-            "L11 ASSET CLASS INDEX",
-            "----------------------------------------",
-            f"asset_class={asset_rows[0]['asset_class']}",
-            f"ranking_group_path_count={len(asset_rows)}",
-            "route_policy=flat_compact_route_keys_full_labels_inside_rows",
-            "selection_runtime=false",
-            "trade_permission=false",
-            "entry_signal=false",
-            "execution=false",
-            "",
-        ])
-        if _write(index_dir / f"{asset_slug}.txt", text, failed):
+        asset_dir = base_dir / asset_slug
+        text = "\n".join(["L11 ASSET CLASS INDEX", "----------------------------------------", f"asset_class={asset_rows[0]['asset_class']}", f"ranking_group_path_count={len(asset_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+        if _write(asset_dir / "00_Asset_Class_Index.txt", text, failed):
             written += 1
+        by_mg: Dict[str, List[Dict[str, str]]] = defaultdict(list)
+        for row in asset_rows:
+            by_mg[row["market_group_slug"]].append(row)
+        for mg_slug, mg_rows in by_mg.items():
+            mg_dir = asset_dir / mg_slug
+            text = "\n".join(["L11 MARKET GROUP INDEX", "----------------------------------------", f"asset_class={mg_rows[0]['asset_class']}", f"market_group={mg_rows[0]['market_group']}", f"ranking_group_path_count={len(mg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+            if _write(mg_dir / "00_Market_Group_Index.txt", text, failed):
+                written += 1
+            by_seg: Dict[str, List[Dict[str, str]]] = defaultdict(list)
+            for row in mg_rows:
+                by_seg[row["market_segment_slug"]].append(row)
+            for seg_slug, seg_rows in by_seg.items():
+                seg_dir = mg_dir / seg_slug
+                text = "\n".join(["L11 MARKET SEGMENT INDEX", "----------------------------------------", f"asset_class={seg_rows[0]['asset_class']}", f"market_group={seg_rows[0]['market_group']}", f"market_segment={seg_rows[0]['market_segment']}", f"ranking_group_path_count={len(seg_rows)}", "selection_runtime=false", "trade_permission=false", "entry_signal=false", "execution=false", ""])
+                if _write(seg_dir / "00_Market_Segment_Index.txt", text, failed):
+                    written += 1
     return written
 
 
@@ -319,21 +303,19 @@ def publish_l11_selection_desk_taxonomy_tree(root: Path) -> L11TreeSummary:
         key = (_display(row.get("asset_class")), _display(row.get("market_group")), _display(row.get("market_segment")), _display(row.get("ranking_group")))
         grouped[key].append(row)
 
-    tree_root = base_dir / "Tree"
     for (asset_class, market_group, market_segment, ranking_group), group_rows in sorted(grouped.items()):
         group_rows.sort(key=_rank_value)
         top5 = [r for r in group_rows if _is_top5(r)][:5]
-        asset_slug = _compact_slug(asset_class, 24)
-        market_group_slug = _compact_slug(market_group, 24)
-        market_segment_slug = _compact_slug(market_segment, 32)
-        ranking_group_slug = _compact_slug(ranking_group, 40)
-        route_key = _group_route_key(asset_class, market_group, market_segment, ranking_group)
-        group_folder = tree_root / route_key
+        asset_slug = _sanitize(asset_class)
+        market_group_slug = _sanitize(market_group)
+        market_segment_slug = _sanitize(market_segment)
+        ranking_group_slug = _sanitize(ranking_group)
+        group_folder = base_dir / asset_slug / market_group_slug / market_segment_slug / ranking_group_slug
         group_folder.mkdir(parents=True, exist_ok=True)
 
         group_csv = _csv_text(group_rows, TOP5_FIELDS)
         top5_csv = _csv_text(top5, TOP5_FIELDS)
-        group_summary = _group_summary_text(ranking_group, group_rows, top5, group_folder, route_key)
+        group_summary = _group_summary_text(ranking_group, group_rows, top5, group_folder)
         top5_text = "\n".join(["L11 TOP 5 CURRENT", "----------------------------------------", f"Ranking Group: {ranking_group}"] + [f"#{r.get('ranking_group_rank')} {r.get('symbol')} score={r.get('l11_group_score')} state={r.get('rank_state')} leader={r.get('leader_flag')} backup={r.get('backup_flag')}" for r in top5] + ["Selection Runtime: FALSE", "Trade Permission: FALSE", "Entry Signal: FALSE", "Execution: FALSE", ""])
 
         for filename, content in [
@@ -397,11 +379,8 @@ def publish_l11_selection_desk_taxonomy_tree(root: Path) -> L11TreeSummary:
         if _write(path, content, failed):
             files_written += 1
 
-    summary = L11TreeSummary(
-        "accepted" if not failed else "write_degraded",
-        "l11_taxonomy_tree_published_flat_compact_routes" if not failed else "one_or_more_l11_taxonomy_tree_outputs_failed",
-        len(index_rows), files_written, files_expected, rank_cards_written, rank_cards_expected, stale_removed, len(failed),
-        str(base_dir / "00_Taxonomy_Tree.txt"), str(base_dir / "00_Taxonomy_Tree.csv"),
-    )
+    status = "accepted" if not failed and files_written >= files_expected and rank_cards_written >= rank_cards_expected else "write_degraded"
+    reason = "l11_selection_desk_taxonomy_tree_published" if status == "accepted" else "one_or_more_l11_taxonomy_tree_outputs_failed"
+    summary = L11TreeSummary(status, reason, len(index_rows), files_written, files_expected, rank_cards_written, rank_cards_expected, stale_removed, len(failed), str(base_dir / "00_Taxonomy_Tree.txt"), str(base_dir / "00_Taxonomy_Tree.csv"))
     _write(base_dir / "00_Taxonomy_Tree_Status.txt", _index_text(summary), failed)
     return summary

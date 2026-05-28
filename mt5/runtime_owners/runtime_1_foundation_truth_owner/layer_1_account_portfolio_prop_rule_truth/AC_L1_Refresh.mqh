@@ -74,7 +74,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1CurrencyResultRiskMap();
 
    // Cluster, recovery, and sequence damage.
-   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TradeClusterMap();
+   AC_L1_ACCOUNT_STATUS_TEXT += AC_L1TradeClusterV2Map();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1EquityDrawdownRecoveryMap();
    AC_L1_ACCOUNT_STATUS_TEXT += AC_L1RecoveryDamageMapsFull();
 
@@ -109,7 +109,7 @@ void AC_L1AppendPortfolioMaps()
    AC_L1_WORKBENCH_SECTION += "time_window_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "holding_time_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "holding_time_risk_maps=enabled_account_status_only\r\n";
-   AC_L1_WORKBENCH_SECTION += "trade_cluster_maps=enabled_account_status_only\r\n";
+   AC_L1_WORKBENCH_SECTION += "cluster_v2_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "currency_risk_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "recovery_damage_maps=enabled_account_status_only\r\n";
    AC_L1_WORKBENCH_SECTION += "setup_tag_readiness=enabled_account_status_only\r\n";

@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "heartbeat_data_change_refresh";
-static const string AC_BUILD_VERSION      = "1.092";
-static const string AC_UPGRADE_ID         = "L0_L4_HEARTBEAT_DATA_CHANGE_REFRESH";
-static const string AC_UPGRADE_SUMMARY    = "Restores heartbeat-driven changed-only publication by making Layer 4 refresh keys data-change driven instead of clock-time driven, so quote checks can run every heartbeat without dirtying every Dossier/Gateway surface from static time refresh.";
-static const string AC_UPGRADE_SCOPE      = "Existing Runtime 1 Layer 4 market-watch truth owner and existing Runtime 7 publication chain only. No new owner, FileIO owner, route owner, worker V2, strategy, alerts, execution, or trade permission is added. Dossiers and gateway inputs should dirty from source data change, not refresh_time churn. Closed symbols may remain frozen unless their Layer 2 route truth changes; open symbols remain heartbeat-refresh eligible.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.092. Runtime proof must show Runtime_Status.txt and Market Board.txt advance on the 250ms heartbeat, L4 refresh_key no longer contains refresh_time, unchanged Dossiers stay skipped/no-rewrite, changed quote packets update their affected surfaces, closed symbols remain frozen unless their route state changes, and timer_duration_gt_period_flag/timer_busy_skip_count do not climb under normal load. Layer 6 remains cost/friction ranking only; trade_permission=false, auto_trade_allowed=false, selection_runtime=false, entry_signal=false, execution=false.";
-static const string AC_LOGGING_POLICY     = "event_boundary_heartbeat_data_change_refresh_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "selection_surface_and_trade_journal_ohlc_marker_cleanup";
+static const string AC_BUILD_VERSION      = "1.071";
+static const string AC_UPGRADE_ID         = "TRADE_JOURNAL_OHLC_MARKER_AND_SELECTION_SURFACE_CLEANUP";
+static const string AC_UPGRADE_SUMMARY    = "Preserves the selection-surface render truth cleanup and promotes Trade Journal OHLC duration context to the versioned fallback-ladder marker contract. Trade Journal may rewrite one Before Aurora journal per pass when that journal lacks the current ohlc_slice_version marker, then copy a bounded bar-level slice from existing Shared OHLC Store files only. No CopyRates, new OHLC owner, sidecar file, packet importer, packet matcher, live trade capture, trade permission, alert permission, execution permission, FileIO owner, route owner, or new layer implementation is added.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 7 publication/render surfaces plus Runtime 1 Trade Journal bookkeeping/forensics status only. Board and Dossier may display latest available selection-surface truth and no-go state. Trade Journal may consume existing Shared OHLC Store files as read-only evidence for Before Aurora journal context. External worker remains calculation_support_only and must not become trade permission, execution, broker polling, FileIO authority, or trade-history truth authority.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.071. Runtime proof must include fresh Market Board, one selected plus one non-selected Dossier, and at least one Before Aurora Trade Journal file regenerated with ohlc_slice_version=v1.071_shared_ohlc_fallback_ladder, source_policy=read_existing_shared_ohlc_files_only_no_copyrates, copyrates_used=false, and fallback_timeframes=M5,M15,M30,H1. Board/Dossier metadata must not claim the system is on one moving layer. No packet import, matching, live capture, permission, or execution is expected.";
+static const string AC_LOGGING_POLICY     = "event_boundary_selection_surface_and_trade_journal_ohlc_marker_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.092_data_change_refresh";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.071_selection_surface_trade_journal_ohlc_marker_cleanup";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
@@ -64,10 +64,9 @@ static const string AC_TRADE_HISTORY_BEFORE_AURORA_FOLDER = "Before Aurora";
 static const string AC_TRADE_HISTORY_AURORA_CAPTURED_FOLDER = "Aurora Captured";
 static const string AC_MARKET_BOARD_FILE  = "Market Board.txt";
 static const int    AC_TIMER_MILLISECONDS = 250;
-static const int    AC_TIMER_STUCK_WARN_MS = 5000;
 static const int    AC_WORKBENCH_INTERVAL_HEARTBEATS = 120;
 static const int    AC_L2_REFRESH_SECONDS = 300;
-static const int    AC_L4_DOSSIER_REFRESH_SECONDS = 0;
+static const int    AC_L4_DOSSIER_REFRESH_SECONDS = 30;
 static const int    AC_L4_TOP_LIST_REFRESH_SECONDS = 10;
 static const int    AC_CALCULATION_RUNTIME_REFRESH_SECONDS = 30;
 static const int    AC_EXTERNAL_WORKER_HEALTH_CHECK_SECONDS = 15;
@@ -83,37 +82,12 @@ static const string AC_EXTERNAL_WORKER_AUTHORITY = "calculation_support_only";
 static const int    AC_EXPERIMENTAL_TIMER_100MS = 100;
 static const int    AC_EXPERIMENTAL_TIMER_10MS = 10;
 static const int    AC_DOSSIER_SHELL_WRITE_RETRIES = 3;
-static const int    AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS = 0;
-static const int    AC_DOSSIER_UNIVERSE_PASS_BUDGET_MS = 0;
+static const int    AC_DOSSIER_UNIVERSE_MAX_SYMBOLS_PER_PASS = 200;
+static const int    AC_DOSSIER_UNIVERSE_PASS_BUDGET_MS = 850;
 static const int    AC_BOARD_RECENT_ACTIVITY_MAX_ROWS = 100;
 static const int    AC_BOARD_CANCELED_ACTIVITY_MAX_ROWS = 20;
 static const int    AC_DOSSIER_SYMBOL_ACTIVITY_MAX_ROWS = 30;
-static const uint   AC_TIMER_BUDGET_MS    = 0;
+static const uint   AC_TIMER_BUDGET_MS    = 900;
 static const bool   AC_USE_COMMON_FILES   = true;
-
-string AC_L0CsvCompatField(string line, int index)
-{
-   string cols[];
-   ushort sep = StringGetCharacter(",", 0);
-   int count = StringSplit(line, sep, cols);
-   if(index < 0 || index >= count) return "";
-   string value = cols[index];
-   StringTrimLeft(value);
-   StringTrimRight(value);
-   StringReplace(value, "\"", "");
-   return value;
-}
-
-string AC_L6CsvLineForSymbol(const string symbol){ return ""; }
-string AC_L7CsvLineForSymbol(const string symbol){ return ""; }
-string AC_L8CsvLineForSymbol(const string symbol){ return ""; }
-string AC_L9CsvLineForSymbol(const string symbol){ return ""; }
-string AC_L10CsvLineForSymbol(const string symbol){ return ""; }
-
-string AC_L6CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
-string AC_L7CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
-string AC_L8CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
-string AC_L9CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
-string AC_L10CsvField(string line, int index){ return AC_L0CsvCompatField(line, index); }
 
 #endif

@@ -11,7 +11,7 @@ static string AC_L6_VALIDATION_STATUS = "Pending";
 static string AC_L6_VALIDATION_REASON = "ranked sidecar not checked yet";
 static string AC_L6_MAIN_BLOCKER = "ranked_symbols.manifest has not been accepted yet";
 static string AC_L6_JOB_TYPE = "L6_COST_FRICTION_RANKING_V1";
-static string AC_L6_EXPECTED_OUTPUT = "ranked_symbols_csv_manifest_symbol_rank_sidecars_preview_optional";
+static string AC_L6_EXPECTED_OUTPUT = "ranked_symbols_csv_manifest_top20_symbol_rank_sidecars";
 static string AC_L6_RANKED_CSV_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols.csv";
 static string AC_L6_RANKED_MANIFEST_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols.manifest";
 static string AC_L6_TOP20_PATH = "Outbox\\Layers\\Layer_6_Cost_Friction_Ranking\\ranked_symbols_top20.txt";
@@ -257,7 +257,7 @@ void AC_RefreshLayer6RankedSidecar()
    AC_L6_LIVE_L5_DRIFT_DELTA = AC_L6_RANKED_SYMBOLS - AC_L5_GATE_PASS;
    bool authority_ok = (authority == AC_EXTERNAL_WORKER_AUTHORITY);
    bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true");
-   bool files_ok = FileIsExist(AC_L6RankedCsvPath(), AC_CommonFlag());
+   bool files_ok = FileIsExist(AC_L6RankedCsvPath(), AC_CommonFlag()) && FileIsExist(AC_L6RankedTop20Path(), AC_CommonFlag());
    bool symbol_files_ok = (AC_L6_SYMBOL_RANK_FILES_WRITTEN == AC_L6_RANKED_SYMBOLS && AC_L6_SYMBOL_RANK_FILES_ACTUAL == AC_L6_RANKED_SYMBOLS && AC_L6_SYMBOL_RANK_FILE_COUNT_OK);
 
    if(manifest_ok && AC_L6_GENERATION_COUNTS_OK && authority_ok && permission_ok && files_ok && symbol_files_ok)
@@ -268,10 +268,7 @@ void AC_RefreshLayer6RankedSidecar()
       AC_L6_VALIDATION_STATUS = AC_L6_LIVE_L5_DRIFT ? "AcceptedWithDrift" : "Accepted";
       AC_L6_VALIDATION_REASON = AC_L6_LIVE_L5_DRIFT ? "snapshot_valid_current_l5_drift" : "snapshot_valid";
       AC_L6_MAIN_BLOCKER = AC_L6_LIVE_L5_DRIFT ? "none_l6_snapshot_valid_current_l5_drift=true" : "none";
-      if(FileIsExist(AC_L6RankedTop20Path(), AC_CommonFlag()))
-         AC_L6_TOP20_FIRST_LINE = AC_L6FirstTop20Symbol(AC_L6ReadSmallTextFile(AC_L6RankedTop20Path(), 16000));
-      else
-         AC_L6_TOP20_FIRST_LINE = "preview_optional_missing_not_acceptance_dependency";
+      AC_L6_TOP20_FIRST_LINE = AC_L6FirstTop20Symbol(AC_L6ReadSmallTextFile(AC_L6RankedTop20Path(), 16000));
       return;
    }
 

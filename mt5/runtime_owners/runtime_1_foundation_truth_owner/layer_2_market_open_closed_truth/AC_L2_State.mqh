@@ -9,7 +9,6 @@ static string   AC_L2_SCAN_STATUS = "not_started";
 static string   AC_L2_SCAN_FAILURE = "";
 static datetime AC_L2_LAST_FULL_SCAN_TIME = 0;
 static string   AC_L2_ROUTE_GENERATION_KEY = "not_scanned";
-static string   AC_L2_ROUTE_MEMBERSHIP_CHECKSUM = "not_scanned";
 static int      AC_L2_LAST_SERVER_DAY_OF_WEEK = -1;
 static int      AC_L2_LAST_SYMBOLS_TOTAL = -1;
 
@@ -56,7 +55,6 @@ void AC_L2Reset()
    AC_L2_QUOTE_SESSION_SUCCESS_COUNT = 0;
    AC_L2_QUOTE_SESSION_FAILURE_COUNT = 0;
    AC_L2_SYMBOL_INFO_FAILURE_COUNT = 0;
-   AC_L2_ROUTE_MEMBERSHIP_CHECKSUM = "not_scanned";
    AC_L2_ROUTE_WRITE_OPEN_COUNT = 0;
    AC_L2_ROUTE_WRITE_CLOSED_COUNT = 0;
    AC_L2_ROUTE_WRITE_UNKNOWN_COUNT = 0;

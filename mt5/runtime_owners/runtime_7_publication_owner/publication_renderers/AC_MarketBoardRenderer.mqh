@@ -14,8 +14,6 @@ string AC_BoardHealthTag(const string status)
       return "REVIEW";
    if(StringFind(status, "Drift") >= 0 || StringFind(status, "drift") >= 0)
       return "DRIFT";
-   if(StringFind(status, "history_limited") >= 0 || StringFind(status, "History Limited") >= 0)
-      return "PARTIAL";
    if(StringFind(status, "Degraded") >= 0 || StringFind(status, "degraded") >= 0 ||
       StringFind(status, "Expired") >= 0 || StringFind(status, "expired") >= 0)
       return "DEGRADED";
@@ -26,14 +24,14 @@ string AC_BoardHealthTag(const string status)
    if(StringFind(status, "Accepted") >= 0 || StringFind(status, "accepted") >= 0 ||
       StringFind(status, "Complete") >= 0 || StringFind(status, "complete") >= 0 ||
       StringFind(status, "Ready") >= 0 || StringFind(status, "ready") >= 0)
-      return "ACCEPTED";
+      return "OK";
    return "CHECK";
 }
 
 bool AC_BoardStatusNeedsWarning(const string status)
 {
    string tag = AC_BoardHealthTag(status);
-   return !(tag == "ACCEPTED" || tag == "UPDATING" || tag == "SEEDING");
+   return !(tag == "OK" || tag == "UPDATING" || tag == "SEEDING");
 }
 
 string AC_BoardWarningText()
@@ -67,71 +65,15 @@ void AC_BoardRefreshSurfacePackets()
    AC_L15RefreshSummary();
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
-   AC_L18L19RefreshStatus();
 }
 
-string AC_BoardOverviewRow(const string surface,
-                           const string state,
-                           const string health,
-                           const string progress,
-                           const string blocker,
-                           const string owner,
-                           const string meaning)
-{
-   return surface + " | " + state + " | " + health + " | " + progress + " | " + blocker + " | " + owner + " | " + meaning + "\r\n";
-}
-
-string AC_BoardGatewayState()
-{
-   if(AC_EXTERNAL_WORKER_STATUS.accepted_result && AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status == "Fresh")
-      return "ACCEPTED";
-   if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present && AC_EXTERNAL_WORKER_STATUS.result_validation_status == "Rejected")
-      return "REVIEW";
-   if(AC_EXTERNAL_WORKER_STATUS.heartbeat_present)
-      return AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status == "Fresh" ? "PENDING" : "DEGRADED";
-   if(AC_EXTERNAL_WORKER_STATUS.worker_installed)
-      return "PENDING";
-   return "DEGRADED";
-}
-
-string AC_BoardGatewayProgress()
-{
-   return "heartbeat=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status
-      + ";result=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status
-      + ";accepted=" + (AC_EXTERNAL_WORKER_STATUS.accepted_result ? "true" : "false");
-}
-
-string AC_BoardGatewayCycleStatusPath()
-{
-   return AC_ExternalWorkerStatusFolder() + "\\gateway_cycle_status.txt";
-}
-
-string AC_BoardGatewayCycleText()
-{
-   return AC_L16ReadSmallTextFile(AC_BoardGatewayCycleStatusPath(), 20000);
-}
-
-string AC_BoardHeaderSection(const AC_Runtime0Snapshot &snapshot,
-                             const AC_Layer0StatusPacket &status)
+string AC_BoardHeaderSection(const AC_Layer0StatusPacket &status)
 {
    string text = "";
    text += "AURORA CORE - MARKET BOARD\r\n";
    text += "==================================================\r\n";
-   text += "Build Version:    " + AC_BUILD_VERSION + "\r\n";
-   text += "Heartbeat ID:     " + IntegerToString((int)snapshot.heartbeat_id) + "\r\n";
-   text += "Generated At:     " + snapshot.generated_at + "\r\n";
-   text += "Current Broker Time: " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
    text += "State:            " + status.status + "\r\n";
    text += "Trust:            " + status.trust_state + "\r\n";
-   text += "Layer 0 Final State: L0.1=" + snapshot.layer_0_1_status + " | L0.2=" + snapshot.layer_0_2_status + " | L0.4=" + snapshot.layer_0_4_status + " | owner=" + snapshot.owner_status + "\r\n";
-   text += "Dossier Batch Status: " + status.status + " | ready=" + IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " | failed=" + IntegerToString(status.failed_symbol_count) + "\r\n";
-   text += "Manifest Status:  " + snapshot.manifest_status + "\r\n";
-   text += "Diagnostics Status: " + snapshot.diagnostics_status + "\r\n";
-   text += "Worker Status:    " + AC_EXTERNAL_WORKER_STATUS.worker_status + " | result=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status + " | heartbeat=" + AC_EXTERNAL_WORKER_STATUS.heartbeat_validation_status + "\r\n";
-   text += "L6 Status:        " + AC_L6_STATUS + "\r\n";
-   text += "L7 Status:        " + AC_L7_STATUS + "\r\n";
-   text += "Timer Duration ms: " + IntegerToString((int)snapshot.timer_duration_ms) + "\r\n";
-   text += "Timer Pressure State: " + snapshot.timer_pressure_state + "\r\n";
    text += "Trade Permission: FALSE\r\n";
    text += "Auto Trading:     FALSE\r\n";
    return text;
@@ -145,17 +87,6 @@ string AC_BoardSystemCockpitSection(const AC_Layer0StatusPacket &status)
    text += "Runtime Mode:        Publication + inspection ranking\r\n";
    text += "Selection Surface:   L16 visible basket + L17 deep-evidence split; inspection only\r\n";
    text += "Permission Stage:    Not active\r\n";
-   string cycle = AC_BoardGatewayCycleText();
-   text += "Chain State:         " + AC_L16KvValue(cycle, "chain_state", "not_runtime_proven") + "\r\n";
-   text += "Core Completion:     " + AC_L16KvValue(cycle, "core_completion_state", "not_runtime_proven") + "\r\n";
-   text += "Deep Completion:     " + AC_L16KvValue(cycle, "deep_completion_state", "not_runtime_proven") + "\r\n";
-   text += "Static Hold:         " + AC_L16KvValue(cycle, "accepted_epoch_static_hold_active", "false") + " remaining=" + AC_L16KvValue(cycle, "accepted_epoch_static_remaining_seconds", "0") + "s\r\n";
-   text += "Retry Cycle:         " + AC_L16KvValue(cycle, "retry_cycle_count", "0") + "/" + AC_L16KvValue(cycle, "retry_cycle_limit", "5") + "\r\n";
-   text += "Chain Blocker:       " + AC_L16KvValue(cycle, "main_blocker_owner", "not_runtime_proven") + " | " + AC_L16KvValue(cycle, "main_blocker_reason", "not_runtime_proven") + "\r\n";
-   text += "L8 Strict State:     " + AC_L8_STATUS + "\r\n";
-   text += "L15 Correlation:     " + AC_L15_STATUS + "\r\n";
-   text += "L17 Currentness:     " + AC_L16KvValue(cycle, "l17_current_chain_valid", "see_gateway_result") + "\r\n";
-   text += "L18/L19 Deep Fill:   L18=" + AC_L18_STATUS + " L19=" + AC_L19_STATUS + "\r\n";
    text += "Primary Warning:     " + AC_BoardWarningText() + "\r\n";
    text += "Main Blocker:        " + status.main_blocker + "\r\n";
    return text;
@@ -198,37 +129,27 @@ string AC_BoardUniverseSnapshotSection(const AC_Layer0StatusPacket &status)
 string AC_BoardLayerHealthMatrixSection(const AC_Layer0StatusPacket &status)
 {
    string text = "";
-   text += "\r\nSURFACE OVERVIEW\r\n";
+   text += "\r\nLAYER HEALTH MATRIX\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Surface | State | Health | Progress | Blocker | Owner | Meaning\r\n";
-   text += AC_BoardOverviewRow("Dossiers Physical Route", AC_DOSSIER_PHYSICAL_MATCH_OK ? "ACCEPTED" : "DEGRADED", AC_DOSSIER_PHYSICAL_MATCH_OK ? "clean" : "mismatch", "open " + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + ", closed " + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + "/" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES), AC_DOSSIER_PHYSICAL_MATCH_OK ? "physical_route_clean" : "physical_route_mismatch", "Runtime7 Dossier publication", "physical route truth only");
-   text += AC_BoardOverviewRow("L0 Publication / Dossier", AC_BoardHealthTag(status.status), status.trust_state, IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " generated", status.main_blocker, "Board / Dossier Renderer Service", "publication status only");
-   text += AC_BoardOverviewRow("L1 Account / Portfolio", AC_L1_READY ? "ACCEPTED" : "PENDING", AC_L1_READY ? "available" : "pending", "history/account surfaces", AC_L1_READY ? "none" : "account_truth_pending", "Runtime1 Foundation Truth", "account and portfolio truth");
-   text += AC_BoardOverviewRow("L2 Market Open / Closed", AC_BoardHealthTag(AC_L2_SCAN_STATUS), AC_L2_SCAN_STATUS, "open " + IntegerToString(AC_L2_OPEN_COUNT) + " / closed " + IntegerToString(AC_L2_CLOSED_COUNT), "none", "Runtime1 Foundation Truth", "market state truth");
-   text += AC_BoardOverviewRow("L3 Broker Specs / Value", AC_BoardHealthTag(AC_L3_SCAN_STATUS), AC_L3_SCAN_STATUS, "specs/value/margin", AC_L3_READY ? "none" : "spec_truth_pending", "Runtime1 Foundation Truth", "broker specs truth");
-   text += AC_BoardOverviewRow("L4 Quote / Spread", AC_BoardHealthTag(AC_L4_SCAN_STATUS), AC_L4_SCAN_STATUS, "fresh " + IntegerToString(AC_L4_FRESH_QUOTES) + " / stale " + IntegerToString(AC_L4_STALE_QUOTES), AC_L4_READY ? "quote_quality_visible" : "quote_truth_pending", "Runtime1 Foundation Truth", "live quote truth");
-   text += AC_BoardOverviewRow("L5 Basic System Gate", AC_BoardHealthTag(AC_L5_STATUS), AC_L5_STATUS, "pass " + IntegerToString(AC_L5_GATE_PASS) + " / blocked " + IntegerToString(AC_L5_GATE_BLOCKED), AC_L5_STATUS == "Complete" ? "none" : "gate_pending", "Runtime1 Foundation Truth", "eligibility gate only");
-   text += AC_BoardOverviewRow("L6 Cost / Friction", AC_BoardHealthTag(AC_L6_STATUS), AC_L6_STATUS, "rows accepted=" + (AC_L6_RANKED_ACCEPTED ? "true" : "false"), AC_L6_RANKED_ACCEPTED ? "none" : "ranked_sidecar_not_current_accepted", "Runtime3 worker readback", "inspection ranking only");
-   text += AC_BoardOverviewRow("L7 Session Relevance", AC_BoardHealthTag(AC_L7_STATUS), AC_L7_STATUS, "rows " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED), AC_L7_RANKED_ACCEPTED ? "none" : "epoch_or_count_contract_pending", "Runtime3 worker readback", "session relevance ranking only");
-   text += AC_BoardOverviewRow("L8 Movement / Range", AC_BoardHealthTag(AC_L8_STATUS), AC_L8_STATUS, "rows " + IntegerToString(AC_L8_RANKED_ROWS_RENDERED) + ";ohlc_min=" + IntegerToString(AC_L8_OHLC_MIN_READY_RENDERED), AC_L8_RANKED_ACCEPTED ? "none" : "ohlc_or_epoch_contract_degraded", "Runtime3 worker readback", "movement/range scoring only");
-   text += AC_BoardOverviewRow("L9 Structure / Location", AC_BoardHealthTag(AC_L9_STATUS), AC_L9_STATUS, "rows " + IntegerToString(AC_L9_RANKED_ROWS_RENDERED) + ";quality=" + AC_L9_GEOMETRY_QUALITY_STATE, AC_L9_RANKED_ACCEPTED ? "none" : "structure_or_ohlc_contract_degraded", "Runtime3 worker readback", "structure/location context only");
-   text += AC_BoardOverviewRow("L10 Taxonomy / Ranking Group", AC_BoardHealthTag(AC_L10_STATUS), AC_L10_STATUS, "symbols " + IntegerToString(AC_L10_SYMBOL_COUNT), AC_L10_ACCEPTED ? "none" : "taxonomy_summary_pending", "Runtime3 worker readback", "classification only");
-   text += AC_BoardOverviewRow("L11 Symbol Rank in Group", AC_BoardHealthTag(AC_L11_STATUS), AC_L11_STATUS, "ranked " + IntegerToString(AC_L11_RANKED_SYMBOL_COUNT), AC_L11_ACCEPTED ? "none" : "group_rank_pending", "Runtime3 worker readback", "intra-group ranking only");
-   text += AC_BoardOverviewRow("L12 Group Heat / Quality", AC_BoardHealthTag(AC_L12_STATUS), AC_L12_STATUS, "groups " + IntegerToString(AC_L12_GROUP_COUNT), AC_L12_ACCEPTED ? "none" : "group_heat_pending", "Runtime3 worker readback", "group quality only");
-   text += AC_BoardOverviewRow("L13 Group Selection", AC_BoardHealthTag(AC_L13_STATUS), AC_L13_STATUS, "selected groups " + IntegerToString(AC_L13_SELECTED_GROUP_COUNT), AC_L13_ACCEPTED ? "none" : "group_selection_pending", "Runtime3 worker readback", "attention selection only");
-   text += AC_BoardOverviewRow("L14 Candidate Pool", AC_BoardHealthTag(AC_L14_STATUS), AC_L14_STATUS, "pool " + IntegerToString(AC_L14_CANDIDATE_POOL_SIZE), AC_L14_ACCEPTED ? "none" : "candidate_pool_pending", "Runtime3 worker readback", "candidate pool only");
-   text += AC_BoardOverviewRow("L15 Correlation / Diversity", AC_BoardHealthTag(AC_L15_STATUS), AC_L15_STATUS, "scored " + IntegerToString(AC_L15_CANDIDATE_SCORED_COUNT), AC_L15_ACCEPTED ? "none" : "correlation_pending", "Runtime3 worker readback", "diversity scoring only");
-   text += AC_BoardOverviewRow("L16 Global Top 10 Basket", AC_BoardHealthTag(AC_L16_STATUS), AC_L16_STATUS, "selected " + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 fallback=" + IntegerToString(AC_L16_FALLBACK_COUNT), AC_L16_MAIN_BLOCKER, "Runtime3 worker readback", "inspection basket only");
-   text += AC_BoardOverviewRow("L17 Deep Evidence Split", AC_BoardHealthTag(AC_L17_STATUS), AC_L17_STATUS, "deep " + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 fallback=" + IntegerToString(AC_L17_FALLBACK_SELECTED_COUNT), AC_L17_MAIN_BLOCKER, "Runtime3 worker readback", "evidence budget split only");
-   text += AC_BoardOverviewRow("L18 Raw OHLC Bar Pack", AC_SurfaceStateFromStatus(AC_L18_STATUS), AC_L18_FRESHNESS_STATUS, "found " + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED) + ";missing=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING), AC_L18_REASON, "Runtime3 worker status surface", "selected raw OHLC display only");
-   text += AC_BoardOverviewRow("L19 Wick / Candle Geometry", AC_SurfaceStateFromStatus(AC_L19_STATUS), AC_L19_FRESHNESS_STATUS, "geometry_rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS) + ";stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT), AC_L19_REASON, "Runtime3 worker status surface", "wick/candle geometry only");
-   text += AC_BoardOverviewRow("L20 Rolling Tick Pack", "NOT_ACTIVE", "design_hold", "feed_quality_proxy_scaffold;mt5_proxy_caveat", "not_runtime_active", "Design hold", "future selected-symbol tick/feed quality evidence only");
-   text += AC_BoardOverviewRow("L21 Indicator / Reference Pack", "NOT_ACTIVE", "design_hold", "explainable_reference_scaffold", "not_runtime_active", "Design hold", "future ATR/VWAP/Bollinger/Donchian context only");
-   text += AC_BoardOverviewRow("L22 Liquidity / DOM Proxy", "NOT_ACTIVE", "design_hold", "evidence_scaffold_poi_liquidity_proxy", "not_runtime_active", "Design hold", "future evidence structures only, no buy/sell wording");
-   text += AC_BoardOverviewRow("L23 Setup / Permission State", "BLOCKED", "trade_permission_false", "entry_signal=false execution=false auto_trade_allowed=false alert_allowed=false", "strategy_validation_status=not_validated", "Design hold", "validation scaffold only; no setup, alert, permission, or execution");
-   text += AC_BoardOverviewRow("OHLC Shared Raw Store", AC_BoardHealthTag(AC_SHARED_OHLC_STATUS), AC_SHARED_OHLC_STATUS, "tf=8 pending=" + IntegerToString(AC_SHARED_OHLC_SYMBOL_TF_PENDING) + ";topup=" + IntegerToString(AC_SHARED_OHLC_TOPUP_ATTEMPTED), "supported_timeframes=M1,M5,M15,M30,H1,H4,D1,W1", "Runtime1 Shared OHLC Raw Storage", "raw storage only");
-   text += AC_BoardOverviewRow("Gateway / External Worker", AC_BoardGatewayState(), AC_EXTERNAL_WORKER_STATUS.worker_status, AC_BoardGatewayProgress(), AC_EXTERNAL_WORKER_STATUS.result_validation_reason, "Runtime3 Calculation Gateway", "worker liveness and result acceptance are separate");
-   text += AC_BoardOverviewRow("Selection Desk", AC_BoardHealthTag(AC_SelectionDeskScaffoldStatus()), AC_SelectionDeskScaffoldStatus(), "L16=" + IntegerToString(AC_L16_SELECTED_COUNT) + ";L17=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + ";dup_l18=" + IntegerToString(AC_L18_SELECTED_DUPLICATE_ROUTE_COPIES), AC_SelectionDeskBlockerSummary(), "Runtime3 worker selection publishers", "operator navigation only");
+   text += "L0   Publication / Dossier       " + AC_BoardHealthTag(status.status) + "   " + IntegerToString(status.dossier_shells_ready) + "/" + IntegerToString(status.broker_symbols_total) + " generated\r\n";
+   text += "L1   Account / Portfolio         " + (AC_L1_READY ? "OK" : "PENDING") + "   " + (AC_L1_READY ? "available" : "pending") + "\r\n";
+   text += "L2   Market Open / Closed        " + AC_BoardHealthTag(AC_L2_SCAN_STATUS) + "   open " + IntegerToString(AC_L2_OPEN_COUNT) + " / closed " + IntegerToString(AC_L2_CLOSED_COUNT) + "\r\n";
+   text += "L3   Broker Specs / Value        " + AC_BoardHealthTag(AC_L3_SCAN_STATUS) + "   " + AC_L3_SCAN_STATUS + "\r\n";
+   text += "L4   Quote / Spread              " + AC_BoardHealthTag(AC_L4_SCAN_STATUS) + "   " + AC_L4_SCAN_STATUS + "\r\n";
+   text += "L5   Basic System Gate           " + AC_BoardHealthTag(AC_L5_STATUS) + "   pass " + IntegerToString(AC_L5_GATE_PASS) + " / blocked " + IntegerToString(AC_L5_GATE_BLOCKED) + "\r\n";
+   text += "L6   Cost / Friction             " + AC_BoardHealthTag(AC_L6_STATUS) + "   " + AC_L6_STATUS + "\r\n";
+   text += "L7   Session Relevance           " + AC_BoardHealthTag(AC_L7_STATUS) + "   " + AC_L7_STATUS + "\r\n";
+   text += "L8   Movement / Range            " + AC_BoardHealthTag(AC_L8_STATUS) + "   " + AC_L8_STATUS + "\r\n";
+   text += "L9   Structure / Location        " + AC_BoardHealthTag(AC_L9_STATUS) + "   " + AC_L9_STATUS + "\r\n";
+   text += "L10  Taxonomy / Ranking Group    " + AC_BoardHealthTag(AC_L10_STATUS) + "   " + AC_L10_STATUS + "\r\n";
+   text += "L11  Symbol Rank in Group        " + AC_BoardHealthTag(AC_L11_STATUS) + "   " + AC_L11_STATUS + "\r\n";
+   text += "L12  Group Heat / Quality        " + AC_BoardHealthTag(AC_L12_STATUS) + "   " + AC_L12_STATUS + "\r\n";
+   text += "L13  Group Selection             " + AC_BoardHealthTag(AC_L13_STATUS) + "   " + AC_L13_STATUS + "\r\n";
+   text += "L14  Candidate Pool              " + AC_BoardHealthTag(AC_L14_STATUS) + "   " + AC_L14_STATUS + "\r\n";
+   text += "L15  Correlation / Diversity     " + AC_BoardHealthTag(AC_L15_STATUS) + "   " + AC_L15_STATUS + "\r\n";
+   text += "L16  Global Top 10 Basket        " + AC_BoardHealthTag(AC_L16_STATUS) + "   " + AC_L16_STATUS + "\r\n";
+   text += "L17  Deep Evidence Split         " + AC_BoardHealthTag(AC_L17_STATUS) + "   " + AC_L17_STATUS + "\r\n";
+   text += "OHLC Shared Raw Store            " + AC_BoardHealthTag(AC_SHARED_OHLC_STATUS) + "   " + AC_SHARED_OHLC_STATUS + "\r\n";
    return text;
 }
 
@@ -310,7 +231,6 @@ string AC_BoardDossierCoverageSection(const AC_Layer0StatusPacket &status)
    text += "Dossier Pass Duration:      " + IntegerToString((int)status.batch_duration_ms) + " ms\r\n";
    text += "Dossier Layout Contract:    " + AC_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
    text += "Cached Layout Contract:     " + AC_L0_CACHED_DOSSIER_RENDER_LAYOUT_KEY + "\r\n";
-   text += AC_DossierPhysicalCoverageBoardSection();
    return text;
 }
 
@@ -356,7 +276,7 @@ string AC_BoardActionSection()
    string text = "";
    text += "\r\nACTION\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Board refresh is atomic and heartbeat-visible; survival publication may be overwritten by final publication in the same heartbeat.\r\n";
+   text += "Board refresh is atomic and writes only when state text changes.\r\n";
    text += "Latest accepted L16/L17 surfaces may guide inspection order and future evidence budget only; no alerts, execution, or trade permission exists.\r\n";
    return text;
 }
@@ -387,7 +307,7 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
    string ohlc = AC_SharedOhlcRenderBoardSection();
 
    string text = "";
-   text += AC_BoardHeaderSection(snapshot, status);
+   text += AC_BoardHeaderSection(status);
    text += AC_BoardSystemCockpitSection(status);
    text += AC_BoardOperatorActionSection();
    text += AC_BoardUniverseSnapshotSection(status);
@@ -427,7 +347,6 @@ string AC_BuildTraderBoardText(const AC_Runtime0Snapshot &snapshot,
 string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 {
    AC_BoardRefreshSurfacePackets();
-   AC_DossierPhysicalRefreshProof();
    return "schema_name=layer_status|schema_version=v0.20|layer_id=L0|layer_name=" + status.layer_name
       + "|source_owner=" + status.owner_name
       + "|status=" + status.status
@@ -436,18 +355,7 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
       + "|marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total)
       + "|dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready)
       + "|dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing)
-      + "|dossier_physical_open_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES)
-      + "|dossier_physical_closed_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES)
-      + "|dossier_physical_unknown_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES)
-      + "|dossier_expected_open_files=" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES)
-      + "|dossier_expected_closed_files=" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES)
-      + "|dossier_expected_unknown_files=" + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES)
-      + "|dossier_physical_missing_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS)
-      + "|dossier_physical_wrong_folder_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS)
-      + "|dossier_physical_duplicate_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS)
-      + "|dossier_physical_orphan_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES)
-      + "|dossier_physical_cleanup_pending=" + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "true" : "false")
-      + "|dossier_physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false")
+      + "|dossier_physical_missing=not_reconciled_by_generation_counter"
       + "|dossier_counter_truth=current_generation_progress_not_physical_file_count"
       + "|failed_current_write_count=" + IntegerToString(status.failed_symbol_count)
       + "|retry_count_total=" + IntegerToString(status.retry_count_total)
@@ -508,7 +416,6 @@ string AC_Layer0StatusRow(const AC_Layer0StatusPacket &status)
 string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
 {
    AC_BoardRefreshSurfacePackets();
-   AC_DossierPhysicalRefreshProof();
    string l1_workbench = AC_Layer1WorkbenchSection();
    string l2_workbench = AC_Layer2WorkbenchSection();
    string l3_workbench = AC_Layer3WorkbenchSection();
@@ -540,19 +447,7 @@ string AC_Layer0WorkbenchText(const AC_Layer0StatusPacket &status)
    text += "marketwatch_symbols_total=" + IntegerToString(status.marketwatch_symbols_total) + "\r\n";
    text += "dossier_current_generation_updated=" + IntegerToString(status.dossier_shells_ready) + "\r\n";
    text += "dossier_current_generation_left=" + IntegerToString(status.dossier_shells_missing) + "\r\n";
-   text += "dossier_physical_open_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_OPEN_FILES) + "\r\n";
-   text += "dossier_physical_closed_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_CLOSED_FILES) + "\r\n";
-   text += "dossier_physical_unknown_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_UNKNOWN_FILES) + "\r\n";
-   text += "dossier_expected_open_files=" + IntegerToString(AC_DOSSIER_EXPECTED_OPEN_FILES) + "\r\n";
-   text += "dossier_expected_closed_files=" + IntegerToString(AC_DOSSIER_EXPECTED_CLOSED_FILES) + "\r\n";
-   text += "dossier_expected_unknown_files=" + IntegerToString(AC_DOSSIER_EXPECTED_UNKNOWN_FILES) + "\r\n";
-   text += "dossier_physical_missing_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_MISSING_SYMBOLS) + "\r\n";
-   text += "dossier_physical_wrong_folder_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_WRONG_FOLDER_SYMBOLS) + "\r\n";
-   text += "dossier_physical_duplicate_symbols=" + IntegerToString(AC_DOSSIER_PHYSICAL_DUPLICATE_SYMBOLS) + "\r\n";
-   text += "dossier_physical_orphan_files=" + IntegerToString(AC_DOSSIER_PHYSICAL_ORPHAN_FILES) + "\r\n";
-   text += "dossier_physical_cleanup_pending=" + (AC_DOSSIER_PHYSICAL_CLEANUP_PENDING ? "true" : "false") + "\r\n";
-   text += "dossier_physical_match=" + (AC_DOSSIER_PHYSICAL_MATCH_OK ? "true" : "false") + "\r\n";
-   text += "dossier_physical_proof_key=" + AC_DOSSIER_PHYSICAL_LAST_PROOF_KEY + "\r\n";
+   text += "dossier_physical_missing=not_reconciled_by_generation_counter\r\n";
    text += "dossier_counter_truth=current_generation_progress_not_physical_file_count\r\n";
    text += "failed_current_write_count=" + IntegerToString(status.failed_symbol_count) + "\r\n";
    text += "retry_count_total=" + IntegerToString(status.retry_count_total) + "\r\n";

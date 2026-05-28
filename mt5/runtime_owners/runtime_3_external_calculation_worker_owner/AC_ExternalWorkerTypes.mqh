@@ -52,11 +52,6 @@ struct AC_ExternalWorkerStatus
    string shared_status_processed_root_count;
    string shared_status_accepted_root_count;
    string shared_status_degraded_root_count;
-   string shared_account_heartbeat_present_count;
-   string shared_account_process_status_present_count;
-   string shared_account_result_pair_present_count;
-   string shared_account_proof_contradiction_count;
-   string shared_account_proof_contradiction_reason;
    string shared_daemon_task_registered;
    string shared_daemon_task_state;
    string shared_watchdog_task_registered;

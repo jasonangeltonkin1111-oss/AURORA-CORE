@@ -62,7 +62,7 @@ def _rank_filename(row: Dict[str, str]) -> str:
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).root
+    return WorkerPaths.from_root(root).outbox.parents[2]
 
 
 def _selection_groups_dir(root: Path) -> Path:
@@ -145,7 +145,7 @@ def _status_text(summary: L11DossierCopySummary) -> str:
         "owner_name=Runtime 5 - Taxonomy / Ranking Group Owner",
         "support_owner=Runtime 3 external worker copy bridge",
         "source_owner=Runtime 7 Dossier publication owner output",
-        "target_surface=Selection Desk/Groups taxonomy tree rank reference files",
+        "target_surface=Selection Desk/Groups taxonomy tree rank files",
         f"status={summary.status}",
         f"reason={summary.reason}",
         f"dossier_copies_written={summary.dossier_copies_written}",
@@ -153,7 +153,7 @@ def _status_text(summary: L11DossierCopySummary) -> str:
         f"dossier_sources_missing={summary.dossier_sources_missing}",
         f"stale_dossier_rank_files_removed={summary.stale_dossier_rank_files_removed}",
         f"write_failed_count={summary.write_failed_count}",
-        "copy_policy=reference_only_no_full_dossier_copy_l11_tree_rank_cards_remain_authoritative",
+        "copy_policy=rank_files_are_source_dossier_copies_when_source_dossier_exists",
         "fallback_policy=missing_source_dossier_keeps_degraded_status",
         "dossier_rerendered_by_l11=false",
         "selection_runtime=false",
@@ -183,12 +183,34 @@ def copy_l11_tree_rank_files_from_dossiers(root: Path) -> L11DossierCopySummary:
     if not rows:
         return _publish_status(root, L11DossierCopySummary("pending", "no_top5_rows_available_for_dossier_copy"))
 
-    return _publish_status(root, L11DossierCopySummary(
-        "accepted",
-        "l11_full_dossier_copy_disabled_to_keep_selection_desk_reference_only",
-        0,
-        0,
-        0,
-        0,
-        0,
-    ))
+    account_root = _account_root(root)
+    grouped: Dict[Path, List[Dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        grouped[_target_folder(root, row)].append(row)
+
+    written = 0
+    expected = 0
+    missing = 0
+    failed = 0
+    stale_removed = 0
+    for folder, group_rows in grouped.items():
+        folder.mkdir(parents=True, exist_ok=True)
+        expected_names = [_rank_filename(row) for row in group_rows]
+        stale_removed += _cleanup_stale_tree_rank_files(folder, expected_names)
+        for row in group_rows:
+            expected += 1
+            symbol = str(row.get("symbol", "")).strip()
+            target = folder / _rank_filename(row)
+            source = _find_dossier(account_root, symbol)
+            if source is None:
+                missing += 1
+                continue
+            content = read_text(source)
+            if atomic_write_text(target, content):
+                written += 1
+            else:
+                failed += 1
+
+    status = "accepted" if written == expected and missing == 0 and failed == 0 else "write_degraded"
+    reason = "l11_tree_rank_files_copied_from_source_dossiers" if status == "accepted" else "one_or_more_l11_tree_dossier_copies_missing_or_failed"
+    return _publish_status(root, L11DossierCopySummary(status, reason, written, expected, missing, stale_removed, failed))

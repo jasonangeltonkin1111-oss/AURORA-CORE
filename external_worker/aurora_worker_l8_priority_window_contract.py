@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aurora_worker_io import account_root_from_outbox
 import aurora_worker_l8_movement as _l8
 
 
@@ -34,7 +33,7 @@ class _PriorityWindowRoot:
 
 
 def _shared_ohlc_priority_window_root(outbox: Path) -> _PriorityWindowRoot:
-    account_root = account_root_from_outbox(outbox)
+    account_root = outbox.parents[2]
     server_root = account_root.parent
     symbols_root = server_root / "Shared Market Data" / "OHLC Store" / "Symbols"
     return _PriorityWindowRoot(symbols_root)

@@ -8,19 +8,15 @@ import io
 import math
 import os
 
-from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L15_LAYER_FOLDER = "Layer_15_Correlation_Diversity_Selection"
 L15_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
 L15_AUTHORITY = "correlation_diversity_scoring_only"
 L15_SCHEMA_NAME = "l15_correlation_diversity_selection"
-L15_PRIMARY_TIMEFRAME = "M15"
-L15_SECONDARY_TIMEFRAME = "M5"
-L15_REFERENCE_TIMEFRAME = "H1"
-L15_TIMEFRAME = L15_PRIMARY_TIMEFRAME
-L15_LOOKBACK_BARS = 351
-L15_MIN_ALIGNED_RETURNS = 64
-L15_DEEP_TARGET_RETURNS = 350
+L15_TIMEFRAME = "H1"
+L15_LOOKBACK_BARS = 168
+L15_MIN_ALIGNED_RETURNS = 80
 L15_DEFAULT_MAX_CORR_ABS = 0.30
 L15_DEFAULT_MAX_CANDIDATES = 80
 L15_DEFAULT_MAX_OHLC_FILE_SCAN = 5000
@@ -171,11 +167,11 @@ def _safe_slug(value: str) -> str:
 
 
 def _root_from_outbox(outbox: Path) -> Path:
-    return account_root_from_outbox(outbox)
+    return outbox.parents[2]
 
 
 def _select_dir(outbox: Path) -> Path:
-    return account_root_from_outbox(outbox) / "Selection Desk" / "Groups"
+    return outbox.parents[2] / "Selection Desk" / "Groups"
 
 
 def _write(path: Path, text: str, failed: List[Path]) -> None:
@@ -185,20 +181,6 @@ def _write(path: Path, text: str, failed: List[Path]) -> None:
 
 def _symbol_root(symbol: str) -> str:
     return symbol.split(".", 1)[0].upper().replace("_", "").replace("-", "")
-
-
-def _candidate_symbol_slugs(symbol: str) -> List[str]:
-    variants = [
-        str(symbol or "").strip(),
-        str(symbol or "").strip().upper(),
-        _symbol_root(symbol),
-    ]
-    out: List[str] = []
-    for value in variants:
-        slug = _safe_slug(value)
-        if slug and slug not in out:
-            out.append(slug)
-    return out
 
 
 def _base_quote(symbol: str) -> Tuple[str, str]:
@@ -225,40 +207,36 @@ def _ohlc_store_roots(root: Path) -> List[Path]:
     return [p for p in candidates if p.exists() and p.is_dir()]
 
 
-def _candidate_ohlc_files(root: Path, symbols: Iterable[str], timeframe: str) -> Tuple[Dict[str, Path], int]:
+def _candidate_ohlc_files(root: Path, symbols: Iterable[str]) -> Tuple[Dict[str, Path], int]:
     stores = _ohlc_store_roots(root)
     if not stores:
         return {}, 0
-    wanted: List[Tuple[str, str]] = []
-    seen: set[str] = set()
-    for symbol in symbols:
-        original = str(symbol or "").strip()
-        if not original or original in seen:
-            continue
-        wanted.append((original, _symbol_root(original)))
-        seen.add(original)
+    wanted = {_symbol_root(s): s for s in symbols}
     found: Dict[str, Path] = {}
+    patterns: List[str] = []
+    for root_symbol in wanted:
+        patterns.extend([
+            f"*{root_symbol}*{L15_TIMEFRAME}*.csv",
+            f"*{root_symbol}*{L15_TIMEFRAME}*.txt",
+            f"*{root_symbol}*.{L15_TIMEFRAME}*.csv",
+            f"*{root_symbol}*.{L15_TIMEFRAME}*.txt",
+        ])
     for store in stores:
-        for original, _root_symbol in wanted:
-            if original in found:
+        for pattern in patterns:
+            try:
+                for path in store.rglob(pattern):
+                    if not path.is_file():
+                        continue
+                    upper = str(path).upper()
+                    if L15_TIMEFRAME not in upper:
+                        continue
+                    for root_symbol, original in wanted.items():
+                        if original not in found and root_symbol in upper:
+                            found[original] = path
+                    if len(found) >= len(wanted):
+                        return found, 0
+            except OSError:
                 continue
-            for slug in _candidate_symbol_slugs(original):
-                candidates = [
-                    store / "Symbols" / slug / f"{timeframe}.seed.csv",
-                    store / "Symbols" / slug / f"{timeframe}.seed.txt",
-                    store / "Symbols" / slug / f"{timeframe}.window.csv",
-                    store / "Symbols" / slug / f"{timeframe}.window.txt",
-                    store / "Symbols" / slug / "Priority Windows" / f"{timeframe}.window.csv",
-                    store / "Symbols" / slug / "Priority Windows" / f"{timeframe}.window.txt",
-                ]
-                for path in candidates:
-                    if path.exists() and path.is_file():
-                        found[original] = path
-                        break
-                if original in found:
-                    break
-            if len(found) >= len(wanted):
-                return found, 0
     scanned = 0
     max_scan = l15_max_ohlc_file_scan()
     for store in stores:
@@ -270,9 +248,9 @@ def _candidate_ohlc_files(root: Path, symbols: Iterable[str], timeframe: str) ->
                 if not path.is_file() or path.suffix.lower() not in {".csv", ".txt"}:
                     continue
                 upper = str(path).upper()
-                if timeframe not in upper:
+                if L15_TIMEFRAME not in upper:
                     continue
-                for original, root_symbol in wanted:
+                for root_symbol, original in wanted.items():
                     if original not in found and root_symbol in upper:
                         found[original] = path
                 if len(found) >= len(wanted):
@@ -282,7 +260,7 @@ def _candidate_ohlc_files(root: Path, symbols: Iterable[str], timeframe: str) ->
     return found, scanned
 
 
-def _read_close_series(path: Path, lookback_bars: int = L15_LOOKBACK_BARS) -> List[Tuple[str, float]]:
+def _read_close_series(path: Path) -> List[Tuple[str, float]]:
     text = read_text(path).replace("\r\n", "\n").strip()
     if not text:
         return []
@@ -303,7 +281,7 @@ def _read_close_series(path: Path, lookback_bars: int = L15_LOOKBACK_BARS) -> Li
                 c = _num(parts[4], default=float("nan"))
                 if parts[0] and not math.isnan(c) and c > 0:
                     rows.append((parts[0], c))
-    return rows[-lookback_bars:]
+    return rows[-L15_LOOKBACK_BARS:]
 
 
 def _returns_by_time(series: List[Tuple[str, float]]) -> Dict[str, float]:
@@ -332,26 +310,6 @@ def _pearson(a: Dict[str, float], b: Dict[str, float]) -> Tuple[str, float | Non
     cov = sum((xs[i] - mx) * (ys[i] - my) for i in range(n))
     corr = max(-1.0, min(1.0, cov / math.sqrt(vx * vy)))
     return f"{corr:.6f}", abs(corr), n, "ok"
-
-
-def _pair_correlation(
-    symbol_a: str,
-    symbol_b: str,
-    returns_by_timeframe: Dict[str, Dict[str, Dict[str, float]]],
-) -> Tuple[str, float | None, int, str, str, str]:
-    seen_reason = "missing_ohlc"
-    best_sample = 0
-    for timeframe, lane in ((L15_PRIMARY_TIMEFRAME, "primary_recent_m15"), (L15_SECONDARY_TIMEFRAME, "secondary_recent_m5")):
-        timeframe_returns = returns_by_timeframe.get(timeframe, {})
-        if symbol_a not in timeframe_returns or symbol_b not in timeframe_returns:
-            continue
-        corr_text, corr_abs, sample_count, reason = _pearson(timeframe_returns[symbol_a], timeframe_returns[symbol_b])
-        best_sample = max(best_sample, sample_count)
-        if reason == "ok":
-            confidence = "corr_deep_ready" if sample_count >= L15_DEEP_TARGET_RETURNS else "corr_min_ready"
-            return corr_text, corr_abs, sample_count, reason, timeframe, confidence
-        seen_reason = reason
-    return "not_available", None, best_sample, seen_reason, f"{L15_PRIMARY_TIMEFRAME}|{L15_SECONDARY_TIMEFRAME}", "correlation_missing_retrying"
 
 
 def _corr_state(corr_abs: float | None, reason: str) -> str:
@@ -439,17 +397,13 @@ def _deferred_score_row(row: Dict[str, str]) -> Dict[str, str]:
 def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], List[Dict[str, str]], int, bool, int, int]:
     main_lane, deferred_lane, capped = _ranked_candidate_lanes(candidates)
     symbols = [_text(r, "symbol") for r in main_lane if _text(r, "symbol") != "not_available"]
-    returns_by_timeframe: Dict[str, Dict[str, Dict[str, float]]] = {}
-    scanned_count = 0
-    for timeframe in (L15_PRIMARY_TIMEFRAME, L15_SECONDARY_TIMEFRAME):
-        ohlc_files, scanned = _candidate_ohlc_files(root, symbols, timeframe)
-        scanned_count += scanned
-        returns_by_timeframe[timeframe] = {}
-        for symbol, path in ohlc_files.items():
-            try:
-                returns_by_timeframe[timeframe][symbol] = _returns_by_time(_read_close_series(path, L15_LOOKBACK_BARS))
-            except Exception:
-                continue
+    ohlc_files, scanned_count = _candidate_ohlc_files(root, symbols)
+    returns: Dict[str, Dict[str, float]] = {}
+    for symbol, path in ohlc_files.items():
+        try:
+            returns[symbol] = _returns_by_time(_read_close_series(path))
+        except Exception:
+            continue
 
     meta = {_text(row, "symbol"): _base_meta(row) for row in main_lane}
     pair_rows: List[Dict[str, str]] = []
@@ -459,7 +413,10 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
             ra, rb = meta.get(a, {}), meta.get(b, {})
             same_group = _text(ra, "ranking_group") == _text(rb, "ranking_group")
             shared_count, shared_reason = _shared_currency(_text(ra, "base_currency"), _text(ra, "quote_currency"), _text(rb, "base_currency"), _text(rb, "quote_currency"))
-            corr_text, corr_abs, sample_count, reason, corr_timeframe, corr_confidence = _pair_correlation(a, b, returns_by_timeframe)
+            if a in returns and b in returns:
+                corr_text, corr_abs, sample_count, reason = _pearson(returns[a], returns[b])
+            else:
+                corr_text, corr_abs, sample_count, reason = "not_available", None, 0, "missing_ohlc"
             pair_risk = (corr_abs * 60.0 if corr_abs is not None else 20.0) + shared_count * 15.0 + (20.0 if same_group else 0.0)
             pair_rows.append({
                 "symbol_a": a, "symbol_b": b, "ranking_group_a": _text(ra, "ranking_group"), "ranking_group_b": _text(rb, "ranking_group"),
@@ -468,7 +425,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
                 "same_ranking_group": "true" if same_group else "false", "shared_currency_count": str(shared_count), "shared_currency_reason": shared_reason,
                 "correlation_value": corr_text, "correlation_abs": f"{corr_abs:.6f}" if corr_abs is not None else "not_available",
                 "correlation_state": _corr_state(corr_abs, reason), "correlation_sample_count": str(sample_count),
-                "correlation_method": f"pearson_log_returns_recent_reachable_{corr_confidence}", "correlation_timeframe": corr_timeframe,
+                "correlation_method": "pearson_log_returns_from_shared_ohlc_store", "correlation_timeframe": L15_TIMEFRAME,
                 "correlation_lookback_bars": str(L15_LOOKBACK_BARS), "data_quality_reason": reason,
                 "currency_overlap_score": f"{min(100.0, shared_count * 35.0):.2f}", "ranking_group_overlap_score": "100.00" if same_group else "0.00",
                 "pair_diversity_risk_score": f"{max(0.0, min(100.0, pair_risk)):.2f}",
@@ -512,7 +469,7 @@ def _build(root: Path, candidates: List[Dict[str, str]]) -> Tuple[List[Dict[str,
             "corr_pair_max_symbol": max_pair, "correlation_state": _corr_state(max_corr, "ok" if max_corr is not None else "missing_ohlc"),
             "correlation_reject_reason": reason, "currency_overlap_score": f"{min(100.0, shared_hits * 8.0):.2f}",
             "ranking_group_overlap_score": f"{min(100.0, same_group_hits * 20.0):.2f}", "diversity_score": f"{diversity:.2f}", "diversity_state": _diversity_state(diversity),
-            "correlation_method": "pearson_log_returns_recent_reachable_m15_primary_m5_secondary", "correlation_timeframe": f"{L15_PRIMARY_TIMEFRAME}|{L15_SECONDARY_TIMEFRAME}", "correlation_lookback_bars": str(L15_LOOKBACK_BARS),
+            "correlation_method": "pearson_log_returns_from_shared_ohlc_store", "correlation_timeframe": L15_TIMEFRAME, "correlation_lookback_bars": str(L15_LOOKBACK_BARS),
             "correlation_sample_count": str(max((_int(p["correlation_sample_count"]) for p in ok), default=0)), "correlation_confidence": "usable" if ok else "degraded_unavailable",
             "l16_constraint_hint": "constrained" if reason != "none" or diversity < 55 else "clean_context", "meaning": "correlation_diversity_scoring_only_not_global_top10_not_trade_permission",
             "selection_runtime": "false", "trade_permission": "false", "entry_signal": "false", "execution": "false", "generated_utc": utc_stamp(),
@@ -615,7 +572,7 @@ def publish_l15_correlation_diversity_selection(outbox_root: Path) -> L15Publish
         return L15PublishSummary("pending", "missing_required_l15_source: " + ";".join(missing))
     try:
         l14_status = _kv(l14 / "l14_candidate_pool_summary.txt").get("status", "pending")
-        if l14_status != "accepted":
+        if l14_status not in {"accepted", "write_degraded"}:
             return L15PublishSummary("pending" if l14_status == "pending" else "degraded", "l14_not_accepted_status=" + l14_status)
         candidates = _csv(l14 / "l14_candidate_pool.csv")
         if not candidates:

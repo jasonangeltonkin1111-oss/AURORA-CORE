@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +29,7 @@ from aurora_worker_l10 import EMPTY_L10_SUMMARY, publish_l10_taxonomy_classifica
 from aurora_worker_l10_source import l10_build_source_bundle
 from aurora_worker_render_index import publish_render_index
 from aurora_worker_recorder import gateway_record_event, gateway_record_exception
-WORKER_VERSION = "0.6.20_l7_currentness_readback"
+WORKER_VERSION = "0.6.17_l17_deep_evidence_selection_split"
 EXPECTED_AUTHORITY = "calculation_support_only"
 PROCESS_START_UNIX = unix_time()
 PROCESS_START_UTC = utc_stamp()
@@ -359,10 +359,7 @@ def run_once(root: Path, worker_mode: str = "validator_daemon_capable") -> Tuple
         l6_start_ns = time.perf_counter_ns()
         l6_summary = publish_l6_cost_friction_rankings(p.outbox)
         l6_duration_ms = max(0, (time.perf_counter_ns() - l6_start_ns) // 1_000_000)
-        l6_reused_existing_outputs = (
-            l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
-            or l6_summary.reason.startswith("static_hold_reuse_accepted_snapshot;")
-        )
+        l6_reused_existing_outputs = l6_summary.reason.startswith("skipped_unchanged_input_reused_existing_ranked_outputs;")
         l7_start_ns = time.perf_counter_ns()
         l7_summary = publish_l7_session_relevance_rankings(p.outbox)
         l7_duration_ms = max(0, (time.perf_counter_ns() - l7_start_ns) // 1_000_000)
@@ -431,7 +428,7 @@ def discover_roots(shared_root: Path) -> List[Path]:
         for server in sorted(shared_root.iterdir()):
             if server.is_dir() and server.name not in {GATEWAY_FOLDER_NAME, "External Worker"}:
                 for account in sorted(server.iterdir()):
-                    if account.is_dir() and (account / GATEWAY_FOLDER_NAME / "Status" / "worker_required.txt").exists():
+                    if account.is_dir() and (account / "Workbench" / GATEWAY_FOLDER_NAME / "Control" / "worker_required.txt").exists():
                         roots.append(account)
     return roots
 
@@ -506,49 +503,10 @@ def _status_age(shared_root: Path) -> Tuple[bool, int]:
         return False, -1
 
 
-def _account_gateway_proof(root: Path) -> Dict[str, str]:
-    paths = WorkerPaths.from_root(root)
-    heartbeat_present = (paths.status / "worker_heartbeat.txt").exists()
-    process_present = (paths.status / "worker_process_status.txt").exists()
-    result_present = (paths.outbox / "result_latest.txt").exists()
-    manifest_present = (paths.outbox / "result_latest.manifest").exists()
-    result_pair_present = result_present and manifest_present
-    missing: List[str] = []
-    if not heartbeat_present:
-        missing.append("worker_heartbeat.txt")
-    if not process_present:
-        missing.append("worker_process_status.txt")
-    if not result_present:
-        missing.append("result_latest.txt")
-    if not manifest_present:
-        missing.append("result_latest.manifest")
-    return {
-        "heartbeat_present": "true" if heartbeat_present else "false",
-        "process_status_present": "true" if process_present else "false",
-        "result_present": "true" if result_present else "false",
-        "result_manifest_present": "true" if manifest_present else "false",
-        "result_pair_present": "true" if result_pair_present else "false",
-        "missing": ",".join(missing) if missing else "none",
-    }
-
-
 def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], results: List[Tuple[Path, int, ValidationResult]], watchdog: WatchdogProof | None = None, repair_success: bool = False, status_mode: str = "shared-daemon") -> str:
     accepted = sum(1 for _r, code, result in results if code == 0 and result.ok)
     degraded = len(results) - accepted
     write_degraded = sum(1 for _r, code, result in results if code == 3 or result.status == "write_degraded")
-    proof_by_root = {str(root): _account_gateway_proof(root) for root, _code, _result in results}
-    heartbeat_count = sum(1 for proof in proof_by_root.values() if proof["heartbeat_present"] == "true")
-    process_count = sum(1 for proof in proof_by_root.values() if proof["process_status_present"] == "true")
-    result_pair_count = sum(1 for proof in proof_by_root.values() if proof["result_pair_present"] == "true")
-    contradiction_reasons: List[str] = []
-    for root, code, result in results:
-        proof = proof_by_root[str(root)]
-        if code == 0 and result.ok and (
-            proof["heartbeat_present"] != "true"
-            or proof["process_status_present"] != "true"
-            or proof["result_pair_present"] != "true"
-        ):
-            contradiction_reasons.append(f"{root}:accepted_without_account_proof:{proof['missing']}")
     cpu = os.cpu_count() or 1
     mem_total, mem_avail, mem_used = _windows_memory()
     proof = watchdog or _read_existing_watchdog(shared_root)
@@ -564,9 +522,6 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         f"process_start_unix={PROCESS_START_UNIX}", f"last_loop_utc={utc_stamp()}", f"last_loop_unix={unix_time()}",
         f"loop_count={loop_count}", f"discovered_root_count={len(roots)}", f"processed_root_count={len(results)}",
         f"accepted_root_count={accepted}", f"degraded_root_count={degraded}", f"write_degraded_root_count={write_degraded}",
-        f"account_heartbeat_present_count={heartbeat_count}", f"account_process_status_present_count={process_count}",
-        f"account_result_pair_present_count={result_pair_count}", f"account_proof_contradiction_count={len(contradiction_reasons)}",
-        f"account_proof_contradiction_reason={';'.join(contradiction_reasons) if contradiction_reasons else 'none'}",
         "daemon_task_registered=not_checked_by_daemon", "daemon_task_state=not_checked_by_daemon",
         "watchdog_task_registered=not_checked_by_daemon", "watchdog_task_state=not_checked_by_daemon",
         f"watchdog_last_check_utc={proof.last_check_utc}", f"watchdog_last_action={proof.last_action}",
@@ -577,19 +532,9 @@ def build_shared_status(shared_root: Path, loop_count: int, roots: List[Path], r
         "cpu_limit_percent=80", "terminal_process_count=not_checked_by_daemon", "aurora_worker_process_count=not_checked_by_daemon",
         f"registered_root_count={len(roots)}", f"resource_throttle_active={throttle}", f"resource_throttle_reason={throttle_reason}",
         "recommended_parallel_jobs=1", "authority=calculation_support_only", "trade_permission=false", "",
-        "root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum|heartbeat_present|process_status_present|result_present|result_manifest_present|account_proof_contradiction",
+        "root|exit_code|status|reason|snapshot_id|job_id|job_type|payload_checksum",
     ]
-    for root, code, res in results:
-        proof = proof_by_root[str(root)]
-        contradiction = "true" if code == 0 and res.ok and (
-            proof["heartbeat_present"] != "true"
-            or proof["process_status_present"] != "true"
-            or proof["result_pair_present"] != "true"
-        ) else "false"
-        lines.append(
-            f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.job_id}|{res.job_type}|{res.payload_checksum}|"
-            f"{proof['heartbeat_present']}|{proof['process_status_present']}|{proof['result_present']}|{proof['result_manifest_present']}|{contradiction}"
-        )
+    lines += [f"{root}|{code}|{res.status}|{res.reason}|{res.snapshot_id}|{res.job_id}|{res.job_type}|{res.payload_checksum}" for root, code, res in results]
     lines.append("")
     return "\n".join(lines)
 
@@ -745,12 +690,8 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--watchdog", action="store_true")
     parser.add_argument("--install-global", action="store_true")
-    parser.add_argument("--version", action="store_true")
     args = parser.parse_args(argv)
 
-    if args.version:
-        print(WORKER_VERSION)
-        return 0
     if args.install_global:
         print("install-global is PowerShell-owned. Run install_worker_global.ps1. No install success is claimed here.")
         return 0
@@ -785,3 +726,8 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+
+
+

@@ -8,7 +8,7 @@ import csv
 import io
 import math
 
-from aurora_worker_io import account_root_from_outbox, atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
+from aurora_worker_io import atomic_write_text, payload_checksum, read_text, unix_time, utc_stamp
 
 L16_LAYER_FOLDER = "Layer_16_Global_Top10_Builder"
 L16_OWNER = "Runtime 5 - Taxonomy / Ranking Group Owner"
@@ -131,7 +131,7 @@ def _kv(path: Path) -> Dict[str, str]:
 
 
 def _root_from_outbox(outbox: Path) -> Path:
-    return account_root_from_outbox(outbox)
+    return outbox.parents[2]
 
 
 def _global_dir(outbox: Path) -> Path:
@@ -507,10 +507,10 @@ def publish_l16_global_top10_builder(outbox_root: Path) -> L16PublishSummary:
     try:
         l14_status = _kv(l14 / "l14_candidate_pool_summary.txt").get("status", "pending")
         l15_status = _kv(l15 / "l15_correlation_diversity_summary.txt").get("status", "pending")
-        if l14_status != "accepted":
+        if l14_status not in {"accepted", "write_degraded"}:
             held = _held_summary(layer, visible, "l14_not_accepted_holding_prior_status=" + l14_status)
             return held if held is not None else L16PublishSummary("pending", "l14_not_accepted_status=" + l14_status)
-        if l15_status != "accepted":
+        if l15_status not in {"accepted", "degraded", "write_degraded"}:
             held = _held_summary(layer, visible, "l15_not_accepted_holding_prior_status=" + l15_status)
             return held if held is not None else L16PublishSummary("pending", "l15_not_accepted_status=" + l15_status)
 

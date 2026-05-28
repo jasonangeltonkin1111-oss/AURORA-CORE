@@ -21,7 +21,7 @@ EMPTY_SELECTION_ROOT_INDEX_SUMMARY = SelectionRootIndexSummary("pending", "selec
 
 
 def _account_root(root: Path) -> Path:
-    return WorkerPaths.from_root(root).root
+    return WorkerPaths.from_root(root).outbox.parents[2]
 
 
 def _selection_desk(root: Path) -> Path:

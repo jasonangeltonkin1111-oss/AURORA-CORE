@@ -12,19 +12,6 @@ def _display_profile() -> str:
     return ",".join(f"{tf}={bars}" for tf, bars in DISPLAY_BARS.items())
 
 
-def _selected_source_mode(root: Path) -> str:
-    account_root = WorkerPaths.from_root(root).root
-    stable = account_root / "Selection Desk" / "Global" / "current_top10.csv"
-    compat = account_root / "Selection Desk" / "01_Global" / "Top_10"
-    if stable.exists() and compat.exists():
-        return "stable_manifest_with_compatibility_shortcut_decoration"
-    if stable.exists():
-        return "stable_manifest_present_no_compatibility_shortcuts_detected"
-    if compat.exists():
-        return "compatibility_shortcut_scan"
-    return "selected_source_missing"
-
-
 def _tf_counter_lines(summary: L18PublishSummary) -> list[str]:
     lines: list[str] = []
     for tf in DISPLAY_BARS:
@@ -37,12 +24,11 @@ def _tf_counter_lines(summary: L18PublishSummary) -> list[str]:
     return lines
 
 
-def l18_result_lines(summary: L18PublishSummary, duration_ms: int, selected_source_mode: str = "unknown") -> str:
+def l18_result_lines(summary: L18PublishSummary, duration_ms: int) -> str:
     lines = [
         f"l18_selected_raw_ohlc_status={summary.status}",
         f"l18_selected_raw_ohlc_reason={summary.reason}",
         f"l18_selected_raw_ohlc_duration_ms={duration_ms}",
-        f"l18_selected_source_mode={selected_source_mode}",
         f"l18_display_profile={_display_profile()}",
         f"l18_selected_dossiers_seen={summary.selected_dossiers_seen}",
         f"l18_selected_route_dossiers_seen={summary.selected_route_dossiers_seen}",
@@ -65,12 +51,6 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int, selected_sour
         f"l18_freshness_unknown_count={summary.freshness_unknown_count}",
         f"l18_freshness_status={summary.freshness_status}",
         f"l18_freshness_policy={summary.freshness_policy}",
-        f"l18_upstream_l17_status={summary.upstream_l17_status}",
-        f"l18_upstream_l17_current_chain_valid={summary.upstream_l17_current_chain_valid}",
-        f"l18_current_chain_valid={summary.latest_current}",
-        f"l18_downstream_allowed={summary.downstream_allowed}",
-        f"l18_visible_output_source={summary.visible_output_source}",
-        f"l18_currentness_reason={summary.currentness_reason}",
     ]
     lines.extend(_tf_counter_lines(summary))
     lines.extend([
@@ -78,7 +58,7 @@ def l18_result_lines(summary: L18PublishSummary, duration_ms: int, selected_sour
         f"l18_board_path={summary.board_path}",
         f"l18_layer_folder={summary.layer_folder}",
         "l18_next_layer=L19_candle_geometry_and_structure_dispatch_owned",
-        "l18_scope=selected_copied_dossiers_only_with_source_mode_label",
+        "l18_scope=canonical_selection_shortcut_dossiers_only",
         "l18_source_owner=Runtime_1_Shared_OHLC_Raw_Storage_Owner",
         "l18_source_policy=read_existing_shared_ohlc_seed_files_only",
         "l18_copyrates_calls=0",
@@ -110,36 +90,30 @@ def _replace_or_append_l18_block(result_text: str, lines: str) -> str:
     return before.rstrip() + "\n" + lines + (suffix + "\n" if suffix else "")
 
 
-def run_l18_after_l17(root: Path, run_l19: bool = True) -> L18PublishSummary:
+def run_l18_after_l17(root: Path) -> L18PublishSummary:
     paths = WorkerPaths.from_root(root)
     paths.ensure()
-    source_mode = _selected_source_mode(root)
     start_ns = time.perf_counter_ns()
     summary = publish_l18_selected_raw_ohlc_bar_pack(root)
     duration_ms = max(0, (time.perf_counter_ns() - start_ns) // 1_000_000)
     result_path = paths.outbox / "result_latest.txt"
     if result_path.exists():
         text = read_text(result_path)
-        updated = _replace_or_append_l18_block(text, l18_result_lines(summary, duration_ms, source_mode))
+        updated = _replace_or_append_l18_block(text, l18_result_lines(summary, duration_ms))
         atomic_write_text(result_path, updated)
         manifest_path = paths.outbox / "result_latest.manifest"
         manifest = "\n".join([
             "schema_name=aurora_worker_result_manifest",
-            "schema_version=20",
+            "schema_version=19",
             "worker_l18_append_status=appended_by_l18_dispatch",
-            f"worker_l19_dispatch_policy={'l18_dispatch_runs_l19_after_l18' if run_l19 else 'l19_runtime_disabled'}",
+            "worker_l19_dispatch_policy=l18_dispatch_runs_l19_after_l18",
             f"l18_status={summary.status}",
-            f"l18_selected_source_mode={source_mode}",
             f"l18_display_profile={_display_profile()}",
             f"l18_selected_dossiers_decorated={summary.selected_dossiers_decorated}",
             f"l18_source_files_found={summary.source_files_found}",
             f"l18_source_files_expected={summary.source_files_expected}",
             f"l18_selected_unique_symbols_seen={summary.selected_unique_symbols_seen}",
             f"l18_freshness_status={summary.freshness_status}",
-            f"l18_current_chain_valid={summary.latest_current}",
-            f"l18_downstream_allowed={summary.downstream_allowed}",
-            f"l18_visible_output_source={summary.visible_output_source}",
-            f"l18_currentness_reason={summary.currentness_reason}",
             f"l18_status_path={summary.status_path}",
             f"l18_board_path={summary.board_path}",
             f"result_size={len(updated.encode('utf-8'))}",
@@ -157,6 +131,5 @@ def run_l18_after_l17(root: Path, run_l19: bool = True) -> L18PublishSummary:
             "",
         ])
         atomic_write_text(manifest_path, manifest)
-    if run_l19:
-        run_l19_after_l18(root)
+    run_l19_after_l18(root)
     return summary

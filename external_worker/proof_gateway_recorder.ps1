@@ -52,7 +52,7 @@ function Find-AccountRoots($RootPath) {
             Get-ChildItem -LiteralPath $serverDir.FullName -Directory -ErrorAction SilentlyContinue |
                 ForEach-Object {
                     $accountDir = $_
-                    $gateway = Join-Path $accountDir.FullName "Gateway"
+                    $gateway = Join-Path $accountDir.FullName "Workbench\Gateway"
                     $result = Join-Path $gateway "Outbox\result_latest.txt"
                     if ((Test-Path -LiteralPath $gateway -PathType Container) -or (Test-Path -LiteralPath $result -PathType Leaf)) { $roots += $accountDir.FullName }
                 }
@@ -96,7 +96,7 @@ $accountRoots = Find-AccountRoots $Root
 PassFail "account_root_discovered" ($accountRoots.Count -gt 0) ("count=" + $accountRoots.Count)
 
 foreach ($acct in $accountRoots) {
-    $gateway = Join-Path $acct "Gateway"
+    $gateway = Join-Path $acct "Workbench\Gateway"
     $statusDir = Join-Path $gateway "Status"
     $outbox = Join-Path $gateway "Outbox"
     $logsDir = Join-Path $gateway "Logs"

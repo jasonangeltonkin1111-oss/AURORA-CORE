@@ -1,24 +1,8 @@
 #ifndef AC_L4_RENDER_TRUTH_MQH
 #define AC_L4_RENDER_TRUTH_MQH
 
-static bool AC_L4_BUILD_REFRESH_BUSY = false;
-
-void AC_L4EnsureFreshBeforeRender()
-{
-   if(AC_L4_BUILD_REFRESH_BUSY)
-      return;
-   if(AC_L4_READY && !AC_L4ShouldRunFullScan())
-      return;
-
-   AC_L4_BUILD_REFRESH_BUSY = true;
-   AC_RefreshLayer4MarketWatchTruth();
-   AC_L4_BUILD_REFRESH_BUSY = false;
-}
-
 void AC_BuildLayer4Texts()
 {
-   AC_L4EnsureFreshBeforeRender();
-
    AC_L4_BOARD_SECTION = "\r\nLAYER 4 - LIVE QUOTE AND SPREAD TRUTH\r\n";
    AC_L4_BOARD_SECTION += "----------------------------------------\r\n";
    AC_L4_BOARD_SECTION += "Status:                     " + AC_L4_SCAN_STATUS + "\r\n";
@@ -63,7 +47,6 @@ void AC_BuildLayer4Texts()
 
 string AC_Layer4BoardSection()
 {
-   AC_L4EnsureFreshBeforeRender();
    if(!AC_L4_READY)
       return "\r\nLAYER 4 - LIVE QUOTE AND SPREAD TRUTH\r\n----------------------------------------\r\nStatus: Pending\r\n";
    return AC_L4_BOARD_SECTION;
@@ -71,7 +54,6 @@ string AC_Layer4BoardSection()
 
 string AC_Layer4WorkbenchSection()
 {
-   AC_L4EnsureFreshBeforeRender();
    if(!AC_L4_READY)
       return "\r\nL4_MARKETWATCH_TRUTH\r\nstatus=pending\r\n";
    return AC_L4_WORKBENCH_SECTION;
@@ -79,7 +61,6 @@ string AC_Layer4WorkbenchSection()
 
 string AC_Layer4DossierSection(const string symbol)
 {
-   AC_L4EnsureFreshBeforeRender();
    string market_state = AC_L2MarketStateForSymbol(symbol);
    string text = "\r\nLAYER 4 - LIVE QUOTE AND SPREAD TRUTH\r\n";
    text += "----------------------------------------\r\n";
@@ -156,8 +137,7 @@ string AC_Layer4DossierSection(const string symbol)
 
 string AC_Layer4StatusRow()
 {
-   AC_L4EnsureFreshBeforeRender();
-   return "schema_name=layer_status|schema_version=v4.1|layer_id=4|layer_name=" + AC_LAYER_4_NAME
+   return "schema_name=layer_status|schema_version=v4.0|layer_id=4|layer_name=" + AC_LAYER_4_NAME
       + "|source_owner=" + AC_RUNTIME1_OWNER
       + "|build_version=" + AC_BUILD_VERSION
       + "|upgrade_id=" + AC_UPGRADE_ID

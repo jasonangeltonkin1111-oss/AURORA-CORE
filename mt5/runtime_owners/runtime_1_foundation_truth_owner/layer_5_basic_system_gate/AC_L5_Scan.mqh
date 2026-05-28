@@ -110,10 +110,7 @@ AC_L5GatePacket AC_L5EvaluateSymbol(const string symbol)
       AC_L5AppendReason(p.gate_reason, "quote_not_fresh_enough");
       AC_L5_BLOCK_STALE_QUOTE++;
    }
-   // Missing tick is already its own L4/L5 blocker. Only label invalid bid/ask
-   // when a tick packet exists but the bid/ask fields are unsafe. This keeps
-   // Board/Dossier/Workbench counters aligned with the Layer 4 owner packet.
-   if(l4.tick_available && !l4.bid_ask_valid)
+   if(!l4.bid_ask_valid)
    {
       p.blocked_invalid_bidask = true;
       AC_L5AppendReason(p.gate_reason, "invalid_bid_ask");

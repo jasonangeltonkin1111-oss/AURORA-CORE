@@ -21,22 +21,13 @@ Runtime 3 is calculation support only. It must not become broker truth, ranking 
 - `aurora_worker_l13.py` / `aurora_worker_l13_dispatch.py` — Layer 13 dynamic ranking_group selection support. Must consume L12 group outputs and must not build symbol candidates, correlation, Global Top 10, permission, or execution.
 - `aurora_worker_l14.py` / `aurora_worker_l14_dispatch.py` — Layer 14 ranking_group leader candidate-pool support. Must consume L13 selected groups and L11 Top 5, preserving L12/L13 context. Must not run correlation, build Global Top 10, permit, alert, or execute.
 - `aurora_worker_l15.py` / `aurora_worker_l15_dispatch.py` — Layer 15 correlation / diversity scoring support. Must consume the L14 candidate pool and may read Shared OHLC Store when available. Must not call MT5, poll brokers, create private OHLC caches, scan the full universe, build Global Top 10, permit, alert, or execute.
-- `aurora_worker_l16.py` / `aurora_worker_l16_safe.py` / `aurora_worker_l16_dispatch.py` — Layer 16 Global Top 10 builder support. `aurora_worker_l16.py` is a compatibility shim; `aurora_worker_l16_safe.py` is the active L16 implementation source. L16 must consume L14/L15 outputs only, build a held visible inspection basket, record clean/fallback display slots, preserve hold truth, and must not permit, alert, execute, or validate an edge.
+- `aurora_worker_l16.py` / `aurora_worker_l16_dispatch.py` — Layer 16 Global Top 10 builder support. Must consume L14/L15 outputs only, build a held visible inspection basket, record clean/fallback display slots, preserve hold truth, and must not permit, alert, execute, or validate an edge.
 - `aurora_worker_l17.py` / `aurora_worker_l17_dispatch.py` — Layer 17 Deep Evidence Selection Split support. Must consume L16 held visible display rows only, prefer CLEAN/CLEAN_DEGRADED rows, preserve fallback labels, cap deep evidence requests, publish selected/rejected split outputs, and must not collect OHLC/ticks/indicators/liquidity, poll brokers, create private OHLC caches, permit, alert, execute, or validate an edge.
 - `aurora_worker_l18.py` / `aurora_worker_l18_dispatch.py` — Layer 18 Selected Raw OHLC Bar Pack support. Must read existing Shared OHLC Store seed files only, decorate canonical Selection Desk copied dossiers only, publish L18 status/Board overview counts, and must not call `CopyRates`, poll brokers, create private OHLC caches, write base Dossiers, calculate signals/patterns, permit, alert, or execute. L18 dispatch invokes L19 after L18 publication.
 - `aurora_worker_l19.py` / `aurora_worker_l19_dispatch.py` — Layer 19 Candle Geometry and Structure support. Must read existing Shared OHLC Store seed files using the L18 selected-dossier scope, render latest 5 candles per timeframe into canonical selected copied dossiers, publish L19 status/Board overview counts, and must not call `CopyRates`, poll brokers, write Shared OHLC Store, create private OHLC caches, write base Dossiers, create trade signals, permit, alert, or execute. Current scope is Wave 1 single-candle structure only.
 - `AuroraWorker.spec` — PyInstaller packaging spec for the worker executable.
 - `install_worker_global.ps1` — Windows install/register script for the shared global scheduled-task daemon/watchdog path.
 - `register_watchdog_safe.ps1` — Windows watchdog registration/support script.
-
-## Chain 11 currentness addendum
-
-- L15 consumes latest-current L14 only and uses recent reachable correlation windows: M15 primary, M5 secondary, H1 optional reference only.
-- L16 consumes latest-current accepted L15 only. Held/fallback display rows remain labelled and must not silently become clean current truth.
-- L17 consumes latest-current L16 layer output only. Selection Desk visible rows are operator navigation/readback, not a fallback source for current downstream truth.
-- L18 consumes latest-current L17 only and may report `complete_history_limited` when files decode, are fresh or aging, and only display depth is shallow.
-- L19 consumes latest-current L17 and L18 only. Geometry from stale or blocked upstream is not downstream-allowed.
-- `test_chain11_currentness.py` is an active synthetic test file for stale-upstream refusal, static epoch rejection, M15/M5 L15 correlation, and L18 history-limited semantics.
 
 ## Runtime chain boundary
 
@@ -71,11 +62,11 @@ L8 may read Runtime 1 Shared OHLC Priority Window files for movement/range ranki
 
 If Shared OHLC data is missing, stale, unreadable, or insufficient, the worker must publish degraded proof rather than fake accepted movement, fake correlation, fake L18 completion, or fake L19 structure completion.
 
-L15 may read shared OHLC for candidate-pool correlation/diversity only. Its current recent correlation contract is M15 primary, M5 secondary, H1 optional reference only.
+L15 may read shared OHLC for candidate-pool correlation/diversity only.
 
 L16 must not read raw OHLC or recompute correlation. L16 consumes L15 correlation/diversity outputs.
 
-L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for latest-current selected visible L16 display rows.
+L17 must not collect raw OHLC, ticks, indicators, or liquidity. It only assigns later evidence budget for selected visible L16 display rows.
 
 L18 may read existing Shared OHLC Store seed files and copy/render selected raw OHLC rows into canonical selected copied dossiers only. L18 must not call `CopyRates`, change Shared OHLC Store contracts, create new OHLC files/caches, touch base Dossiers, or infer trade signals.
 
@@ -95,7 +86,6 @@ The following one-shot repair scripts were removed from active `main` because th
 
 - `external_worker/aurora_recovery_hotfix_v2.py`
 - `external_worker/aurora_full_repair_no_install.py`
-- `external_worker/aurora_packaging_path_fix.py`
 
 Do not recreate one-shot repair scripts in this folder unless the task explicitly scopes them, they are clearly marked non-runtime, and they cannot masquerade as active Runtime 3 authority.
 

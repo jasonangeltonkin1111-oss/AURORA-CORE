@@ -142,12 +142,7 @@ bool AC_L5QuoteFreshEnough(const AC_L4SymbolPacket &l4)
 bool AC_L5SurfaceUsable(const AC_L4SymbolPacket &l4)
 {
    string surface_quality = AC_L5Lower(l4.surface_quality);
-   // L4 Surface Warning is advisory evidence, not a separate L5 hard blocker.
-   // L5 must use its own explicit blockers for non-fresh quote, missing tick,
-   // invalid bid/ask, and absurd spread. Otherwise Layer 4's broad warning state
-   // silently bypasses the Layer 5 policy threshold and false-blocks symbols that
-   // should be passed or blocked by a named Basic Gate rule.
-   return surface_quality != "surface blocked" && surface_quality != "not scanned";
+   return surface_quality == "surface usable";
 }
 
 bool AC_L5SpreadAbsurd(const AC_L4SymbolPacket &l4)

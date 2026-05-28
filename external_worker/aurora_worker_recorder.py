@@ -148,7 +148,7 @@ def gateway_record_event(
     """Write a bounded EXE-side Gateway addendum event.
 
     This recorder is deliberately not an EA/MT5 logger. It writes from the packaged
-    Gateway process into the account-local Gateway/Logs folder.
+    Gateway process into the account-local Workbench/Gateway/Logs folder.
 
     It is event-boundary and duplicate-throttled by default. If the same event
     signature repeats, it is skipped to avoid per-heartbeat log spam. It never

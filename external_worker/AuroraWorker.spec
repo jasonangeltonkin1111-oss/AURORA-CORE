@@ -35,7 +35,6 @@ a = Analysis(
         'aurora_worker_l19',
         'aurora_worker_l19_dispatch',
         'aurora_worker_selection_surface_shortcuts',
-        'aurora_worker_selection_surface_shortcuts_ux',
         'aurora_worker_selection_surface_groups',
         'aurora_worker_selection_surface_root_index',
         'aurora_worker_selection_root_index',

@@ -52,23 +52,6 @@ Register-ScheduledTask `
   -Description "Aurora global Gateway watchdog repair task" `
   -Force | Out-Null
 
-$watchdogEnableAttempted = "false"
-$watchdogEnableError = "none"
-$watchdogStartAttempted = "false"
-$watchdogStartError = "none"
-try {
-    $watchdogEnableAttempted = "true"
-    Enable-ScheduledTask -TaskName $watchdogTask -ErrorAction Stop | Out-Null
-} catch {
-    $watchdogEnableError = ($_.Exception.Message -replace "\r?\n", " ")
-}
-try {
-    $watchdogStartAttempted = "true"
-    Start-ScheduledTask -TaskName $watchdogTask -ErrorAction Stop
-} catch {
-    $watchdogStartError = ($_.Exception.Message -replace "\r?\n", " ")
-}
-
 $daemon = Get-ScheduledTask -TaskName $daemonTask -ErrorAction SilentlyContinue
 $watchdog = Get-ScheduledTask -TaskName $watchdogTask -ErrorAction SilentlyContinue
 
@@ -78,33 +61,22 @@ $watchdogRegistered = if ($watchdog) { "true" } else { "false" }
 $watchdogState = if ($watchdog) { $watchdog.State.ToString() } else { "not_registered" }
 $packagedExePresent = if (Test-Path $watchdogExe) { "true" } else { "false" }
 $packagedDllPresent = if (Test-Path $watchdogDll) { "true" } else { "false" }
-$daemonRunnable = $daemonRegistered -eq "true" -and $daemonState -ne "Disabled" -and $daemonState -ne "registration_failed"
-$watchdogRunnable = $watchdogRegistered -eq "true" -and $watchdogState -ne "Disabled" -and $watchdogState -ne "registration_failed"
 
-# This is install/autostart configuration proof only. The watchdog helper does
-# not claim operator_cmd_required=false because stale/missing daemon recovery
-# still requires fresh shared status and account result proof.
-$operatorRequired = "true"
+# This is install/autostart configuration proof only.
+# It is not stale/missing daemon recovery proof. Runtime closeout still requires
+# shared status freshness plus watchdog recovery evidence from the Gateway status file.
+$operatorRequired = if ($daemonRegistered -eq "true" -and $watchdogRegistered -eq "true" -and $packagedExePresent -eq "true" -and $packagedDllPresent -eq "true") { "false" } else { "true" }
 
 if (Test-Path $installStatus) {
     $text = Get-Content $installStatus -Raw
     $pairs = @{
-        "schema_version" = "8"
+        "schema_version" = "6"
         "scheduled_task_registered" = $daemonRegistered
         "scheduled_task_state" = $daemonState
-        "scheduled_task_runnable" = if ($daemonRunnable) { "true" } else { "false" }
         "watchdog_task_registered" = $watchdogRegistered
         "watchdog_task_state" = $watchdogState
-        "watchdog_task_runnable" = if ($watchdogRunnable) { "true" } else { "false" }
-        "watchdog_task_error" = $watchdogEnableError
-        "watchdog_task_enable_attempted" = $watchdogEnableAttempted
-        "watchdog_task_enable_error" = $watchdogEnableError
-        "watchdog_task_start_attempted" = $watchdogStartAttempted
-        "watchdog_task_start_error" = $watchdogStartError
-        "watchdog_default_enabled" = if ($watchdogRunnable) { "true" } else { "false" }
+        "watchdog_task_error" = "none"
         "operator_cmd_required" = $operatorRequired
-        "runtime_proof_ready_for_operator_cmd" = "false"
-        "runtime_proof_ready_reason" = "watchdog_helper_does_not_claim_runtime_recovery_proof"
         "auto_start_configured" = if ($operatorRequired -eq "false") { "true" } else { "false" }
         "packaged_exe_present" = $packagedExePresent
         "packaged_internal_python_dll_present" = $packagedDllPresent

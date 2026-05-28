@@ -239,7 +239,7 @@ void AC_L7LoadTop20Evidence()
 {
    string top20_text = AC_L7ReadSmallTextFile(AC_L7RankedTop20Path(), 16000);
    AC_L7_TOP20_FIRST_LINE = AC_L7FirstTop20Symbol(top20_text);
-   AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = AC_L7PipeField(AC_L7_TOP20_FIRST_LINE, 6, "not_available");
+   AC_L7_CURRENT_GLOBAL_SESSION_RENDERED = AC_L7PipeField(AC_L7_TOP20_FIRST_LINE, 5, "not_available");
 }
 
 void AC_L7AcceptCurrentEpoch()
@@ -324,7 +324,6 @@ void AC_L7RefreshRankedSidecar()
    string trade_permission = AC_L7KvValue(ranked_manifest, "trade_permission", "not_available");
    string ranking_runtime = AC_L7KvValue(ranked_manifest, "ranking_runtime", "not_available");
    string selection_runtime = AC_L7KvValue(ranked_manifest, "selection_runtime", "not_available");
-   string execution = AC_L7KvValue(ranked_manifest, "execution", "not_available");
 
    AC_L7_RANKED_ROWS_RENDERED = ranked_rows;
    AC_L7_RANKED_COUNT_RENDERED = AC_L7KvInt(ranked_manifest, "ranked_count", 0);
@@ -349,7 +348,7 @@ void AC_L7RefreshRankedSidecar()
    bool identity_ok = (source_input_checksum == input_payload_checksum && input_payload_checksum != "not_available")
       || (checksum_match_text == "true" && ranked_input_checksum == input_payload_checksum && ranked_input_checksum_after == input_payload_checksum);
    bool authority_ok = (authority == AC_EXTERNAL_WORKER_AUTHORITY);
-   bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true" && execution == "false");
+   bool permission_ok = (trade_permission == "false" && selection_runtime == "false" && ranking_runtime == "true");
    bool files_ok = FileIsExist(AC_L7RankedCsvPath(), AC_CommonFlag())
       && FileIsExist(AC_L7RankedTop20Path(), AC_CommonFlag())
       && AC_L7_SYMBOL_RANK_FILE_COUNT_OK_RENDERED == "true"
@@ -445,12 +444,9 @@ string AC_L7RenderRankEvidenceBlock(const string rank_text, const string rank_pa
    text += prefix + "Rank State: " + AC_L7KvValue(rank_text, "rank_state", "not_available") + "\r\n";
    text += prefix + "Rank Index: " + AC_L7KvValue(rank_text, "rank_index", "not_available") + " / " + IntegerToString(AC_L7_RANKED_ROWS_RENDERED) + "\r\n";
    text += prefix + "Session Score: " + AC_L7KvValue(rank_text, "session_score", "not_available") + "\r\n";
-   text += prefix + "Session Confidence: " + AC_L7KvValue(rank_text, "session_relevance_confidence", "not_available") + "\r\n";
    text += prefix + "Session Bucket: " + AC_L7KvValue(rank_text, "session_bucket", "not_available") + "\r\n";
    text += prefix + "Score Quality: " + AC_L7KvValue(rank_text, "score_quality", "not_available") + "\r\n";
    text += prefix + "Current Session: " + AC_L7KvValue(rank_text, "current_session", "not_available") + "\r\n";
-   text += prefix + "Session Minutes Elapsed: " + AC_L7KvValue(rank_text, "session_minutes_elapsed", "not_available") + "\r\n";
-   text += prefix + "Session Minutes Remaining: " + AC_L7KvValue(rank_text, "session_minutes_remaining", "not_available") + "\r\n";
    text += "Session Definition Source: " + AC_L7KvValue(rank_text, "session_definition_source", "not_available") + "\r\n";
    text += "Session Time Basis: " + AC_L7KvValue(rank_text, "session_time_basis", "not_available") + "\r\n";
    text += "Time Basis Confidence: " + AC_L7KvValue(rank_text, "time_basis_confidence", "not_available") + "\r\n";
@@ -458,10 +454,6 @@ string AC_L7RenderRankEvidenceBlock(const string rank_text, const string rank_pa
    text += "Live Activity Quality Score: " + AC_L7KvValue(rank_text, "live_activity_quality_score", "not_available") + "\r\n";
    text += "Quote Freshness Quality Score: " + AC_L7KvValue(rank_text, "quote_freshness_quality_score", "not_available") + "\r\n";
    text += "Spread Session Safety Score: " + AC_L7KvValue(rank_text, "spread_session_safety_score", "not_available") + "\r\n";
-   text += "Tick Age Seconds: " + AC_L7KvValue(rank_text, "tick_age_seconds", "not_available") + "\r\n";
-   text += "Spread BPS: " + AC_L7KvValue(rank_text, "spread_bps", "not_available") + "\r\n";
-   text += "Quote Quality: " + AC_L7KvValue(rank_text, "quote_quality", "not_available") + "\r\n";
-   text += "Surface Quality: " + AC_L7KvValue(rank_text, "surface_quality", "not_available") + "\r\n";
    text += "Reason: " + AC_L7KvValue(rank_text, "reason", "not_available") + "\r\n";
    text += "Rank Source: " + rank_path + "\r\n";
    return text;

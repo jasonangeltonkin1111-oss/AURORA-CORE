@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from aurora_worker_io import account_root_from_outbox, payload_checksum, read_text
+from aurora_worker_io import payload_checksum, read_text
 from aurora_worker_l9_contract import L9_TF_WEIGHTS
 
 
@@ -44,8 +44,8 @@ def sanitize_path_part(value: str) -> str:
 
 
 def shared_ohlc_store_root(outbox: Path) -> Path:
-    # outbox = <server>/<account>/Gateway/Outbox
-    account_root = account_root_from_outbox(outbox)
+    # outbox = <server>/<account>/Workbench/Gateway/Outbox
+    account_root = outbox.parents[2]
     server_root = account_root.parent
     return server_root / "Shared Market Data" / "OHLC Store"
 

@@ -47,7 +47,7 @@ check_has l11_tree_ranked_symbols "external_worker/aurora_worker_l11_tree.py" "0
 check_has l11_tree_top5_txt "external_worker/aurora_worker_l11_tree.py" "00_Top5_Current.txt"
 check_has l11_tree_top5_csv "external_worker/aurora_worker_l11_tree.py" "00_Top5_Current.csv"
 check_has l11_tree_dispatch_called "external_worker/aurora_worker_l11_dispatch.py" "publish_l11_selection_desk_taxonomy_tree"
-check_has l11_dispatch_called "external_worker/aurora_worker_entrypoint.py" "run_l11_after_render_index"
+check_has l11_dispatch_called "external_worker/aurora_worker_entrypoint.py" "run_l11_after_core"
 check_has l11_package_hiddenimport "external_worker/AuroraWorker.spec" "aurora_worker_l11"
 check_has l11_cleanup_hiddenimport "external_worker/AuroraWorker.spec" "aurora_worker_l11_cleanup"
 check_has l11_dossier_copy_hiddenimport "external_worker/AuroraWorker.spec" "aurora_worker_l11_dossier_copy"

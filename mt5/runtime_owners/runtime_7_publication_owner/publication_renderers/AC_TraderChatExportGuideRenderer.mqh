@@ -37,18 +37,11 @@ bool AC_TCSHasTop10Selection(const string symbol)
    return (AC_L16CsvLineForSymbol(symbol) != "");
 }
 
-string AC_TCSQueueText(const string symbol)
+string AC_TCSReviewText(const string symbol)
 {
-   string row = AC_L17CsvLineForSymbol(symbol);
-   if(row == "") return "0";
-   return AC_TCSCsvField(row, 0, "0");
-}
-
-string AC_TCSTop10RankText(const string symbol)
-{
-   string row = AC_L16CsvLineForSymbol(symbol);
-   if(row == "") return "0";
-   return AC_TCSCsvField(row, 0, "0");
+   if(AC_TCSHasQueueSelection(symbol)) return "MANUAL_REVIEW_PACKET_AVAILABLE";
+   if(AC_TCSHasTop10Selection(symbol)) return "WATCH_ONLY_EXPORT_AVAILABLE";
+   return "NO_CURRENT_EXPORT_PACKET";
 }
 
 string AC_TCSBoardReadinessState()
@@ -56,10 +49,20 @@ string AC_TCSBoardReadinessState()
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
    if(AC_L16_SELECTED_COUNT > 0 && AC_L17_DEEP_SELECTED_COUNT > 0)
-      return "DEEP_QUEUE_NUMERIC_CONTEXT_AVAILABLE";
+      return "READY_FOR_MANUAL_REVIEW_EXPORT";
    if(AC_L16_SELECTED_COUNT > 0)
-      return "TOP10_NUMERIC_CONTEXT_ONLY";
-   return "NO_CURRENT_NUMERIC_EXPORT";
+      return "WATCH_ONLY_EXPORT";
+   return "NO_CURRENT_EXPORT";
+}
+
+string AC_TCSBoardReadinessReason()
+{
+   string state = AC_TCSBoardReadinessState();
+   if(state == "READY_FOR_MANUAL_REVIEW_EXPORT")
+      return "selection/evidence-budget queue candidates exist; L23 export may be copied as labelled truth context only; permission remains false";
+   if(state == "WATCH_ONLY_EXPORT")
+      return "visible Top 10 candidates exist, but no L17 evidence-budget queue selection is ready; export is watch-only";
+   return "no current selected evidence-budget queue candidates available";
 }
 
 string AC_TCSL6CsvLineForSymbol(const string symbol)
@@ -78,70 +81,50 @@ string AC_TCSL6CsvLineForSymbol(const string symbol)
    return "";
 }
 
-string AC_TCSCostShort(string value)
+string AC_TCSTop10RankText(const string symbol)
 {
-   value = AC_TCSValueOrNA(value);
-   if(value == "complete_cost_model") return "OK";
-   if(value == "warning_micro_spread_cost_model_mismatch") return "MICRO_WARN";
-   if(value == "warning_cost_model_mismatch") return "WARN";
-   if(value == "usable_fallback_cost_model_primary_unavailable") return "FALLBACK";
-   if(value == "degraded_cost_model_mismatch") return "DEGRADED";
-   return value;
+   string row = AC_L16CsvLineForSymbol(symbol);
+   if(row == "") return "No";
+   return "#" + AC_TCSCsvField(row, 0, "NA");
 }
 
-string AC_TCSShortGroup(string group)
+string AC_TCSQueueText(const string symbol)
 {
-   group = AC_TCSValueOrNA(group);
-   if(group == "Currency / Forex Cross Pairs") return "FX Cross";
-   if(group == "Currency / Forex Major Pairs") return "FX Major";
-   if(group == "Currency / Forex Exotic Pairs") return "FX Exotic";
-   if(group == "Commodities / Precious Metals") return "Metals";
-   if(group == "Index / European Indices") return "EU Index";
-   if(group == "Index / US Indices") return "US Index";
-   if(group == "Crypto Currency / Large Cap Crypto") return "Crypto Large";
-   return group;
+   string row = AC_L17CsvLineForSymbol(symbol);
+   if(row == "") return "No";
+   return "#" + AC_TCSCsvField(row, 0, "NA");
 }
 
-string AC_TCSDeepNumericText()
-{
-   return "L17=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5"
-      + " | L18=" + IntegerToString(AC_L18_SOURCE_FILES_FOUND) + "/" + IntegerToString(AC_L18_SOURCE_FILES_EXPECTED)
-      + " miss=" + IntegerToString(AC_L18_SOURCE_FILES_MISSING)
-      + " | L19 rows=" + IntegerToString(AC_L19_VALID_GEOMETRY_ROWS)
-      + " stale=" + IntegerToString(AC_L19_FRESHNESS_STALE_COUNT);
-}
-
-string AC_TCSSymbolNumericCard(const string rank_text,
-                               const string symbol,
-                               const string ranking_group,
-                               const string score_label,
-                               const string score_value,
-                               const string source_score_label,
-                               const string source_score_value,
-                               const string corr_score,
-                               const string top10_text)
+string AC_TCSCompactSymbolRow(const string rank_text,
+                              const string symbol,
+                              const string ranking_group,
+                              const string score_label,
+                              const string score_value,
+                              const string source_score_label,
+                              const string source_score_value,
+                              const string corr_score,
+                              const string top10_text)
 {
    string l6_row = AC_TCSL6CsvLineForSymbol(symbol);
    string l11_row = AC_L11RankedCsvLineForSymbol(symbol);
-   string cost_state = (l6_row == "" ? "NA" : AC_TCSCostShort(AC_TCSCsvField(l6_row, 9, "NA")));
+   string bps = (l6_row == "" ? "NA" : AC_TCSCsvField(l6_row, 9, "NA"));
    string move = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 37, "NA"));
    string loc = (l11_row == "" ? "NA" : AC_TCSCsvField(l11_row, 40, "NA"));
-   string queue_rank = AC_TCSQueueText(symbol);
-   string top10_rank = top10_text;
-   if(top10_rank == "No") top10_rank = "0";
+   string queue_text = AC_TCSQueueText(symbol);
+   string review_text = AC_TCSReviewText(symbol);
 
-   string text = "";
-   text += rank_text + " " + symbol + " - " + AC_TCSShortGroup(ranking_group) + "\r\n";
-   text += "  Scores: " + score_label + "=" + score_value
+   return rank_text + " " + symbol
+      + " | group=" + ranking_group
+      + " | " + score_label + "=" + score_value
       + " | " + source_score_label + "=" + source_score_value
-      + " | cost=" + cost_state
+      + " | bps=" + bps
       + " | move=" + move
-      + " | loc=" + loc + "\r\n";
-   text += "  Trade data: corr=" + corr_score
-      + " | top10=" + top10_rank
-      + " | queue=" + queue_rank
-      + " | " + AC_TCSDeepNumericText() + "\r\n";
-   return text;
+      + " | loc=" + loc
+      + " | corr=" + corr_score
+      + " | top10=" + top10_text
+      + " | queue=" + queue_text
+      + " | review=" + review_text
+      + " | trade_allowed=false | entry_signal=false\r\n";
 }
 
 string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
@@ -149,14 +132,13 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
    AC_L16RefreshSummary();
    AC_L17RefreshSummary();
    string text = "";
-   text += "\r\nGLOBAL TOP 10 - TRADE DATA SNAPSHOT\r\n";
+   text += "\r\nGLOBAL TOP 10 - INSPECTION ORDER\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Status: " + AC_L16_STATUS
-      + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10"
-      + " | fallback=" + IntegerToString(AC_L16_FALLBACK_COUNT)
-      + " | deep=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5"
-      + " | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
-   text += "Numbers: basket/source scores, cost state, move, location, correlation, Top10 rank, queue rank, L18/L19 deep-data counters.\r\n";
+   text += "Purpose: compact inspection order; scores are source-owner values, not board calculations.\r\n";
+   text += "Status: " + AC_L16_STATUS + " | selected=" + IntegerToString(AC_L16_SELECTED_COUNT) + "/10 | queued=" + IntegerToString(AC_L17_DEEP_SELECTED_COUNT) + "/5 | readiness=" + AC_TCSBoardReadinessState() + "\r\n";
+   text += "Legend: basket=constrained inspection score | source=upstream candidate score | bps=spread cost | move/location are surface scores | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
+   text += "Inactive future owners: ATR, indicators, liquidity, setup validation, L23 permission upgrade.\r\n";
+   text += "Rank Note: Global rank may not sort by basket score alone because L16 also applies group/correlation/fallback constraints.\r\n";
 
    string csv = AC_L16ReadSmallTextFile(AC_L16Top10CsvPath(), 1000000);
    if(csv == "")
@@ -180,25 +162,25 @@ string AC_BoardGlobalTop10TraderOverviewSection(const int max_rows = 10)
       string basket_score = AC_TCSCsvField(line, 7, "NA");
       string source_score = AC_TCSCsvField(line, 8, "NA");
       string corr_score = AC_TCSCsvField(line, 13, "NA");
-      text += AC_TCSSymbolNumericCard(rank_text, symbol, ranking_group, "basket", basket_score, "source", source_score, corr_score, rank_text);
+      text += AC_TCSCompactSymbolRow(rank_text, symbol, ranking_group, "basket", basket_score, "source", source_score, corr_score, rank_text);
       printed++;
    }
    if(printed == 0) text += "Rows: NA - no usable L16 rows found.\r\n";
+   text += "Meaning: inspection/evidence-review export queue only; no setup permission, no execution.\r\n";
    return text;
 }
 
-string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7, const int max_symbols_per_group = 3)
+string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7, const int max_symbols_per_group = 5)
 {
    AC_L11RefreshSummary();
    AC_L13RefreshSummary();
    AC_L17RefreshSummary();
    string text = "";
-   text += "\r\nTOP SYMBOLS PER SELECTED GROUP - TRADE DATA SNAPSHOT\r\n";
+   text += "\r\nTOP 5 PER SELECTED GROUP\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Status: selected_groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT)
-      + " | symbols_per_group_shown=" + IntegerToString(max_symbols_per_group)
-      + " | " + AC_TCSDeepNumericText() + "\r\n";
-   text += "Numbers: group rank/score, L6 cost state, L8 move score, L9 location score, correlation if in Top10, queue rank.\r\n";
+   text += "Source: L13 selected ranking_groups + Symbol Ranking Inside Ranking Group Top 5.\r\n";
+   text += "Status: groups=" + IntegerToString(AC_L13_SELECTED_GROUP_COUNT) + " | dynamic selected groups only\r\n";
+   text += "Legend: group_score=L11 score | group_rank=rank inside selected group | top10=L16 visible basket membership | queue=L17 evidence-budget queue rank | review=manual evidence-review queue, not permission.\r\n";
 
    string selected_csv = AC_L13ReadSmallTextFile(AC_L13SelectedCsvPath(), 1000000);
    string top5_csv = AC_L11ReadSmallTextFile(AC_L11Top5Path(), 1000000);
@@ -224,9 +206,7 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
       if(ranking_group == "NA") continue;
       string group_rank = AC_TCSCsvField(group_line, 0, "NA");
       string group_score = AC_TCSCsvField(group_line, 8, "NA");
-      text += "\r\n[" + AC_TCSShortGroup(ranking_group) + "] full_group=" + ranking_group
-         + " | selected_rank=#" + group_rank
-         + " | group_score=" + group_score + "\r\n";
+      text += "\r\n[" + ranking_group + "] selected_rank=#" + group_rank + " | group_selection_score=" + group_score + "\r\n";
 
       int symbols_printed = 0;
       for(int i = 1; i < top5_count && symbols_printed < max_symbols_per_group; i++)
@@ -241,25 +221,27 @@ string AC_BoardSelectedGroupsTop5TraderOverviewSection(const int max_groups = 7,
          string top10_text = AC_TCSTop10RankText(symbol);
          string l16_row = AC_L16CsvLineForSymbol(symbol);
          string corr_score = (l16_row == "" ? "NA" : AC_TCSCsvField(l16_row, 13, "NA"));
-         text += AC_TCSSymbolNumericCard("#" + group_symbol_rank, symbol, ranking_group, "group_score", group_score_row, "group_rank", "#" + group_symbol_rank, corr_score, top10_text);
+         text += AC_TCSCompactSymbolRow("#" + group_symbol_rank, symbol, ranking_group, "group_score", group_score_row, "group_rank", "#" + group_symbol_rank, corr_score, top10_text);
          symbols_printed++;
       }
-      if(symbols_printed == 0) text += "Rows: NA - no Top symbols found for this selected group.\r\n";
+      if(symbols_printed == 0) text += "Rows: NA - no Top 5 rows found for this selected group.\r\n";
       groups_printed++;
    }
 
    if(groups_printed == 0) text += "Rows: NA - no selected dynamic groups found.\r\n";
+   text += "Meaning: selected dynamic groups only; not all groups, not trade permission.\r\n";
    return text;
 }
 
 string AC_BoardTraderSelectionOverviewSection()
 {
    string text = "";
-   text += "\r\nSELECTION DESK - TRADER DATA VIEW\r\n";
+   text += "\r\nSELECTION DESK - TRADER VIEW\r\n";
    text += "==================================================\r\n";
-   text += "Purpose: readable symbol trade-data context from existing owner outputs. Render-only; no score calculation, no new owner.\r\n";
+   text += "Purpose: fast symbol quality cockpit for trader chat. Render-only; no score calculation, no new owner.\r\n";
+   text += "Trade lock is declared once at the Board header; rows below are inspection/evidence-review queue only.\r\n";
    text += AC_BoardGlobalTop10TraderOverviewSection(10);
-   text += AC_BoardSelectedGroupsTop5TraderOverviewSection(7, 3);
+   text += AC_BoardSelectedGroupsTop5TraderOverviewSection(7, 5);
    return text;
 }
 
@@ -270,7 +252,7 @@ string AC_L23ExportPermissionLockSection()
    text += "--------------------------------------------------\r\n";
    text += "manual_review_packet_available = true only when copied packet truth is labelled with source, missing, degraded, and stale evidence.\r\n";
    text += "trader_chat_export_available = true only for truth-context export; it is not an entry instruction.\r\n";
-   text += "class_1_system_alert_allowed: system-status only; class_2_setup_alert_allowed=false; directional_alert_allowed=false.\r\n";
+   text += "class_1_system_alert_allowed=true; class_2_setup_alert_allowed=false; directional_alert_allowed=false.\r\n";
    text += "entry_signal=false; trade_allowed=false; auto_trade_allowed=false; live_allowed=false; prop_firm_ready=false; edge_validated=false.\r\n";
    text += "Permission Block Reason: validation_missing; prop_profile_not_runtime_verified; selected evidence may be partial/degraded/stale.\r\n";
    return text;
@@ -285,8 +267,8 @@ string AC_L23ExportPacketSchemaSection()
    text += "Required Fields: schema_version, packet_created_utc, symbol, source_cycle_id, source_files_or_sections, upstream_layers_present, evidence_completeness_pct, missing_evidence_list, degraded_evidence_list, stale_evidence_list.\r\n";
    text += "Context Fields: setup_research_candidate, structure_context_summary, liquidity_context_summary, risk_geometry_context_summary, review_warnings, validation_required_reason, permission_block_reason.\r\n";
    text += "Permission Fields Required: manual_review_packet_available, trader_chat_export_available, class_1_system_alert_allowed, class_2_setup_alert_allowed, directional_alert_allowed, entry_signal, trade_allowed, auto_trade_allowed, live_allowed, prop_firm_ready, edge_validated.\r\n";
-   text += "Forbidden Values Before Validation: true values for entry, trade, auto, live, prop, or edge permission fields.\r\n";
-   text += "Forbidden Wording: directional confirmation, probability marketing, guarantee language, best-now phrasing, prop-firm safety claims, or institutional-flow confirmation claims.\r\n";
+   text += "Forbidden Values Before Validation: entry_signal=true; trade_allowed=true; auto_trade_allowed=true; live_allowed=true; prop_firm_ready=true; edge_validated=true.\r\n";
+   text += "Forbidden Wording: confirmed buy/sell; high probability; guaranteed setup; best trade now; prop-firm safe; institutional order flow confirmed.\r\n";
    return text;
 }
 

@@ -17,11 +17,6 @@ void AC_AppendExternalWorkerSharedSupervisorTexts()
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_status_processed_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_status_accepted_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_status_degraded_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count + "\r\n";
-   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_account_heartbeat_present_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_heartbeat_present_count + "\r\n";
-   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_account_process_status_present_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_process_status_present_count + "\r\n";
-   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_account_result_pair_present_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_result_pair_present_count + "\r\n";
-   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_account_proof_contradiction_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_count + "\r\n";
-   AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_account_proof_contradiction_reason=" + AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_reason + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_daemon_task_registered=" + AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_registered + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_daemon_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state + "\r\n";
    AC_EXTERNAL_WORKER_WORKBENCH_SECTION += "shared_watchdog_task_registered=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_registered + "\r\n";
@@ -54,8 +49,6 @@ void AC_AppendExternalWorkerSharedSupervisorTexts()
       + "|shared_status_processed_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count
       + "|shared_status_accepted_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count
       + "|shared_status_degraded_root_count=" + AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count
-      + "|shared_account_result_pair_present_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_result_pair_present_count
-      + "|shared_account_proof_contradiction_count=" + AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_count
       + "|shared_daemon_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state
       + "|shared_watchdog_task_state=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_state
       + "|shared_watchdog_last_action=" + AC_EXTERNAL_WORKER_STATUS.shared_watchdog_last_action

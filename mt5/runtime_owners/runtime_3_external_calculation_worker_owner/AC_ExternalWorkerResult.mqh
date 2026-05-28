@@ -181,11 +181,6 @@ void AC_ReadExternalWorkerSharedStatus()
    AC_EXTERNAL_WORKER_STATUS.shared_status_processed_root_count = AC_EWValue(shared_text, "processed_root_count");
    AC_EXTERNAL_WORKER_STATUS.shared_status_accepted_root_count = AC_EWValue(shared_text, "accepted_root_count");
    AC_EXTERNAL_WORKER_STATUS.shared_status_degraded_root_count = AC_EWValue(shared_text, "degraded_root_count");
-   AC_EXTERNAL_WORKER_STATUS.shared_account_heartbeat_present_count = AC_EWValue(shared_text, "account_heartbeat_present_count");
-   AC_EXTERNAL_WORKER_STATUS.shared_account_process_status_present_count = AC_EWValue(shared_text, "account_process_status_present_count");
-   AC_EXTERNAL_WORKER_STATUS.shared_account_result_pair_present_count = AC_EWValue(shared_text, "account_result_pair_present_count");
-   AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_count = AC_EWValue(shared_text, "account_proof_contradiction_count");
-   AC_EXTERNAL_WORKER_STATUS.shared_account_proof_contradiction_reason = AC_EWValue(shared_text, "account_proof_contradiction_reason");
    AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_registered = AC_EWValue(shared_text, "daemon_task_registered");
    AC_EXTERNAL_WORKER_STATUS.shared_daemon_task_state = AC_EWValue(shared_text, "daemon_task_state");
    AC_EXTERNAL_WORKER_STATUS.shared_watchdog_task_registered = AC_EWValue(shared_text, "watchdog_task_registered");
