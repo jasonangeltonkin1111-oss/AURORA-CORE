@@ -2,13 +2,13 @@
 #define AC_CONFIG_MQH
 
 static const string AC_SYSTEM_NAME        = "AURORA CORE";
-static const string AC_BUILD_PHASE        = "layer6_gateway_path_sync";
-static const string AC_BUILD_VERSION      = "1.088";
-static const string AC_UPGRADE_ID         = "LAYER6_GATEWAY_PATH_SYNC";
-static const string AC_UPGRADE_SUMMARY    = "Aligns MT5 shared Gateway package/status read paths with the active installer one-folder worker outputs so Layer 6 ranked sidecar readback can detect installed worker/runtime proof; includes Runtime 0 final status resync and Layer 5 gate policy repair; preserves no trade permission.";
-static const string AC_UPGRADE_SCOPE      = "Small adjacent Gateway route/status sync needed for Layer 6 cost/friction ranking readback. MT5 now reads shared worker install/status proof from Gateway\\AuroraWorker, shared_worker_install_status.txt, and shared_worker_status.txt matching install_worker_global.ps1. No new owner, FileIO owner, worker V2, scheduler V2, score logic, selection, alerts, execution, or trade permission is added.";
-static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.088 and #property version=1.088. Runtime proof must show Runtime_Status final status sync clean, Gateway install/status read paths show current packaged worker proof when installer has run, L6 input primitives row_count equals L5 gate_pass, ranked_symbols.manifest exists after worker run, L6 ranked_symbols equals export input_count/source_l5_gate_pass unless drift is explicitly labelled, L6 authority=calculation_support_only, trade_permission=false, selection_runtime=false, execution=false, no closed/L5-blocked symbols ranked valid, zero-spread rows labelled truthfully not edge, and physical publication remains unblocked.";
-static const string AC_LOGGING_POLICY     = "event_boundary_layer6_gateway_path_sync_no_permission_no_new_owner";
+static const string AC_BUILD_PHASE        = "publication_survival_before_dossier";
+static const string AC_BUILD_VERSION      = "1.089";
+static const string AC_UPGRADE_ID         = "PUBLICATION_SURVIVAL_BEFORE_DOSSIER";
+static const string AC_UPGRADE_SUMMARY    = "Publishes survival surfaces before the heavy Dossier/deep-layer render pass so Market Board, Runtime Status, and Gateway required status cannot be starved by Layer 6 or downstream Dossier rendering pressure; preserves Layer 6 Gateway path sync and no trade permission.";
+static const string AC_UPGRADE_SCOPE      = "Runtime 0 orchestration order repair only. Account Status, Gateway worker_required, worker status readback, Market Board, and Runtime Status now publish before the heavy Dossier batch. No new owner, FileIO owner, route owner, worker V2, strategy, selection, alerts, execution, or trade permission is added.";
+static const string AC_UPGRADE_TEST_PLAN  = "Compile must confirm build_version=1.089 and #property version=1.089. Runtime proof must show Market Board.txt and Workbench/Status/Runtime_Status.txt update even if Dossier/L6/L7 rendering is degraded or slow; Gateway/Status/worker_required.txt exists; file_publication_blocked=false unless a true FileIO failure occurs; Dossiers continue publishing after survival surfaces; Layer 6 remains cost/friction ranking only; trade_permission=false, auto_trade_allowed=false, selection_runtime=false, execution=false.";
+static const string AC_LOGGING_POLICY     = "event_boundary_publication_survival_before_dossier_no_permission_no_new_owner";
 static const string AC_RUNTIME0_OWNER     = "Runtime 0 - Governance / Internal Control Owner";
 static const string AC_RUNTIME1_OWNER     = "Runtime 1 - Foundation Truth Owner";
 static const string AC_RUNTIME3_OWNER     = "Runtime 3 - Calculation Gateway Owner";
@@ -29,7 +29,7 @@ static const string AC_GATEWAY_DISPLAY_NAME = "Gateway";
 static const string AC_GATEWAY_LEGACY_PATH_POLICY = "physical_gateway_paths_active_external_worker_names_are_internal_compatibility_only";
 static const string AC_GATEWAY_SHARED_TARGET_FOLDER = "Gateway";
 static const string AC_GATEWAY_ACCOUNT_TARGET_FOLDER = "Gateway";
-static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.088_layer6_gateway_path_sync";
+static const string AC_DOSSIER_SHELL_SCHEMA_VERSION = "dossier_v1.089_publication_survival_before_dossier";
 static const string AC_L5_CALCULATION_EXECUTION_OWNER = "none_basic_gate_only";
 static const string AC_L5_ADVISORY_SURFACE_OWNER = "not_layer5_belongs_to_layer6_plus";
 static const string AC_L5_PREVIOUS_LAYER_DUPLICATION_POLICY = "forbidden_l5_consumes_l2_l3_l4_owner_packets_and_outputs_basic_pass_block_gate_only";
