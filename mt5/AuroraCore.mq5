@@ -329,15 +329,6 @@ void OnTimer()
    AC_ServiceTradeJournal();
    AC_AddMicroLog("AC_ServiceTradeJournal", start, AC_TRADE_JOURNAL_STATUS.status + ":" + AC_TRADE_JOURNAL_STATUS.historical_generator_status);
 
-   // Critical Runtime 1 -> Runtime 7 bridge.
-   // This existing owner invokes L2/L3/L4/L5 dependency refreshes and physically
-   // publishes the per-symbol Dossier files into Dossiers/Open, Dossiers/Closed,
-   // and Dossiers/Unknown. Runtime 1 owns the truth; Layer 0 only orchestrates the pass.
-   start = GetTickCount();
-   AC_WriteResult dossier_batch = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
-   AC_AddMicroLog("AC_PublishLayer0DossierBatch", start, dossier_batch.status);
-   AC_MergeWriteResult("dossier_batch", dossier_batch, detail);
-
    start = GetTickCount();
    AC_WriteResult worker_required = AC_WriteExternalWorkerRequired();
    AC_AddMicroLog("AC_WriteExternalWorkerRequired", start, worker_required.status);
@@ -355,14 +346,21 @@ void OnTimer()
    AC_AddMicroLog("AC_PublishMarketBoard", start, board.status);
    AC_RecordWriteProblem("market_board", board);
 
-   AC_SNAPSHOT.layer_0_2_status = "running_finish_pending";
-   AC_SNAPSHOT.layer_0_4_status = "running_publication_pending";
+   AC_SNAPSHOT.layer_0_2_status = "running_dossier_pending";
+   AC_SNAPSHOT.layer_0_4_status = "running_survival_surfaces_published";
    AC_HeartbeatFinish(AC_SNAPSHOT);
    AC_LAST_TIMER_DURATION_MS = AC_SNAPSHOT.timer_duration_ms;
 
    start = GetTickCount();
    AC_WriteResult runtime_status = AC_PublishRuntimeStatus(AC_SNAPSHOT);
-   AC_AddMicroLog("AC_PublishRuntimeStatusInterim", start, runtime_status.status);
+   AC_AddMicroLog("AC_PublishRuntimeStatusSurvival", start, runtime_status.status);
+
+   // Heavy Runtime 1 -> Runtime 7 bridge runs after survival surfaces.
+   // If Dossier/deep-layer rendering stalls, Market Board and Runtime Status still print life first.
+   start = GetTickCount();
+   AC_WriteResult dossier_batch = AC_PublishLayer0DossierBatch(AC_L0_STATUS);
+   AC_AddMicroLog("AC_PublishLayer0DossierBatch", start, dossier_batch.status);
+   AC_MergeWriteResult("dossier_batch", dossier_batch, detail);
 
    start = GetTickCount();
    AC_WriteResult manifest = AC_PublishManifest(account_status, dossier_batch, worker_required, board);
