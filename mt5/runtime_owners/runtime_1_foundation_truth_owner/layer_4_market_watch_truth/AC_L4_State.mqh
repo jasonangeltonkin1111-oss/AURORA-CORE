@@ -4,6 +4,7 @@
 static bool AC_L4_READY = false;
 static uint AC_L4_SCAN_STARTED_MS = 0;
 static uint AC_L4_SCAN_DURATION_MS = 0;
+static uint AC_L4_LAST_REFRESH_MS = 0;
 static string AC_L4_SCAN_STATUS = "Not started";
 static string AC_L4_CACHE_KEY = "not_scanned";
 static string AC_L4_REFRESH_KEY = "not_refreshed";
@@ -37,6 +38,7 @@ void AC_L4Reset()
 {
    AC_L4_READY = false;
    AC_L4_SCAN_STARTED_MS = GetTickCount();
+   AC_L4_LAST_REFRESH_MS = AC_L4_SCAN_STARTED_MS;
    AC_L4_SCAN_DURATION_MS = 0;
    AC_L4_SCAN_STATUS = "Scanning";
    // Use the same TimeTradeServer-first clock as L2 session truth. TimeCurrent()
