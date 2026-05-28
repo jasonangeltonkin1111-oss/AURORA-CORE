@@ -258,9 +258,7 @@ string AC_DossierHeaderSection(const string symbol, const string market_state)
    text += "AURORA CORE - SYMBOL DOSSIER\r\n";
    text += "==================================================\r\n";
    text += "Build Version:    " + AC_BUILD_VERSION + "\r\n";
-   text += "Heartbeat ID:     " + IntegerToString((int)AC_HEARTBEAT_ID) + "\r\n";
-   text += "Generated At:     " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
-   text += "Current Broker Time: " + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   text += "Dossier Mode:     changed_only_source_truth\r\n";
    text += "Symbol:           " + symbol + "\r\n";
    text += "Broker Symbol:    " + symbol + "\r\n";
    text += "Market State:     " + AC_MarketStateTitle(market_state) + "\r\n";
@@ -307,17 +305,23 @@ string AC_DossierCurrentnessProofSection(const string symbol,
                                          const string market_state)
 {
    string text = "";
-   text += "\r\nCURRENTNESS PROOF\r\n";
+   text += "\r\nSOURCE CHANGE PROOF\r\n";
    text += "--------------------------------------------------\r\n";
    text += "build_version=" + AC_BUILD_VERSION + "\r\n";
-   text += "heartbeat_id=" + IntegerToString((int)AC_HEARTBEAT_ID) + "\r\n";
-   text += "generated_at=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
-   text += "current_broker_time=" + TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS) + "\r\n";
+   text += "schema_version=" + AC_DOSSIER_SHELL_SCHEMA_VERSION + "\r\n";
+   text += "publication_policy=changed_only_no_heartbeat_dirtying\r\n";
    text += "dossier_route=" + AC_DossierSymbolPathByState(symbol, market_state) + "\r\n";
    text += "market_state=" + AC_MarketStateTitle(market_state) + "\r\n";
+   text += "l2_route_generation_key=" + AC_L2_ROUTE_GENERATION_KEY + "\r\n";
+   text += "l3_cache_key=" + AC_L3_CACHE_KEY + "\r\n";
+   text += "l4_cache_key=" + AC_L4_CACHE_KEY + "\r\n";
+   text += "l4_refresh_key=" + AC_L4_REFRESH_KEY + "\r\n";
    text += "l5_status=" + AC_L5_STATUS + "\r\n";
    text += "l6_status=" + AC_L6_STATUS + "\r\n";
+   text += "l6_checksum=" + AC_L6_MANIFEST_PAYLOAD_CHECKSUM + "\r\n";
    text += "l7_status=" + AC_L7_STATUS + "\r\n";
+   text += "l7_input_checksum=" + AC_L7_INPUT_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
+   text += "l7_ranked_checksum=" + AC_L7_RANKED_PAYLOAD_CHECKSUM_RENDERED + "\r\n";
    text += "trade_permission=false\r\n";
    text += "auto_trade_allowed=false\r\n";
    text += "entry_signal=false\r\n";
@@ -379,38 +383,30 @@ string AC_DossierOperatorMeaningSection(const string symbol, const string market
 
 string AC_DossierScoreCardSection(const string symbol)
 {
+   string l6_row = AC_L6CsvLineForSymbol(symbol);
+   string l7_row = AC_L7CsvLineForSymbol(symbol);
+   string l8_row = AC_L8CsvLineForSymbol(symbol);
+   string l9_row = AC_L9CsvLineForSymbol(symbol);
+   string l10_row = AC_L10CsvLineForSymbol(symbol);
    string l11_row = AC_L11RankedCsvLineForSymbol(symbol);
    string l14_row = AC_L14CsvLineForSymbol(symbol);
    string l15_row = AC_L15CsvLineForSymbol(symbol);
+   string l16_row = AC_L16CsvLineForSymbol(symbol);
+   string l17_row = AC_L17CsvLineForSymbol(symbol);
+
    string text = "";
-   text += "\r\nSCORE CARD\r\n";
+   text += "\r\nRANK / SCORE CARD\r\n";
    text += "--------------------------------------------------\r\n";
-   if(l11_row == "")
-   {
-      text += "L11 Score Card:        not_available\r\n";
-      text += "Reason:                symbol missing from L11 ranked group CSV or L11 unreadable\r\n";
-   }
-   else
-   {
-      text += "L6 Cost/Friction:      " + AC_L11CsvField(l11_row, 31) + " state=" + AC_L11CsvField(l11_row, 33) + "\r\n";
-      text += "L7 Session Relevance:  " + AC_L11CsvField(l11_row, 34) + " state=" + AC_L11CsvField(l11_row, 36) + "\r\n";
-      text += "L8 Movement/Range:     " + AC_L11CsvField(l11_row, 37) + " state=" + AC_L11CsvField(l11_row, 39) + "\r\n";
-      text += "L9 Structure/Location: " + AC_L11CsvField(l11_row, 40) + " state=" + AC_L11CsvField(l11_row, 42) + "\r\n";
-      text += "L11 Group Score:       " + AC_L11CsvField(l11_row, 13) + " state=" + AC_L11CsvField(l11_row, 15) + "\r\n";
-   }
-   if(l14_row != "")
-      text += "L14 Priority Score:    " + AC_L14CsvField(l14_row, 13) + " role=" + AC_L14CsvField(l14_row, 9) + "\r\n";
-   else
-      text += "L14 Priority Score:    not_available\r\n";
-   if(l15_row != "")
-   {
-      text += "L15 Diversity Score:   " + AC_L15CsvField(l15_row, 23) + " state=" + AC_L15CsvField(l15_row, 24) + "\r\n";
-      text += "L15 Corr Max Abs:      " + AC_L15CsvField(l15_row, 16) + "\r\n";
-      text += "L16 Constraint Hint:   " + AC_L15CsvField(l15_row, 30) + "\r\n";
-   }
-   else
-      text += "L15 Diversity Score:   not_available\r\n";
-   text += "Score Meaning:         inspection_only_not_trade_permission\r\n";
+   text += "Ranking Group:       " + (l10_row != "" ? AC_L10CsvField(l10_row, 4) : "not_classified") + "\r\n";
+   text += "L6 Cost Rank:        " + (l6_row != "" ? "#" + AC_L6CsvField(l6_row, 0) + " score=" + AC_L6CsvField(l6_row, 5) + " friction=" + AC_L6CsvField(l6_row, 4) : "not_ranked") + "\r\n";
+   text += "L7 Session Rank:     " + (l7_row != "" ? "#" + AC_L7CsvField(l7_row, 0) + " score=" + AC_L7CsvField(l7_row, 6) + " bucket=" + AC_L7CsvField(l7_row, 7) : "not_ranked") + "\r\n";
+   text += "L8 Movement Rank:    " + (l8_row != "" ? "#" + AC_L8CsvField(l8_row, 0) + " score=" + AC_L8CsvField(l8_row, 6) + " bucket=" + AC_L8CsvField(l8_row, 7) : "not_ranked") + "\r\n";
+   text += "L9 Structure Rank:   " + (l9_row != "" ? "#" + AC_L9CsvField(l9_row, 0) + " score=" + AC_L9CsvField(l9_row, 6) + " state=" + AC_L9CsvField(l9_row, 7) : "not_ranked") + "\r\n";
+   text += "L11 Group Rank:      " + (l11_row != "" ? "#" + AC_L11CsvField(l11_row, 5) + " score=" + AC_L11CsvField(l11_row, 6) : "not_ranked") + "\r\n";
+   text += "L14 Candidate Pool:  " + (l14_row != "" ? "#" + AC_L14CsvField(l14_row, 0) + " score=" + AC_L14CsvField(l14_row, 6) : "not_candidate") + "\r\n";
+   text += "L15 Diversity:       " + (l15_row != "" ? "#" + AC_L15CsvField(l15_row, 0) + " score=" + AC_L15CsvField(l15_row, 6) : "not_selected") + "\r\n";
+   text += "L16 Global Top 10:   " + (l16_row != "" ? "#" + AC_L16CsvField(l16_row, 0) + " basket_score=" + AC_L16CsvField(l16_row, 7) : "not_selected") + "\r\n";
+   text += "L17 Deep Evidence:   " + (l17_row != "" ? "queue #" + AC_L17CsvField(l17_row, 0) + " priority=" + AC_L17CsvField(l17_row, 7) : "not_deep_selected") + "\r\n";
    return text;
 }
 
@@ -419,20 +415,12 @@ string AC_DossierPipelinePositionSection(const string symbol, const string marke
    string text = "";
    text += "\r\nPIPELINE POSITION\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "L2 Market State:              " + AC_MarketStateTitle(market_state) + "\r\n";
-   text += "L5 Basic Gate:                see L5 detail below\r\n";
-   text += "L6-L9 Surface Scoring:        ranking/inspection only\r\n";
-   text += "L10 Taxonomy:                 " + AC_L10_STATUS + "\r\n";
-   text += "L11 Intra-group Ranking:      " + AC_L11_STATUS + "\r\n";
-   text += "L12 Group Heat / Quality:     " + AC_L12_STATUS + "\r\n";
-   text += "L13 Group Selection:          " + AC_L13_STATUS + "\r\n";
-   text += "L14 Candidate Pool:           " + AC_L14_STATUS + "\r\n";
-   text += "L15 Correlation / Diversity:  " + AC_L15_STATUS + "\r\n";
-   text += "L16 Global Top 10:            " + AC_L16_STATUS + "\r\n";
-   text += "L17 Deep Evidence Split:      " + AC_L17_STATUS + "\r\n";
-   text += "L18 Raw OHLC Bar Pack:        " + AC_L18_STATUS + " freshness=" + AC_L18_FRESHNESS_STATUS + "\r\n";
-   text += "L19 Wick / Candle Geometry:   " + AC_L19_STATUS + " freshness=" + AC_L19_FRESHNESS_STATUS + "\r\n";
-   text += "L23 Trade Permission:         false\r\n";
+   text += "Market Route:        " + AC_MarketStateTitle(market_state) + "\r\n";
+   text += "L5 Gate:             " + AC_L5_STATUS + "\r\n";
+   text += "L6 / L7 / L8 / L9:   " + AC_L6_STATUS + " | " + AC_L7_STATUS + " | " + AC_L8_STATUS + " | " + AC_L9_STATUS + "\r\n";
+   text += "L10-L17 Pipeline:    " + AC_L10_STATUS + " | " + AC_L11_STATUS + " | " + AC_L12_STATUS + " | " + AC_L13_STATUS + " | " + AC_L14_STATUS + " | " + AC_L15_STATUS + " | " + AC_L16_STATUS + " | " + AC_L17_STATUS + "\r\n";
+   text += "L18-L19 Evidence:    " + AC_L18_STATUS + " | " + AC_L19_STATUS + "\r\n";
+   text += "Permission Layer:    L23 BLOCKED / not validated\r\n";
    return text;
 }
 
@@ -441,16 +429,10 @@ string AC_DossierRiskBlockerCardSection(const string symbol)
    string text = "";
    text += "\r\nRISK / BLOCKER CARD\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Permission Result:     FALSE\r\n";
-   text += "Entry Signal:          FALSE\r\n";
-   text += "Execution:             FALSE\r\n";
-   text += "Main Cautions:\r\n";
-   text += "  L7: " + AC_L7_STATUS + "\r\n";
-   text += "  L8: " + AC_L8_STATUS + "\r\n";
-   text += "  L9: " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
-   text += "  L14: " + AC_L14_STATUS + "\r\n";
-   text += "  L15: " + AC_L15_STATUS + "\r\n";
-   text += "Safety Meaning:        publication/inspection may continue; trading remains blocked\r\n";
+   text += "Primary Blocker:     " + (AC_L6_MAIN_BLOCKER == "none" ? (AC_L7_MAIN_BLOCKER == "none" ? (AC_L8_MAIN_BLOCKER == "none" ? (AC_L9_MAIN_BLOCKER == "none" ? (AC_L10_MAIN_BLOCKER == "none" ? AC_L5_MAIN_BLOCKER : AC_L10_MAIN_BLOCKER) : AC_L9_MAIN_BLOCKER) : AC_L8_MAIN_BLOCKER) : AC_L7_MAIN_BLOCKER) : AC_L6_MAIN_BLOCKER) + "\r\n";
+   text += "Gateway Worker:      " + AC_EXTERNAL_WORKER_STATUS.worker_status + " result=" + AC_EXTERNAL_WORKER_STATUS.result_validation_status + "\r\n";
+   text += "Trade Permission:    FALSE\r\n";
+   text += "Reason:              No validated L23 strategy/permission owner exists.\r\n";
    return text;
 }
 
@@ -459,16 +441,11 @@ string AC_DossierCurrentLimitsSection(const string symbol, const string market_s
    string text = "";
    text += "\r\nCURRENT LIMITS\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Broker Symbol Exists: Yes\r\n";
-   text += "Market State Known: " + ((market_state == "open" || market_state == "closed") ? "Yes" : "No") + "\r\n";
-   text += "Broker Static Specs: " + (AC_L3_READY ? "Available / Scanned (see Layer 3)" : "Pending Layer 3 scan") + "\r\n";
-   text += "Live Quote Truth: " + (market_state == "open" ? (AC_L4_READY ? "Available / Scanned (see Layer 4)" : "Unavailable - Layer 4 not scanned yet") : "Unavailable - market closed or unknown") + "\r\n";
-   text += "Surface Ranking: L6=" + AC_L6_STATUS + " | L7=" + AC_L7_STATUS + " | L8=" + AC_L8_STATUS + " | L9=" + AC_L9_STATUS + " | L9_quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
-   text += "Selection Ranking: L10=" + AC_L10_STATUS + " | L11=" + AC_L11_STATUS + " | L12=" + AC_L12_STATUS + " | L13=" + AC_L13_STATUS + " | L14=" + AC_L14_STATUS + " | L15=" + AC_L15_STATUS + " | L16=" + AC_L16_STATUS + " | L17=" + AC_L17_STATUS + "\r\n";
-   text += "Selected Evidence: L18=" + AC_L18_STATUS + " | L19=" + AC_L19_STATUS + "\r\n";
-   text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
-   text += "Selection Active: L16/L17 inspection and evidence-budget surfaces only; no trade permission\r\n";
-   text += "Permission Active: No\r\n";
+   text += "This Dossier may be current for publication while still not trade-ready.\r\n";
+   text += "Closed market route is normal truth, not a failure.\r\n";
+   text += "L6-L17 are inspection/selection surfaces only.\r\n";
+   text += "L18-L22 evidence packs are not entry signals.\r\n";
+   text += "L23 remains blocked until strategy validation and prop-rule proof exist.\r\n";
    return text;
 }
 
@@ -477,31 +454,11 @@ string AC_DossierFoundationStatusSection(const string symbol, const string marke
    string text = "";
    text += "\r\nFOUNDATION STATUS\r\n";
    text += "--------------------------------------------------\r\n";
-   text += "Layer 0 Publication: Complete\r\n";
-   text += "Layer 1 Account and Portfolio: " + (AC_L1_READY ? "Available" : "Pending") + "\r\n";
-   text += "Layer 2 Market State: " + (AC_L2_READY ? AC_L2_SCAN_STATUS : "Pending") + "\r\n";
-   text += "Layer 3 Broker Specs and Value: " + (AC_L3_READY ? AC_L3_SCAN_STATUS : "Pending") + "\r\n";
-   text += "Layer 4 Live Quote and Spread: " + (market_state == "open" ? (AC_L4_READY ? AC_L4_SCAN_STATUS : "Pending") : "Cut off until market reopens") + "\r\n";
-   text += "Layer 5 Basic System Gate: " + AC_L5_STATUS + "\r\n";
-   text += "Layer 6 Cost / Friction Ranking: " + AC_L6_STATUS + "\r\n";
-   text += "Layer 7 Session Relevance Ranking: " + AC_L7_STATUS + "\r\n";
-   text += "Layer 8 Movement / Range Ranking: " + AC_L8_STATUS + "\r\n";
-   text += "Layer 9 Structure / Location Geometry: " + AC_L9_STATUS + " | quality=" + AC_L9_GEOMETRY_QUALITY_STATE + "\r\n";
-   text += "Layer 10 Taxonomy / Ranking Group Map: " + AC_L10_STATUS + "\r\n";
-   text += "Layer 11 Symbol Ranking Inside Group: " + AC_L11_STATUS + "\r\n";
-   text += "Layer 12 Ranking Group Heat / Quality: " + AC_L12_STATUS + "\r\n";
-   text += "Layer 13 Dynamic Group Selection: " + AC_L13_STATUS + "\r\n";
-   text += "Layer 14 Candidate Pool: " + AC_L14_STATUS + "\r\n";
-   text += "Layer 15 Correlation / Diversity: " + AC_L15_STATUS + "\r\n";
-   text += "Layer 16 Global Top 10: " + AC_L16_STATUS + "\r\n";
-   text += "Layer 17 Deep Evidence Split: " + AC_L17_STATUS + "\r\n";
-   text += "Layer 18 Raw OHLC Bar Pack: " + AC_L18_STATUS + " | freshness=" + AC_L18_FRESHNESS_STATUS + "\r\n";
-   text += "Layer 19 Wick / Candle Geometry: " + AC_L19_STATUS + " | freshness=" + AC_L19_FRESHNESS_STATUS + "\r\n";
-   text += "Layer 20 Rolling Tick Pack: NOT_ACTIVE design/hold\r\n";
-   text += "Layer 21 Indicator / Reference Pack: NOT_ACTIVE design/hold\r\n";
-   text += "Layer 22 Liquidity / DOM Proxy: NOT_ACTIVE design/hold\r\n";
-   text += "Layer 23 Setup / Permission State: BLOCKED trade_permission=false\r\n";
-   text += "Shared OHLC Raw Store: " + AC_SHARED_OHLC_STATUS + "\r\n";
+   text += "L1 Account: " + (AC_L1_READY ? "ACCEPTED" : "PENDING") + "\r\n";
+   text += "L2 Market State: " + AC_MarketStateTitle(market_state) + "\r\n";
+   text += "L3 Specs: " + AC_L3_SCAN_STATUS + "\r\n";
+   text += "L4 Quote: " + AC_L4_SCAN_STATUS + "\r\n";
+   text += "L5 Gate: " + AC_L5_STATUS + "\r\n";
    return text;
 }
 
@@ -510,12 +467,11 @@ string AC_DossierNextRequiredSection(const string market_state)
    string text = "";
    text += "\r\nNEXT REQUIRED\r\n";
    text += "----------------------------------------\r\n";
-   text += (market_state == "open" ? "Next step: inspect L16/L17 selection context, then wait for L18/L19/OHLC evidence to become fresh enough.\r\n" : "Next step: wait for Layer 2 recheck before deeper layers.\r\n");
-   text += "Open / Closed owner: Layer 2 only\r\n";
-   text += "Layer 6-9 rank only Layer 5 pass symbols; they do not hard-block symbols.\r\n";
-   text += "Layer 10 classifies symbols into ranking_groups only; it does not rank, select, copy Dossiers, or permit trades.\r\n";
-   text += "Layer 11-19 are inspection/evidence surfaces only; no setup alert or trade permission exists here.\r\n";
-   text += "Shared OHLC is raw storage only; future layers must read it instead of calling CopyRates privately.\r\n";
+   if(market_state == "open")
+      text += "Inspect ranking/evidence surfaces only; do not treat selection as permission.\r\n";
+   else
+      text += "Wait for Layer 2 to show open market state before any deeper trading review.\r\n";
+   text += "Validation required before any L23 setup, alert, or permission claim.\r\n";
    return text;
 }
 
@@ -1135,7 +1091,17 @@ AC_WriteResult AC_PublishLayer0DossierBatch(AC_Layer0StatusPacket &status)
       && AC_L0_CACHED_L15_GENERATED_UTC == AC_L15_GENERATED_UTC
       && AC_L0_CACHED_L15_ACCEPTED == AC_L15_ACCEPTED)
    {
-      return AC_RunLayer0UniverseShellPass(status);
+      status = AC_L0_CACHED_STATUS;
+      status.status = "Current - no Dossier source changes";
+      status.trust_state = "Dossiers Source-Current";
+      status.main_blocker = AC_L0_CACHED_STATUS.main_blocker;
+      status.batch_attempted = 0;
+      status.batch_written = 0;
+      status.batch_duration_ms = 0;
+      status.next_symbol_index = total;
+      status.batch_complete = true;
+      AC_L0_CACHED_RESULT = AC_MakeSyntheticWriteResult(AC_DossiersFolder(), true, "dossier_universe_cached_no_rewrite", (ulong)AC_L0_INCREMENTAL_WRITTEN_TOTAL, "source_key_unchanged_no_dossier_rewrite|progress_key=" + current_progress_key + "|render_key=" + current_render_key + "|mode=changed_only_fast_lane");
+      return AC_L0_CACHED_RESULT;
    }
    return AC_RunLayer0UniverseShellPass(status);
 }
